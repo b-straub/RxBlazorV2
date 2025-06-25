@@ -1,0 +1,199 @@
+﻿@page "/weather"
+@inherits ObservableComponent<WeatherModel>
+
+<PageTitle>Reactive Weather</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large">
+    <MudGrid>
+        <MudItem xs="12">
+            <MudText Typo="Typo.h3" GutterBottom="true">🌤️ Reactive Weather Forecast</MudText>
+            <MudText Typo="Typo.body1" Class="mb-4">
+                Showcasing reactive programming with automatic UI updates, smart commands, and multi-model coordination.
+            </MudText>
+        </MudItem>
+        
+        <!-- Settings Panel -->
+        <MudItem xs="12" md="4">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">⚙️ Settings</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack>
+                        <MudTextField @bind-Value="Model.CurrentLocation" 
+                                      Label="Location" 
+                                      Variant="Variant.Outlined"
+                                      Disabled="Model.IsLoading" />
+                        
+                        <MudButton @onclick="() => Model.ChangeLocationCommand.ExecuteAsync(Model.CurrentLocation)"
+                                   Disabled="@(!Model.ChangeLocationCommand.CanExecute)"
+                                   Variant="Variant.Filled" 
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.LocationOn">
+                            Change Location
+                        </MudButton>
+                        
+                        <MudDivider />
+                        
+                        <MudButton @onclick="() => _settings.ToggleUnitCommand.Execute()"
+                                   Variant="Variant.Outlined"
+                                   StartIcon="@Icons.Material.Filled.Thermostat">
+                            Unit: @_settings.TemperatureUnit
+                        </MudButton>
+                        
+                        <MudSwitch @bind-Value="_settings.AutoRefresh"
+                                   Label="Auto Refresh" 
+                                   Color="Color.Success" />
+                        
+                        <MudSlider @bind-Value="_settings.RefreshInterval"
+                                   Min="1" Max="30" Step="1"
+                                   Disabled="!_settings.AutoRefresh">
+                            Refresh: @_settings.RefreshInterval min
+                        </MudSlider>
+                        
+                        <MudButton @onclick="() => _settings.ToggleThemeCommand.Execute()"
+                                   Variant="Variant.Text"
+                                   StartIcon="@(_settings.IsDarkMode ? Icons.Material.Filled.DarkMode : Icons.Material.Filled.LightMode)">
+                            @(_settings.IsDarkMode ? "Dark " : "Light " + "Mode")
+                        </MudButton>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        
+        <!-- Weather Content -->
+        <MudItem xs="12" md="8">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">📍 @Model.CurrentLocation</MudText>
+                    </CardHeaderContent>
+                    <CardHeaderActions>
+                        @if (Model.LastRefresh != default)
+                        {
+                            <MudText Typo="Typo.caption">
+                                Last updated: @Model.LastRefresh.ToString("HH:mm:ss")
+                            </MudText>
+                        }
+                    </CardHeaderActions>
+                </MudCardHeader>
+                
+                <MudCardContent>
+                    <!-- Action Buttons -->
+                    <MudStack Row Spacing="2" Class="mb-4">
+                        <MudButton @onclick="() => Model.LoadWeatherCommand.ExecuteAsync(false)"
+                                   Disabled="@(!Model.LoadWeatherCommand.CanExecute)"
+                                   Variant="Variant.Filled" 
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.CloudDownload">
+                            @(Model.IsLoading ? "Loading..." : "Load Weather")
+                        </MudButton>
+                        
+                        <MudButton @onclick="() => Model.RefreshCommand.ExecuteAsync()"
+                                   Disabled="@(!Model.RefreshCommand.CanExecute)"
+                                   Variant="Variant.Outlined" 
+                                   Color="Color.Secondary"
+                                   StartIcon="@Icons.Material.Filled.Refresh">
+                            Refresh
+                        </MudButton>
+                        
+                        <MudButton @onclick="() => Model.SimulateErrorCommand.ExecuteAsync(true)"
+                                   Variant="Variant.Text" 
+                                   Color="Color.Error"
+                                   StartIcon="@Icons.Material.Filled.Error">
+                            Simulate Error
+                        </MudButton>
+                    </MudStack>
+                    
+                    <!-- Loading Indicator -->
+                    @if (Model.IsLoading)
+                    {
+                        <MudStack AlignItems="AlignItems.Center" Class="pa-4">
+                            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+                            <MudText Typo="Typo.body1">Loading weather data for @Model.CurrentLocation...</MudText>
+                        </MudStack>
+                    }
+                    
+                    <!-- Error Display -->
+                    @if (!string.IsNullOrEmpty(Model.SimulateErrorCommand.Error?.Message))
+                    {
+                        <MudAlert Severity="Severity.Error" 
+                                  Variant="Variant.Filled" 
+                                  ShowCloseIcon="true" 
+                                  CloseIconClicked="() => Model.SimulateErrorCommand.ResetError()"
+                                  Class="mb-4">
+                            @Model.SimulateErrorCommand.Error?.Message
+                        </MudAlert>
+                    }
+                    
+                    <!-- Weather Data -->
+                    @if (Model.Forecasts != null && !Model.IsLoading)
+                    {
+                        <MudTable Items="Model.Forecasts" 
+                                  Hover="true" 
+                                  Breakpoint="Breakpoint.Sm" 
+                                  Dense="true"
+                                  Class="weather-table">
+                            <HeaderContent>
+                                <MudTh>Date</MudTh>
+                                <MudTh>Temperature</MudTh>
+                                <MudTh>Summary</MudTh>
+                                <MudTh>Location</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Date">
+                                    <MudText Typo="Typo.body2">@context.Date.ToString("ddd, MMM dd")</MudText>
+                                </MudTd>
+                                <MudTd DataLabel="Temperature">
+                                    @if (_settings.TemperatureUnit == "Celsius")
+                                    {
+                                        <MudChip T="string" Color="GetTemperatureColor(context.TemperatureC)" Size="Size.Small">
+                                            @context.TemperatureC°C
+                                        </MudChip>
+                                    }
+                                    else
+                                    {
+                                        <MudChip T="string" Color="GetTemperatureColor(context.TemperatureC)" Size="Size.Small">
+                                            @context.TemperatureF°F
+                                        </MudChip>
+                                    }
+                                </MudTd>
+                                <MudTd DataLabel="Summary">
+                                    <MudText Typo="Typo.body2">@GetWeatherIcon(context.Summary) @context.Summary</MudText>
+                                </MudTd>
+                                <MudTd DataLabel="Location">
+                                    <MudText Typo="Typo.caption">@context.Location</MudText>
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                        
+                        <!-- Auto-refresh indicator -->
+                        @if (_settings.AutoRefresh && Model.Forecasts.Any())
+                        {
+                            <MudAlert Severity="Severity.Info" Variant="Variant.Text" Class="mt-4">
+                                <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.AutoMode" />
+                                    <MudText Typo="Typo.caption">
+                                        Auto-refreshing every @_settings.RefreshInterval minutes
+                                    </MudText>
+                                </MudStack>
+                            </MudAlert>
+                        }
+                    }
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+<style>
+    .weather-table .mud-table-cell {
+        padding: 8px 16px;
+    }
+    
+    .mud-chip {
+        font-weight: 500;
+    }
+</style>
