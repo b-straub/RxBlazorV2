@@ -6,13 +6,17 @@ namespace GeneratorRunner
     {
         private static readonly string[] SourcePaths =
         [
-            "RxBlazorV2Sample/Program.cs",
-            "RxBlazorV2Sample/Model/CounterModel.cs",
+            "../RxBlazorV2Sample/HelperModel/GenericModel.cs",
+            "../RxBlazorV2Sample/Model/CounterModel.cs",
+            //"../../WebAppBase/WebAppBase.Shared/Models/Sync/SyncNotificationModel.cs",
+            //"../../WebAppBase/WebAppBase.Shared/Models/Sync/SyncModels.cs",
+            //"../../WebAppBase/WebAppBase.Shared/Services/AdaptivePollerService.cs",
         ];
         
         private static readonly string[] AdditionalTextPaths =
         [
-            "RxBlazorV2Sample/Pages/Counter2.razor"
+            "../RxBlazorV2Sample/Pages/Counter2.razor"
+            //"../../WebAppBase/WebAppBase.Shared/Components/SyncManager.razor"
         ];
 
         public static void Main(string[] _)
@@ -22,11 +26,18 @@ namespace GeneratorRunner
 
             foreach (var path in SourcePaths)
             {
-                var fullPath = Path.Combine(GetProjectRootFromBase(), "..", path);
+                var fullPath = Path.Combine(GetProjectRootFromBase(), path);
                 
                 if (File.Exists(fullPath))
                 {
-                    sources.Add(File.ReadAllText(fullPath));
+                    var content = File.ReadAllText(fullPath);
+                    if (content.IndexOf("using System;", StringComparison.InvariantCulture) == -1)
+                    {
+                        // fix implict usings;
+                        content = "using System;" + Environment.NewLine + content;
+                    }
+                    
+                    sources.Add(content);
                     Console.WriteLine($"Loaded source: {fullPath}");
                 }
                 else
@@ -37,7 +48,7 @@ namespace GeneratorRunner
 
             foreach (var path in AdditionalTextPaths)
             {
-                var fullPath = Path.Combine(GetProjectRootFromBase(), "..", path);
+                var fullPath = Path.Combine(GetProjectRootFromBase(), path);
                 if (File.Exists(fullPath))
                 {
                     additionalText.Add((File.ReadAllText(fullPath), fullPath));
@@ -54,6 +65,13 @@ namespace GeneratorRunner
             foreach (var diag in diags)
             {
                 Console.WriteLine($"Message: {diag.GetMessage()}, Location: {diag.Location.GetLineSpan()}");
+            }
+
+            var outputDir = Path.Combine(GetProjectRootFromBase(), "GeneratedOutput");
+
+            foreach (var path in SourcePaths)
+            {
+                File.Copy(Path.Combine(GetProjectRootFromBase(), path), Path.Combine(outputDir, Path.GetFileName(path)));
             }
         }
         

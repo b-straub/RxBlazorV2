@@ -1,10 +1,9 @@
 using RxBlazorV2Generator.Diagnostics;
-
 using CodeFixVerifier =
     RxBlazorV2Test.Helpers.CSharpCodeFixVerifier<RxBlazorV2Generator.Analyzers.RxBlazorDiagnosticAnalyzer,
         RxBlazorV2CodeFix.CodeFix.CircularTriggerReferenceCodeFixProvider>;
 
-namespace RxBlazorV2Test.Tests;
+namespace RxBlazorV2Test.AnalyzerAndCodefixTests;
 
 public class CircularTriggerReferenceCodeFixTests
 {

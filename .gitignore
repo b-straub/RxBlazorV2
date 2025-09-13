@@ -372,3 +372,4 @@ out/
 
 # Generated files (specific to this project)
 **/Generated/
+GeneratorRunner/GeneratedOutput

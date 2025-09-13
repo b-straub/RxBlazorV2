@@ -25,8 +25,8 @@ public static class RazorCodeGenerator
             var sb = new StringBuilder();
         
         sb.AppendLine("using R3;");
+        sb.AppendLine("using ObservableCollections;");
         sb.AppendLine("using System;");
-        sb.AppendLine("using RxBlazorV2Sample.Model;");
         sb.AppendLine("using Microsoft.Extensions.DependencyInjection;");
         sb.AppendLine();
         sb.AppendLine($"namespace {razorInfo.Namespace};");
@@ -39,7 +39,7 @@ public static class RazorCodeGenerator
         
         if (isObservableComponent)
         {
-            // ObservableComponent<T> pattern - generate subscriptions and OnContextReady
+            // ObservableComponent<T> pattern - generate subscriptions and OnInitialize
             var diFields = razorInfo.ObservableModelFields.Where(f => f != "Model").ToList();
             
             // Generate CompositeDisposable for subscription management
@@ -69,10 +69,10 @@ public static class RazorCodeGenerator
                 sb.AppendLine("    ");
             }
 
-            // Generate OnContextReady method for subscription setup
+            // Generate OnInitialize method for subscription setup
             if (razorInfo.FieldToPropertiesMap.Any())
             {
-                sb.AppendLine("    protected override void OnContextReady()");
+                sb.AppendLine("    protected override void OnInitialize()");
                 sb.AppendLine("    {");
                 sb.AppendLine("        // Subscribe to model changes for component base model and other models from properties");
                 
@@ -104,6 +104,7 @@ public static class RazorCodeGenerator
             {
                 sb.AppendLine("    protected override void Dispose(bool disposing)");
                 sb.AppendLine("    {");
+                sb.AppendLine("        OnDispose();");
                 sb.AppendLine("        Subscriptions.Dispose();");
                 sb.AppendLine("        base.Dispose(disposing);");
                 sb.AppendLine("    }");

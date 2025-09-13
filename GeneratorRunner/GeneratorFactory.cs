@@ -64,15 +64,26 @@ namespace GeneratorTest.Helpers
             
             driver.RunGeneratorsAndUpdateCompilation(compilation, out Compilation? generatorCompilation, out ImmutableArray<Diagnostic> generatorDiagnostics);
             
-            // Print generated files for debugging
+            // Print and save generated files for debugging
             Console.WriteLine("\n=== Generated Files ===");
+            var outputDir = Path.Combine(GetProjectRootFromBase(), "GeneratedOutput");
+            Directory.CreateDirectory(outputDir);
+            
             foreach (var syntaxTree in generatorCompilation.SyntaxTrees)
             {
                 if (syntaxTree.FilePath.Contains(".g.cs"))
                 {
-                    Console.WriteLine($"\nFile: {syntaxTree.FilePath}");
-                    Console.WriteLine(syntaxTree.GetText().ToString());
+                    var fileName = Path.GetFileName(syntaxTree.FilePath);
+                    var content = syntaxTree.GetText().ToString();
+                    
+                    Console.WriteLine($"\nFile: {fileName}");
+                    Console.WriteLine(content);
                     Console.WriteLine("\n" + new string('=', 50));
+                    
+                    // Save to disk
+                    var outputPath = Path.Combine(outputDir, fileName);
+                    File.WriteAllText(outputPath, content);
+                    Console.WriteLine($"💾 Saved to: {outputPath}");
                 }
             }
             
@@ -87,6 +98,20 @@ namespace GeneratorTest.Helpers
             {
                 return SourceText.From(text);
             }
+        }
+        
+        private static string GetProjectRootFromBase()
+        {
+            var baseDirectory = AppContext.BaseDirectory;
+            var current = new DirectoryInfo(baseDirectory);
+
+            // Navigate up to find the project root (where .csproj file is)
+            while (current != null && !current.GetFiles("*.csproj").Any())
+            {
+                current = current.Parent;
+            }
+
+            return current?.FullName ?? baseDirectory;
         }
     }
 }

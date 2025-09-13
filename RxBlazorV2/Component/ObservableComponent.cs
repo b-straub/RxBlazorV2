@@ -12,6 +12,7 @@ public class ObservableComponent<T> : OwningComponentBase<T> where T : Observabl
         base.OnAfterRender(firstRender);
         if (firstRender)
         {
+            OnInitialize();
             OnContextReady();
             Model.ContextReady();
         }
@@ -27,6 +28,10 @@ public class ObservableComponent<T> : OwningComponentBase<T> where T : Observabl
         }
     }
     
+    protected virtual void OnInitialize()
+    {
+    }
+    
     protected virtual void OnContextReady()
     {
     }
@@ -34,5 +39,9 @@ public class ObservableComponent<T> : OwningComponentBase<T> where T : Observabl
     protected virtual Task OnContextReadyAsync()
     {
         return Task.CompletedTask;
+    }
+    
+    protected virtual void OnDispose()
+    {
     }
 }

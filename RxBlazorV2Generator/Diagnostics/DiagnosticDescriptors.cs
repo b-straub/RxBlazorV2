@@ -122,4 +122,31 @@ public static class DiagnosticDescriptors
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         description: "ObservableCommandTrigger cannot listen to a property that the command's execution method modifies, as this creates an infinite loop.");
+
+    public static readonly DiagnosticDescriptor GenericArityMismatchError = new(
+        id: "RXBG014",
+        title: "Generic type arity mismatch",
+        messageFormat: "Referenced generic type '{0}' has {1} type parameters but the referencing class '{2}' has {3} type parameters. Generic arity must match for type parameter substitution.",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "When referencing open generic types, the number of type parameters must match between the referenced and referencing types.");
+
+    public static readonly DiagnosticDescriptor TypeConstraintMismatchError = new(
+        id: "RXBG015",
+        title: "Type constraint mismatch",
+        messageFormat: "Type parameter '{0}' in referenced type '{1}' has constraints '{2}' but the corresponding type parameter in referencing class '{3}' has constraints '{4}'. Constraints must be compatible.",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Type constraints must be compatible between referenced and referencing generic types to ensure type safety.");
+
+    public static readonly DiagnosticDescriptor InvalidOpenGenericReferenceError = new(
+        id: "RXBG016", 
+        title: "Invalid open generic type reference",
+        messageFormat: "Cannot reference open generic type '{0}' from non-generic class '{1}'. Open generic types can only be referenced from generic classes with compatible type parameters.",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Open generic types (typeof(MyType<,>)) can only be referenced from generic classes that can provide the required type parameters.");
 }

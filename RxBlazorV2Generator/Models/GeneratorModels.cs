@@ -32,11 +32,16 @@ public class ObservableModelInfo
     public string ModelScope { get; }
     public List<DIFieldInfo> DIFields { get; }
     public List<string> ImplementedInterfaces { get; }
+    
+    public string GenericTypes { get; }
+    
+    public string TypeConstrains { get; }
 
     public ObservableModelInfo(string namespaceName, string className, string fullyQualifiedName,
         List<PartialPropertyInfo> partialProperties, List<CommandPropertyInfo> commandProperties,
         Dictionary<string, MethodDeclarationSyntax> methods, List<ModelReferenceInfo> modelReferences,
-        string modelScope = "Singleton", List<DIFieldInfo>? diFields = null, List<string>? implementedInterfaces = null)
+        string modelScope = "Singleton", List<DIFieldInfo>? diFields = null, List<string>? implementedInterfaces = null,
+        string? genericTypes = null, string? typeConstrains = null)
     {
         Namespace = namespaceName;
         ClassName = className;
@@ -46,8 +51,10 @@ public class ObservableModelInfo
         Methods = methods;
         ModelReferences = modelReferences;
         ModelScope = modelScope;
-        DIFields = diFields ?? new List<DIFieldInfo>();
-        ImplementedInterfaces = implementedInterfaces ?? new List<string>();
+        DIFields = diFields ?? [];
+        ImplementedInterfaces = implementedInterfaces ?? [];
+        GenericTypes = genericTypes ?? string.Empty;
+        TypeConstrains = typeConstrains ?? string.Empty;
     }
 }
 
@@ -55,11 +62,13 @@ public class PartialPropertyInfo
 {
     public string Name { get; }
     public string Type { get; }
+    public bool IsObservableCollection { get; }
 
-    public PartialPropertyInfo(string name, string type)
+    public PartialPropertyInfo(string name, string type, bool isObservableCollection = false)
     {
         Name = name;
         Type = type;
+        IsObservableCollection = isObservableCollection;
     }
 }
 
@@ -79,7 +88,7 @@ public class CommandPropertyInfo
         ExecuteMethod = executeMethod;
         CanExecuteMethod = canExecuteMethod;
         SupportsCancellation = supportsCancellation;
-        Triggers = triggers ?? new List<CommandTriggerInfo>();
+        Triggers = triggers ?? [];
     }
 }
 

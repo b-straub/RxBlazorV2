@@ -26,37 +26,20 @@ internal static class CSharpAnalyzerVerifier<TAnalyzer>
 
     public static Task VerifyAnalyzerAsync(string source, params DiagnosticResult[] expected)
     {
-        var test = new Test<TAnalyzer> { TestCode = source };
-        test.TestState.Sources.Add(("GlobalUsings.cs", SourceText.From(GlobalUsing, Encoding.UTF8)));
+        var test = new AnalyzerTest<TAnalyzer> { TestCode = source };
+        test.TestState.Sources.Add(("GlobalUsings.cs", SourceText.From(TestShared.GlobalUsing, Encoding.UTF8)));
         test.TestBehaviors |= TestBehaviors.SkipGeneratedSourcesCheck;
         test.ExpectedDiagnostics.AddRange(expected);
         return test.RunAsync();
     }
-
-    private static string GlobalUsing =>
-        """
-        global using global::System;
-        global using global::System.Collections.Generic;
-        global using global::System.IO;
-        global using global::System.Linq;
-        global using global::System.Net.Http;
-        global using global::System.Threading;
-        global using global::System.Threading.Tasks;
-        """;
 }
 
-internal class Test<TAnalyzer> : CSharpAnalyzerTest<TAnalyzer, DefaultVerifier>
+internal class AnalyzerTest<TAnalyzer> : CSharpAnalyzerTest<TAnalyzer, DefaultVerifier>
     where TAnalyzer : DiagnosticAnalyzer, new()
 {
-    public Test()
+    public AnalyzerTest()
     {
-        ReferenceAssemblies = ReferenceAssemblies.Net.Net90
-            .AddPackages([
-                new PackageIdentity("Microsoft.Net.Compilers.Toolset", "4.14.0"),
-                new PackageIdentity("Microsoft.Extensions.DependencyInjection", "9.0.6"),
-                new PackageIdentity("Microsoft.AspNetCore.Components", "9.0.6"),
-                new PackageIdentity("R3", "1.3.0")
-            ]); 
+        ReferenceAssemblies = TestShared.ReferenceAssemblies();
 
         SolutionTransforms.Add((solution, projectId) =>
         {

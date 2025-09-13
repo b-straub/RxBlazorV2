@@ -19,42 +19,29 @@ public static class AttributeAnalysisExtensions
                 
                 if (typeInfo.Type is INamedTypeSymbol namedTypeSymbol)
                 {
-                    // Check if type inherits from ObservableModel or IObservableModel
-                    if (!namedTypeSymbol.InheritsFromObservableModel() && !namedTypeSymbol.InheritsFromIObservableModel())
+                    return ValidateAndReturnTypeSymbol(namedTypeSymbol, attribute, serviceInfoList);
+                }
+            }
+            // Try to get the type from non-generic attribute with typeof() argument
+            else if (attribute.ArgumentList?.Arguments.Count > 0)
+            {
+                var firstArgument = attribute.ArgumentList.Arguments.First();
+                
+                // Handle typeof(SomeType) expressions
+                if (firstArgument.Expression is TypeOfExpressionSyntax typeOfExpression)
+                {
+                    var typeInfo = semanticModel.GetTypeInfo(typeOfExpression.Type);
+                    
+                    if (typeInfo.Type is INamedTypeSymbol namedTypeSymbol)
                     {
-                        var diagnostic = Diagnostic.Create(
-                            DiagnosticDescriptors.InvalidModelReferenceTargetError,
-                            attribute.GetLocation(),
-                            namedTypeSymbol.Name);
-                        return (null, diagnostic);
+                        // For unbound generic types, we might get the constructed generic type
+                        // Try to get the generic type definition if this is a constructed generic type
+                        var typeToValidate = namedTypeSymbol.IsGenericType && namedTypeSymbol.TypeArguments.Length > 0
+                            ? namedTypeSymbol.ConstructedFrom
+                            : namedTypeSymbol;
+                            
+                        return ValidateAndReturnTypeSymbol(typeToValidate, attribute, serviceInfoList);
                     }
-
-                    // Check if type is registered in service collection
-                    if (serviceInfoList != null)
-                    {
-                        var fullyQualifiedName = namedTypeSymbol.ToDisplayString();
-                        var className = namedTypeSymbol.Name;
-                        
-                        bool isRegistered = serviceInfoList.Services.Any(service => 
-                            service.FullyQualifiedName == fullyQualifiedName || 
-                            service.ClassName == className ||
-                            service.FullyQualifiedName.EndsWith($".{className}"));
-
-                        // Skip validation for ObservableModel types and interfaces since they're auto-registered
-                        bool isObservableModel = namedTypeSymbol.InheritsFromObservableModel();
-                        bool isObservableInterface = namedTypeSymbol.InheritsFromIObservableModel();
-                        
-                        if (!isRegistered && !isObservableModel && !isObservableInterface)
-                        {
-                            var diagnostic = Diagnostic.Create(
-                                DiagnosticDescriptors.ModelReferenceNotRegisteredError,
-                                attribute.GetLocation(),
-                                className);
-                            return (namedTypeSymbol, diagnostic); // Return the type but with diagnostic
-                        }
-                    }
-
-                    return (namedTypeSymbol, null);
                 }
             }
         }
@@ -63,6 +50,196 @@ public static class AttributeAnalysisExtensions
             // Return null on any error during extraction
         }
         return (null, null);
+    }
+
+    private static (INamedTypeSymbol? typeSymbol, Diagnostic? diagnostic) ValidateAndReturnTypeSymbol(
+        INamedTypeSymbol namedTypeSymbol, 
+        AttributeSyntax attribute, 
+        ServiceInfoList? serviceInfoList)
+    {
+        // Check if type inherits from ObservableModel or IObservableModel
+        if (!namedTypeSymbol.InheritsFromObservableModel() && !namedTypeSymbol.InheritsFromIObservableModel())
+        {
+            var diagnostic = Diagnostic.Create(
+                DiagnosticDescriptors.InvalidModelReferenceTargetError,
+                attribute.GetLocation(),
+                namedTypeSymbol.Name);
+            return (null, diagnostic);
+        }
+
+        // Check if type is registered in service collection
+        if (serviceInfoList != null)
+        {
+            var fullyQualifiedName = namedTypeSymbol.ToDisplayString();
+            var className = namedTypeSymbol.Name;
+            
+            bool isRegistered = serviceInfoList.Services.Any(service => 
+                service.FullyQualifiedName == fullyQualifiedName || 
+                service.ClassName == className ||
+                service.FullyQualifiedName.EndsWith($".{className}"));
+
+            // Skip validation for ObservableModel types and interfaces since they're auto-registered
+            bool isObservableModel = namedTypeSymbol.InheritsFromObservableModel();
+            bool isObservableInterface = namedTypeSymbol.InheritsFromIObservableModel();
+            
+            if (!isRegistered && !isObservableModel && !isObservableInterface)
+            {
+                var diagnostic = Diagnostic.Create(
+                    DiagnosticDescriptors.ModelReferenceNotRegisteredError,
+                    attribute.GetLocation(),
+                    className);
+                return (namedTypeSymbol, diagnostic); // Return the type but with diagnostic
+            }
+        }
+
+        return (namedTypeSymbol, null);
+    }
+
+    public static (INamedTypeSymbol? typeSymbol, Diagnostic? diagnostic) ValidateGenericTypeConstraints(
+        this INamedTypeSymbol referencedType,
+        INamedTypeSymbol referencingType,
+        AttributeSyntax attribute)
+    {
+        // If the referenced type is not generic, no constraint validation needed
+        if (!referencedType.IsGenericType)
+        {
+            return (referencedType, null);
+        }
+
+        // Check if referenced type is an open generic type 
+        // For unbound generics like typeof(MyClass<,>), we need to check if it has type parameters
+        var isOpenGeneric = referencedType.IsGenericType && 
+                           (referencedType.IsUnboundGenericType || 
+                            referencedType.TypeParameters.Length > 0);
+        
+        if (isOpenGeneric)
+        {
+            // Referencing type must also be generic
+            if (!referencingType.IsGenericType)
+            {
+                var diagnostic = Diagnostic.Create(
+                    DiagnosticDescriptors.InvalidOpenGenericReferenceError,
+                    attribute.GetLocation(),
+                    referencedType.Name,
+                    referencingType.Name);
+                return (null, diagnostic);
+            }
+
+            // Check that generic arity matches
+            var referencedArity = referencedType.TypeParameters.Length;
+            var referencingArity = referencingType.TypeParameters.Length;
+
+            if (referencedArity != referencingArity)
+            {
+                var diagnostic = Diagnostic.Create(
+                    DiagnosticDescriptors.GenericArityMismatchError,
+                    attribute.GetLocation(),
+                    referencedType.Name,
+                    referencedArity,
+                    referencingType.Name,
+                    referencingArity);
+                return (null, diagnostic);
+            }
+
+            // Validate type parameter constraints
+            for (int i = 0; i < referencedArity; i++)
+            {
+                var referencedParam = referencedType.TypeParameters[i];
+                var referencingParam = referencingType.TypeParameters[i];
+
+                var constraintValidation = ValidateTypeParameterConstraints(referencedParam, referencingParam, referencedType, referencingType, attribute);
+                if (constraintValidation.diagnostic != null)
+                {
+                    return (null, constraintValidation.diagnostic);
+                }
+            }
+
+            // Return the unbound generic type for code generation
+            return (referencedType, null);
+        }
+
+        // For closed generic types, just return as-is
+        return (referencedType, null);
+    }
+
+    private static (bool isValid, Diagnostic? diagnostic) ValidateTypeParameterConstraints(
+        ITypeParameterSymbol referencedParam,
+        ITypeParameterSymbol referencingParam,
+        INamedTypeSymbol referencedType,
+        INamedTypeSymbol referencingType,
+        AttributeSyntax attribute)
+    {
+        // Compare constraint types
+        var referencedConstraints = GetConstraintString(referencedParam);
+        var referencingConstraints = GetConstraintString(referencingParam);
+
+        // Simple constraint comparison - could be enhanced for more sophisticated validation
+        if (referencedConstraints != referencingConstraints)
+        {
+            var diagnostic = Diagnostic.Create(
+                DiagnosticDescriptors.TypeConstraintMismatchError,
+                attribute.GetLocation(),
+                referencedParam.Name,
+                referencedType.Name,
+                referencedConstraints,
+                referencingType.Name,
+                referencingConstraints);
+            return (false, diagnostic);
+        }
+
+        return (true, null);
+    }
+
+    private static string GetConstraintString(ITypeParameterSymbol typeParam)
+    {
+        var constraints = new List<string>();
+
+        if (typeParam.HasReferenceTypeConstraint)
+            constraints.Add("class");
+        
+        if (typeParam.HasValueTypeConstraint)
+            constraints.Add("struct");
+            
+        if (typeParam.HasUnmanagedTypeConstraint)
+            constraints.Add("unmanaged");
+            
+        if (typeParam.HasNotNullConstraint)
+            constraints.Add("notnull");
+
+        foreach (var constraintType in typeParam.ConstraintTypes)
+        {
+            constraints.Add(constraintType.ToDisplayString());
+        }
+
+        if (typeParam.HasConstructorConstraint)
+            constraints.Add("new()");
+
+        return constraints.Any() ? string.Join(", ", constraints) : "none";
+    }
+
+    private static (string propertyTypeName, string propertyName) GetPropertyTypeAndName(
+        INamedTypeSymbol referencedType, 
+        INamedTypeSymbol referencingType)
+    {
+        var propertyName = referencedType.Name;
+        
+        // If the referenced type is an open generic type, construct the concrete type  
+        var isOpenGeneric = referencedType.IsGenericType && 
+                           (referencedType.IsUnboundGenericType || 
+                            referencedType.TypeParameters.Length > 0);
+                            
+        if (isOpenGeneric && referencingType.IsGenericType)
+        {
+            // For open generic types, use the type parameters from the referencing type
+            var typeParameters = referencingType.TypeParameters.Select(tp => tp.Name).ToArray();
+            var concreteTypeName = $"{referencedType.Name}<{string.Join(", ", typeParameters)}>";
+            
+            return (concreteTypeName, propertyName);
+        }
+        
+        // For closed generic types or non-generic types, use the full type name
+        var fullTypeName = referencedType.ToDisplayString();
+        return (fullTypeName, propertyName);
     }
 
     public static INamedTypeSymbol? ExtractReferencedModelType(this AttributeSyntax attribute, SemanticModel semanticModel)
@@ -233,14 +410,32 @@ public static class AttributeAnalysisExtensions
                     
                     if (referencedModelType != null)
                     {
-                        var propertyName = referencedModelType.Name; // Simple name as property
-                        var usedProperties = classDecl.AnalyzeModelReferenceUsage(referencedModelType.Name);
-                        
-                        modelReferences.Add(new ModelReferenceInfo(
-                            referencedModelType.Name,
-                            referencedModelType.ContainingNamespace.ToDisplayString(),
-                            propertyName,
-                            usedProperties));
+                        // Get the referencing class symbol for constraint validation
+                        var referencingClassSymbol = semanticModel.GetDeclaredSymbol(classDecl);
+                        if (referencingClassSymbol is INamedTypeSymbol referencingTypeSymbol)
+                        {
+                            // Validate generic type constraints if the referenced type is generic
+                            var (validatedType, constraintDiagnostic) = referencedModelType.ValidateGenericTypeConstraints(referencingTypeSymbol, attribute);
+                            
+                            if (constraintDiagnostic != null)
+                            {
+                                diagnostics.Add(constraintDiagnostic);
+                                continue; // Skip adding this reference if constraint validation failed
+                            }
+                            
+                            if (validatedType != null)
+                            {
+                                // For open generic types, we need to construct the concrete type name using referencing class's type parameters
+                                var (propertyTypeName, propertyName) = GetPropertyTypeAndName(validatedType, referencingTypeSymbol);
+                                var usedProperties = classDecl.AnalyzeModelReferenceUsage(propertyName);
+                                
+                                modelReferences.Add(new ModelReferenceInfo(
+                                    propertyTypeName,
+                                    validatedType.ContainingNamespace.ToDisplayString(),
+                                    propertyName,
+                                    usedProperties));
+                            }
+                        }
                     }
                 }
             }

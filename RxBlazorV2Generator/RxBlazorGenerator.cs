@@ -133,6 +133,7 @@ public class RxBlazorGenerator : IIncrementalGenerator
             static (spc, models) => 
             {
                 ObservableModelCodeGenerator.GenerateAddObservableModelsExtension(spc, models.Where(m => m != null).ToArray()!);
+                ObservableModelCodeGenerator.GenerateAddGenericObservableModelsExtension(spc, models.Where(m => m != null).ToArray()!);
             });
 
     }

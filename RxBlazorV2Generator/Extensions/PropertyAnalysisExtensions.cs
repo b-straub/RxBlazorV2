@@ -7,7 +7,7 @@ namespace RxBlazorV2Generator.Extensions;
 
 public static class PropertyAnalysisExtensions
 {
-    public static List<PartialPropertyInfo> ExtractPartialProperties(this ClassDeclarationSyntax classDecl)
+    public static List<PartialPropertyInfo> ExtractPartialProperties(this ClassDeclarationSyntax classDecl, SemanticModel semanticModel)
     {
         var partialProperties = new List<PartialPropertyInfo>();
 
@@ -17,9 +17,11 @@ public static class PropertyAnalysisExtensions
                 member.AccessorList?.Accessors.Any(a => a.IsKind(SyntaxKind.GetAccessorDeclaration)) == true &&
                 member.AccessorList?.Accessors.Any(a => a.IsKind(SyntaxKind.SetAccessorDeclaration)) == true)
             {
+                var isObservableCollection = member.IsObservableCollectionProperty(semanticModel);
                 partialProperties.Add(new PartialPropertyInfo(
                     member.Identifier.ValueText,
-                    member.Type!.ToString()));
+                    member.Type!.ToString(),
+                    isObservableCollection));
             }
         }
 
@@ -179,5 +181,41 @@ public static class PropertyAnalysisExtensions
         }
         
         return modifiedProperties.ToList();
+    }
+
+    public static bool IsObservableCollectionProperty(this PropertyDeclarationSyntax property, SemanticModel semanticModel)
+    {
+        try
+        {
+            // Get the type symbol for the property
+            var propertySymbol = semanticModel.GetDeclaredSymbol(property);
+            if (propertySymbol is not IPropertySymbol propSymbol) 
+                return false;
+
+            var propertyType = propSymbol.Type;
+            
+            // Check if the type implements IObservableCollection<T>
+            return ImplementsIObservableCollection(propertyType);
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    private static bool ImplementsIObservableCollection(ITypeSymbol typeSymbol)
+    {
+        // Check all interfaces implemented by this type
+        foreach (var interfaceType in typeSymbol.AllInterfaces)
+        {
+            // Check for IObservableCollection<T> from ObservableCollections namespace
+            if (interfaceType.Name == "IObservableCollection" && 
+                interfaceType.ContainingNamespace?.ToDisplayString() == "ObservableCollections")
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

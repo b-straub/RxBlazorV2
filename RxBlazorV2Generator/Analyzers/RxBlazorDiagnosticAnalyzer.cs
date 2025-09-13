@@ -25,7 +25,10 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
         DiagnosticDescriptors.ComponentNotObservableError,
         DiagnosticDescriptors.SharedModelNotSingletonError,
         DiagnosticDescriptors.TriggerTypeArgumentsMismatchError,
-        DiagnosticDescriptors.CircularTriggerReferenceError
+        DiagnosticDescriptors.CircularTriggerReferenceError,
+        DiagnosticDescriptors.GenericArityMismatchError,
+        DiagnosticDescriptors.TypeConstraintMismatchError,
+        DiagnosticDescriptors.InvalidOpenGenericReferenceError
     ];
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>

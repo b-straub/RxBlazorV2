@@ -33,15 +33,19 @@ public static class ObservableModelAnalyzer
             if (!namedTypeSymbol.InheritsFromObservableModel()) 
                 return (null, diagnostics);
 
+            var attributes = namedTypeSymbol.GetAttributes();
+            
             // Extract all components using extension methods
             var methods = classDecl.CollectMethods();
-            var partialProperties = classDecl.ExtractPartialProperties();
+            var partialProperties = classDecl.ExtractPartialProperties(semanticModel);
             var (commandProperties, commandPropertiesDiagnostics) = classDecl.ExtractCommandPropertiesWithDiagnostics(methods, semanticModel);
             var (modelReferences, modelReferenceDiagnostics) = classDecl.ExtractModelReferencesWithDiagnostics(semanticModel, serviceClasses);
             var modelScope = classDecl.ExtractModelScopeFromClass(semanticModel);
             var diFields = classDecl.ExtractDIFields(semanticModel, serviceClasses, observableModelClasses);
             var implementedInterfaces = namedTypeSymbol.ExtractObservableModelInterfaces();
-
+            var genericTypes = namedTypeSymbol.ExtractObservableModelGenericTypes();
+            var typeConstrains = classDecl.ExtractTypeConstrains();
+            
             // Add any diagnostics from command properties analysis
             diagnostics.AddRange(commandPropertiesDiagnostics);
             
@@ -58,7 +62,9 @@ public static class ObservableModelAnalyzer
                 modelReferences,
                 modelScope,
                 diFields,
-                implementedInterfaces);
+                implementedInterfaces,
+                genericTypes,
+                typeConstrains);
 
             // Enhance model references with command method analysis
             var enhancedModelReferences = modelInfo.EnhanceModelReferencesWithCommandAnalysis();
@@ -73,7 +79,9 @@ public static class ObservableModelAnalyzer
                 enhancedModelReferences,
                 modelScope,
                 diFields,
-                implementedInterfaces);
+                implementedInterfaces,
+                genericTypes,
+                typeConstrains);
 
             return (finalModelInfo, diagnostics);
         }

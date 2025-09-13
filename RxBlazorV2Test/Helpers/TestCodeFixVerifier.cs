@@ -25,8 +25,8 @@ internal static class CSharpCodeFixVerifier<TAnalyzer, TCodeFix>
 
     public static Task VerifyAnalyzerAsync(string source, params DiagnosticResult[] expected)
     {
-        var test = new Test<TAnalyzer, TCodeFix> { TestCode = source };
-        test.TestState.Sources.Add(("GlobalUsings.cs", SourceText.From(GlobalUsing, Encoding.UTF8)));
+        var test = new CodeFixTest<TAnalyzer, TCodeFix> { TestCode = source };
+        test.TestState.Sources.Add(("GlobalUsings.cs", SourceText.From(TestShared.GlobalUsing, Encoding.UTF8)));
         test.TestBehaviors |= TestBehaviors.SkipGeneratedSourcesCheck;
         test.ExpectedDiagnostics.AddRange(expected);
         return test.RunAsync();
@@ -40,7 +40,7 @@ internal static class CSharpCodeFixVerifier<TAnalyzer, TCodeFix>
 
     private static Task VerifyCodeFixAsync(string source, DiagnosticResult[] expected, string fixedSource, int? codeActionIndex = null)
     {
-        var test = new Test<TAnalyzer, TCodeFix>
+        var test = new CodeFixTest<TAnalyzer, TCodeFix>
         {
             TestCode = source,
             FixedCode = fixedSource,
@@ -48,38 +48,21 @@ internal static class CSharpCodeFixVerifier<TAnalyzer, TCodeFix>
             CodeFixTestBehaviors = codeActionIndex is not null ? CodeFixTestBehaviors.SkipFixAllCheck : CodeFixTestBehaviors.None
         };
         
-        test.TestState.Sources.Add(("GlobalUsings.cs", SourceText.From(GlobalUsing, Encoding.UTF8)));
-        test.FixedState.Sources.Add(("GlobalUsings.cs", SourceText.From(GlobalUsing, Encoding.UTF8)));
+        test.TestState.Sources.Add(("GlobalUsings.cs", SourceText.From(TestShared.GlobalUsing, Encoding.UTF8)));
+        test.FixedState.Sources.Add(("GlobalUsings.cs", SourceText.From(TestShared.GlobalUsing, Encoding.UTF8)));
         test.TestBehaviors |= TestBehaviors.SkipGeneratedSourcesCheck;
         test.ExpectedDiagnostics.AddRange(expected);
         return test.RunAsync();
     }
-
-    private static string GlobalUsing =>
-        """
-        global using global::System;
-        global using global::System.Collections.Generic;
-        global using global::System.IO;
-        global using global::System.Linq;
-        global using global::System.Net.Http;
-        global using global::System.Threading;
-        global using global::System.Threading.Tasks;
-        """;
 }
 
-internal class Test<TAnalyzer, TCodeFix> : CSharpCodeFixTest<TAnalyzer, TCodeFix, DefaultVerifier>
+internal class CodeFixTest<TAnalyzer, TCodeFix> : CSharpCodeFixTest<TAnalyzer, TCodeFix, DefaultVerifier>
     where TAnalyzer : DiagnosticAnalyzer, new()
     where TCodeFix : CodeFixProvider, new()
 {
-    public Test()
+    public CodeFixTest()
     {
-        ReferenceAssemblies = ReferenceAssemblies.Net.Net90
-            .AddPackages([
-                new PackageIdentity("Microsoft.Net.Compilers.Toolset", "4.14.0"), // Use the latest version of the compiler toolset
-                new PackageIdentity("Microsoft.Extensions.DependencyInjection", "9.0.6"),
-                new PackageIdentity("Microsoft.AspNetCore.Components", "9.0.6"),
-                new PackageIdentity("R3", "1.3.0")
-            ]); 
+        ReferenceAssemblies = TestShared.ReferenceAssemblies();
 
         SolutionTransforms.Add((solution, projectId) =>
         {

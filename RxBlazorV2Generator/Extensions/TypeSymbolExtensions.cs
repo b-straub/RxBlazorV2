@@ -5,20 +5,6 @@ namespace RxBlazorV2Generator.Extensions;
 
 public static class TypeSymbolExtensions
 {
-    public static bool InheritsFromObservableModelBase(this INamedTypeSymbol typeSymbol)
-    {
-        // Check if type inherits from ObservableModel (which inherits from ObservableModelBase)
-        var baseType = typeSymbol.BaseType;
-        while (baseType != null)
-        {
-            if (baseType.Name == "ObservableModel" || baseType.Name == "ObservableModelBase")
-                return true;
-            baseType = baseType.BaseType;
-        }
-
-        return false;
-    }
-
     public static bool IsObservableModelClass(this ClassDeclarationSyntax classDecl)
     {
         // Only check partial classes with base types
@@ -94,6 +80,35 @@ public static class TypeSymbolExtensions
         }
         
         return observableInterfaces;
+    }
+    
+    public static string ExtractObservableModelGenericTypes(this INamedTypeSymbol typeSymbol)
+    {
+        if (!typeSymbol.IsGenericType)
+        {
+            return string.Empty;
+        }
+        
+        var genericTypes = new List<string>();
+        
+        // Check all implemented interfaces
+        foreach (var genericType in typeSymbol.TypeArguments)
+        {
+            genericTypes.Add(genericType.ToDisplayString());
+        }
+        
+        var generics = genericTypes.Aggregate((f, n) =>
+            f + ", " + n);
+
+        char[] trims = [' ', ','];
+        generics = generics.TrimEnd(trims);
+            
+        if (generics.Length > 0)
+        {
+            generics = "<" + generics + ">";
+        }
+        
+        return generics;
     }
     
     public static bool IsServiceRegistration(this InvocationExpressionSyntax invocation)
