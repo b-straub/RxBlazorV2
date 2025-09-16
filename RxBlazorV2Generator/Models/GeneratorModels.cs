@@ -37,11 +37,13 @@ public class ObservableModelInfo
     
     public string TypeConstrains { get; }
 
+    public List<string> UsingStatements { get; }
+
     public ObservableModelInfo(string namespaceName, string className, string fullyQualifiedName,
         List<PartialPropertyInfo> partialProperties, List<CommandPropertyInfo> commandProperties,
         Dictionary<string, MethodDeclarationSyntax> methods, List<ModelReferenceInfo> modelReferences,
         string modelScope = "Singleton", List<DIFieldInfo>? diFields = null, List<string>? implementedInterfaces = null,
-        string? genericTypes = null, string? typeConstrains = null)
+        string? genericTypes = null, string? typeConstrains = null, List<string>? usingStatements = null)
     {
         Namespace = namespaceName;
         ClassName = className;
@@ -55,6 +57,7 @@ public class ObservableModelInfo
         ImplementedInterfaces = implementedInterfaces ?? [];
         GenericTypes = genericTypes ?? string.Empty;
         TypeConstrains = typeConstrains ?? string.Empty;
+        UsingStatements = usingStatements ?? [];
     }
 }
 

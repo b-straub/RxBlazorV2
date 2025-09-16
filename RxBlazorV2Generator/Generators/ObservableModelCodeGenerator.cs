@@ -16,24 +16,41 @@ public static class ObservableModelCodeGenerator
         {
             var sb = new StringBuilder();
             sb.AppendLine("#nullable enable");
-            sb.AppendLine("using RxBlazorV2.Model;");
-            sb.AppendLine("using RxBlazorV2.Interface;");
-            sb.AppendLine("using Microsoft.Extensions.DependencyInjection;");
-            sb.AppendLine("using R3;");
-            sb.AppendLine("using ObservableCollections;");
-            sb.AppendLine("using System;");
+
+            // Add all using statements from the source file
+            var requiredUsings = new HashSet<string>(modelInfo.UsingStatements);
+
+            // Add required framework usings
+            requiredUsings.Add("RxBlazorV2.Model");
+            requiredUsings.Add("RxBlazorV2.Interface");
+            requiredUsings.Add("Microsoft.Extensions.DependencyInjection");
+            requiredUsings.Add("R3");
+            requiredUsings.Add("ObservableCollections");
+            requiredUsings.Add("System");
+
+            // Add System.Linq if there are model references
             if (modelInfo.ModelReferences.Any())
             {
-                sb.AppendLine("using System.Linq;");
-                // Add using statements for referenced model namespaces
+                requiredUsings.Add("System.Linq");
+            }
+
+            // Add using statements for referenced model namespaces
+            if (modelInfo.ModelReferences.Any())
+            {
                 foreach (var modelRef in modelInfo.ModelReferences)
                 {
                     if (!string.IsNullOrEmpty(modelRef.ReferencedModelNamespace) &&
                         modelRef.ReferencedModelNamespace != modelInfo.Namespace)
                     {
-                        sb.AppendLine($"using {modelRef.ReferencedModelNamespace};");
+                        requiredUsings.Add(modelRef.ReferencedModelNamespace);
                     }
                 }
+            }
+
+            // Sort and add all using statements
+            foreach (var usingStatement in requiredUsings.OrderBy(u => u))
+            {
+                sb.AppendLine($"using {usingStatement};");
             }
 
             sb.AppendLine();

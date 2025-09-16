@@ -45,6 +45,7 @@ public static class ObservableModelAnalyzer
             var implementedInterfaces = namedTypeSymbol.ExtractObservableModelInterfaces();
             var genericTypes = namedTypeSymbol.ExtractObservableModelGenericTypes();
             var typeConstrains = classDecl.ExtractTypeConstrains();
+            var usingStatements = classDecl.ExtractUsingStatements();
             
             // Add any diagnostics from command properties analysis
             diagnostics.AddRange(commandPropertiesDiagnostics);
@@ -64,7 +65,8 @@ public static class ObservableModelAnalyzer
                 diFields,
                 implementedInterfaces,
                 genericTypes,
-                typeConstrains);
+                typeConstrains,
+                usingStatements);
 
             // Enhance model references with command method analysis
             var enhancedModelReferences = modelInfo.EnhanceModelReferencesWithCommandAnalysis();
@@ -81,7 +83,8 @@ public static class ObservableModelAnalyzer
                 diFields,
                 implementedInterfaces,
                 genericTypes,
-                typeConstrains);
+                typeConstrains,
+                usingStatements);
 
             return (finalModelInfo, diagnostics);
         }
