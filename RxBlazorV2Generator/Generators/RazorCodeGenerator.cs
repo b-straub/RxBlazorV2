@@ -2,13 +2,14 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
 using RxBlazorV2Generator.Models;
 using RxBlazorV2Generator.Diagnostics;
+using System.Collections.Immutable;
 using System.Text;
 
 namespace RxBlazorV2Generator.Generators;
 
 public static class RazorCodeGenerator
 {
-    public static void GenerateRazorConstructors(SourceProductionContext context, RazorCodeBehindInfo razorInfo, int updateFrequencyMs = 100)
+    public static void GenerateRazorConstructors(SourceProductionContext context, RazorCodeBehindInfo razorInfo, ImmutableArray<ObservableModelInfo?> observableModels, int updateFrequencyMs = 100)
     {
         try
         {
@@ -79,13 +80,26 @@ public static class RazorCodeGenerator
                 {
                     var fieldName = fieldProps.Key;
                     var properties = fieldProps.Value.Distinct().ToList();
-                    
+
                     var propertyList = new List<string>();
                     propertyList.AddRange(properties.Select(p => $"\"{p}\""));
                     propertyList.Add($"{fieldName}.ModelID");
-                    
+
+                    // Add observable collection properties from the model
+                    if (razorInfo.FieldToTypeMap.TryGetValue(fieldName, out var fieldType))
+                    {
+                        var modelInfo = observableModels.FirstOrDefault(m => m != null && m.FullyQualifiedName == fieldType);
+                        if (modelInfo != null)
+                        {
+                            var observableCollectionProps = modelInfo.PartialProperties
+                                .Where(p => p.IsObservableCollection)
+                                .Select(p => $"\"{p.Name}\"");
+                            propertyList.AddRange(observableCollectionProps);
+                        }
+                    }
+
                     var observedPropsArray = $"[{string.Join(", ", propertyList)}]";
-                    
+
                     sb.AppendLine($"        Subscriptions.Add({fieldName}.Observable.Where(p => p.Intersect({observedPropsArray}).Any())");
                     sb.AppendLine($"            .Chunk(TimeSpan.FromMilliseconds({updateFrequencyMs}))");
                     sb.AppendLine("            .Subscribe(chunks =>");
@@ -133,13 +147,26 @@ public static class RazorCodeGenerator
                 {
                     var fieldName = fieldProps.Key;
                     var properties = fieldProps.Value.Distinct().ToList();
-                    
+
                     var propertyList = new List<string>();
                     propertyList.AddRange(properties.Select(p => $"\"{p}\""));
                     propertyList.Add($"{fieldName}.ModelID");
-                    
+
+                    // Add observable collection properties from the model
+                    if (razorInfo.FieldToTypeMap.TryGetValue(fieldName, out var fieldType))
+                    {
+                        var modelInfo = observableModels.FirstOrDefault(m => m != null && m.FullyQualifiedName == fieldType);
+                        if (modelInfo != null)
+                        {
+                            var observableCollectionProps = modelInfo.PartialProperties
+                                .Where(p => p.IsObservableCollection)
+                                .Select(p => $"\"{p.Name}\"");
+                            propertyList.AddRange(observableCollectionProps);
+                        }
+                    }
+
                     var observedPropsArray = $"[{string.Join(", ", propertyList)}]";
-                    
+
                     sb.AppendLine($"        {fieldName}.Observable.Where(p => p.Intersect({observedPropsArray}).Any())");
                     sb.AppendLine("            .Subscribe(p =>");
                     sb.AppendLine("            {");

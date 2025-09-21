@@ -115,13 +115,13 @@ public class RxBlazorGenerator : IIncrementalGenerator
             });
 
         // Generate constructors for Razor code-behind classes
-        context.RegisterSourceOutput(combinedRazorInfo.Combine(msbuildProvider),
+        context.RegisterSourceOutput(combinedRazorInfo.Combine(msbuildProvider).Combine(observableModelClasses.Collect()),
             static (spc, combined) =>
             {
-                var (source, config) = combined;
+                var ((source, config), models) = combined;
                 if (source != null)
                 {
-                    RazorCodeGenerator.GenerateRazorConstructors(spc, source, config.UpdateFrequencyMs);
+                    RazorCodeGenerator.GenerateRazorConstructors(spc, source, models, config.UpdateFrequencyMs);
                 }
             });
 
