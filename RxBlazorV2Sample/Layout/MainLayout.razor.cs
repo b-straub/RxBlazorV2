@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Components;
-using RxBlazorV2Sample.Model;
+using SettingsModel = RxBlazorV2Sample.Models.SettingsModel;
 
 namespace RxBlazorV2Sample.Layout;
 

@@ -18,6 +18,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\RxBlazorV2ExternalModel\RxBlazorV2ExternalModel.csproj" />
         <ProjectReference Include="..\RxBlazorV2\RxBlazorV2.csproj"/>
     </ItemGroup>
 

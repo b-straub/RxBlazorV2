@@ -3,9 +3,9 @@ using RxBlazorV2.Model;
 
 namespace RxBlazorV2.Component;
 
-public class ObservableComponent<T> : OwningComponentBase<T> where T : ObservableModel
+public class ObservableComponent<T> : OwningComponentBase<T>, IAsyncDisposable where T : ObservableModel
 {
-    protected T Model => Service;
+    public T Model => Service;
     
     protected override void OnAfterRender(bool firstRender)
     {
@@ -43,5 +43,15 @@ public class ObservableComponent<T> : OwningComponentBase<T> where T : Observabl
     
     protected virtual void OnDispose()
     {
+    }
+    
+    protected virtual ValueTask OnDisposeAsync()
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await OnDisposeAsync();
     }
 }

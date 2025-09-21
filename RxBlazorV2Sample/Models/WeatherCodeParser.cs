@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace RxBlazorV2Sample.Model;
+namespace RxBlazorV2Sample.Models;
 
 public class WeatherCodeParser
 {

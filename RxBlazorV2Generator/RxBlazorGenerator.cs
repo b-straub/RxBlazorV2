@@ -1,10 +1,21 @@
 using Microsoft.CodeAnalysis;
 using RxBlazorV2Generator.Analyzers;
 using RxBlazorV2Generator.Generators;
-using System.Reflection;
 using RxBlazorV2Generator.Models;
 
 namespace RxBlazorV2Generator;
+
+public class GeneratorConfig
+{
+    public int UpdateFrequencyMs { get; }
+    public string RootNamespace { get; }
+
+    public GeneratorConfig(int updateFrequencyMs, string rootNamespace)
+    {
+        UpdateFrequencyMs = updateFrequencyMs;
+        RootNamespace = rootNamespace;
+    }
+}
 
 [Generator]
 public class RxBlazorGenerator : IIncrementalGenerator
@@ -16,33 +27,19 @@ public class RxBlazorGenerator : IIncrementalGenerator
             .Select(static (provider, _) =>
             {
                 provider.GlobalOptions.TryGetValue("build_property.RxBlazorObservableUpdateFrequencyMs", out var updateFrequencyValue);
-                return int.TryParse(updateFrequencyValue, out var frequency) ? frequency : 100; // Default to 100ms
+                var updateFrequency = int.TryParse(updateFrequencyValue, out var frequency) ? frequency : 100; // Default to 100ms
+
+                // Get root namespace from project properties
+                provider.GlobalOptions.TryGetValue("build_property.RootNamespace", out var rootNamespace);
+                if (string.IsNullOrEmpty(rootNamespace))
+                {
+                    provider.GlobalOptions.TryGetValue("build_property.AssemblyName", out rootNamespace);
+                }
+                rootNamespace ??= "Global"; // Fallback if neither is available
+
+                return new GeneratorConfig(updateFrequency, rootNamespace);
             });
 
-        // Register the ObservableCommandAttribute
-        context.RegisterPostInitializationOutput(ctx => ctx.AddSource(
-            "ObservableCommandAttribute.g.cs",
-            Microsoft.CodeAnalysis.Text.SourceText.From(GetEmbeddedResourceContent("ObservableCommandAttribute.cs"), System.Text.Encoding.UTF8)));
-
-        // Register the ObservableCommandTriggerAttribute
-        context.RegisterPostInitializationOutput(ctx => ctx.AddSource(
-            "ObservableCommandTriggerAttribute.g.cs",
-            Microsoft.CodeAnalysis.Text.SourceText.From(GetEmbeddedResourceContent("ObservableCommandTriggerAttribute.cs"), System.Text.Encoding.UTF8)));
-        
-        // Register the ObservableCommandTriggerAttributeT
-        context.RegisterPostInitializationOutput(ctx => ctx.AddSource(
-            "ObservableCommandTriggerAttributeT.g.cs",
-            Microsoft.CodeAnalysis.Text.SourceText.From(GetEmbeddedResourceContent("ObservableCommandTriggerAttributeT.cs"), System.Text.Encoding.UTF8)));
-        
-        // Register the ObservableModelReferenceAttribute
-        context.RegisterPostInitializationOutput(ctx => ctx.AddSource(
-            "ObservableModelReferenceAttribute.g.cs",
-            Microsoft.CodeAnalysis.Text.SourceText.From(GetEmbeddedResourceContent("ObservableModelReferenceAttribute.cs"), System.Text.Encoding.UTF8)));
-
-        // Register the ObservableModelScopeAttribute
-        context.RegisterPostInitializationOutput(ctx => ctx.AddSource(
-            "ObservableModelScopeAttribute.g.cs",
-            Microsoft.CodeAnalysis.Text.SourceText.From(GetEmbeddedResourceContent("ObservableModelScopeAttribute.cs"), System.Text.Encoding.UTF8)));
 
         // Analyze service registrations to detect DI services
         var serviceClasses = context.SyntaxProvider
@@ -80,12 +77,12 @@ public class RxBlazorGenerator : IIncrementalGenerator
 
         // Generate code for observable models
         context.RegisterSourceOutput(observableModelClasses.Combine(msbuildProvider),
-            static (spc, combined) => 
+            static (spc, combined) =>
             {
-                var (modelInfo, updateFrequencyMs) = combined;
+                var (modelInfo, config) = combined;
                 if (modelInfo != null)
                 {
-                    ObservableModelCodeGenerator.GenerateObservableModelPartials(spc, modelInfo, updateFrequencyMs);
+                    ObservableModelCodeGenerator.GenerateObservableModelPartials(spc, modelInfo, config.UpdateFrequencyMs);
                 }
             });
 
@@ -119,37 +116,25 @@ public class RxBlazorGenerator : IIncrementalGenerator
 
         // Generate constructors for Razor code-behind classes
         context.RegisterSourceOutput(combinedRazorInfo.Combine(msbuildProvider),
-            static (spc, combined) => 
+            static (spc, combined) =>
             {
-                var (source, updateFrequencyMs) = combined;
+                var (source, config) = combined;
                 if (source != null)
                 {
-                    RazorCodeGenerator.GenerateRazorConstructors(spc, source, updateFrequencyMs);
+                    RazorCodeGenerator.GenerateRazorConstructors(spc, source, config.UpdateFrequencyMs);
                 }
             });
 
         // Generate AddObservableModels extension method
-        context.RegisterSourceOutput(observableModelClasses.Collect(),
-            static (spc, models) => 
+        context.RegisterSourceOutput(observableModelClasses.Collect().Combine(msbuildProvider),
+            static (spc, combined) =>
             {
-                ObservableModelCodeGenerator.GenerateAddObservableModelsExtension(spc, models.Where(m => m != null).ToArray()!);
-                ObservableModelCodeGenerator.GenerateAddGenericObservableModelsExtension(spc, models.Where(m => m != null).ToArray()!);
+                var (models, config) = combined;
+                var nonNullModels = models.Where(m => m != null).Select(x => x!).ToArray();
+                ObservableModelCodeGenerator.GenerateAddObservableModelsExtension(spc, nonNullModels, config.RootNamespace);
+                ObservableModelCodeGenerator.GenerateAddGenericObservableModelsExtension(spc, nonNullModels, config.RootNamespace);
             });
 
     }
 
-    private static string GetEmbeddedResourceContent(string fileName)
-    {
-        var assembly = Assembly.GetExecutingAssembly();
-        var resourceName = $"RxBlazorV2Generator.Templates.{fileName}";
-        
-        using var stream = assembly.GetManifestResourceStream(resourceName);
-        if (stream == null)
-        {
-            throw new InvalidOperationException($"Could not find embedded resource: {resourceName}");
-        }
-        
-        using var reader = new StreamReader(stream);
-        return reader.ReadToEnd();
-    }
 }

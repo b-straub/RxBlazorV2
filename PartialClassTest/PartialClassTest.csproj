@@ -16,6 +16,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RxBlazorV2\RxBlazorV2.csproj" />
+    <ProjectReference Include="..\RxBlazorV2Generator\RxBlazorV2Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
+    <ProjectReference Include="..\RxBlazorV2CodeFix\RxBlazorV2CodeFix.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
   </ItemGroup>
 
   <ItemGroup>

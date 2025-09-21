@@ -1,4 +1,4 @@
-using RxBlazorV2Sample.Model;
+using RxBlazorV2Sample.Models;
 
 namespace RxBlazorV2Sample.Extensions;
 

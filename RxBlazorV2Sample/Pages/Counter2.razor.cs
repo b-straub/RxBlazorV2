@@ -1,5 +1,5 @@
 using RxBlazorV2.Component;
-using RxBlazorV2Sample.Model;
+using CounterModel = RxBlazorV2Sample.Models.CounterModel;
 
 namespace RxBlazorV2Sample.Pages
 {

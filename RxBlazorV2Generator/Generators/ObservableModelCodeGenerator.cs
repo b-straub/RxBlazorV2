@@ -468,8 +468,13 @@ public static class ObservableModelCodeGenerator
 
 
     public static void GenerateAddObservableModelsExtension(SourceProductionContext context,
-        ObservableModelInfo[] models)
+        ObservableModelInfo[] models, string rootNamespace)
     {
+        if (models.Length == 0)
+        {
+            return;
+        }
+        
         try
         {
             var sb = new StringBuilder();
@@ -481,8 +486,7 @@ public static class ObservableModelCodeGenerator
             var namespaces = models.Select(m => m.Namespace).Distinct().Where(ns => !string.IsNullOrEmpty(ns))
                 .ToArray();
 
-            var rootNamespace = namespaces.First().IndexOf(".", StringComparison.InvariantCulture) > 0 ? 
-                namespaces.First().Split('.')[0] : namespaces.First();
+            // rootNamespace is now provided as parameter
             
             foreach (var ns in namespaces)
             {
@@ -503,9 +507,10 @@ public static class ObservableModelCodeGenerator
             sb.AppendLine();
             sb.AppendLine($"namespace {rootNamespace};");
             sb.AppendLine();
-            sb.AppendLine("public static class ObservableModelServiceCollectionExtensions");
+            
+            sb.AppendLine($"public static partial class ObservableModels");
             sb.AppendLine("{");
-            sb.AppendLine("    public static IServiceCollection AddObservableModels(this IServiceCollection services)");
+            sb.AppendLine("    public static IServiceCollection Initialize(IServiceCollection services)");
             sb.AppendLine("    {");
 
             foreach (var model in models.Where(m => m.GenericTypes.Length == 0))
@@ -549,7 +554,7 @@ public static class ObservableModelCodeGenerator
             sb.AppendLine("    }");
             sb.AppendLine("}");
 
-            context.AddSource("ObservableModelServiceCollectionExtensions.g.cs",
+            context.AddSource("ObservableModelsServiceCollectionExtension.g.cs",
                 SourceText.From(sb.ToString(), Encoding.UTF8));
         }
         catch (Exception ex)
@@ -557,15 +562,20 @@ public static class ObservableModelCodeGenerator
             var diagnostic = Diagnostic.Create(
                 DiagnosticDescriptors.CodeGenerationError,
                 Location.None,
-                "AddObservableModelsExtension",
+                "ObservableModelsServices",
                 ex.Message);
             context.ReportDiagnostic(diagnostic);
         }
     }
 
     public static void GenerateAddGenericObservableModelsExtension(SourceProductionContext context,
-        ObservableModelInfo[] models)
+        ObservableModelInfo[] models, string rootNamespace)
     {
+        if (models.Length == 0)
+        {
+            return;
+        }
+        
         try
         {
             var sb = new StringBuilder();
@@ -576,8 +586,7 @@ public static class ObservableModelCodeGenerator
             var namespaces = models.Select(m => m.Namespace).Distinct().Where(ns => !string.IsNullOrEmpty(ns))
                 .ToArray();
             
-            var rootNamespace = namespaces.First().IndexOf(".", StringComparison.InvariantCulture) > 0 ? 
-                namespaces.First().Split('.')[0] : namespaces.First();
+            // rootNamespace is now provided as parameter
 
             foreach (var ns in namespaces)
             {
@@ -598,14 +607,14 @@ public static class ObservableModelCodeGenerator
             sb.AppendLine();
             sb.AppendLine($"namespace {rootNamespace};");
             sb.AppendLine();
-
-            sb.AppendLine($"public static class GenericModelsServiceCollectionExtensions");
+            
+            sb.AppendLine($"public static partial class ObservableModels");
             sb.AppendLine("{");
 
             foreach (var model in models.Where(m => m.GenericTypes.Length > 0))
             {
                 sb.AppendLine(
-                    $"    public static IServiceCollection Add{model.ClassName}{model.GenericTypes}(this IServiceCollection services)");
+                    $"    public static IServiceCollection {model.ClassName}{model.GenericTypes}(IServiceCollection services)");
 
                 if (model.TypeConstrains.Length > 0)
                 {
@@ -661,7 +670,7 @@ public static class ObservableModelCodeGenerator
             var diagnostic = Diagnostic.Create(
                 DiagnosticDescriptors.CodeGenerationError,
                 Location.None,
-                "AddObservableModelsExtension",
+                "GenericModelsServices",
                 ex.Message);
             context.ReportDiagnostic(diagnostic);
         } 

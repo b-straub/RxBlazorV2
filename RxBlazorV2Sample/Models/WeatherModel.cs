@@ -3,7 +3,7 @@ using RxBlazorV2.Model;
 using RxBlazorV2Sample.Interfaces;
 using RxBlazorV2Sample.Services;
 
-namespace RxBlazorV2Sample.Model;
+namespace RxBlazorV2Sample.Models;
 
 [ObservableModelReference<ISettingsModel>]
 [ObservableModelScope(ModelScope.Scoped)]

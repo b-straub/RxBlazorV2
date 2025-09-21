@@ -23,10 +23,11 @@ namespace Test
         // lang=csharp
         const string generated = @"
 #nullable enable
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
 using Microsoft.Extensions.DependencyInjection;
+using ObservableCollections;
 using R3;
+using RxBlazorV2.Interface;
+using RxBlazorV2.Model;
 using System;
 
 namespace Test;

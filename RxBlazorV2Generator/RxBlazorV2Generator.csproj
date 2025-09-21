@@ -16,12 +16,5 @@
     <PackageReference Include="System.Composition" Version="9.0.0" PrivateAssets="all" />
   </ItemGroup>
 
-  <ItemGroup>
-    <EmbeddedResource Include="Templates\ObservableCommandAttribute.cs" />
-    <EmbeddedResource Include="Templates\ObservableCommandTriggerAttribute.cs" />
-    <EmbeddedResource Include="Templates\ObservableCommandTriggerAttributeT.cs" />
-    <EmbeddedResource Include="Templates\ObservableModelReferenceAttribute.cs" />
-    <EmbeddedResource Include="Templates\ObservableModelScopeAttribute.cs" />
-  </ItemGroup>
 
 </Project>

@@ -1,7 +1,7 @@
 using MudBlazor;
 using RxBlazorV2.Component;
 using RxBlazorV2Sample.Interfaces;
-using RxBlazorV2Sample.Model;
+using WeatherModel = RxBlazorV2Sample.Models.WeatherModel;
 
 namespace RxBlazorV2Sample.Pages;
 

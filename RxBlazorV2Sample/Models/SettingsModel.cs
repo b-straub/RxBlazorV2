@@ -1,9 +1,9 @@
+using MudBlazor;
 using RxBlazorV2.Interface;
 using RxBlazorV2.Model;
 using RxBlazorV2Sample.Interfaces;
-using MudBlazor;
 
-namespace RxBlazorV2Sample.Model;
+namespace RxBlazorV2Sample.Models;
 
 [ObservableModelScope(ModelScope.Singleton)]
 public partial class SettingsModel : ObservableModel, ISettingsModel

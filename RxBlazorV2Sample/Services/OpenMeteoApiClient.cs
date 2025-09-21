@@ -1,6 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using RxBlazorV2Sample.Model;
+using RxBlazorV2Sample.Models;
 
 namespace RxBlazorV2Sample.Services;
 

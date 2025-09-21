@@ -18,15 +18,14 @@ internal static class RxBlazorGeneratorVerifier
     {
         var test = new RxBlazorGeneratorTest { TestCode = source };
         test.TestState.Sources.Add(("GlobalUsings.cs", SourceText.From(TestShared.GlobalUsing, Encoding.UTF8)));
-        foreach (var att in test.GetGeneratedAttributes())
-        {
-            test.TestState.GeneratedSources.Add(att);
-        }
 
         test.TestState.GeneratedSources.Add((typeof(RxBlazorGenerator), $"Test.{modelName}.g.cs",
             SourceText.From(generated.TrimStart(), Encoding.UTF8)));
-        test.TestState.GeneratedSources.Add((typeof(RxBlazorGenerator), "ObservableModelServiceExtensions.g.cs",
-                SourceText.From(RxBlazorGeneratorTest.ServiceExtension(modelName), Encoding.UTF8))
+        test.TestState.GeneratedSources.Add((typeof(RxBlazorGenerator), "ObservableModelsServiceCollectionExtension.g.cs",
+                SourceText.From(RxBlazorGeneratorTest.ObservableModelsServiceExtension(modelName), Encoding.UTF8))
+        );
+        test.TestState.GeneratedSources.Add((typeof(RxBlazorGenerator), "GenericModelsServiceCollectionExtension.g.cs",
+                SourceText.From(RxBlazorGeneratorTest.GenricModelsServiceExtension(modelName), Encoding.UTF8))
         );
         test.ExpectedDiagnostics.AddRange(expected);
         test.TestState.ReferenceAssemblies = TestShared.ReferenceAssemblies();
@@ -44,54 +43,41 @@ internal class RxBlazorGeneratorTest : CSharpSourceGeneratorTest<RxBlazorGenerat
             languageVersion: LanguageVersion.Preview);
     }
 
-    public IEnumerable<(Type, string, SourceText)> GetGeneratedAttributes()
-    {
-        return
-        [
-            (typeof(RxBlazorGenerator), "ObservableCommandAttribute.g.cs",
-                SourceText.From(GetEmbeddedResourceContent("ObservableCommandAttribute.cs"), Encoding.UTF8)),
-            (typeof(RxBlazorGenerator), "ObservableCommandTriggerAttribute.g.cs",
-                SourceText.From(GetEmbeddedResourceContent("ObservableCommandTriggerAttribute.cs"), Encoding.UTF8)),
-            (typeof(RxBlazorGenerator), "ObservableCommandTriggerAttributeT.g.cs",
-                SourceText.From(GetEmbeddedResourceContent("ObservableCommandTriggerAttributeT.cs"), Encoding.UTF8)),
-            (typeof(RxBlazorGenerator), "ObservableModelReferenceAttribute.g.cs",
-                SourceText.From(GetEmbeddedResourceContent("ObservableModelReferenceAttribute.cs"), Encoding.UTF8)),
-            (typeof(RxBlazorGenerator), "ObservableModelScopeAttribute.g.cs",
-                SourceText.From(GetEmbeddedResourceContent("ObservableModelScopeAttribute.cs"), Encoding.UTF8)),
-        ];
-    }
 
-    private static string GetEmbeddedResourceContent(string fileName)
-    {
-        var assembly = typeof(RxBlazorGenerator).Assembly;
-        var resourceName = $"RxBlazorV2Generator.Templates.{fileName}";
-
-        using var stream = assembly.GetManifestResourceStream(resourceName);
-        if (stream == null)
-        {
-            throw new InvalidOperationException($"Could not find embedded resource: {resourceName}");
-        }
-
-        using var reader = new StreamReader(stream);
-        return reader.ReadToEnd();
-    }
-
-    public static string ServiceExtension(string modelName)
+    public static string ObservableModelsServiceExtension(string modelName)
     {
         var serviceExtension = @$"
 using Microsoft.Extensions.DependencyInjection;
 using RxBlazorV2.Model;
 using Test;
 
-namespace Microsoft.Extensions.DependencyInjection;
+namespace Test;
 
-public static class ObservableModelServiceCollectionExtensions
+public static partial class TestServices
 {{
-    public static IServiceCollection AddObservableModels(this IServiceCollection services)
+    public static IServiceCollection Initialize(IServiceCollection services)
     {{
         services.AddSingleton<{modelName}>();
         return services;
     }}
+}}";
+        serviceExtension = serviceExtension.TrimStart();
+        serviceExtension = serviceExtension.Replace("\r\n", Environment.NewLine);
+        serviceExtension = serviceExtension += Environment.NewLine;
+        return serviceExtension;
+    }
+    
+    public static string GenricModelsServiceExtension(string modelName)
+    {
+        var serviceExtension = @$"
+using Microsoft.Extensions.DependencyInjection;
+using RxBlazorV2.Model;
+using Test;
+
+namespace Test;
+
+public static partial class TestServices
+{{
 }}";
         serviceExtension = serviceExtension.TrimStart();
         serviceExtension = serviceExtension.Replace("\r\n", Environment.NewLine);

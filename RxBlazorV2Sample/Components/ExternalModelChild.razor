@@ -1,0 +1,29 @@
+@using RxBlazorV2ExternalModel.Type
+@inherits ExternalModel
+
+<MudStack Row="true" AlignItems="AlignItems.Center">
+    <MudButton @onclick=@Add Variant="Variant.Filled"
+               Color="Color.Secondary"
+               Disabled="@(!Model.AddToTList.CanExecute)">
+        AddToList
+    </MudButton>
+    
+    @if (Model.TestList.Count > 0)
+    {
+        @Model.TestList.Select(l => l.Name + l.Count).Aggregate((s, n) => s + ", " + n)
+    }
+    else
+    {
+        <MudText>No Content</MudText>
+    }
+</MudStack>
+
+@code
+{
+    private int _count;
+
+    private void Add()
+    {
+        Model.AddToTList.Execute(new ListType("Test", _count++));
+    }
+}

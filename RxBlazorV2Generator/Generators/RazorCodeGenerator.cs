@@ -45,8 +45,7 @@ public static class RazorCodeGenerator
             // Generate CompositeDisposable for subscription management
             if (razorInfo.FieldToPropertiesMap.Any())
             {
-                sb.AppendLine("    private readonly CompositeDisposable _subscriptions = new();");
-                sb.AppendLine("    protected IDisposable Subscriptions => _subscriptions;");
+                sb.AppendLine("    protected CompositeDisposable Subscriptions { get; } = new();");
                 sb.AppendLine();
             }
             
@@ -87,7 +86,7 @@ public static class RazorCodeGenerator
                     
                     var observedPropsArray = $"[{string.Join(", ", propertyList)}]";
                     
-                    sb.AppendLine($"        _subscriptions.Add({fieldName}.Observable.Where(p => p.Intersect({observedPropsArray}).Any())");
+                    sb.AppendLine($"        Subscriptions.Add({fieldName}.Observable.Where(p => p.Intersect({observedPropsArray}).Any())");
                     sb.AppendLine($"            .Chunk(TimeSpan.FromMilliseconds({updateFrequencyMs}))");
                     sb.AppendLine("            .Subscribe(chunks =>");
                     sb.AppendLine("            {");

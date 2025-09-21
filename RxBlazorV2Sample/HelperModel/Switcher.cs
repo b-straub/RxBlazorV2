@@ -1,11 +1,10 @@
 using RxBlazorV2.Interface;
 using RxBlazorV2.Model;
-using RxBlazorV2Sample.Model;
 
 namespace RxBlazorV2Sample.HelperModel;
 
 [ObservableModelReference<NotAModel>]
-[ObservableModelReference<CounterModel>]
+[ObservableModelReference<Models.CounterModel>]
 [ObservableModelScope(ModelScope.Transient)]
 public partial class Switcher : ObservableModel
 {

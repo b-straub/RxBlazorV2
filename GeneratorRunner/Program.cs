@@ -6,8 +6,7 @@ namespace GeneratorRunner
     {
         private static readonly string[] SourcePaths =
         [
-            "../RxBlazorV2Sample/HelperModel/GenericModel.cs",
-            "../RxBlazorV2Sample/Model/CounterModel.cs",
+            "../RxBlazorV2ExternalModel/Models/Model.cs",
             //"../../WebAppBase/WebAppBase.Shared/Models/Sync/SyncNotificationModel.cs",
             //"../../WebAppBase/WebAppBase.Shared/Models/Sync/SyncModels.cs",
             //"../../WebAppBase/WebAppBase.Shared/Services/AdaptivePollerService.cs",
@@ -15,7 +14,7 @@ namespace GeneratorRunner
         
         private static readonly string[] AdditionalTextPaths =
         [
-            "../RxBlazorV2Sample/Pages/Counter2.razor"
+            "../RxBlazorV2ExternalModel/Components/ExternalModel.razor"
             //"../../WebAppBase/WebAppBase.Shared/Components/SyncManager.razor"
         ];
 

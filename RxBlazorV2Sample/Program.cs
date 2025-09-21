@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using MudBlazor.Services;
 using RxBlazorV2Sample;
-using RxBlazorV2Sample.Model;
+using RxBlazorV2Sample.Models;
 using RxBlazorV2Sample.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -11,13 +11,14 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 builder.Services.AddMudServices();
-builder.Services.AddObservableModels();
-builder.Services.AddGenericModel<string, int>();
-builder.Services.AddAnotherGenericModel<string, int>();
-
 // Add weather services
 builder.Services.AddScoped<WeatherCodeParser>();
 builder.Services.AddScoped<OpenMeteoApiClient>();
 builder.Services.AddScoped<LocationService>();
+
+ObservableModels.Initialize(builder.Services);
+RxBlazorV2ExternalModel.ObservableModels.Initialize(builder.Services);
+ObservableModels.GenericModel<string, int>(builder.Services);
+ObservableModels.AnotherGenericModel<string, int>(builder.Services);
 
 await builder.Build().RunAsync();

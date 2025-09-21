@@ -23,7 +23,8 @@ internal static class TestShared
                     "4.14.0"), // Use the latest version of the compiler toolset
                 new PackageIdentity("Microsoft.Extensions.DependencyInjection", "9.0.6"),
                 new PackageIdentity("Microsoft.AspNetCore.Components", "9.0.6"),
-                new PackageIdentity("R3", "1.3.0")
+                new PackageIdentity("R3", "1.3.0"),
+                new PackageIdentity("ObservableCollections.R3", "3.3.4")
             ]);
     }
 }
