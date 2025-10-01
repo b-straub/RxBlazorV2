@@ -9,16 +9,30 @@ public partial class TestModel : ObservableModel
 {
     public partial ObservableList<ListType> TestList { get; set; }
     
-    [ObservableCommand(nameof(AddItemToTList), nameof(AddItemToTListCe))]
-    public partial IObservableCommand<ListType> AddToTList { get; }
+    [ObservableCommand(nameof(AddItemToTListAsync), nameof(AddItemToTListCe))]
+    public partial IObservableCommandAsync<ListType> AddToTList { get; }
     
-    private void AddItemToTList(ListType item)
+    [ObservableCommand(nameof(ClearListCmd), nameof(ClearListCmdCe))]
+    public partial IObservableCommand ClearList { get; }
+    
+    private async Task AddItemToTListAsync(ListType item, CancellationToken ct)
     {
+        await Task.Delay(1000, ct);
         TestList.Add(item);
     }
 
     private bool AddItemToTListCe()
     {
         return TestList.Count < 3;
+    }
+    
+    private void ClearListCmd()
+    {
+        TestList.Clear();
+    }
+    
+    private bool ClearListCmdCe()
+    {
+        return TestList.Count > 0;
     }
 }

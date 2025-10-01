@@ -1,13 +1,31 @@
 @using RxBlazorV2ExternalModel.Type
+@using R3;
 @inherits ExternalModel
 
 <MudStack Row="true" AlignItems="AlignItems.Center">
-    <MudButton @onclick=@Add Variant="Variant.Filled"
-               Color="Color.Secondary"
-               Disabled="@(!Model.AddToTList.CanExecute)">
-        AddToList
-    </MudButton>
+    <MudSwitch @bind-Value="_suspend" Color="Color.Primary" Label="Suspend"/>
+    @if (Model.AddToTList.Executing)
+    {
+        <MudButton @onclick=@Model.AddToTList.Cancel Variant="Variant.Filled"
+                   Color="Color.Warning">
+            Cancel Add
+        </MudButton>
+    }
+    else
+    {
+        <MudButton @onclick=@AddAsync Variant="Variant.Filled"
+                   Color="Color.Secondary"
+                   Disabled="@(!Model.AddToTList.CanExecute)">
+            Add To List
+        </MudButton>
+    }
     
+    <MudButton @onclick=@ClearList Variant="Variant.Filled"
+               Color="Color.Warning"
+               Disabled="@(!Model.ClearList.CanExecute || Model.AddToTList.Executing)">
+        Clear List
+    </MudButton>
+
     @if (Model.TestList.Count > 0)
     {
         @Model.TestList.Select(l => l.Name + l.Count).Aggregate((s, n) => s + ", " + n)
@@ -16,14 +34,50 @@
     {
         <MudText>No Content</MudText>
     }
+    <MudText>@($"Changes: {_listChanges}")</MudText>
 </MudStack>
 
 @code
 {
     private int _count;
+    private int _listChanges;
+    private bool _suspend;
 
-    private void Add()
+    private async Task AddAsync()
     {
-        Model.AddToTList.Execute(new ListType("Test", _count++));
+        _listChanges = 0;
+        if (_suspend)
+        {
+            using var _ = Model.SuspendNotifications();
+            await DoAddAsync();
+        }
+        else
+        {
+            await DoAddAsync();
+        }
+    }
+
+    private async Task DoAddAsync()
+    {
+        await Model.AddToTList.ExecuteAsync(new ListType("Test", _count++));
+        await Model.AddToTList.ExecuteAsync(new ListType("Test", _count++));
+        await Model.AddToTList.ExecuteAsync(new ListType("Test", _count++));
+        await Model.AddToTList.ExecuteAsync(new ListType("Test", _count++));
+    }
+
+    private void ClearList()
+    {
+        _listChanges = 0;
+        _count = 0;
+        Model.ClearList.Execute();
+    }
+
+    protected override void OnContextReady()
+    {
+        Subscriptions.Add(Model.Observable
+            .Where(o => o.Any(n => n == nameof(Model.TestList)))
+            .Chunk(TimeSpan.FromMilliseconds(100))
+            .Subscribe(_ => { _listChanges++; }));
+        base.OnContextReady();
     }
 }

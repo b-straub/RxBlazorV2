@@ -31,18 +31,13 @@ public class ObservableCommandAsyncBase(ObservableModel model, string[] observed
     : ObservableCommandBase(model, observedProperties), IObservableCommandAsyncBase
 {
     public virtual bool Executing { get; protected set; }
-    
-    protected CancellationToken CancellationToken { get; private set; }
+
+    protected CancellationToken? CancellationToken => _cancellationTokenSource?.Token;
     private CancellationTokenSource? _cancellationTokenSource;
     
     protected void ResetCancellationToken()
     {
-        if (_cancellationTokenSource is not null && !_cancellationTokenSource.TryReset())
-        {
-            _cancellationTokenSource = new();
-            CancellationToken = _cancellationTokenSource.Token;
-        }
-        else
+        if (_cancellationTokenSource is null || !_cancellationTokenSource.TryReset())
         {
             _cancellationTokenSource = new();
         }
@@ -83,7 +78,7 @@ public class ObservableCommandFactory(
             SetError(e);
         }
         
-        _model.PropertyChangedSubject.OnNext(_observedProperties);
+        _model.StateHasChanged(_observedProperties);
     }
 
     public override bool CanExecute => canExecute?.Invoke() ?? true;
@@ -117,7 +112,7 @@ public class ObservableCommandFactory<T>(
             SetError(e);
         }
         
-        _model.PropertyChangedSubject.OnNext(_observedProperties);
+        _model.StateHasChanged(_observedProperties);
     }
 
     public override bool CanExecute => canExecute?.Invoke() ?? true;
@@ -142,7 +137,7 @@ public class ObservableCommandAsyncFactory(
     public override async Task ExecuteAsync()
     {
         Executing = true;
-        _model.PropertyChangedSubject.OnNext(_observedProperties);
+        _model.StateHasChanged(_observedProperties);
         
         SetError();
         try
@@ -155,7 +150,7 @@ public class ObservableCommandAsyncFactory(
         }
         
         Executing = false;
-        _model.PropertyChangedSubject.OnNext(_observedProperties);
+        _model.StateHasChanged(_observedProperties);
     }
 
     public override bool CanExecute => canExecute?.Invoke() ?? true;
@@ -170,30 +165,52 @@ public class ObservableCommandAsyncCancelableFactory(
 {
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;
- 
+
     public override async Task ExecuteAsync()
     {
+        // Early exit if suspension already aborted
+        if (_model.IsSuspensionAborted())
+        {
+            return;
+        }
+
         ResetCancellationToken();
         Executing = true;
-        _model.PropertyChangedSubject.OnNext(_observedProperties);
 
+        // If this is the first command in suspension, bypass suspension for immediate UI feedback
+        if (_model.IsFirstCommandInSuspension())
+        {
+            _model.PropertyChangedSubject.OnNext(_observedProperties);
+        }
+        else
+        {
+            _model.StateHasChanged(_observedProperties);
+        }
+        
         SetError();
         try
         {
-            await execute(CancellationToken);
+            if (!CancellationToken.HasValue)
+            {
+                throw new InvalidOperationException("CancellationToken must be set!");
+            }
+            await execute(CancellationToken.Value);
+        }
+        catch (TaskCanceledException)
+        {
+            _model.AbortCurrentSuspension();
         }
         catch (Exception e)
         {
-            if (e.GetType() != typeof(TaskCanceledException))
-            {
-                SetError(e);
-            }
+            SetError(e);
         }
-
-        Executing = false;
-        _model.PropertyChangedSubject.OnNext(_observedProperties);
+        finally
+        {
+            Executing = false;
+            _model.StateHasChanged(_observedProperties);
+        }
     }
-    
+
     public override bool CanExecute => canExecute?.Invoke() ?? true;
 }
 
@@ -216,7 +233,7 @@ public class ObservableCommandAsyncFactory<T>(
     public override async Task ExecuteAsync(T parameter)
     {
         Executing = true;
-        _model.PropertyChangedSubject.OnNext(_observedProperties);
+        _model.StateHasChanged(_observedProperties);
         
         SetError();
         try
@@ -228,7 +245,7 @@ public class ObservableCommandAsyncFactory<T>(
             SetError(e);
         }
         
-        _model.PropertyChangedSubject.OnNext(_observedProperties);
+        _model.StateHasChanged(_observedProperties);
         Executing = false;
     }
 
@@ -244,29 +261,51 @@ public class ObservableCommandAsyncCancelableFactory<T>(
 {
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;
-   
+
     public override async Task ExecuteAsync(T parameter)
     {
+        // Early exit if suspension already aborted
+        if (_model.IsSuspensionAborted())
+        {
+            return;
+        }
+
         ResetCancellationToken();
         Executing = true;
-        _model.PropertyChangedSubject.OnNext(_observedProperties);
-        
+
+        // If this is the first command in suspension, bypass suspension for immediate UI feedback
+        if (_model.IsFirstCommandInSuspension())
+        {
+            _model.PropertyChangedSubject.OnNext(_observedProperties);
+        }
+        else
+        {
+            _model.StateHasChanged(_observedProperties);
+        }
+
         SetError();
         try
         {
-            await execute(parameter, CancellationToken);
+            if (!CancellationToken.HasValue)
+            {
+                throw new InvalidOperationException("CancellationToken must be set!");
+            }
+            await execute(parameter, CancellationToken.Value);
+        }
+        catch (TaskCanceledException)
+        {
+            _model.AbortCurrentSuspension();
         }
         catch (Exception e)
         {
-            if (e.GetType() != typeof(TaskCanceledException))
-            {
-                SetError(e);
-            }
+            SetError(e);
         }
-        
-        _model.PropertyChangedSubject.OnNext(_observedProperties);
-        Executing = false;
+        finally
+        {
+            Executing = false;
+            _model.StateHasChanged(_observedProperties);
+        }
     }
-    
+
     public override bool CanExecute => canExecute?.Invoke() ?? true;
 }

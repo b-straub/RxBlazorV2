@@ -91,11 +91,13 @@ public partial class MyModel : ObservableModel
 ## Command Method Signatures
 
 The generator supports multiple command patterns:
-- `void Method()` → `IObservableCommand`  
-- `Task Method()` → `IObservableCommandAsync`
-- `void Method(T param)` → `IObservableCommand<T>`
-- `Task Method(T param)` → `IObservableCommandAsync<T>`
-- `Task Method(T param, CancellationToken token)` → `IObservableCommandAsync<T>` with cancellation
+```csharp
+void Method() → IObservableCommand
+Task Method() → IObservableCommandAsync
+void Method(T param) → IObservableCommand<T>
+Task Method(T param) → IObservableCommandAsync<T>
+Task Method(T param, CancellationToken token) → IObservableCommandAsync<T> // with cancellation
+```
 
 ## Dependencies and Framework Versions
 
