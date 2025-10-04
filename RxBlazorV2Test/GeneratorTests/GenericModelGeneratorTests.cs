@@ -50,7 +50,6 @@ public partial class GenericModel<T>
         }
     }
 
-
 }
 ";
 
@@ -114,7 +113,6 @@ public partial class GenericModel<T, P>
         }
     }
 
-
 }
 ";
 
@@ -162,6 +160,7 @@ public partial class GenericModel<T>
     private readonly CompositeDisposable _subscriptions = new();
     protected override IDisposable Subscriptions => _subscriptions;
 
+
     private IObservableCommand<T> _testCommand;
 
     public partial IObservableCommand<T> TestCommand
@@ -171,6 +170,7 @@ public partial class GenericModel<T>
 
     public GenericModel() : base()
     {
+        // Initialize commands
         _testCommand = new ObservableCommandFactory<T>(this, [""""], ExecuteMethod);
     }
 }

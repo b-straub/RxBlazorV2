@@ -17,80 +17,71 @@ limitations under the License.
 */
 
 using Microsoft.CodeAnalysis;
-using System.Linq;
 
 namespace RxBlazorV2CodeFix.CodeFix;
 
-    internal static class SyntaxHelpers
+internal static class SyntaxHelpers
+{
+    private static bool True(this bool? value)
     {
-        private static bool True(this bool? value)
+        return value.GetValueOrDefault(false);
+    }
+
+    public static SyntaxList<TNode> RemoveKeepTrivia<TNode>(this SyntaxList<TNode> list, TNode node)
+        where TNode : SyntaxNode
+    {
+        var firstNode = node.Equals(list.First());
+        var lastNode = node.Equals(list.Last());
+
+        var newList = list.Remove(node!);
+
+        if (firstNode)
         {
-            return value.GetValueOrDefault(false);
-        }
-        
-        public static SyntaxList<TNode> RemoveKeepTrivia<TNode>(this SyntaxList<TNode> list, TNode node) where TNode : SyntaxNode
-        {
-            if (node is null)
+            var newFirst = newList.FirstOrDefault()?.WithLeadingTrivia(node!.GetLeadingTrivia());
+            if (newFirst is not null)
             {
-                return list;
+                newList = newList.Replace(newList.First(), newFirst);
             }
-
-            var firstNode = (node?.Equals(list.First())).True();
-            var lastNode = (node?.Equals(list.Last())).True();
-
-            var newList = list.Remove(node!);
-
-            if (firstNode)
-            {
-                var newFirst = newList.FirstOrDefault()?.WithLeadingTrivia(node!.GetLeadingTrivia());
-                if (newFirst is not null)
-                {
-                    newList = newList.Replace(newList.First(), newFirst);
-                }
-            }
-
-            if (lastNode)
-            {
-                var newLast = newList.LastOrDefault()?.WithTrailingTrivia(node!.GetTrailingTrivia());
-                if (newLast is not null)
-                {
-                    newList = newList.Replace(newList.Last(), newLast);
-                }
-            }
-
-            return newList;
         }
 
-        public static SeparatedSyntaxList<TNode> RemoveKeepTrivia<TNode>(this SeparatedSyntaxList<TNode> list, TNode node) where TNode : SyntaxNode
+        if (lastNode)
         {
-            if (node is null)
+            var newLast = newList.LastOrDefault()?.WithTrailingTrivia(node!.GetTrailingTrivia());
+            if (newLast is not null)
             {
-                return list;
+                newList = newList.Replace(newList.Last(), newLast);
             }
-
-            var firstNode = (node?.Equals(list.First())).True();
-            var lastNode = (node?.Equals(list.Last())).True();
-
-            var newList = list.Remove(node!);
-
-            if (firstNode)
-            {
-                var newFirst = newList.FirstOrDefault()?.WithLeadingTrivia(node!.GetLeadingTrivia());
-                if (newFirst is not null)
-                {
-                    newList = newList.Replace(newList.First(), newFirst);
-                }
-            }
-
-            if (lastNode)
-            {
-                var newLast = newList.LastOrDefault()?.WithTrailingTrivia(node!.GetTrailingTrivia());
-                if (newLast is not null)
-                {
-                    newList = newList.Replace(newList.Last(), newLast);
-                }
-            }
-
-            return newList;
         }
+
+        return newList;
+    }
+
+    public static SeparatedSyntaxList<TNode> RemoveKeepTrivia<TNode>(this SeparatedSyntaxList<TNode> list, TNode node)
+        where TNode : SyntaxNode
+    {
+        var firstNode = node.Equals(list.First());
+        var lastNode = node.Equals(list.Last());
+
+        var newList = list.Remove(node!);
+
+        if (firstNode)
+        {
+            var newFirst = newList.FirstOrDefault()?.WithLeadingTrivia(node!.GetLeadingTrivia());
+            if (newFirst is not null)
+            {
+                newList = newList.Replace(newList.First(), newFirst);
+            }
+        }
+
+        if (lastNode)
+        {
+            var newLast = newList.LastOrDefault()?.WithTrailingTrivia(node!.GetTrailingTrivia());
+            if (newLast is not null)
+            {
+                newList = newList.Replace(newList.Last(), newLast);
+            }
+        }
+
+        return newList;
+    }
 }

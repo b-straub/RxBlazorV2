@@ -52,7 +52,6 @@ public partial class TestModel
         }
     }
 
-
 }
 ";
         
