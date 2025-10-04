@@ -95,18 +95,9 @@ public static class DiagnosticDescriptors
         description: "When an ObservableModel is used by multiple ObservableComponent instances, it must be registered as Singleton (default when no attribute is specified) to ensure data consistency across components.",
         customTags: [WellKnownDiagnosticTags.CompilationEnd]
         );
-
-    public static readonly DiagnosticDescriptor ModelReferenceNotRegisteredError = new(
-        id: "RXBG011",
-        title: "Referenced model is not registered in DI container",
-        messageFormat: "Model '{0}' referenced by [ObservableModelReference<{0}>] is not registered in the DI container. Add 'services.Add<{0}>()' to your service registration.",
-        category: "RxBlazorGenerator",
-        DiagnosticSeverity.Error,
-        isEnabledByDefault: true,
-        description: "Models referenced via [ObservableModelReference<T>] must be registered in the DI container for dependency injection to work.");
     
     public static readonly DiagnosticDescriptor TriggerTypeArgumentsMismatchError = new(
-        id: "RXBG012",
+        id: "RXBG011",
         title: "Command trigger type arguments mismatch",
         messageFormat: "Trigger type arguments [{1}] do not match command type arguments [{0}]. Ensure the trigger attribute has the same generic type parameters as the command.",
         category: "RxBlazorGenerator",
@@ -115,7 +106,7 @@ public static class DiagnosticDescriptors
         description: "ObservableCommandTrigger generic type arguments must match the command's generic type arguments for proper type safety.");
     
     public static readonly DiagnosticDescriptor CircularTriggerReferenceError = new(
-        id: "RXBG013",
+        id: "RXBG012",
         title: "Circular trigger reference detected",
         messageFormat: "Command '{0}' is triggered by property '{1}' but the execution method '{2}' modifies the same property. This creates an infinite loop. Remove the trigger or modify a different property.",
         category: "RxBlazorGenerator",
@@ -124,7 +115,7 @@ public static class DiagnosticDescriptors
         description: "ObservableCommandTrigger cannot listen to a property that the command's execution method modifies, as this creates an infinite loop.");
 
     public static readonly DiagnosticDescriptor GenericArityMismatchError = new(
-        id: "RXBG014",
+        id: "RXBG013",
         title: "Generic type arity mismatch",
         messageFormat: "Referenced generic type '{0}' has {1} type parameters but the referencing class '{2}' has {3} type parameters. Generic arity must match for type parameter substitution.",
         category: "RxBlazorGenerator",
@@ -133,7 +124,7 @@ public static class DiagnosticDescriptors
         description: "When referencing open generic types, the number of type parameters must match between the referenced and referencing types.");
 
     public static readonly DiagnosticDescriptor TypeConstraintMismatchError = new(
-        id: "RXBG015",
+        id: "RXBG014",
         title: "Type constraint mismatch",
         messageFormat: "Type parameter '{0}' in referenced type '{1}' has constraints '{2}' but the corresponding type parameter in referencing class '{3}' has constraints '{4}'. Constraints must be compatible.",
         category: "RxBlazorGenerator",
@@ -142,7 +133,7 @@ public static class DiagnosticDescriptors
         description: "Type constraints must be compatible between referenced and referencing generic types to ensure type safety.");
 
     public static readonly DiagnosticDescriptor InvalidOpenGenericReferenceError = new(
-        id: "RXBG016", 
+        id: "RXBG015", 
         title: "Invalid open generic type reference",
         messageFormat: "Cannot reference open generic type '{0}' from non-generic class '{1}'. Open generic types can only be referenced from generic classes with compatible type parameters.",
         category: "RxBlazorGenerator",

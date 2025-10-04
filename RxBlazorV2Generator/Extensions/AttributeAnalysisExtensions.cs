@@ -77,19 +77,6 @@ public static class AttributeAnalysisExtensions
                 service.FullyQualifiedName == fullyQualifiedName || 
                 service.ClassName == className ||
                 service.FullyQualifiedName.EndsWith($".{className}"));
-
-            // Skip validation for ObservableModel types and interfaces since they're auto-registered
-            bool isObservableModel = namedTypeSymbol.InheritsFromObservableModel();
-            bool isObservableInterface = namedTypeSymbol.InheritsFromIObservableModel();
-            
-            if (!isRegistered && !isObservableModel && !isObservableInterface)
-            {
-                var diagnostic = Diagnostic.Create(
-                    DiagnosticDescriptors.ModelReferenceNotRegisteredError,
-                    attribute.GetLocation(),
-                    className);
-                return (namedTypeSymbol, diagnostic); // Return the type but with diagnostic
-            }
         }
 
         return (namedTypeSymbol, null);

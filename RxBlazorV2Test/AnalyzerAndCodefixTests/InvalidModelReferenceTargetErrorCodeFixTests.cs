@@ -6,7 +6,7 @@ using CodeFixVerifier =
 
 namespace RxBlazorV2Test.Tests;
 
-public class MissingDIRegistrationCodeFixTests
+public class InvalidModelReferenceTargetErrorCodeFixTests
 {
     [Fact]
     public async Task RemoveModelReference_RemovesInvalidReference()

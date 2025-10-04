@@ -7,6 +7,7 @@ using Microsoft.CodeAnalysis.Testing;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
 using RxBlazorV2Generator;
+using RxBlazorV2Generator.Diagnostics;
 
 namespace RxBlazorV2Test.Helpers;
 
@@ -77,10 +78,9 @@ internal class CodeFixTest<TAnalyzer, TCodeFix> : CSharpCodeFixTest<TAnalyzer, T
             // Add compilation options for proper analyzer/generator behavior
             project = project.WithCompilationOptions(project.CompilationOptions!
                 .WithSpecificDiagnosticOptions(project.CompilationOptions.SpecificDiagnosticOptions
-                    .Add("RXBG010", ReportDiagnostic.Error) // SharedModelNotSingletonError
-                    .Add("RXBG011", ReportDiagnostic.Error) // ModelReferenceNotRegisteredError
-                    .Add("RXBG012", ReportDiagnostic.Error) // TriggerTypeArgumentsMismatchError
-                    .Add("RXBG013", ReportDiagnostic.Error))); // CircularTriggerReferenceError
+                    .Add(DiagnosticDescriptors.SharedModelNotSingletonError.Id, ReportDiagnostic.Error) // SharedModelNotSingletonError
+                    .Add(DiagnosticDescriptors.TriggerTypeArgumentsMismatchError.Id, ReportDiagnostic.Error) // TriggerTypeArgumentsMismatchError
+                    .Add(DiagnosticDescriptors.CircularModelReferenceError.Id, ReportDiagnostic.Error))); // CircularTriggerReferenceError
             
             return project.Solution;
         });
