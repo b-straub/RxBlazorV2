@@ -13,15 +13,17 @@ public static class PropertyAnalysisExtensions
 
         foreach (var member in classDecl.Members.OfType<PropertyDeclarationSyntax>())
         {
-            if (member.Modifiers.Any(SyntaxKind.PartialKeyword) && 
+            if (member.Modifiers.Any(SyntaxKind.PartialKeyword) &&
                 member.AccessorList?.Accessors.Any(a => a.IsKind(SyntaxKind.GetAccessorDeclaration)) == true &&
                 member.AccessorList?.Accessors.Any(a => a.IsKind(SyntaxKind.SetAccessorDeclaration)) == true)
             {
                 var isObservableCollection = member.IsObservableCollectionProperty(semanticModel);
+                var isEquatable = member.IsEquatableProperty(semanticModel);
                 partialProperties.Add(new PartialPropertyInfo(
                     member.Identifier.ValueText,
                     member.Type!.ToString(),
-                    isObservableCollection));
+                    isObservableCollection,
+                    isEquatable));
             }
         }
 
@@ -209,7 +211,7 @@ public static class PropertyAnalysisExtensions
         foreach (var interfaceType in typeSymbol.AllInterfaces)
         {
             // Check for IObservableCollection<T> from ObservableCollections namespace
-            if (interfaceType.Name == "IObservableCollection" && 
+            if (interfaceType.Name == "IObservableCollection" &&
                 interfaceType.ContainingNamespace?.ToDisplayString() == "ObservableCollections")
             {
                 return true;
@@ -217,5 +219,78 @@ public static class PropertyAnalysisExtensions
         }
 
         return false;
+    }
+
+    public static bool IsEquatableProperty(this PropertyDeclarationSyntax property, SemanticModel semanticModel)
+    {
+        try
+        {
+            // Get the type symbol for the property
+            var propertySymbol = semanticModel.GetDeclaredSymbol(property);
+            if (propertySymbol is not IPropertySymbol propSymbol)
+            {
+                return false;
+            }
+
+            var propertyType = propSymbol.Type;
+
+            // Check if the type is equatable
+            return IsEquatableType(propertyType);
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    private static bool IsEquatableType(ITypeSymbol type)
+    {
+        // Don't add equality check for generic type parameters without constraints
+        // because we don't know if they support the != operator
+        if (type.TypeKind == TypeKind.TypeParameter)
+        {
+            return false;
+        }
+
+        // Handle nullable types
+        type = GetUnderlyingNullableTypeOrSelf(type);
+
+        // Check for built-in special types (primitives, string, object, etc.)
+        if (type.SpecialType is not SpecialType.None)
+        {
+            return true;
+        }
+        
+        // Check if the type implements IEquatable<T>
+        foreach (var interfaceType in type.AllInterfaces)
+        {
+            if (interfaceType.OriginalDefinition.ToDisplayString() == "System.IEquatable<T>")
+            {
+                return true;
+            }
+        }
+
+        // Check if it's a record or record struct (they implement IEquatable<T> automatically)
+        if (type is INamedTypeSymbol { IsRecord: true })
+        {
+            return true;
+        }
+
+        // Check if it's an enum (enums are always equatable)
+        return type.TypeKind == TypeKind.Enum;
+    }
+
+    private static ITypeSymbol GetUnderlyingNullableTypeOrSelf(ITypeSymbol typeSymbol)
+    {
+        if (typeSymbol is INamedTypeSymbol namedTypeSymbol)
+        {
+            if (namedTypeSymbol.ConstructedFrom.SpecialType == SpecialType.System_Nullable_T &&
+                namedTypeSymbol.TypeArguments.Length == 1)
+            {
+                return namedTypeSymbol.TypeArguments[0];
+            }
+        }
+
+        return typeSymbol;
     }
 }

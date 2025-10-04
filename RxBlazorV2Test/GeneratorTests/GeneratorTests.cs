@@ -44,8 +44,11 @@ public partial class TestModel
         get => field;
         set
         {
-            field = value;
-            StateHasChanged(nameof(Test));
+            if (field != value)
+            {
+                field = value;
+                StateHasChanged(nameof(Test));
+            }
         }
     }
 
@@ -53,6 +56,6 @@ public partial class TestModel
 }
 ";
         
-        await RxBlazorGeneratorVerifier.VerifySourceGeneratorAsync(test, generated, "TestModel");
+        await RxBlazorGeneratorVerifier.VerifySourceGeneratorAsync(test, generated, "TestModel", string.Empty);
     }
 }

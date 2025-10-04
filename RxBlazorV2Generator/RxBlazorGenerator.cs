@@ -82,7 +82,7 @@ public class RxBlazorGenerator : IIncrementalGenerator
                 var (modelInfo, config) = combined;
                 if (modelInfo != null)
                 {
-                    ObservableModelCodeGenerator.GenerateObservableModelPartials(spc, modelInfo, config.UpdateFrequencyMs);
+                    ObservableModelCodeGenerator.GenerateObservableModelPartials(spc, modelInfo);
                 }
             });
 

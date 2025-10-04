@@ -9,8 +9,7 @@ namespace RxBlazorV2Generator.Generators;
 
 public static class ObservableModelCodeGenerator
 {
-    public static void GenerateObservableModelPartials(SourceProductionContext context, ObservableModelInfo modelInfo,
-        int updateFrequencyMs = 100)
+    public static void GenerateObservableModelPartials(SourceProductionContext context, ObservableModelInfo modelInfo)
     {
         try
         {
@@ -88,8 +87,21 @@ public static class ObservableModelCodeGenerator
                 sb.AppendLine("        get => field;");
                 sb.AppendLine("        set");
                 sb.AppendLine("        {");
-                sb.AppendLine("            field = value;");
-                sb.AppendLine($"            StateHasChanged(nameof({prop.Name}));");
+
+                if (prop.IsEquatable)
+                {
+                    sb.AppendLine("            if (field != value)");
+                    sb.AppendLine("            {");
+                    sb.AppendLine("                field = value;");
+                    sb.AppendLine($"                StateHasChanged(nameof({prop.Name}));");
+                    sb.AppendLine("            }");
+                }
+                else
+                {
+                    sb.AppendLine("            field = value;");
+                    sb.AppendLine($"            StateHasChanged(nameof({prop.Name}));");
+                }
+
                 sb.AppendLine("        }");
                 sb.AppendLine("    }");
                 sb.AppendLine();
@@ -163,8 +175,7 @@ public static class ObservableModelCodeGenerator
                     {
                         sb.AppendLine($"        {prop.Name} = new();");
                         sb.AppendLine($"        _subscriptions.Add({prop.Name}.ObserveChanged()");
-                        sb.AppendLine($"            .Chunk(TimeSpan.FromMilliseconds({updateFrequencyMs}))");
-                        sb.AppendLine($"            .Subscribe(chunks => StateHasChanged(\"{prop.Name}\")));");
+                        sb.AppendLine($"            .Subscribe(_ => StateHasChanged(\"{prop.Name}\")));");
                         sb.AppendLine();
                     }
                 }
@@ -196,9 +207,8 @@ public static class ObservableModelCodeGenerator
                         var observedProps = $"[\"{string.Join("\", \"", modelRef.UsedProperties)}\"]";
                         sb.AppendLine(
                             $"        _subscriptions.Add({modelRef.PropertyName}.Observable.Where(p => p.Intersect({observedProps}).Any())");
-                        sb.AppendLine($"            .Chunk(TimeSpan.FromMilliseconds({updateFrequencyMs}))");
                         sb.AppendLine(
-                            "            .Subscribe(chunks => StateHasChanged(chunks.SelectMany(c => c).ToArray())));");
+                            "            .Subscribe(props => StateHasChanged(props)));");
                     }
                 }
 
@@ -226,7 +236,6 @@ public static class ObservableModelCodeGenerator
                                 // Local property trigger
                                 sb.AppendLine(
                                     $"        _subscriptions.Add(Observable.Where(p => p.Intersect({triggerProps}).Any())");
-                                sb.AppendLine($"            .Chunk(TimeSpan.FromMilliseconds({updateFrequencyMs}))");
                                 if (!string.IsNullOrEmpty(combinedCondition))
                                 {
                                     sb.AppendLine($"            .Where(_ => {combinedCondition})");
@@ -239,7 +248,6 @@ public static class ObservableModelCodeGenerator
                                 // Referenced model property trigger
                                 sb.AppendLine(
                                     $"        _subscriptions.Add({sourceModel}.Observable.Where(p => p.Intersect({triggerProps}).Any())");
-                                sb.AppendLine($"            .Chunk(TimeSpan.FromMilliseconds({updateFrequencyMs}))");
                                 if (!string.IsNullOrEmpty(combinedCondition))
                                 {
                                     sb.AppendLine($"            .Where(_ => {combinedCondition})");
@@ -270,8 +278,7 @@ public static class ObservableModelCodeGenerator
                     {
                         sb.AppendLine($"        {prop.Name} = new();");
                         sb.AppendLine($"        _subscriptions.Add({prop.Name}.ObserveChanged()");
-                        sb.AppendLine($"            .Chunk(TimeSpan.FromMilliseconds({updateFrequencyMs}))");
-                        sb.AppendLine($"            .Subscribe(chunks => StateHasChanged(\"{prop.Name}\")));");
+                        sb.AppendLine($"            .Subscribe(_ => StateHasChanged(\"{prop.Name}\")));");
                         sb.AppendLine();
                     }
                 }
@@ -311,7 +318,6 @@ public static class ObservableModelCodeGenerator
                                 // Local property trigger
                                 sb.AppendLine(
                                     $"        _subscriptions.Add(Observable.Where(p => p.Intersect({triggerProps}).Any())");
-                                sb.AppendLine($"            .Chunk(TimeSpan.FromMilliseconds({updateFrequencyMs}))");
                                 if (!string.IsNullOrEmpty(combinedCondition))
                                 {
                                     sb.AppendLine($"            .Where(_ => {combinedCondition})");
@@ -339,8 +345,7 @@ public static class ObservableModelCodeGenerator
                 {
                     sb.AppendLine($"        {prop.Name} = new();");
                     sb.AppendLine($"        _subscriptions.Add({prop.Name}.ObserveChanged()");
-                    sb.AppendLine($"            .Chunk(TimeSpan.FromMilliseconds({updateFrequencyMs}))");
-                    sb.AppendLine($"            .Subscribe(chunks => StateHasChanged(\"{prop.Name}\")));");
+                    sb.AppendLine($"            .Subscribe(_ => StateHasChanged(\"{prop.Name}\")));");
                     sb.AppendLine();
                 }
 

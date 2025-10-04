@@ -16,7 +16,13 @@
         <MudButton @onclick=@AddAsync Variant="Variant.Filled"
                    Color="Color.Secondary"
                    Disabled="@(!Model.AddToTList.CanExecute)">
-            Add To List
+            Add To List Async
+        </MudButton>
+        
+        <MudButton @onclick=@Add Variant="Variant.Filled"
+                   Color="Color.Secondary"
+                   Disabled="@(!Model.AddToTList.CanExecute)">
+            Add To List Sync
         </MudButton>
     }
     
@@ -43,6 +49,16 @@
     private int _listChanges;
     private bool _suspend;
 
+    private void Add()
+    {
+        using var _ = Model.SuspendNotifications();
+        Model.TestList.Clear();
+        Model.TestList.Add(new ListType("Test1", 1));
+        Model.TestList.Add(new ListType("Test2", 2));
+        Model.TestList.Add(new ListType("Test3", 3));
+        Model.TestList.Add(new ListType("Test4", 4));
+    }
+    
     private async Task AddAsync()
     {
         _listChanges = 0;

@@ -1,0 +1,45 @@
+﻿@page "/testEquatable"
+@inherits ObservableComponent<EquatableTestModel>
+
+<PageTitle>Equatable Test</PageTitle>
+
+<MudStack>
+    <MudText>@_stateChangedCounter</MudText>
+    
+    <MudStack Row="true">
+        <MudButton @onclick=@(() => Model.DateTime = DateTime.Now)
+                   Variant="Variant.Filled" Color="Color.Primary">
+            DateTime
+        </MudButton>
+        
+        <MudButton @onclick=@(() => Model.Guid = Guid.NewGuid()) 
+                   Variant="Variant.Filled" Color="Color.Primary">
+            Guid
+        </MudButton>
+
+        <MudButton @onclick=@(() => Model.Decimal = Random.Shared.Next())
+                   Variant="Variant.Filled" Color="Color.Primary">
+            Decimal changed
+        </MudButton>
+        
+        <MudButton @onclick=@(() => Model.Decimal = 10)
+                   Variant="Variant.Filled" Color="Color.Primary">
+            Decimal unchanged
+        </MudButton>
+        
+        <MudButton @onclick=@SetTestRecordChanged
+                   Variant="Variant.Filled" Color="Color.Primary">
+            Test record changed
+        </MudButton>
+        
+        <MudButton @onclick=@SetTestRecordUnchanged
+                   Variant="Variant.Filled" Color="Color.Primary">
+            Test record unchanged
+        </MudButton>
+        
+        <MudButton @onclick=@(() => Model.TestClass = new())
+                   Variant="Variant.Filled" Color="Color.Primary">
+            Class changed
+        </MudButton>
+    </MudStack>
+</MudStack>

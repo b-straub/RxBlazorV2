@@ -215,6 +215,10 @@ public abstract class ObservableModel : IObservableModel
 
     protected virtual void Dispose(bool disposing)
     {
-        Subscriptions.Dispose();
+        if (disposing)
+        {
+            Subscriptions.Dispose();
+            PropertyChangedSubject.Dispose();
+        }
     }
 }

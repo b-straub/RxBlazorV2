@@ -66,12 +66,14 @@ public class PartialPropertyInfo
     public string Name { get; }
     public string Type { get; }
     public bool IsObservableCollection { get; }
+    public bool IsEquatable { get; }
 
-    public PartialPropertyInfo(string name, string type, bool isObservableCollection = false)
+    public PartialPropertyInfo(string name, string type, bool isObservableCollection = false, bool isEquatable = false)
     {
         Name = name;
         Type = type;
         IsObservableCollection = isObservableCollection;
+        IsEquatable = isEquatable;
     }
 }
 
