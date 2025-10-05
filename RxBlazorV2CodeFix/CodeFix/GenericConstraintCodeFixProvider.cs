@@ -59,8 +59,9 @@ public class GenericConstraintCodeFixProvider : CodeFixProvider
                 continue;
             }
 
-            // For GenericArityMismatchError and InvalidOpenGenericReferenceError, offer to adjust the referencing class type parameters
+            // For GenericArityMismatchError, TypeConstraintMismatchError, and InvalidOpenGenericReferenceError, offer to adjust the referencing class type parameters
             if (diagnostic.Id == DiagnosticDescriptors.GenericArityMismatchError.Id ||
+                diagnostic.Id == DiagnosticDescriptors.TypeConstraintMismatchError.Id ||
                 diagnostic.Id == DiagnosticDescriptors.InvalidOpenGenericReferenceError.Id)
             {
                 var classDeclaration = attribute.FirstAncestorOrSelf<ClassDeclarationSyntax>();

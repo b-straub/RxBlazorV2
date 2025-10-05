@@ -86,7 +86,7 @@ public partial class AnotherGenericModel<T, P> : ObservableModel where T : class
 [ObservableModelScope(ModelScope.Singleton)]
 public partial class GenericModelTwoParams<T, U> : ObservableModel where T : class where U : struct
 {
-    public partial T Value { get; set; }
+    public partial T Value { get; set; } = null!;
     public partial U SecondValue { get; set; }
 }
 

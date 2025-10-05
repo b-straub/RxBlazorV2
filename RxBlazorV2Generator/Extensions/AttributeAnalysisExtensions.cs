@@ -16,22 +16,23 @@ public static class AttributeAnalysisExtensions
             {
                 var typeArgument = genericName.TypeArgumentList.Arguments.First();
                 var typeInfo = semanticModel.GetTypeInfo(typeArgument);
-                
+
                 if (typeInfo.Type is INamedTypeSymbol namedTypeSymbol)
                 {
-                    return ValidateAndReturnTypeSymbol(namedTypeSymbol, attribute, serviceInfoList);
+                    var validatedSymbol = ValidateAndReturnTypeSymbol(namedTypeSymbol, attribute, serviceInfoList);
+                    return (validatedSymbol, null);
                 }
             }
             // Try to get the type from non-generic attribute with typeof() argument
             else if (attribute.ArgumentList?.Arguments.Count > 0)
             {
                 var firstArgument = attribute.ArgumentList.Arguments.First();
-                
+
                 // Handle typeof(SomeType) expressions
                 if (firstArgument.Expression is TypeOfExpressionSyntax typeOfExpression)
                 {
                     var typeInfo = semanticModel.GetTypeInfo(typeOfExpression.Type);
-                    
+
                     if (typeInfo.Type is INamedTypeSymbol namedTypeSymbol)
                     {
                         // For unbound generic types, we might get the constructed generic type
@@ -39,32 +40,37 @@ public static class AttributeAnalysisExtensions
                         var typeToValidate = namedTypeSymbol.IsGenericType && namedTypeSymbol.TypeArguments.Length > 0
                             ? namedTypeSymbol.ConstructedFrom
                             : namedTypeSymbol;
-                            
-                        return ValidateAndReturnTypeSymbol(typeToValidate, attribute, serviceInfoList);
+
+                        var validatedSymbol = ValidateAndReturnTypeSymbol(typeToValidate, attribute, serviceInfoList);
+                        return (validatedSymbol, null);
                     }
                 }
             }
         }
+        catch (Exceptions.DiagnosticException ex)
+        {
+            // Convert DiagnosticException to diagnostic
+            return (null, ex.ToDiagnostic());
+        }
         catch (Exception)
         {
-            // Return null on any error during extraction
+            // Return null on any other error during extraction
         }
         return (null, null);
     }
 
-    private static (INamedTypeSymbol? typeSymbol, Diagnostic? diagnostic) ValidateAndReturnTypeSymbol(
-        INamedTypeSymbol namedTypeSymbol, 
-        AttributeSyntax attribute, 
+    private static INamedTypeSymbol ValidateAndReturnTypeSymbol(
+        INamedTypeSymbol namedTypeSymbol,
+        AttributeSyntax attribute,
         ServiceInfoList? serviceInfoList)
     {
         // Check if type inherits from ObservableModel or IObservableModel
         if (!namedTypeSymbol.InheritsFromObservableModel() && !namedTypeSymbol.InheritsFromIObservableModel())
         {
-            var diagnostic = Diagnostic.Create(
+            throw new Exceptions.DiagnosticException(
                 DiagnosticDescriptors.InvalidModelReferenceTargetError,
                 attribute.GetLocation(),
                 namedTypeSymbol.Name);
-            return (null, diagnostic);
         }
 
         // Check if type is registered in service collection
@@ -72,17 +78,17 @@ public static class AttributeAnalysisExtensions
         {
             var fullyQualifiedName = namedTypeSymbol.ToDisplayString();
             var className = namedTypeSymbol.Name;
-            
-            bool isRegistered = serviceInfoList.Services.Any(service => 
-                service.FullyQualifiedName == fullyQualifiedName || 
+
+            bool isRegistered = serviceInfoList.Services.Any(service =>
+                service.FullyQualifiedName == fullyQualifiedName ||
                 service.ClassName == className ||
                 service.FullyQualifiedName.EndsWith($".{className}"));
         }
 
-        return (namedTypeSymbol, null);
+        return namedTypeSymbol;
     }
 
-    public static (INamedTypeSymbol? typeSymbol, Diagnostic? diagnostic) ValidateGenericTypeConstraints(
+    public static INamedTypeSymbol ValidateGenericTypeConstraints(
         this INamedTypeSymbol referencedType,
         INamedTypeSymbol referencingType,
         AttributeSyntax attribute)
@@ -90,26 +96,25 @@ public static class AttributeAnalysisExtensions
         // If the referenced type is not generic, no constraint validation needed
         if (!referencedType.IsGenericType)
         {
-            return (referencedType, null);
+            return referencedType;
         }
 
-        // Check if referenced type is an open generic type 
+        // Check if referenced type is an open generic type
         // For unbound generics like typeof(MyClass<,>), we need to check if it has type parameters
-        var isOpenGeneric = referencedType.IsGenericType && 
-                           (referencedType.IsUnboundGenericType || 
+        var isOpenGeneric = referencedType.IsGenericType &&
+                           (referencedType.IsUnboundGenericType ||
                             referencedType.TypeParameters.Length > 0);
-        
+
         if (isOpenGeneric)
         {
             // Referencing type must also be generic
             if (!referencingType.IsGenericType)
             {
-                var diagnostic = Diagnostic.Create(
+                throw new Exceptions.DiagnosticException(
                     DiagnosticDescriptors.InvalidOpenGenericReferenceError,
                     attribute.GetLocation(),
                     referencedType.Name,
                     referencingType.Name);
-                return (null, diagnostic);
             }
 
             // Check that generic arity matches
@@ -118,14 +123,13 @@ public static class AttributeAnalysisExtensions
 
             if (referencedArity != referencingArity)
             {
-                var diagnostic = Diagnostic.Create(
+                throw new Exceptions.DiagnosticException(
                     DiagnosticDescriptors.GenericArityMismatchError,
                     attribute.GetLocation(),
                     referencedType.Name,
                     referencedArity,
                     referencingType.Name,
                     referencingArity);
-                return (null, diagnostic);
             }
 
             // Validate type parameter constraints
@@ -134,22 +138,18 @@ public static class AttributeAnalysisExtensions
                 var referencedParam = referencedType.TypeParameters[i];
                 var referencingParam = referencingType.TypeParameters[i];
 
-                var constraintValidation = ValidateTypeParameterConstraints(referencedParam, referencingParam, referencedType, referencingType, attribute);
-                if (constraintValidation.diagnostic != null)
-                {
-                    return (null, constraintValidation.diagnostic);
-                }
+                ValidateTypeParameterConstraints(referencedParam, referencingParam, referencedType, referencingType, attribute);
             }
 
             // Return the unbound generic type for code generation
-            return (referencedType, null);
+            return referencedType;
         }
 
         // For closed generic types, just return as-is
-        return (referencedType, null);
+        return referencedType;
     }
 
-    private static (bool isValid, Diagnostic? diagnostic) ValidateTypeParameterConstraints(
+    private static void ValidateTypeParameterConstraints(
         ITypeParameterSymbol referencedParam,
         ITypeParameterSymbol referencingParam,
         INamedTypeSymbol referencedType,
@@ -163,7 +163,7 @@ public static class AttributeAnalysisExtensions
         // Simple constraint comparison - could be enhanced for more sophisticated validation
         if (referencedConstraints != referencingConstraints)
         {
-            var diagnostic = Diagnostic.Create(
+            throw new Exceptions.DiagnosticException(
                 DiagnosticDescriptors.TypeConstraintMismatchError,
                 attribute.GetLocation(),
                 referencedParam.Name,
@@ -171,10 +171,7 @@ public static class AttributeAnalysisExtensions
                 referencedConstraints,
                 referencingType.Name,
                 referencingConstraints);
-            return (false, diagnostic);
         }
-
-        return (true, null);
     }
 
     private static string GetConstraintString(ITypeParameterSymbol typeParam)
@@ -457,17 +454,11 @@ public static class AttributeAnalysisExtensions
                                 continue; // Skip adding this reference if circular reference detected
                             }
 
-                            // Validate generic type constraints if the referenced type is generic
-                            var (validatedType, constraintDiagnostic) = referencedModelType.ValidateGenericTypeConstraints(referencingTypeSymbol, attribute);
-
-                            if (constraintDiagnostic != null)
+                            try
                             {
-                                diagnostics.Add(constraintDiagnostic);
-                                continue; // Skip adding this reference if constraint validation failed
-                            }
+                                // Validate generic type constraints if the referenced type is generic
+                                var validatedType = referencedModelType.ValidateGenericTypeConstraints(referencingTypeSymbol, attribute);
 
-                            if (validatedType != null)
-                            {
                                 // For open generic types, we need to construct the concrete type name using referencing class's type parameters
                                 var (propertyTypeName, propertyName) = GetPropertyTypeAndName(validatedType, referencingTypeSymbol);
                                 var usedProperties = classDecl.AnalyzeModelReferenceUsage(propertyName);
@@ -477,6 +468,11 @@ public static class AttributeAnalysisExtensions
                                     validatedType.ContainingNamespace.ToDisplayString(),
                                     propertyName,
                                     usedProperties));
+                            }
+                            catch (Exceptions.DiagnosticException ex)
+                            {
+                                diagnostics.Add(ex.ToDiagnostic());
+                                continue; // Skip adding this reference if validation failed
                             }
                         }
                     }

@@ -198,7 +198,7 @@ namespace Test
         public partial string Name { get; set; } = """";
     }
 }";
-        await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode, codeActionIndex: 0);
+        await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode, codeActionIndex: 1);
     }
 
     [Fact]
@@ -345,6 +345,6 @@ namespace Test
         public partial string Name { get; set; } = """";
     }
 }";
-        await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode, codeActionIndex: 0);
+        await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode, codeActionIndex: 1);
     }
 }
