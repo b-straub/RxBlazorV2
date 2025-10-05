@@ -204,8 +204,56 @@ public static class AttributeAnalysisExtensions
         return constraints.Any() ? string.Join(", ", constraints) : "none";
     }
 
+    private static Diagnostic? DetectCircularReference(
+        INamedTypeSymbol referencingType,
+        INamedTypeSymbol referencedType,
+        AttributeSyntax attribute,
+        SemanticModel semanticModel)
+    {
+        // Get the original (unbound) type for comparison
+        var referencingOriginal = referencingType.OriginalDefinition;
+        var referencedOriginal = referencedType.OriginalDefinition;
+
+        // Check if the referenced type has an ObservableModelReference attribute back to the referencing type
+        var referencedDeclaration = referencedOriginal.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() as ClassDeclarationSyntax;
+        if (referencedDeclaration is null)
+        {
+            return null;
+        }
+
+        foreach (var attributeList in referencedDeclaration.AttributeLists)
+        {
+            foreach (var attr in attributeList.Attributes)
+            {
+                var attributeName = attr.Name.ToString();
+                if (attributeName.StartsWith("ObservableModelReference"))
+                {
+                    // Extract the type referenced by the other model
+                    var (otherReferencedType, _) = attr.ExtractReferencedModelTypeWithDiagnostic(semanticModel);
+                    if (otherReferencedType is not null)
+                    {
+                        var otherReferencedOriginal = otherReferencedType.OriginalDefinition;
+
+                        // Check if it references back to the original referencing type
+                        if (SymbolEqualityComparer.Default.Equals(otherReferencedOriginal, referencingOriginal))
+                        {
+                            var diagnostic = Diagnostic.Create(
+                                DiagnosticDescriptors.CircularModelReferenceError,
+                                attribute.GetLocation(),
+                                referencingType.Name,
+                                referencedType.Name);
+                            return diagnostic;
+                        }
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
     private static (string propertyTypeName, string propertyName) GetPropertyTypeAndName(
-        INamedTypeSymbol referencedType, 
+        INamedTypeSymbol referencedType,
         INamedTypeSymbol referencingType)
     {
         var propertyName = referencedType.Name;
@@ -401,21 +449,29 @@ public static class AttributeAnalysisExtensions
                         var referencingClassSymbol = semanticModel.GetDeclaredSymbol(classDecl);
                         if (referencingClassSymbol is INamedTypeSymbol referencingTypeSymbol)
                         {
+                            // Check for circular reference
+                            var circularDiagnostic = DetectCircularReference(referencingTypeSymbol, referencedModelType, attribute, semanticModel);
+                            if (circularDiagnostic != null)
+                            {
+                                diagnostics.Add(circularDiagnostic);
+                                continue; // Skip adding this reference if circular reference detected
+                            }
+
                             // Validate generic type constraints if the referenced type is generic
                             var (validatedType, constraintDiagnostic) = referencedModelType.ValidateGenericTypeConstraints(referencingTypeSymbol, attribute);
-                            
+
                             if (constraintDiagnostic != null)
                             {
                                 diagnostics.Add(constraintDiagnostic);
                                 continue; // Skip adding this reference if constraint validation failed
                             }
-                            
+
                             if (validatedType != null)
                             {
                                 // For open generic types, we need to construct the concrete type name using referencing class's type parameters
                                 var (propertyTypeName, propertyName) = GetPropertyTypeAndName(validatedType, referencingTypeSymbol);
                                 var usedProperties = classDecl.AnalyzeModelReferenceUsage(propertyName);
-                                
+
                                 modelReferences.Add(new ModelReferenceInfo(
                                     propertyTypeName,
                                     validatedType.ContainingNamespace.ToDisplayString(),

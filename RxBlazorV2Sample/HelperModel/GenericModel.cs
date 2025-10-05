@@ -82,3 +82,17 @@ public partial class AnotherGenericModel<T, P> : ObservableModel where T : class
         Console.WriteLine("OnContextReady");
     }
 }
+
+[ObservableModelScope(ModelScope.Singleton)]
+public partial class GenericModelTwoParams<T, U> : ObservableModel where T : class where U : struct
+{
+    public partial T Value { get; set; }
+    public partial U SecondValue { get; set; }
+}
+
+[ObservableModelScope(ModelScope.Singleton)]
+[ObservableModelReference(typeof(GenericModelTwoParams<,>))]
+public partial class TestModel<T, U> : ObservableModel where T : class where U : struct
+{
+    public partial string Name { get; set; } = "";
+}

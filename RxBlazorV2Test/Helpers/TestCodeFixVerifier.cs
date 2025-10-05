@@ -39,7 +39,7 @@ internal static class CSharpCodeFixVerifier<TAnalyzer, TCodeFix>
     public static Task VerifyCodeFixAsync(string source, DiagnosticResult expected, string fixedSource, int? codeActionIndex = null)
         => VerifyCodeFixAsync(source, [expected], fixedSource, codeActionIndex);
 
-    private static Task VerifyCodeFixAsync(string source, DiagnosticResult[] expected, string fixedSource, int? codeActionIndex = null)
+    public static Task VerifyCodeFixAsync(string source, DiagnosticResult[] expected, string fixedSource, int? codeActionIndex = null)
     {
         var test = new CodeFixTest<TAnalyzer, TCodeFix>
         {
