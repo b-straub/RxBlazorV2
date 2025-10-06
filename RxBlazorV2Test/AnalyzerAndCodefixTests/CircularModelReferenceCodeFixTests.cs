@@ -15,6 +15,7 @@ public class CircularModelReferenceCodeFixTests
     [Fact]
     public async Task DetectSimpleCircularReference()
     {
+        // lang=csharp
         var test = @"
 using RxBlazorV2.Model;
 using RxBlazorV2.Interface;
@@ -40,8 +41,9 @@ namespace TestNamespace
     }
 
     [Fact]
-    public async Task RemoveCircularReferenceFromFirstModel()
+    public async Task RemoveCircularReferenceFromFirstModel_SingleFix()
     {
+        // lang=csharp
         var test = @"
 using RxBlazorV2.Model;
 using RxBlazorV2.Interface;
@@ -84,11 +86,11 @@ namespace TestNamespace
             CodeFixVerifier.Diagnostic("RXBG006").WithLocation(0).WithArguments("ModelA", "ModelB"),
             CodeFixVerifier.Diagnostic("RXBG006").WithLocation(1).WithArguments("ModelB", "ModelA")
         };
-        await CodeFixVerifier.VerifyCodeFixAsync(test, expected, fixedCode);
+        await CodeFixVerifier.VerifyCodeFixAsync(test, expected, fixedCode, codeActionIndex: 0);
     }
 
     [Fact]
-    public async Task RemoveCircularReferenceFromSecondModel()
+    public async Task RemoveCircularReferenceFromBothModels()
     {
         var test = @"
 using RxBlazorV2.Model;
@@ -116,7 +118,6 @@ using RxBlazorV2.Interface;
 namespace TestNamespace
 {
     [ObservableModelScope(ModelScope.Singleton)]
-    [ObservableModelReference(typeof(ModelB))]
     public partial class ModelA : ObservableModel
     {
     }
@@ -134,6 +135,7 @@ namespace TestNamespace
         };
         await CodeFixVerifier.VerifyCodeFixAsync(test, expected, fixedCode, codeActionIndex: 1);
     }
+
 
     [Fact]
     public async Task NoCircularReferenceWithDifferentModels()

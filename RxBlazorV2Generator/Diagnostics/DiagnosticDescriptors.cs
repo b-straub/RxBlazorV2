@@ -56,7 +56,9 @@ public static class DiagnosticDescriptors
         category: "RxBlazorGenerator",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "Circular references between observable models are not allowed.");
+        description: "Circular references between observable models are not allowed.",
+        helpLinkUri: null,
+        customTags: ["Remove this circular model reference", "Remove all circular model references"]);
 
     public static readonly DiagnosticDescriptor InvalidModelReferenceTargetError = new(
         id: "RXBG007",
@@ -121,7 +123,9 @@ public static class DiagnosticDescriptors
         category: "RxBlazorGenerator",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "When referencing open generic types, the number of type parameters must match between the referenced and referencing types.");
+        description: "When referencing open generic types, the number of type parameters must match between the referenced and referencing types.",
+        helpLinkUri: null,
+        customTags: ["Adjust type parameters to match referenced type", "Remove reference"]);
 
     public static readonly DiagnosticDescriptor TypeConstraintMismatchError = new(
         id: "RXBG014",
@@ -130,14 +134,18 @@ public static class DiagnosticDescriptors
         category: "RxBlazorGenerator",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "Type constraints must be compatible between referenced and referencing generic types to ensure type safety.");
+        description: "Type constraints must be compatible between referenced and referencing generic types to ensure type safety.",
+        helpLinkUri: null,
+        customTags: ["Adjust type parameters to match referenced type", "Remove reference"]);
 
     public static readonly DiagnosticDescriptor InvalidOpenGenericReferenceError = new(
-        id: "RXBG015", 
+        id: "RXBG015",
         title: "Invalid open generic type reference",
         messageFormat: "Cannot reference open generic type '{0}' from non-generic class '{1}'. Open generic types can only be referenced from generic classes with compatible type parameters.",
         category: "RxBlazorGenerator",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "Open generic types (typeof(MyType<,>)) can only be referenced from generic classes that can provide the required type parameters.");
+        description: "Open generic types (typeof(MyType<,>)) can only be referenced from generic classes that can provide the required type parameters.",
+        helpLinkUri: null,
+        customTags: ["Adjust type parameters to match referenced type", "Remove reference"]);
 }

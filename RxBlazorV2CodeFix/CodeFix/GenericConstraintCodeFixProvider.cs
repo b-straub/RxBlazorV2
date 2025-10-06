@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Diagnostics;
+using RxBlazorV2Generator.Extensions;
 using System.Collections.Immutable;
 using System.Composition;
 using System.Linq;
@@ -68,26 +69,18 @@ public class GenericConstraintCodeFixProvider : CodeFixProvider
                 if (classDeclaration is not null)
                 {
                     var adjustTypeParametersAction = CodeAction.Create(
-                        title: "Adjust referencing class type parameters to match referenced model",
+                        title: diagnostic.Descriptor.CodeFixMessage(0),
                         createChangedDocument: c => AdjustTypeParametersAsync(context.Document, root, attribute, classDeclaration, semanticModel, c),
-                        equivalenceKey: "AdjustTypeParameters");
+                        equivalenceKey: diagnostic.Descriptor.Id);
 
                     context.RegisterCodeFix(adjustTypeParametersAction, diagnostic);
                 }
             }
 
-            var title = diagnostic.Id == DiagnosticDescriptors.GenericArityMismatchError.Id
-                ? "Remove model reference with mismatched generic arity"
-                : diagnostic.Id == DiagnosticDescriptors.TypeConstraintMismatchError.Id
-                    ? "Remove model reference with incompatible type constraints"
-                    : diagnostic.Id == DiagnosticDescriptors.InvalidOpenGenericReferenceError.Id
-                        ? "Remove invalid open generic type reference"
-                        : "Remove invalid model reference attribute";
-
             var removeAttributeAction = CodeAction.Create(
-                title: title,
+                title: diagnostic.Descriptor.CodeFixMessage(1),
                 createChangedDocument: c => RemoveAttributeAsync(context.Document, root, attribute, c),
-                equivalenceKey: $"RemoveAttribute_{diagnostic.Id}");
+                equivalenceKey: $"{diagnostic.Descriptor.Id}_Remove");
 
             context.RegisterCodeFix(removeAttributeAction, diagnostic);
         }
