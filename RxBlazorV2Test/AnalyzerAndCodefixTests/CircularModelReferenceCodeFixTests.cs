@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using RxBlazorV2Generator.Diagnostics;
 using Xunit;
 
 using CodeFixVerifier =
@@ -16,153 +17,157 @@ public class CircularModelReferenceCodeFixTests
     public async Task DetectSimpleCircularReference()
     {
         // lang=csharp
-        var test = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
+        var test = $$"""
 
-namespace TestNamespace
-{
-    [ObservableModelScope(ModelScope.Singleton)]
-    [ObservableModelReference(typeof(ModelB))]
-    public partial class ModelA : ObservableModel
-    {
-    }
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-    [ObservableModelScope(ModelScope.Singleton)]
-    [ObservableModelReference(typeof(ModelA))]
-    public partial class ModelB : ObservableModel
-    {
-    }
-}";
+        namespace TestNamespace
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            [{|{{DiagnosticDescriptors.CircularModelReferenceError.Id}}:ObservableModelReference(typeof(ModelB))|}]
+            public partial class ModelA : ObservableModel
+            {
+            }
 
-        await AnalyzerVerifier.VerifyAnalyzerAsync(test,
-            AnalyzerVerifier.Diagnostic("RXBG006").WithSpan(8, 6, 8, 46).WithArguments("ModelA", "ModelB"),
-            AnalyzerVerifier.Diagnostic("RXBG006").WithSpan(14, 6, 14, 46).WithArguments("ModelB", "ModelA"));
+            [ObservableModelScope(ModelScope.Singleton)]
+            [{|{{DiagnosticDescriptors.CircularModelReferenceError.Id}}:ObservableModelReference(typeof(ModelA))|}]
+            public partial class ModelB : ObservableModel
+            {
+            }
+        }
+        """;
+
+        await AnalyzerVerifier.VerifyAnalyzerAsync(test);
     }
 
     [Fact]
     public async Task RemoveCircularReferenceFromFirstModel_SingleFix()
     {
         // lang=csharp
-        var test = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
+        var test = $$"""
 
-namespace TestNamespace
-{
-    [ObservableModelScope(ModelScope.Singleton)]
-    [{|#0:ObservableModelReference(typeof(ModelB))|}]
-    public partial class ModelA : ObservableModel
-    {
-    }
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-    [ObservableModelScope(ModelScope.Singleton)]
-    [{|#1:ObservableModelReference(typeof(ModelA))|}]
-    public partial class ModelB : ObservableModel
-    {
-    }
-}";
-
-        var fixedCode = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
-
-namespace TestNamespace
-{
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class ModelA : ObservableModel
-    {
-    }
-
-    [ObservableModelScope(ModelScope.Singleton)]
-    [ObservableModelReference(typeof(ModelA))]
-    public partial class ModelB : ObservableModel
-    {
-    }
-}";
-
-        var expected = new[]
+        namespace TestNamespace
         {
-            CodeFixVerifier.Diagnostic("RXBG006").WithLocation(0).WithArguments("ModelA", "ModelB"),
-            CodeFixVerifier.Diagnostic("RXBG006").WithLocation(1).WithArguments("ModelB", "ModelA")
-        };
-        await CodeFixVerifier.VerifyCodeFixAsync(test, expected, fixedCode, codeActionIndex: 0);
+            [ObservableModelScope(ModelScope.Singleton)]
+            [{|{{DiagnosticDescriptors.CircularModelReferenceError.Id}}:ObservableModelReference(typeof(ModelB))|}]
+            public partial class ModelA : ObservableModel
+            {
+            }
+
+            [ObservableModelScope(ModelScope.Singleton)]
+            [{|{{DiagnosticDescriptors.CircularModelReferenceError.Id}}:ObservableModelReference(typeof(ModelA))|}]
+            public partial class ModelB : ObservableModel
+            {
+            }
+        }
+        """;
+
+        // lang=csharp
+        var fixedCode = """
+
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+
+        namespace TestNamespace
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class ModelA : ObservableModel
+            {
+            }
+
+            [ObservableModelScope(ModelScope.Singleton)]
+            [ObservableModelReference(typeof(ModelA))]
+            public partial class ModelB : ObservableModel
+            {
+            }
+        }
+        """;
+
+        await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode, codeActionIndex: 0);
     }
 
     [Fact]
     public async Task RemoveCircularReferenceFromBothModels()
     {
-        var test = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
+        // lang=csharp
+        var test = $$"""
 
-namespace TestNamespace
-{
-    [ObservableModelScope(ModelScope.Singleton)]
-    [{|#0:ObservableModelReference(typeof(ModelB))|}]
-    public partial class ModelA : ObservableModel
-    {
-    }
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-    [ObservableModelScope(ModelScope.Singleton)]
-    [{|#1:ObservableModelReference(typeof(ModelA))|}]
-    public partial class ModelB : ObservableModel
-    {
-    }
-}";
-
-        var fixedCode = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
-
-namespace TestNamespace
-{
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class ModelA : ObservableModel
-    {
-    }
-
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class ModelB : ObservableModel
-    {
-    }
-}";
-
-        var expected = new[]
+        namespace TestNamespace
         {
-            CodeFixVerifier.Diagnostic("RXBG006").WithLocation(0).WithArguments("ModelA", "ModelB"),
-            CodeFixVerifier.Diagnostic("RXBG006").WithLocation(1).WithArguments("ModelB", "ModelA")
-        };
-        await CodeFixVerifier.VerifyCodeFixAsync(test, expected, fixedCode, codeActionIndex: 1);
+            [ObservableModelScope(ModelScope.Singleton)]
+            [{|{{DiagnosticDescriptors.CircularModelReferenceError.Id}}:ObservableModelReference(typeof(ModelB))|}]
+            public partial class ModelA : ObservableModel
+            {
+            }
+
+            [ObservableModelScope(ModelScope.Singleton)]
+            [{|{{DiagnosticDescriptors.CircularModelReferenceError.Id}}:ObservableModelReference(typeof(ModelA))|}]
+            public partial class ModelB : ObservableModel
+            {
+            }
+        }
+        """;
+
+        // lang=csharp
+        var fixedCode = """
+
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+
+        namespace TestNamespace
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class ModelA : ObservableModel
+            {
+            }
+
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class ModelB : ObservableModel
+            {
+            }
+        }
+        """;
+
+        await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode, codeActionIndex: 1);
     }
 
 
     [Fact]
     public async Task NoCircularReferenceWithDifferentModels()
     {
-        var test = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
+        // lang=csharp
+        var test = """
 
-namespace TestNamespace
-{
-    [ObservableModelScope(ModelScope.Singleton)]
-    [ObservableModelReference(typeof(ModelB))]
-    public partial class ModelA : ObservableModel
-    {
-    }
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-    [ObservableModelScope(ModelScope.Singleton)]
-    [ObservableModelReference(typeof(ModelC))]
-    public partial class ModelB : ObservableModel
-    {
-    }
+        namespace TestNamespace
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            [ObservableModelReference(typeof(ModelB))]
+            public partial class ModelA : ObservableModel
+            {
+            }
 
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class ModelC : ObservableModel
-    {
-    }
-}";
+            [ObservableModelScope(ModelScope.Singleton)]
+            [ObservableModelReference(typeof(ModelC))]
+            public partial class ModelB : ObservableModel
+            {
+            }
+
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class ModelC : ObservableModel
+            {
+            }
+        }
+        """;
 
         await AnalyzerVerifier.VerifyAnalyzerAsync(test);
     }

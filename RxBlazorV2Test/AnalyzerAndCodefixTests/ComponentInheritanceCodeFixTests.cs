@@ -12,92 +12,102 @@ public class ComponentInheritanceCodeFixTests
     public async Task ChangeToObservableComponent_FixesComponentBaseInheritance()
     {
         // lang=csharp
-        var test = @$"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
-using Microsoft.AspNetCore.Components;
+        var test = $$"""
 
-namespace Test
-{{
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class TestModel : ObservableModel
-    {{
-        public partial string Name {{ get; set; }}
-    }}
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+        using Microsoft.AspNetCore.Components;
 
-    [{{|{DiagnosticDescriptors.ComponentNotObservableError.Id}:ObservableModelScope(ModelScope.Singleton)|}}]
-    public partial class TestComponent : ComponentBase
-    {{
-        protected TestModel Model {{ get; set; }}
-    }}
-}}";
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; }
+            }
+
+            [{|{{DiagnosticDescriptors.ComponentNotObservableError.Id}}:ObservableModelScope(ModelScope.Singleton)|}]
+            public partial class TestComponent : ComponentBase
+            {
+                protected TestModel Model { get; set; }
+            }
+        }
+        """;
 
         // lang=csharp
-        var fixedCode = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
-using Microsoft.AspNetCore.Components;
-using RxBlazorV2.Component;
+        var fixedCode = """
 
-namespace Test
-{
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class TestModel : ObservableModel
-    {
-        public partial string Name { get; set; }
-    }
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+        using Microsoft.AspNetCore.Components;
+        using RxBlazorV2.Component;
 
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class TestComponent : ObservableComponent<TestModel>
-    {
-        protected TestModel Model { get; set; }
-    }
-}";
-        await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode, codeActionIndex: 0);
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; }
+            }
+
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestComponent : ObservableComponent<TestModel>
+            {
+                protected TestModel Model { get; set; }
+            }
+        }
+        """;
+
+        await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode);
     }
 
     [Fact]
     public async Task RemoveObservableModelAttributes_RemovesAllModelAttributes()
     {
         // lang=csharp
-        var test = @$"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
-using Microsoft.AspNetCore.Components;
+        var test = $$"""
 
-namespace Test
-{{
-    public partial class TestModel : ObservableModel
-    {{
-        public partial string Name {{ get; set; }}
-    }}
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+        using Microsoft.AspNetCore.Components;
 
-    [{{|{DiagnosticDescriptors.ComponentNotObservableError.Id}:ObservableModelScope(ModelScope.Singleton)|}}]
-    [ObservableModelReference<TestModel>]
-    public partial class TestComponent : ComponentBase
-    {{
-        protected TestModel Model {{ get; set; }}
-    }}
-}}";
+        namespace Test
+        {
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; }
+            }
+
+            [{|{{DiagnosticDescriptors.ComponentNotObservableError.Id}}:ObservableModelScope(ModelScope.Singleton)|}]
+            [ObservableModelReference<TestModel>]
+            public partial class TestComponent : ComponentBase
+            {
+                protected TestModel Model { get; set; }
+            }
+        }
+        """;
 
         // lang=csharp
-        var fixedCode = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
-using Microsoft.AspNetCore.Components;
+        var fixedCode = """
 
-namespace Test
-{
-    public partial class TestModel : ObservableModel
-    {
-        public partial string Name { get; set; }
-    }
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+        using Microsoft.AspNetCore.Components;
 
-    public partial class TestComponent : ComponentBase
-    {
-        protected TestModel Model { get; set; }
-    }
-}";
+        namespace Test
+        {
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; }
+            }
+
+            public partial class TestComponent : ComponentBase
+            {
+                protected TestModel Model { get; set; }
+            }
+        }
+        """;
+
         await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode, codeActionIndex: 1);
     }
 

@@ -15,27 +15,29 @@ public class TriggerTypeArgumentsCodeFixTests
     public async Task AnalyzerDetectsTriggerTypeArgumentsMismatch()
     {
         // lang=csharp
-        var test = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
+        var test = $$"""
 
-namespace Test
-{
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class TestModel : ObservableModel
-    {
-        public partial string Name { get; set; } = """";
-        
-        [ObservableCommand(nameof(ExecuteMethodWithParam))]
-        [{|" + DiagnosticDescriptors.TriggerTypeArgumentsMismatchError.Id + @":ObservableCommandTrigger<int>(nameof(Name), 42)|}]
-        public partial IObservableCommand<string> TestCommand { get; }
-        
-        private void ExecuteMethodWithParam(string parameter)
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+
+        namespace Test
         {
-            Console.WriteLine(""Executed with Name: "" + Name + "", Parameter: "" + parameter);
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; } = "";
+
+                [ObservableCommand(nameof(ExecuteMethodWithParam))]
+                [{|{{DiagnosticDescriptors.TriggerTypeArgumentsMismatchError.Id}}:ObservableCommandTrigger<int>(nameof(Name), 42)|}]
+                public partial IObservableCommand<string> TestCommand { get; }
+
+                private void ExecuteMethodWithParam(string parameter)
+                {
+                    Console.WriteLine("Executed with Name: " + Name + ", Parameter: " + parameter);
+                }
+            }
         }
-    }
-}";
+        """;
 
         await AnalyzerVerifier.VerifyAnalyzerAsync(test);
     }
@@ -44,101 +46,111 @@ namespace Test
     public async Task FixTriggerTypeArguments_MatchesCommandType()
     {
         // lang=csharp
-        var test = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
+        var test = $$"""
 
-namespace Test
-{
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class TestModel : ObservableModel
-    {
-        public partial string Name { get; set; } = """";
-        
-        [ObservableCommand(nameof(ExecuteMethodWithParam))]
-        [{|" + DiagnosticDescriptors.TriggerTypeArgumentsMismatchError.Id + @":ObservableCommandTrigger<int>(nameof(Name), 42)|}]
-        public partial IObservableCommand<string> TestCommand { get; }
-        
-        private void ExecuteMethodWithParam(string parameter)
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+
+        namespace Test
         {
-            Console.WriteLine(""Executed with Name: "" + Name + "", Parameter: "" + parameter);
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; } = "";
+
+                [ObservableCommand(nameof(ExecuteMethodWithParam))]
+                [{|{{DiagnosticDescriptors.TriggerTypeArgumentsMismatchError.Id}}:ObservableCommandTrigger<int>(nameof(Name), 42)|}]
+                public partial IObservableCommand<string> TestCommand { get; }
+
+                private void ExecuteMethodWithParam(string parameter)
+                {
+                    Console.WriteLine("Executed with Name: " + Name + ", Parameter: " + parameter);
+                }
+            }
         }
-    }
-}";
+        """;
 
         // lang=csharp
-        var fixedCode = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
+        var fixedCode = """
 
-namespace Test
-{
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class TestModel : ObservableModel
-    {
-        public partial string Name { get; set; } = """";
-        
-        [ObservableCommand(nameof(ExecuteMethodWithParam))]
-        [ObservableCommandTrigger<string>(nameof(Name), null)]
-        public partial IObservableCommand<string> TestCommand { get; }
-        
-        private void ExecuteMethodWithParam(string parameter)
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+
+        namespace Test
         {
-            Console.WriteLine(""Executed with Name: "" + Name + "", Parameter: "" + parameter);
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; } = "";
+
+                [ObservableCommand(nameof(ExecuteMethodWithParam))]
+                [ObservableCommandTrigger<string>(nameof(Name), null)]
+                public partial IObservableCommand<string> TestCommand { get; }
+
+                private void ExecuteMethodWithParam(string parameter)
+                {
+                    Console.WriteLine("Executed with Name: " + Name + ", Parameter: " + parameter);
+                }
+            }
         }
-    }
-}";
-        await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode, codeActionIndex: 0);
+        """;
+
+        await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode);
     }
 
     [Fact]
     public async Task RemoveTriggerTypeArguments_UsesNonGenericVersion()
     {
         // lang=csharp
-        var test = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
+        var test = $$"""
 
-namespace Test
-{
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class TestModel : ObservableModel
-    {
-        public partial string Name { get; set; } = """";
-        
-        [ObservableCommand(nameof(ExecuteMethod))]
-        [{|" + DiagnosticDescriptors.TriggerTypeArgumentsMismatchError.Id + @":ObservableCommandTrigger<string>(nameof(Name), ""test"")|}]
-        public partial IObservableCommand TestCommand { get; }
-        
-        private void ExecuteMethod()
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+
+        namespace Test
         {
-            Console.WriteLine($""Executed with Name: {Name}"");
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; } = "";
+
+                [ObservableCommand(nameof(ExecuteMethod))]
+                [{|{{DiagnosticDescriptors.TriggerTypeArgumentsMismatchError.Id}}:ObservableCommandTrigger<string>(nameof(Name), "test")|}]
+                public partial IObservableCommand TestCommand { get; }
+
+                private void ExecuteMethod()
+                {
+                    Console.WriteLine($"Executed with Name: {Name}");
+                }
+            }
         }
-    }
-}";
+        """;
 
         // lang=csharp
-        var fixedCode = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
+        var fixedCode = """
 
-namespace Test
-{
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class TestModel : ObservableModel
-    {
-        public partial string Name { get; set; } = """";
-        
-        [ObservableCommand(nameof(ExecuteMethod))]
-        [ObservableCommandTrigger(nameof(Name))]
-        public partial IObservableCommand TestCommand { get; }
-        
-        private void ExecuteMethod()
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+
+        namespace Test
         {
-            Console.WriteLine($""Executed with Name: {Name}"");
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; } = "";
+
+                [ObservableCommand(nameof(ExecuteMethod))]
+                [ObservableCommandTrigger(nameof(Name))]
+                public partial IObservableCommand TestCommand { get; }
+
+                private void ExecuteMethod()
+                {
+                    Console.WriteLine($"Executed with Name: {Name}");
+                }
+            }
         }
-    }
-}";
+        """;
+
         await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode, codeActionIndex: 1);
     }
 
@@ -146,103 +158,113 @@ namespace Test
     public async Task FixAsyncCommandTriggerTypeArguments_MatchesCommandType()
     {
         // lang=csharp
-        var test = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
+        var test = $$"""
 
-namespace Test
-{
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class TestModel : ObservableModel
-    {
-        public partial string Name { get; set; } = """";
-        
-        [ObservableCommand(nameof(ExecuteAsyncMethodWithParam))]
-        [{|" + DiagnosticDescriptors.TriggerTypeArgumentsMismatchError.Id + @":ObservableCommandTrigger<string>(nameof(Name), ""test"")|}]
-        public partial IObservableCommandAsync<int> TestCommand { get; }
-        
-        private async Task ExecuteAsyncMethodWithParam(int parameter)
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+
+        namespace Test
         {
-            await Task.Delay(parameter);
-            Console.WriteLine(""Executed with Name: "" + Name + "", Parameter: "" + parameter);
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; } = "";
+
+                [ObservableCommand(nameof(ExecuteAsyncMethodWithParam))]
+                [{|{{DiagnosticDescriptors.TriggerTypeArgumentsMismatchError.Id}}:ObservableCommandTrigger<string>(nameof(Name), "test")|}]
+                public partial IObservableCommandAsync<int> TestCommand { get; }
+
+                private async Task ExecuteAsyncMethodWithParam(int parameter)
+                {
+                    await Task.Delay(parameter);
+                    Console.WriteLine("Executed with Name: " + Name + ", Parameter: " + parameter);
+                }
+            }
         }
-    }
-}";
+        """;
 
         // lang=csharp
-        var fixedCode = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
+        var fixedCode = """
 
-namespace Test
-{
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class TestModel : ObservableModel
-    {
-        public partial string Name { get; set; } = """";
-        
-        [ObservableCommand(nameof(ExecuteAsyncMethodWithParam))]
-        [ObservableCommandTrigger<int>(nameof(Name), 0)]
-        public partial IObservableCommandAsync<int> TestCommand { get; }
-        
-        private async Task ExecuteAsyncMethodWithParam(int parameter)
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+
+        namespace Test
         {
-            await Task.Delay(parameter);
-            Console.WriteLine(""Executed with Name: "" + Name + "", Parameter: "" + parameter);
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; } = "";
+
+                [ObservableCommand(nameof(ExecuteAsyncMethodWithParam))]
+                [ObservableCommandTrigger<int>(nameof(Name), 0)]
+                public partial IObservableCommandAsync<int> TestCommand { get; }
+
+                private async Task ExecuteAsyncMethodWithParam(int parameter)
+                {
+                    await Task.Delay(parameter);
+                    Console.WriteLine("Executed with Name: " + Name + ", Parameter: " + parameter);
+                }
+            }
         }
-    }
-}";
-        await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode, codeActionIndex: 0);
+        """;
+
+        await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode);
     }
 
     [Fact]
     public async Task FixNonGenericToGenericCommand_AddsCorrectTypeArguments()
     {
         // lang=csharp
-        var test = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
+        var test = $$"""
 
-namespace Test
-{
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class TestModel : ObservableModel
-    {
-        public partial string Name { get; set; } = """";
-        
-        [ObservableCommand(nameof(ExecuteMethod))]
-        [{|" + DiagnosticDescriptors.TriggerTypeArgumentsMismatchError.Id + @":ObservableCommandTrigger<string>(nameof(Name), ""test"")|}]
-        public partial IObservableCommand TestCommand { get; }
-        
-        private void ExecuteMethod()
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+
+        namespace Test
         {
-            Console.WriteLine($""Executed with Name: {Name}"");
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; } = "";
+
+                [ObservableCommand(nameof(ExecuteMethod))]
+                [{|{{DiagnosticDescriptors.TriggerTypeArgumentsMismatchError.Id}}:ObservableCommandTrigger<string>(nameof(Name), "test")|}]
+                public partial IObservableCommand TestCommand { get; }
+
+                private void ExecuteMethod()
+                {
+                    Console.WriteLine($"Executed with Name: {Name}");
+                }
+            }
         }
-    }
-}";
+        """;
 
         // lang=csharp
-        var fixedCode = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
+        var fixedCode = """
 
-namespace Test
-{
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class TestModel : ObservableModel
-    {
-        public partial string Name { get; set; } = """";
-        
-        [ObservableCommand(nameof(ExecuteMethod))]
-        [ObservableCommandTrigger(nameof(Name))]
-        public partial IObservableCommand TestCommand { get; }
-        
-        private void ExecuteMethod()
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+
+        namespace Test
         {
-            Console.WriteLine($""Executed with Name: {Name}"");
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; } = "";
+
+                [ObservableCommand(nameof(ExecuteMethod))]
+                [ObservableCommandTrigger(nameof(Name))]
+                public partial IObservableCommand TestCommand { get; }
+
+                private void ExecuteMethod()
+                {
+                    Console.WriteLine($"Executed with Name: {Name}");
+                }
+            }
         }
-    }
-}";
+        """;
+
         await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode, codeActionIndex: 1);
     }
 }

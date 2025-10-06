@@ -15,96 +15,106 @@ public class GenericConstraintCodeFixTests
     public async Task AdjustTypeParameters_ToMatchReferencedModel()
     {
         // lang=csharp
-        var test = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
+        var test = $$"""
 
-namespace Test
-{
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class GenericModelTwoParams<T, U> : ObservableModel
-    {
-        public partial T Value { get; set; }
-        public partial U SecondValue { get; set; }
-    }
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-    [ObservableModelScope(ModelScope.Singleton)]
-    [{|" + DiagnosticDescriptors.GenericArityMismatchError.Id + @":ObservableModelReference(typeof(GenericModelTwoParams<,>))|}]
-    public partial class TestModel<T> : ObservableModel
-    {
-        public partial string Name { get; set; } = """";
-    }
-}";
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class GenericModelTwoParams<T, U> : ObservableModel
+            {
+                public partial T Value { get; set; }
+                public partial U SecondValue { get; set; }
+            }
+
+            [ObservableModelScope(ModelScope.Singleton)]
+            [{|{{DiagnosticDescriptors.GenericArityMismatchError.Id}}:ObservableModelReference(typeof(GenericModelTwoParams<,>))|}]
+            public partial class TestModel<T> : ObservableModel
+            {
+                public partial string Name { get; set; } = "";
+            }
+        }
+        """;
 
         // lang=csharp
-        var fixedCode = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
+        var fixedCode = """
 
-namespace Test
-{
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class GenericModelTwoParams<T, U> : ObservableModel
-    {
-        public partial T Value { get; set; }
-        public partial U SecondValue { get; set; }
-    }
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-    [ObservableModelScope(ModelScope.Singleton)]
-    [ObservableModelReference(typeof(GenericModelTwoParams<,>))]
-    public partial class TestModel<T, U> : ObservableModel
-    {
-        public partial string Name { get; set; } = """";
-    }
-}";
-        await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode, codeActionIndex: 0);
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class GenericModelTwoParams<T, U> : ObservableModel
+            {
+                public partial T Value { get; set; }
+                public partial U SecondValue { get; set; }
+            }
+
+            [ObservableModelScope(ModelScope.Singleton)]
+            [ObservableModelReference(typeof(GenericModelTwoParams<,>))]
+            public partial class TestModel<T, U> : ObservableModel
+            {
+                public partial string Name { get; set; } = "";
+            }
+        }
+        """;
+
+        await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode);
     }
 
     [Fact]
     public async Task RemoveGenericArityMismatchReference()
     {
         // lang=csharp
-        var test = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
+        var test = $$"""
 
-namespace Test
-{
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class GenericModelTwoParams<T, U> : ObservableModel
-    {
-        public partial T Value { get; set; }
-        public partial U SecondValue { get; set; }
-    }
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-    [ObservableModelScope(ModelScope.Singleton)]
-    [{|" + DiagnosticDescriptors.GenericArityMismatchError.Id + @":ObservableModelReference(typeof(GenericModelTwoParams<,>))|}]
-    public partial class TestModel<T> : ObservableModel
-    {
-        public partial string Name { get; set; } = """";
-    }
-}";
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class GenericModelTwoParams<T, U> : ObservableModel
+            {
+                public partial T Value { get; set; }
+                public partial U SecondValue { get; set; }
+            }
+
+            [ObservableModelScope(ModelScope.Singleton)]
+            [{|{{DiagnosticDescriptors.GenericArityMismatchError.Id}}:ObservableModelReference(typeof(GenericModelTwoParams<,>))|}]
+            public partial class TestModel<T> : ObservableModel
+            {
+                public partial string Name { get; set; } = "";
+            }
+        }
+        """;
 
         // lang=csharp
-        var fixedCode = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
+        var fixedCode = """
 
-namespace Test
-{
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class GenericModelTwoParams<T, U> : ObservableModel
-    {
-        public partial T Value { get; set; }
-        public partial U SecondValue { get; set; }
-    }
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class TestModel<T> : ObservableModel
-    {
-        public partial string Name { get; set; } = """";
-    }
-}";
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class GenericModelTwoParams<T, U> : ObservableModel
+            {
+                public partial T Value { get; set; }
+                public partial U SecondValue { get; set; }
+            }
+
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel<T> : ObservableModel
+            {
+                public partial string Name { get; set; } = "";
+            }
+        }
+        """;
+
         await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode, codeActionIndex: 1);
     }
 
@@ -112,92 +122,102 @@ namespace Test
     public async Task AdjustTypeParameters_ForInvalidOpenGenericReference()
     {
         // lang=csharp
-        var test = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
+        var test = $$"""
 
-namespace Test
-{
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class GenericModel<T> : ObservableModel
-    {
-        public partial T Value { get; set; }
-    }
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-    [ObservableModelScope(ModelScope.Singleton)]
-    [{|" + DiagnosticDescriptors.InvalidOpenGenericReferenceError.Id + @":ObservableModelReference(typeof(GenericModel<>))|}]
-    public partial class TestModel : ObservableModel
-    {
-        public partial string Name { get; set; } = """";
-    }
-}";
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class GenericModel<T> : ObservableModel
+            {
+                public partial T Value { get; set; }
+            }
+
+            [ObservableModelScope(ModelScope.Singleton)]
+            [{|{{DiagnosticDescriptors.InvalidOpenGenericReferenceError.Id}}:ObservableModelReference(typeof(GenericModel<>))|}]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; } = "";
+            }
+        }
+        """;
 
         // lang=csharp
-        var fixedCode = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
+        var fixedCode = """
 
-namespace Test
-{
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class GenericModel<T> : ObservableModel
-    {
-        public partial T Value { get; set; }
-    }
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-    [ObservableModelScope(ModelScope.Singleton)]
-    [ObservableModelReference(typeof(GenericModel<>))]
-    public partial class TestModel<T> : ObservableModel
-    {
-        public partial string Name { get; set; } = """";
-    }
-}";
-        await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode, codeActionIndex: 0);
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class GenericModel<T> : ObservableModel
+            {
+                public partial T Value { get; set; }
+            }
+
+            [ObservableModelScope(ModelScope.Singleton)]
+            [ObservableModelReference(typeof(GenericModel<>))]
+            public partial class TestModel<T> : ObservableModel
+            {
+                public partial string Name { get; set; } = "";
+            }
+        }
+        """;
+
+        await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode);
     }
 
     [Fact]
     public async Task RemoveTypeConstraintMismatchReference()
     {
         // lang=csharp
-        var test = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
+        var test = $$"""
 
-namespace Test
-{
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class GenericModel<T> : ObservableModel where T : class
-    {
-        public partial T Value { get; set; }
-    }
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-    [ObservableModelScope(ModelScope.Singleton)]
-    [{|" + DiagnosticDescriptors.TypeConstraintMismatchError.Id + @":ObservableModelReference(typeof(GenericModel<>))|}]
-    public partial class TestModel<T> : ObservableModel where T : struct
-    {
-        public partial string Name { get; set; } = """";
-    }
-}";
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class GenericModel<T> : ObservableModel where T : class
+            {
+                public partial T Value { get; set; }
+            }
+
+            [ObservableModelScope(ModelScope.Singleton)]
+            [{|{{DiagnosticDescriptors.TypeConstraintMismatchError.Id}}:ObservableModelReference(typeof(GenericModel<>))|}]
+            public partial class TestModel<T> : ObservableModel where T : struct
+            {
+                public partial string Name { get; set; } = "";
+            }
+        }
+        """;
 
         // lang=csharp
-        var fixedCode = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
+        var fixedCode = """
 
-namespace Test
-{
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class GenericModel<T> : ObservableModel where T : class
-    {
-        public partial T Value { get; set; }
-    }
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class TestModel<T> : ObservableModel where T : struct
-    {
-        public partial string Name { get; set; } = """";
-    }
-}";
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class GenericModel<T> : ObservableModel where T : class
+            {
+                public partial T Value { get; set; }
+            }
+
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel<T> : ObservableModel where T : struct
+            {
+                public partial string Name { get; set; } = "";
+            }
+        }
+        """;
+
         await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode, codeActionIndex: 1);
     }
 
@@ -205,45 +225,50 @@ namespace Test
     public async Task RemoveInvalidOpenGenericReference()
     {
         // lang=csharp
-        var test = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
+        var test = $$"""
 
-namespace Test
-{
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class GenericModel<T> : ObservableModel
-    {
-        public partial T Value { get; set; }
-    }
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-    [ObservableModelScope(ModelScope.Singleton)]
-    [{|" + DiagnosticDescriptors.InvalidOpenGenericReferenceError.Id + @":ObservableModelReference(typeof(GenericModel<>))|}]
-    public partial class TestModel : ObservableModel
-    {
-        public partial string Name { get; set; } = """";
-    }
-}";
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class GenericModel<T> : ObservableModel
+            {
+                public partial T Value { get; set; }
+            }
+
+            [ObservableModelScope(ModelScope.Singleton)]
+            [{|{{DiagnosticDescriptors.InvalidOpenGenericReferenceError.Id}}:ObservableModelReference(typeof(GenericModel<>))|}]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; } = "";
+            }
+        }
+        """;
 
         // lang=csharp
-        var fixedCode = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
+        var fixedCode = """
 
-namespace Test
-{
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class GenericModel<T> : ObservableModel
-    {
-        public partial T Value { get; set; }
-    }
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class TestModel : ObservableModel
-    {
-        public partial string Name { get; set; } = """";
-    }
-}";
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class GenericModel<T> : ObservableModel
+            {
+                public partial T Value { get; set; }
+            }
+
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; } = "";
+            }
+        }
+        """;
+
         await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode, codeActionIndex: 1);
     }
 
@@ -251,50 +276,55 @@ namespace Test
     public async Task RemoveGenericArityMismatchReference_FromAttributeList()
     {
         // lang=csharp
-        var test = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
-using System.Diagnostics.CodeAnalysis;
+        var test = $$"""
 
-namespace Test
-{
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class GenericModelTwoParams<T, U> : ObservableModel
-    {
-        public partial T Value { get; set; }
-        public partial U SecondValue { get; set; }
-    }
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+        using System.Diagnostics.CodeAnalysis;
 
-    [ObservableModelScope(ModelScope.Singleton)]
-    [SuppressMessage(""Test"", ""TST001""), {|" + DiagnosticDescriptors.GenericArityMismatchError.Id + @":ObservableModelReference(typeof(GenericModelTwoParams<,>))|}]
-    public partial class TestModel<T> : ObservableModel
-    {
-        public partial string Name { get; set; } = """";
-    }
-}";
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class GenericModelTwoParams<T, U> : ObservableModel
+            {
+                public partial T Value { get; set; }
+                public partial U SecondValue { get; set; }
+            }
+
+            [ObservableModelScope(ModelScope.Singleton)]
+            [SuppressMessage("Test", "TST001"), {|{{DiagnosticDescriptors.GenericArityMismatchError.Id}}:ObservableModelReference(typeof(GenericModelTwoParams<,>))|}]
+            public partial class TestModel<T> : ObservableModel
+            {
+                public partial string Name { get; set; } = "";
+            }
+        }
+        """;
 
         // lang=csharp
-        var fixedCode = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
-using System.Diagnostics.CodeAnalysis;
+        var fixedCode = """
 
-namespace Test
-{
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class GenericModelTwoParams<T, U> : ObservableModel
-    {
-        public partial T Value { get; set; }
-        public partial U SecondValue { get; set; }
-    }
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+        using System.Diagnostics.CodeAnalysis;
 
-    [ObservableModelScope(ModelScope.Singleton)]
-    [SuppressMessage(""Test"", ""TST001"")]
-    public partial class TestModel<T> : ObservableModel
-    {
-        public partial string Name { get; set; } = """";
-    }
-}";
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class GenericModelTwoParams<T, U> : ObservableModel
+            {
+                public partial T Value { get; set; }
+                public partial U SecondValue { get; set; }
+            }
+
+            [ObservableModelScope(ModelScope.Singleton)]
+            [SuppressMessage("Test", "TST001")]
+            public partial class TestModel<T> : ObservableModel
+            {
+                public partial string Name { get; set; } = "";
+            }
+        }
+        """;
+
         await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode, codeActionIndex: 1);
     }
 
@@ -302,49 +332,54 @@ namespace Test
     public async Task RemoveTypeConstraintMismatchReference_SeparateAttributeList()
     {
         // lang=csharp
-        var test = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
+        var test = $$"""
 
-namespace Test
-{
-    public interface IEntity { }
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class GenericModel<T> : ObservableModel where T : class, IEntity, new()
-    {
-        public partial T Value { get; set; }
-    }
+        namespace Test
+        {
+            public interface IEntity { }
 
-    [ObservableModelScope(ModelScope.Singleton)]
-    [{|" + DiagnosticDescriptors.TypeConstraintMismatchError.Id + @":ObservableModelReference(typeof(GenericModel<>))|}]
-    public partial class TestModel<T> : ObservableModel where T : class, new()
-    {
-        public partial string Name { get; set; } = """";
-    }
-}";
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class GenericModel<T> : ObservableModel where T : class, IEntity, new()
+            {
+                public partial T Value { get; set; }
+            }
+
+            [ObservableModelScope(ModelScope.Singleton)]
+            [{|{{DiagnosticDescriptors.TypeConstraintMismatchError.Id}}:ObservableModelReference(typeof(GenericModel<>))|}]
+            public partial class TestModel<T> : ObservableModel where T : class, new()
+            {
+                public partial string Name { get; set; } = "";
+            }
+        }
+        """;
 
         // lang=csharp
-        var fixedCode = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
+        var fixedCode = """
 
-namespace Test
-{
-    public interface IEntity { }
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class GenericModel<T> : ObservableModel where T : class, IEntity, new()
-    {
-        public partial T Value { get; set; }
-    }
+        namespace Test
+        {
+            public interface IEntity { }
 
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class TestModel<T> : ObservableModel where T : class, new()
-    {
-        public partial string Name { get; set; } = """";
-    }
-}";
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class GenericModel<T> : ObservableModel where T : class, IEntity, new()
+            {
+                public partial T Value { get; set; }
+            }
+
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel<T> : ObservableModel where T : class, new()
+            {
+                public partial string Name { get; set; } = "";
+            }
+        }
+        """;
+
         await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode, codeActionIndex: 1);
     }
 }

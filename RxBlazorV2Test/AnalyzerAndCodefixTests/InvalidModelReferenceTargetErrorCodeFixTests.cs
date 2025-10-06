@@ -12,91 +12,101 @@ public class InvalidModelReferenceTargetErrorCodeFixTests
     public async Task RemoveModelReference_RemovesInvalidReference()
     {
         // lang=csharp
-        var test = @$"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
+        var test = $$"""
 
-namespace Test
-{{
-    // This doesn't inherit from ObservableModel so should trigger the diagnostic
-    public class UnregisteredModel
-    {{
-        public string Name {{ get; set; }}
-    }}
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-    [{{|{DiagnosticDescriptors.InvalidModelReferenceTargetError.Id}:ObservableModelReference<UnregisteredModel>|}}]
-    [ObservableModelScope(ModelScope.Scoped)]
-    public partial class TestModel : ObservableModel
-    {{
-        public partial int Value {{ get; set; }}
-    }}
-}}";
+        namespace Test
+        {
+            // This doesn't inherit from ObservableModel so should trigger the diagnostic
+            public class UnregisteredModel
+            {
+                public string Name { get; set; }
+            }
+
+            [{|{{DiagnosticDescriptors.InvalidModelReferenceTargetError.Id}}:ObservableModelReference<UnregisteredModel>|}]
+            [ObservableModelScope(ModelScope.Scoped)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial int Value { get; set; }
+            }
+        }
+        """;
 
         // lang=csharp
-        var fixedCode = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
+        var fixedCode = """
 
-namespace Test
-{
-    // This doesn't inherit from ObservableModel so should trigger the diagnostic
-    public class UnregisteredModel
-    {
-        public string Name { get; set; }
-    }
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-    [ObservableModelScope(ModelScope.Scoped)]
-    public partial class TestModel : ObservableModel
-    {
-        public partial int Value { get; set; }
-    }
-}";
-        await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode, codeActionIndex: 0);
+        namespace Test
+        {
+            // This doesn't inherit from ObservableModel so should trigger the diagnostic
+            public class UnregisteredModel
+            {
+                public string Name { get; set; }
+            }
+
+            [ObservableModelScope(ModelScope.Scoped)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial int Value { get; set; }
+            }
+        }
+        """;
+
+        await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode);
     }
 
     [Fact]
     public async Task RemoveModelReference_FromAttributeList()
     {
         // lang=csharp
-        var test = @$"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
+        var test = $$"""
 
-namespace Test
-{{
-    // This doesn't inherit from ObservableModel so should trigger the diagnostic
-    public class UnregisteredService
-    {{
-        public string Name {{ get; set; }}
-    }}
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-    [{{|{DiagnosticDescriptors.InvalidModelReferenceTargetError.Id}:ObservableModelReference<UnregisteredService>|}}, ObservableModelScope(ModelScope.Scoped)]
-    public partial class TestModel : ObservableModel
-    {{
-        public partial int Value {{ get; set; }}
-    }}
-}}";
+        namespace Test
+        {
+            // This doesn't inherit from ObservableModel so should trigger the diagnostic
+            public class UnregisteredService
+            {
+                public string Name { get; set; }
+            }
+
+            [{|{{DiagnosticDescriptors.InvalidModelReferenceTargetError.Id}}:ObservableModelReference<UnregisteredService>|}, ObservableModelScope(ModelScope.Scoped)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial int Value { get; set; }
+            }
+        }
+        """;
 
         // lang=csharp
-        var fixedCode = @"
-using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
+        var fixedCode = """
 
-namespace Test
-{
-    // This doesn't inherit from ObservableModel so should trigger the diagnostic
-    public class UnregisteredService
-    {
-        public string Name { get; set; }
-    }
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-    [ObservableModelScope(ModelScope.Scoped)]
-    public partial class TestModel : ObservableModel
-    {
-        public partial int Value { get; set; }
-    }
-}";
-        await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode, codeActionIndex: 0);
+        namespace Test
+        {
+            // This doesn't inherit from ObservableModel so should trigger the diagnostic
+            public class UnregisteredService
+            {
+                public string Name { get; set; }
+            }
+
+            [ObservableModelScope(ModelScope.Scoped)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial int Value { get; set; }
+            }
+        }
+        """;
+
+        await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode);
     }
 
 }
