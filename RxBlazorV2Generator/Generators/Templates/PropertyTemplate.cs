@@ -73,6 +73,13 @@ public static class PropertyTemplate
     private static string GeneratePartialProperty(PartialPropertyInfo prop)
     {
         var sb = new StringBuilder();
+        var batchIdsParam = "";
+        if (prop.BatchIds is not null && prop.BatchIds.Length > 0)
+        {
+            var quotedBatchIds = string.Join(", ", prop.BatchIds.Select(id => $"\"{id}\""));
+            batchIdsParam = $", {quotedBatchIds}";
+        }
+
         sb.AppendLine($"    public partial {prop.Type} {prop.Name}");
         sb.AppendLine("    {");
         sb.AppendLine("        get => field;");
@@ -84,13 +91,13 @@ public static class PropertyTemplate
             sb.AppendLine("            if (field != value)");
             sb.AppendLine("            {");
             sb.AppendLine("                field = value;");
-            sb.AppendLine($"                StateHasChanged(nameof({prop.Name}));");
+            sb.AppendLine($"                StateHasChanged(nameof({prop.Name}){batchIdsParam});");
             sb.AppendLine("            }");
         }
         else
         {
             sb.AppendLine("            field = value;");
-            sb.AppendLine($"            StateHasChanged(nameof({prop.Name}));");
+            sb.AppendLine($"            StateHasChanged(nameof({prop.Name}){batchIdsParam});");
         }
 
         sb.AppendLine("        }");

@@ -19,15 +19,50 @@ public static class PropertyAnalysisExtensions
             {
                 var isObservableCollection = member.IsObservableCollectionProperty(semanticModel);
                 var isEquatable = member.IsEquatableProperty(semanticModel);
+                var batchIds = member.GetObservableBatchIds(semanticModel);
                 partialProperties.Add(new PartialPropertyInfo(
                     member.Identifier.ValueText,
                     member.Type!.ToString(),
                     isObservableCollection,
-                    isEquatable));
+                    isEquatable,
+                    batchIds));
             }
         }
 
         return partialProperties;
+    }
+
+    public static string[]? GetObservableBatchIds(this PropertyDeclarationSyntax property, SemanticModel semanticModel)
+    {
+        try
+        {
+            var propertySymbol = semanticModel.GetDeclaredSymbol(property);
+            if (propertySymbol is not IPropertySymbol propSymbol)
+            {
+                return null;
+            }
+
+            var batchIds = new List<string>();
+            foreach (var attribute in propSymbol.GetAttributes())
+            {
+                var attributeClass = attribute.AttributeClass;
+                if (attributeClass?.Name == "ObservableBatchAttribute" &&
+                    attribute.ConstructorArguments.Length > 0)
+                {
+                    var batchIdArg = attribute.ConstructorArguments[0];
+                    if (batchIdArg.Value is string batchId)
+                    {
+                        batchIds.Add(batchId);
+                    }
+                }
+            }
+
+            return batchIds.Count > 0 ? batchIds.ToArray() : null;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 
     public static List<string> AnalyzeMethodForPropertyUsage(this Dictionary<string, MethodDeclarationSyntax> methods, 

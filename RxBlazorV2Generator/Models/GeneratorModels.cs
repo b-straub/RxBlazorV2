@@ -67,13 +67,15 @@ public class PartialPropertyInfo
     public string Type { get; }
     public bool IsObservableCollection { get; }
     public bool IsEquatable { get; }
+    public string[]? BatchIds { get; }
 
-    public PartialPropertyInfo(string name, string type, bool isObservableCollection = false, bool isEquatable = false)
+    public PartialPropertyInfo(string name, string type, bool isObservableCollection = false, bool isEquatable = false, string[]? batchIds = null)
     {
         Name = name;
         Type = type;
         IsObservableCollection = isObservableCollection;
         IsEquatable = isEquatable;
+        BatchIds = batchIds;
     }
 }
 

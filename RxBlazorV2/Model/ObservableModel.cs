@@ -3,23 +3,17 @@ using RxBlazorV2.Interface;
 
 namespace RxBlazorV2.Model;
 
-public enum SuspensionState
-{
-    None,
-    Active,
-    Aborted
-}
-
 public abstract class ObservableModel : IObservableModel
 {
     public abstract string ModelID { get; }
 
     private bool _initialized;
     private bool _initializedAsync;
-    private int _suspendNotifications;
+    private bool _suspendNotifications;
     private readonly HashSet<string> _pendingNotifications = new();
     private readonly Lock _suspenderLock = new();
     private NotificationSuspender? _currentSuspender;
+    private readonly HashSet<string> _suspendedBatchIds = new();
 
     public Observable<string[]> Observable { get; }
     protected abstract IDisposable Subscriptions { get; }
@@ -59,19 +53,24 @@ public abstract class ObservableModel : IObservableModel
         return Task.CompletedTask;
     }
     
-    protected void StateHasChanged(string? propertyName = null)
+    protected void StateHasChanged(string? propertyName, params string[] batchIds)
     {
-        if (_suspendNotifications > 0)
+        var isSuspended = _suspendNotifications && (batchIds.Length == 0 || batchIds.Any(id => _suspendedBatchIds.Contains(id)));
+
+        if (isSuspended)
         {
             _pendingNotifications.Add(propertyName ?? ModelID);
             return;
         }
+
         PropertyChangedSubject.OnNext([propertyName ?? ModelID]);
     }
 
-    protected internal void StateHasChanged(string[] propertyNames)
+    protected internal void StateHasChanged(string[] propertyNames, params string[] batchIds)
     {
-        if (_suspendNotifications > 0)
+        var isSuspended = _suspendNotifications && (batchIds.Length == 0 || batchIds.Any(id => _suspendedBatchIds.Contains(id)));
+
+        if (isSuspended)
         {
             foreach (var name in propertyNames.Length == 0 ? [ModelID] : propertyNames)
             {
@@ -79,6 +78,7 @@ public abstract class ObservableModel : IObservableModel
             }
             return;
         }
+
         PropertyChangedSubject.OnNext(propertyNames.Length == 0 ? [ModelID] : propertyNames);
     }
 
@@ -86,35 +86,55 @@ public abstract class ObservableModel : IObservableModel
     /// Suspends state change notifications until the returned IDisposable is disposed.
     /// Useful for batch updates to properties or observable collections.
     /// All property changes during suspension are batched and fired as a single notification when disposed.
-    /// Supports nested calls - notifications are only fired when all suspensions are released.
     /// </summary>
+    /// <param name="batchIds">
+    /// Optional batch identifiers. When provided, only suspends notifications for properties with matching
+    /// <see cref="ObservableBatchAttribute"/>. When empty, suspends all notifications.
+    /// Multiple batch IDs can be specified to suspend multiple batch groups simultaneously.
+    /// </param>
+    /// <remarks>
+    /// <para>Nested suspensions are not supported and will throw <see cref="InvalidOperationException"/>.</para>
+    /// <para>Properties without batch IDs are suspended when no batch IDs are specified.</para>
+    /// <para>Properties with batch IDs are only suspended if at least one of their batch IDs matches a suspended batch.</para>
+    /// </remarks>
     /// <example>
     /// <code>
-    /// // Using statement (block scope):
+    /// // Suspend all notifications:
     /// using (Model.SuspendNotifications())
     /// {
     ///     Tlist.Clear();
     ///     Tlist.AddRange(Enumerable.Range(0, 10000));
-    ///     // Notification fires at end of block
+    ///     // All notifications fire at end of block
     /// }
     ///
-    /// 
-    /// // Using declaration (method scope):
-    /// void UpdateData()
+    /// // Single batch-specific suspension:
+    /// using (Model.SuspendNotifications("UserInfo"))
     /// {
-    ///     using var _ = Model.SuspendNotifications();
-    ///     Tlist.Clear();
-    ///     Tlist.AddRange(Enumerable.Range(0, 10000));
-    ///     // Notification fires at end of method
+    ///     FirstName = "John";  // Suspended if [ObservableBatch("UserInfo")]
+    ///     LastName = "Doe";     // Suspended if [ObservableBatch("UserInfo")]
+    ///     Age = 30;             // NOT suspended if no [ObservableBatch] or different batch ID
+    /// }
+    ///
+    /// // Multiple batch suspensions:
+    /// using (Model.SuspendNotifications("UserInfo", "Address"))
+    /// {
+    ///     FirstName = "John";   // Suspended if [ObservableBatch("UserInfo")]
+    ///     City = "New York";    // Suspended if [ObservableBatch("Address")]
     /// }
     /// </code>
     /// </example>
     /// <returns>IDisposable that fires batched notifications when disposed.</returns>
-    public IDisposable SuspendNotifications()
+    /// <exception cref="InvalidOperationException">Thrown when a suspension is already active.</exception>
+    public IDisposable SuspendNotifications(params string[] batchIds)
     {
         lock (_suspenderLock)
         {
-            var suspender = new NotificationSuspender(this);
+            if (_suspendNotifications)
+            {
+                throw new InvalidOperationException("SuspendNotifications is already active. Nested suspensions are not supported.");
+            }
+
+            var suspender = new NotificationSuspender(this, batchIds);
             _currentSuspender = suspender;
             return suspender;
         }
@@ -144,22 +164,6 @@ public abstract class ObservableModel : IObservableModel
         }
     }
 
-    public SuspensionState CurrentSuspensionState
-    {
-        get
-        {
-            lock (_suspenderLock)
-            {
-                if (_currentSuspender is null)
-                {
-                    return SuspensionState.None;
-                }
-
-                return _currentSuspender.IsAborted ? SuspensionState.Aborted : SuspensionState.Active;
-            }
-        }
-    }
-
     private sealed class NotificationSuspender : IDisposable
     {
         private readonly ObservableModel _model;
@@ -168,15 +172,24 @@ public abstract class ObservableModel : IObservableModel
 
         internal bool IsAborted { get; private set; }
 
-        public NotificationSuspender(ObservableModel model)
+        public NotificationSuspender(ObservableModel model, string[] batchIds)
         {
             _model = model;
-            Interlocked.Increment(ref _model._suspendNotifications);
+
+            _model._suspendNotifications = true;
+
+            foreach (var batchId in batchIds)
+            {
+                _model._suspendedBatchIds.Add(batchId);
+            }
         }
 
         internal bool IsFirstCommand()
         {
-            if (_firstCommandExecuted) return false;
+            if (_firstCommandExecuted)
+            {
+                return false;
+            }
             _firstCommandExecuted = true;
             return true;
         }
@@ -194,15 +207,14 @@ public abstract class ObservableModel : IObservableModel
             }
             _disposed = true;
 
-            if (Interlocked.Decrement(ref _model._suspendNotifications) == 0)
-            {
-                _model._currentSuspender = null;
+            _model._suspendedBatchIds.Clear();
+            _model._suspendNotifications = false;
+            _model._currentSuspender = null;
 
-                if (_model._pendingNotifications.Count > 0)
-                {
-                    _model.PropertyChangedSubject.OnNext(_model._pendingNotifications.ToArray());
-                    _model._pendingNotifications.Clear();
-                }
+            if (_model._pendingNotifications.Count > 0)
+            {
+                _model.PropertyChangedSubject.OnNext(_model._pendingNotifications.ToArray());
+                _model._pendingNotifications.Clear();
             }
         }
     }

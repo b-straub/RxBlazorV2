@@ -7,6 +7,16 @@ namespace RxBlazorV2ExternalModel.Models;
 
 public partial class TestModel : ObservableModel
 {
+    public const string CommonBatch = "common";
+    public const string ListBatch = "list";
+
+    public partial int NotInBatch { get; set; }
+    
+    [ObservableBatch(CommonBatch)]
+    public partial int InBatch { get; set; }
+
+    [ObservableBatch(ListBatch)]
+    [ObservableBatch(CommonBatch)]
     public partial ObservableList<ListType> TestList { get; set; }
     
     [ObservableCommand(nameof(AddItemToTListAsync), nameof(AddItemToTListCe))]

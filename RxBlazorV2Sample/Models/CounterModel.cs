@@ -8,6 +8,9 @@ public partial class CounterModel : ObservableModel
 {
     public partial int Counter1 { get; set; }
     public partial int Counter2 { get; set; }
+
+    [ObservableBatch("counters")]
+    [ObservableBatch("batch2")]
     public partial int Counter3 { get; set; }
     
     [ObservableCommand(nameof(IncrementCount1))]

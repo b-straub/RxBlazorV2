@@ -155,9 +155,16 @@ public static class ConstructorTemplate
             sb.AppendLine("        // Initialize IObservableCollection properties");
             foreach (var prop in observableCollectionProperties)
             {
+                var batchIdsParam = "";
+                if (prop.BatchIds is not null && prop.BatchIds.Length > 0)
+                {
+                    var quotedBatchIds = string.Join(", ", prop.BatchIds.Select(id => $"\"{id}\""));
+                    batchIdsParam = $", {quotedBatchIds}";
+                }
+
                 sb.AppendLine($"        {prop.Name} = new();");
                 sb.AppendLine($"        _subscriptions.Add({prop.Name}.ObserveChanged()");
-                sb.AppendLine($"            .Subscribe(_ => StateHasChanged(\"{prop.Name}\")));");
+                sb.AppendLine($"            .Subscribe(_ => StateHasChanged(\"{prop.Name}\"{batchIdsParam})));");
                 if (prop != observableCollectionProperties.Last())
                 {
                     sb.AppendLine();

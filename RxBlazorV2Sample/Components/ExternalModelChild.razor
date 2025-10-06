@@ -1,5 +1,6 @@
 @using RxBlazorV2ExternalModel.Type
 @using R3;
+@using RxBlazorV2ExternalModel.Models
 @inherits ExternalModel
 
 <MudStack Row="true" AlignItems="AlignItems.Center">
@@ -19,10 +20,16 @@
             Add To List Async
         </MudButton>
         
-        <MudButton @onclick=@Add Variant="Variant.Filled"
+        <MudButton @onclick=@AddListOnly Variant="Variant.Filled"
                    Color="Color.Secondary"
                    Disabled="@(!Model.AddToTList.CanExecute)">
-            Add To List Sync
+            Add To List Sync ListOnly
+        </MudButton>
+        
+        <MudButton @onclick=@AddWithCommon Variant="Variant.Filled"
+                   Color="Color.Secondary"
+                   Disabled="@(!Model.AddToTList.CanExecute)">
+            Add To List Sync List and Common
         </MudButton>
     }
     
@@ -49,14 +56,27 @@
     private int _listChanges;
     private bool _suspend;
 
-    private void Add()
+    private void AddListOnly()
     {
-        using var _ = Model.SuspendNotifications();
+        using var _ = Model.SuspendNotifications(TestModel.ListBatch);
+        DoAdd();
+    }
+    
+    private void AddWithCommon()
+    {
+        using var _ = Model.SuspendNotifications(TestModel.CommonBatch, TestModel.ListBatch);
+        DoAdd();
+    }
+
+    private void DoAdd()
+    {
         Model.TestList.Clear();
         Model.TestList.Add(new ListType("Test1", 1));
         Model.TestList.Add(new ListType("Test2", 2));
         Model.TestList.Add(new ListType("Test3", 3));
         Model.TestList.Add(new ListType("Test4", 4));
+        Model.NotInBatch++;
+        Model.InBatch++;
     }
     
     private async Task AddAsync()
@@ -64,7 +84,7 @@
         _listChanges = 0;
         if (_suspend)
         {
-            using var _ = Model.SuspendNotifications();
+            using var _ = Model.SuspendNotifications(TestModel.ListBatch);
             await DoAddAsync();
         }
         else
@@ -91,8 +111,6 @@
     protected override void OnContextReady()
     {
         Subscriptions.Add(Model.Observable
-            .Where(o => o.Any(n => n == nameof(Model.TestList)))
-            .Chunk(TimeSpan.FromMilliseconds(100))
             .Subscribe(_ => { _listChanges++; }));
         base.OnContextReady();
     }
