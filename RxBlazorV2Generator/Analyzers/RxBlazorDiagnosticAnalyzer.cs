@@ -269,8 +269,8 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
         // Check if this class has ObservableModel attributes but doesn't inherit from ObservableComponent
         var hasObservableModelAttributes = classDecl.AttributeLists
             .SelectMany(al => al.Attributes)
-            .Any(attr => attr.Name.ToString().Contains("ObservableModelScope") || 
-                        attr.Name.ToString().Contains("ObservableModelReference"));
+            .Any(attr => attr.IsObservableModelScope(semanticModel) ||
+                        attr.IsObservableModelReference(semanticModel));
         
         if (hasObservableModelAttributes)
         {
@@ -304,7 +304,7 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
                 // Find the ObservableModelScope attribute for location
                 var attributeNode = classDecl.AttributeLists
                     .SelectMany(al => al.Attributes)
-                    .FirstOrDefault(attr => attr.Name.ToString().Contains("ObservableModelScope"));
+                    .FirstOrDefault(attr => attr.IsObservableModelScope(semanticModel));
                 
                 var location = attributeNode?.GetLocation() ?? classDecl.GetLocation();
                 
