@@ -55,7 +55,7 @@ public abstract class ObservableModel : IObservableModel
     
     protected void StateHasChanged(string? propertyName, params string[] batchIds)
     {
-        var isSuspended = _suspendNotifications && (batchIds.Length == 0 || batchIds.Any(id => _suspendedBatchIds.Contains(id)));
+        var isSuspended = _suspendNotifications && (_suspendedBatchIds.Count == 0 || batchIds.Any(id => _suspendedBatchIds.Contains(id)));
 
         if (isSuspended)
         {
@@ -68,7 +68,7 @@ public abstract class ObservableModel : IObservableModel
 
     protected internal void StateHasChanged(string[] propertyNames, params string[] batchIds)
     {
-        var isSuspended = _suspendNotifications && (batchIds.Length == 0 || batchIds.Any(id => _suspendedBatchIds.Contains(id)));
+        var isSuspended = _suspendNotifications && (_suspendedBatchIds.Count == 0 || batchIds.Any(id => _suspendedBatchIds.Contains(id)));
 
         if (isSuspended)
         {
