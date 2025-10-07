@@ -68,8 +68,26 @@ public static class ObservableModelAnalyzer
                 typeConstrains,
                 usingStatements);
 
+            // Build symbol map for model references
+            var modelSymbolMap = new Dictionary<string, ITypeSymbol>();
+            foreach (var modelRef in modelReferences)
+            {
+                // Resolve the type symbol from the reference
+                var fullTypeName = string.IsNullOrEmpty(modelRef.ReferencedModelNamespace)
+                    ? modelRef.ReferencedModelTypeName
+                    : $"{modelRef.ReferencedModelNamespace}.{modelRef.ReferencedModelTypeName}";
+
+                var typeSymbol = semanticModel.Compilation.GetTypeByMetadataName(fullTypeName);
+                if (typeSymbol != null)
+                {
+                    modelSymbolMap[modelRef.PropertyName] = typeSymbol;
+                }
+            }
+
             // Enhance model references with command method analysis
-            var enhancedModelReferences = modelInfo.EnhanceModelReferencesWithCommandAnalysis();
+            var enhancedModelReferences = modelInfo.EnhanceModelReferencesWithCommandAnalysis(
+                semanticModel,
+                modelSymbolMap);
 
             var finalModelInfo = new ObservableModelInfo(
                 namedTypeSymbol.ContainingNamespace.ToDisplayString(),

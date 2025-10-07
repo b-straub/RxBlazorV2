@@ -336,7 +336,8 @@ public static class AttributeAnalysisExtensions
 
                 // Analyze the execute method to determine if it supports cancellation
                 var supportsCancellation = methods.TryGetValue(executeMethod!, out var executeMethodSyntax) &&
-                    executeMethodSyntax.HasCancellationTokenParameter();
+                    semanticModel != null &&
+                    executeMethodSyntax.HasCancellationTokenParameter(semanticModel);
 
                 // Extract trigger attributes
                 var triggerAttrs = attributes.Where(a => 
@@ -461,7 +462,10 @@ public static class AttributeAnalysisExtensions
 
                                 // For open generic types, we need to construct the concrete type name using referencing class's type parameters
                                 var (propertyTypeName, propertyName) = GetPropertyTypeAndName(validatedType, referencingTypeSymbol);
-                                var usedProperties = classDecl.AnalyzeModelReferenceUsage(propertyName);
+                                var usedProperties = classDecl.AnalyzeModelReferenceUsage(
+                                    propertyName,
+                                    semanticModel,
+                                    validatedType);
 
                                 modelReferences.Add(new ModelReferenceInfo(
                                     propertyTypeName,
