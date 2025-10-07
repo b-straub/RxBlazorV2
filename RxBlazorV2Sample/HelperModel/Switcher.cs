@@ -27,6 +27,6 @@ public partial class Switcher : ObservableModel
     
     private bool CanAddTen()
     {
-        return AddMode && !Add10 && CounterModel.Counter2 < 20;
+        return AddMode && !Add10 && CounterModel is { Counter2: < 20, Counter1: < 10 };
     }
 }

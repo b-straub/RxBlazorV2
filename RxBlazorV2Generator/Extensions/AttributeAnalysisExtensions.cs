@@ -459,25 +459,21 @@ public static class AttributeAnalysisExtensions
                             try
                             {
                                 // Validate generic type constraints if the referenced type is generic
-                                var validatedType = referencedModelType.ValidateGenericTypeConstraints(referencingTypeSymbol, attribute);
+                                var validatedSymbol = referencedModelType.ValidateGenericTypeConstraints(referencingTypeSymbol, attribute);
 
                                 // For open generic types, we need to construct the concrete type name using referencing class's type parameters
-                                var (propertyTypeName, propertyName) = GetPropertyTypeAndName(validatedType, referencingTypeSymbol);
-                                var usedProperties = classDecl.AnalyzeModelReferenceUsage(
-                                    propertyName,
-                                    semanticModel,
-                                    validatedType);
+                                var (propertyTypeName, propertyName) = GetPropertyTypeAndName(validatedSymbol, referencingTypeSymbol);
+                                var usedProperties = classDecl.AnalyzeModelReferenceUsage(validatedSymbol);
 
                                 modelReferences.Add(new ModelReferenceInfo(
                                     propertyTypeName,
-                                    validatedType.ContainingNamespace.ToDisplayString(),
+                                    validatedSymbol.ContainingNamespace.ToDisplayString(),
                                     propertyName,
                                     usedProperties));
                             }
                             catch (Exceptions.DiagnosticException ex)
                             {
                                 diagnostics.Add(ex.ToDiagnostic());
-                                continue; // Skip adding this reference if validation failed
                             }
                         }
                     }

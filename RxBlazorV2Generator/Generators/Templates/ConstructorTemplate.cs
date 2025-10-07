@@ -186,8 +186,8 @@ public static class ConstructorTemplate
         foreach (var modelRef in modelInfo.ModelReferences)
         {
             var observedProps = $"[\"{string.Join("\", \"", modelRef.UsedProperties)}\"]";
-            sb.AppendLine($"        _subscriptions.Add({modelRef.PropertyName}.Observable.Where(p => p.Intersect({observedProps}).Any())");
-            sb.AppendLine("            .Subscribe(props => StateHasChanged(props)));");
+            sb.AppendLine($"        _subscriptions.Add({modelRef.PropertyName}.Observable.Select(props => props.Intersect({observedProps})).Where(props => props.Any())");
+            sb.AppendLine("            .Subscribe(props => StateHasChanged(props.ToArray())));");
         }
 
         return sb.ToString().TrimEnd('\r', '\n');

@@ -8,53 +8,24 @@ public static class ModelReferenceAnalysisExtensions
 {
     public static List<string> AnalyzeModelReferenceUsage(
         this ClassDeclarationSyntax classDecl,
-        string referencedModelName,
-        SemanticModel semanticModel,
-        ITypeSymbol referencedModelType)
+        INamedTypeSymbol referencedModelSymbol)
     {
         var usedProperties = new HashSet<string>();
-
+        var possibleProperties = referencedModelSymbol
+            .GetMembers()
+            .Select(n => n as IPropertySymbol)
+            .Where(p => p is not null)
+            .Select(p => p!.Name)
+            .ToList();
+        
         // Use semantic model to find property access patterns
         foreach (var node in classDecl.DescendantNodes())
         {
-            if (node is MemberAccessExpressionSyntax memberAccess)
+            if (node is IdentifierNameSyntax identifierNameSyntax)
             {
-                var symbolInfo = semanticModel.GetSymbolInfo(memberAccess.Expression);
-                var symbol = symbolInfo.Symbol;
-
-                if (symbol == null)
+                if (possibleProperties.Contains(identifierNameSyntax.Identifier.ValueText))
                 {
-                    continue;
-                }
-
-                ITypeSymbol? expressionType = null;
-
-                // Handle property access (property is of the model type)
-                if (symbol is IPropertySymbol propertySymbol)
-                {
-                    expressionType = propertySymbol.Type;
-                }
-                // Handle local variable
-                else if (symbol is ILocalSymbol localSymbol)
-                {
-                    expressionType = localSymbol.Type;
-                }
-                // Handle parameter
-                else if (symbol is IParameterSymbol paramSymbol)
-                {
-                    expressionType = paramSymbol.Type;
-                }
-                // Handle field
-                else if (symbol is IFieldSymbol fieldSymbol)
-                {
-                    expressionType = fieldSymbol.Type;
-                }
-
-                // Check if the expression type matches the referenced model type
-                if (expressionType != null &&
-                    SymbolEqualityComparer.Default.Equals(expressionType, referencedModelType))
-                {
-                    usedProperties.Add(memberAccess.Name.Identifier.ValueText);
+                    usedProperties.Add(identifierNameSyntax.Identifier.ValueText);
                 }
             }
         }
