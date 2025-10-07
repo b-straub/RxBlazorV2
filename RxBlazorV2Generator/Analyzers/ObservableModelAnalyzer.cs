@@ -32,8 +32,6 @@ public static class ObservableModelAnalyzer
             // Check if class inherits from ObservableModel
             if (!namedTypeSymbol.InheritsFromObservableModel()) 
                 return (null, diagnostics);
-
-            var attributes = namedTypeSymbol.GetAttributes();
             
             // Extract all components using extension methods
             var methods = classDecl.CollectMethods();
@@ -125,6 +123,96 @@ public static class ObservableModelAnalyzer
     {
         var (modelInfo, _) = GetObservableModelClassInfoWithDiagnostics(context, serviceClasses, observableModelClasses);
         return modelInfo;
+    }
+
+    /// <summary>
+    /// Analyzes an ObservableModel class using semantic model from full compilation.
+    /// This version should be used in the final RegisterSourceOutput step after combining with CompilationProvider.
+    /// </summary>
+    public static ObservableModelInfo? GetObservableModelClassInfoFromCompilation(
+        ClassDeclarationSyntax classDecl,
+        SemanticModel semanticModel,
+        Compilation compilation,
+        ServiceInfoList? serviceClasses = null)
+    {
+        try
+        {
+            var classSymbol = semanticModel.GetDeclaredSymbol(classDecl);
+            if (classSymbol is not INamedTypeSymbol namedTypeSymbol)
+                return null;
+
+            // Check if class inherits from ObservableModel
+            if (!namedTypeSymbol.InheritsFromObservableModel())
+                return null;
+
+            // Extract all components using extension methods with proper semantic model
+            var methods = classDecl.CollectMethods();
+            var partialProperties = classDecl.ExtractPartialProperties(semanticModel);
+            var (commandProperties, _) = classDecl.ExtractCommandPropertiesWithDiagnostics(methods, semanticModel);
+            var (modelReferences, _) = classDecl.ExtractModelReferencesWithDiagnostics(semanticModel, serviceClasses);
+            var modelScope = classDecl.ExtractModelScopeFromClass(semanticModel);
+            var diFields = classDecl.ExtractDIFields(semanticModel, serviceClasses, null);
+            var implementedInterfaces = namedTypeSymbol.ExtractObservableModelInterfaces();
+            var genericTypes = namedTypeSymbol.ExtractObservableModelGenericTypes();
+            var typeConstrains = classDecl.ExtractTypeConstrains();
+            var usingStatements = classDecl.ExtractUsingStatements();
+
+            var modelInfo = new ObservableModelInfo(
+                namedTypeSymbol.ContainingNamespace.ToDisplayString(),
+                namedTypeSymbol.Name,
+                namedTypeSymbol.ToDisplayString(),
+                partialProperties,
+                commandProperties,
+                methods,
+                modelReferences,
+                modelScope,
+                diFields,
+                implementedInterfaces,
+                genericTypes,
+                typeConstrains,
+                usingStatements);
+
+            // Build symbol map for model references
+            var modelSymbolMap = new Dictionary<string, ITypeSymbol>();
+            foreach (var modelRef in modelReferences)
+            {
+                // Resolve the type symbol from the reference using compilation
+                var fullTypeName = string.IsNullOrEmpty(modelRef.ReferencedModelNamespace)
+                    ? modelRef.ReferencedModelTypeName
+                    : $"{modelRef.ReferencedModelNamespace}.{modelRef.ReferencedModelTypeName}";
+
+                var typeSymbol = compilation.GetTypeByMetadataName(fullTypeName);
+                if (typeSymbol != null)
+                {
+                    modelSymbolMap[modelRef.PropertyName] = typeSymbol;
+                }
+            }
+
+            // Enhance model references with command method analysis
+            var enhancedModelReferences = modelInfo.EnhanceModelReferencesWithCommandAnalysis(
+                semanticModel,
+                modelSymbolMap);
+
+            return new ObservableModelInfo(
+                namedTypeSymbol.ContainingNamespace.ToDisplayString(),
+                namedTypeSymbol.Name,
+                namedTypeSymbol.ToDisplayString(),
+                partialProperties,
+                commandProperties,
+                methods,
+                enhancedModelReferences,
+                modelScope,
+                diFields,
+                implementedInterfaces,
+                genericTypes,
+                typeConstrains,
+                usingStatements);
+        }
+        catch (Exception)
+        {
+            // Silently skip models that fail analysis in code generation
+            return null;
+        }
     }
 
     public static List<string> GetObservedProperties(ObservableModelInfo modelInfo, CommandPropertyInfo command)

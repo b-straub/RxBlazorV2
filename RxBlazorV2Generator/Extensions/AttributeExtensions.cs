@@ -68,11 +68,6 @@ public static class AttributeExtensions
         this AttributeSyntax attribute,
         SemanticModel semanticModel)
     {
-        if (semanticModel is null)
-        {
-            return false;
-        }
-
         var symbolInfo = semanticModel.GetSymbolInfo(attribute);
         if (symbolInfo.Symbol is not IMethodSymbol methodSymbol)
         {

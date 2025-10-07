@@ -74,9 +74,7 @@ public static class ModelReferenceAnalysisExtensions
         // Analyze execute method for model property usage
         if (command.ExecuteMethod != null && modelInfo.Methods.TryGetValue(command.ExecuteMethod, out var executeMethod))
         {
-            var executeProps = executeMethod.AnalyzeMethodForModelReferences(
-                referencedModelName,
-                semanticModel,
+            var executeProps = executeMethod.AnalyzeMethodForModelReferences(semanticModel,
                 referencedModelType);
             foreach (var prop in executeProps)
             {
@@ -87,9 +85,7 @@ public static class ModelReferenceAnalysisExtensions
         // Analyze canExecute method for model property usage
         if (command.CanExecuteMethod != null && modelInfo.Methods.TryGetValue(command.CanExecuteMethod, out var canExecuteMethod))
         {
-            var canExecuteProps = canExecuteMethod.AnalyzeMethodForModelReferences(
-                referencedModelName,
-                semanticModel,
+            var canExecuteProps = canExecuteMethod.AnalyzeMethodForModelReferences(semanticModel,
                 referencedModelType);
             foreach (var prop in canExecuteProps)
             {

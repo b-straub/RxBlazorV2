@@ -7,6 +7,8 @@ namespace GeneratorRunner
         private static readonly string[] SourcePaths =
         [
             //"../RxBlazorV2ExternalModel/Models/Model.cs",
+            "../RxBlazorV2Sample/HelperModel/Switcher.cs",
+            "../RxBlazorV2Sample/Models/CounterModel.cs"
             //"../../WebAppBase/WebAppBase.Shared/Models/Sync/SyncNotificationModel.cs",
             //"../../WebAppBase/WebAppBase.Shared/Models/Sync/SyncModels.cs",
             //"../../WebAppBase/WebAppBase.Shared/Services/AdaptivePollerService.cs",
@@ -20,8 +22,8 @@ namespace GeneratorRunner
 
         public static void Main(string[] _)
         {
-            List<string> sources = new();
-            List<(string Text, string Path)> additionalText = new();
+            List<string> sources = [];
+            List<(string Text, string Path)> additionalText = [];
 
             foreach (var path in SourcePaths)
             {

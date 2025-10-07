@@ -57,7 +57,9 @@ internal class AnalyzerTest<TAnalyzer> : CSharpAnalyzerTest<TAnalyzer, DefaultVe
                 .WithSpecificDiagnosticOptions(project.CompilationOptions.SpecificDiagnosticOptions
                     .Add(DiagnosticDescriptors.SharedModelNotSingletonError.Id, ReportDiagnostic.Error) // SharedModelNotSingletonError
                     .Add(DiagnosticDescriptors.TriggerTypeArgumentsMismatchError.Id, ReportDiagnostic.Error) // TriggerTypeArgumentsMismatchError
-                    .Add(DiagnosticDescriptors.CircularModelReferenceError.Id, ReportDiagnostic.Error))); // CircularTriggerReferenceError
+                    .Add(DiagnosticDescriptors.CircularModelReferenceError.Id, ReportDiagnostic.Error) // CircularModelReferenceError
+                    .Add("CS0104", ReportDiagnostic.Suppress) // Suppress ambiguous reference errors in generated code
+                    .Add("CS0111", ReportDiagnostic.Suppress))); // Suppress duplicate member errors in generated code
             
             return project.Solution;
         });

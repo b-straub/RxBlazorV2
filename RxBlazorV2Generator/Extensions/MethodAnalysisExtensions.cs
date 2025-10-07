@@ -41,7 +41,6 @@ public static class MethodAnalysisExtensions
 
     public static List<string> AnalyzeMethodForModelReferences(
         this MethodDeclarationSyntax method,
-        string referencedModelName,
         SemanticModel semanticModel,
         ITypeSymbol referencedModelType)
     {

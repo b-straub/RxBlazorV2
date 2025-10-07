@@ -21,7 +21,6 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
         DiagnosticDescriptors.RazorFileReadError,
         DiagnosticDescriptors.CircularModelReferenceError,
         DiagnosticDescriptors.InvalidModelReferenceTargetError,
-        DiagnosticDescriptors.AmbiguousModelReferenceError,
         DiagnosticDescriptors.ComponentNotObservableError,
         DiagnosticDescriptors.SharedModelNotSingletonError,
         DiagnosticDescriptors.TriggerTypeArgumentsMismatchError,
@@ -115,7 +114,7 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
         
         try
         {
-            if (semanticModel.GetDeclaredSymbol(classDecl) is not INamedTypeSymbol namedTypeSymbol)
+            if (semanticModel.GetDeclaredSymbol(classDecl) is not { } namedTypeSymbol)
                 return diagnostics;
 
             // Check if class inherits from ObservableModel

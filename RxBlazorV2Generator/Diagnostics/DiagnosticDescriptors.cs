@@ -69,15 +69,6 @@ public static class DiagnosticDescriptors
         isEnabledByDefault: true,
         description: "Model references must target classes that inherit from ObservableModel.");
 
-    public static readonly DiagnosticDescriptor AmbiguousModelReferenceError = new(
-        id: "RXBG008",
-        title: "Ambiguous model reference",
-        messageFormat: "Referenced model '{0}' exists in multiple namespaces: {1}",
-        category: "RxBlazorGenerator",
-        DiagnosticSeverity.Error,
-        isEnabledByDefault: true,
-        description: "Referenced model name exists in multiple namespaces and cannot be resolved uniquely.");
-
     public static readonly DiagnosticDescriptor ComponentNotObservableError = new(
         id: "RXBG009",
         title: "Component contains ObservableModel fields but does not inherit from ObservableComponent",

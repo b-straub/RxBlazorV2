@@ -33,16 +33,15 @@ namespace GeneratorTest.Helpers
     {
         public static ImmutableArray<Diagnostic> RunGenerator(IEnumerable<string> sources, IEnumerable<(string Text, string Path)> additionalTexts)
         {
-            List<SyntaxTree> syntaxTrees = new();
+            List<SyntaxTree> syntaxTrees = [];
 
-            foreach (string? source in sources)
+            foreach (var source in sources)
             {
-                string? st = source;
-                SyntaxTree? syntaxTree = CSharpSyntaxTree.ParseText(SourceText.From(st, Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Preview));
+                var syntaxTree = CSharpSyntaxTree.ParseText(SourceText.From(source, Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Preview));
                 syntaxTrees.Add(syntaxTree);
             }
 
-            CSharpCompilationOptions? compilationOptions = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
+            var compilationOptions = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
                 .WithNullableContextOptions(NullableContextOptions.Enable)
                 .WithOptimizationLevel(OptimizationLevel.Debug)
                 .WithGeneralDiagnosticOption(ReportDiagnostic.Default);
@@ -54,7 +53,7 @@ namespace GeneratorTest.Helpers
             
 
             Compilation compilation = CSharpCompilation.Create("testgenerator", syntaxTrees, allReferences, compilationOptions);
-            CSharpParseOptions? parseOptions = syntaxTrees.FirstOrDefault()?.Options as CSharpParseOptions;
+            var parseOptions = syntaxTrees.FirstOrDefault()?.Options as CSharpParseOptions;
             RxBlazorGenerator? generator = new();
 
             var additionalTextsArray = additionalTexts.Select(at => new RazorAdditionalText(at.Text, at.Path) as AdditionalText).ToImmutableArray();
@@ -62,7 +61,7 @@ namespace GeneratorTest.Helpers
             GeneratorDriver driver = CSharpGeneratorDriver.
                 Create([generator.AsSourceGenerator()], additionalTextsArray, parseOptions: parseOptions);
             
-            driver.RunGeneratorsAndUpdateCompilation(compilation, out Compilation? generatorCompilation, out ImmutableArray<Diagnostic> generatorDiagnostics);
+            driver.RunGeneratorsAndUpdateCompilation(compilation, out var generatorCompilation, out var generatorDiagnostics);
             
             // Print and save generated files for debugging
             Console.WriteLine("\n=== Generated Files ===");

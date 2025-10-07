@@ -1,7 +1,9 @@
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Analyzers;
 using RxBlazorV2Generator.Generators;
 using RxBlazorV2Generator.Models;
+using System.Collections.Immutable;
 
 namespace RxBlazorV2Generator;
 
@@ -39,8 +41,7 @@ public class RxBlazorGenerator : IIncrementalGenerator
 
                 return new GeneratorConfig(updateFrequency, rootNamespace);
             });
-
-
+        
         // Analyze service registrations to detect DI services
         var serviceClasses = context.SyntaxProvider
             .CreateSyntaxProvider(
@@ -49,17 +50,24 @@ public class RxBlazorGenerator : IIncrementalGenerator
             .Where(static m => m is not null)
             .Collect();
 
-
-        // Single pass: analyze observable models with service information
-        var observableModelClasses = context.SyntaxProvider
+        // Collect Observable Model class declarations (syntax only, no semantic analysis yet)
+        var observableModelSyntax = context.SyntaxProvider
             .CreateSyntaxProvider(
                 predicate: static (s, _) => ObservableModelAnalyzer.IsObservableModelClass(s),
-                transform: static (ctx, _) => ctx)
-            .Combine(serviceClasses)
-            .Select(static (combined, _) => 
+                transform: static (ctx, _) => (ClassDecl: (ClassDeclarationSyntax)ctx.Node, Tree: ctx.Node.SyntaxTree))
+            .Collect();
+
+        // Combine syntax nodes with compilation and services for semantic analysis
+        var observableModelsWithCompilation = observableModelSyntax
+            .Combine(context.CompilationProvider)
+            .Combine(serviceClasses);
+
+        // Analyze observable models and collect ObservableModelInfo for use by other generators
+        var observableModelClasses = observableModelsWithCompilation
+            .Select(static (combined, _) =>
             {
-                var (syntaxContext, services) = combined;
-                
+                var ((classNodes, compilation), services) = combined;
+
                 // Merge service info
                 var mergedServices = new ServiceInfoList();
                 foreach (var serviceList in services.Where(s => s != null))
@@ -69,20 +77,33 @@ public class RxBlazorGenerator : IIncrementalGenerator
                         mergedServices.AddService(service);
                     }
                 }
-                
-                // Analyze model with service information (model cross-references work from attributes alone)
-                return ObservableModelAnalyzer.GetObservableModelClassInfo(syntaxContext, mergedServices);
-            })
-            .Where(static m => m is not null);
+
+                // Analyze each class with proper semantic model from compilation
+                var models = new List<ObservableModelInfo?>();
+                foreach (var (classDecl, syntaxTree) in classNodes)
+                {
+                    // Get semantic model for this specific syntax tree from the compilation
+                    var semanticModel = compilation.GetSemanticModel(syntaxTree);
+
+                    var modelInfo = ObservableModelAnalyzer.GetObservableModelClassInfoFromCompilation(
+                        classDecl,
+                        semanticModel,
+                        compilation,
+                        mergedServices);
+
+                    models.Add(modelInfo);
+                }
+
+                return models.ToImmutableArray();
+            });
 
         // Generate code for observable models
-        context.RegisterSourceOutput(observableModelClasses.Combine(msbuildProvider),
-            static (spc, combined) =>
+        context.RegisterSourceOutput(observableModelClasses,
+            static (spc, models) =>
             {
-                var (modelInfo, config) = combined;
-                if (modelInfo != null)
+                foreach (var modelInfo in models.Where(m => m != null))
                 {
-                    ObservableModelCodeGenerator.GenerateObservableModelPartials(spc, modelInfo);
+                    ObservableModelCodeGenerator.GenerateObservableModelPartials(spc, modelInfo!);
                 }
             });
 
@@ -100,8 +121,8 @@ public class RxBlazorGenerator : IIncrementalGenerator
         // Combine razor files with code-behind classes and observable models
         var combinedRazorInfo = razorCodeBehindClasses
             .Combine(razorFiles.Collect())
-            .Combine(observableModelClasses.Collect())
-            .Select(static (combined, _) => 
+            .Combine(observableModelClasses)
+            .Select(static (combined, _) =>
             {
                 try
                 {
@@ -115,7 +136,7 @@ public class RxBlazorGenerator : IIncrementalGenerator
             });
 
         // Generate constructors for Razor code-behind classes
-        context.RegisterSourceOutput(combinedRazorInfo.Combine(msbuildProvider).Combine(observableModelClasses.Collect()),
+        context.RegisterSourceOutput(combinedRazorInfo.Combine(msbuildProvider).Combine(observableModelClasses),
             static (spc, combined) =>
             {
                 var ((source, config), models) = combined;
@@ -126,7 +147,7 @@ public class RxBlazorGenerator : IIncrementalGenerator
             });
 
         // Generate AddObservableModels extension method
-        context.RegisterSourceOutput(observableModelClasses.Collect().Combine(msbuildProvider),
+        context.RegisterSourceOutput(observableModelClasses.Combine(msbuildProvider),
             static (spc, combined) =>
             {
                 var (models, config) = combined;
@@ -134,7 +155,5 @@ public class RxBlazorGenerator : IIncrementalGenerator
                 ObservableModelCodeGenerator.GenerateAddObservableModelsExtension(spc, nonNullModels, config.RootNamespace);
                 ObservableModelCodeGenerator.GenerateAddGenericObservableModelsExtension(spc, nonNullModels, config.RootNamespace);
             });
-
     }
-
 }

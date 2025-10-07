@@ -2,6 +2,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Models;
 using RxBlazorV2Generator.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 
 namespace RxBlazorV2Generator.Extensions;
 
@@ -74,44 +75,6 @@ public static class AttributeAnalysisExtensions
                 namedTypeSymbol.Name);
         }
 
-        // Check for ambiguous model references (RXBG008)
-        // Find all types in the compilation with the same simple name
-        var typeName = namedTypeSymbol.Name;
-        var matchingTypes = new List<INamedTypeSymbol>();
-
-        // Search through source compilation global namespace
-        FindTypesWithName(semanticModel.Compilation.GlobalNamespace, typeName, matchingTypes);
-
-        // Also search through referenced assemblies
-        foreach (var reference in semanticModel.Compilation.References)
-        {
-            if (semanticModel.Compilation.GetAssemblyOrModuleSymbol(reference) is IAssemblySymbol assemblySymbol)
-            {
-                FindTypesWithName(assemblySymbol.GlobalNamespace, typeName, matchingTypes);
-            }
-        }
-
-        // Filter to only ObservableModel types and exclude the one we already resolved
-        var observableModelMatches = matchingTypes
-            .Where(t => (t.InheritsFromObservableModel() || t.InheritsFromIObservableModel()) &&
-                       !SymbolEqualityComparer.Default.Equals(t.OriginalDefinition, namedTypeSymbol.OriginalDefinition))
-            .ToList();
-
-        if (observableModelMatches.Any())
-        {
-            // Found multiple ObservableModel types with the same name
-            var namespaces = new[] { namedTypeSymbol.ContainingNamespace.ToDisplayString() }
-                .Concat(observableModelMatches.Select(t => t.ContainingNamespace.ToDisplayString()))
-                .Distinct()
-                .OrderBy(ns => ns);
-
-            throw new Exceptions.DiagnosticException(
-                DiagnosticDescriptors.AmbiguousModelReferenceError,
-                attribute.GetLocation(),
-                typeName,
-                string.Join(", ", namespaces));
-        }
-
         // Check if type is registered in service collection
         if (serviceInfoList != null)
         {
@@ -125,23 +88,6 @@ public static class AttributeAnalysisExtensions
         }
 
         return namedTypeSymbol;
-    }
-
-    private static void FindTypesWithName(INamespaceSymbol namespaceSymbol, string typeName, List<INamedTypeSymbol> results)
-    {
-        // Search for types in this namespace
-        foreach (var member in namespaceSymbol.GetMembers())
-        {
-            if (member is INamedTypeSymbol namedType && namedType.Name == typeName)
-            {
-                results.Add(namedType);
-            }
-            else if (member is INamespaceSymbol childNamespace)
-            {
-                // Recursively search child namespaces
-                FindTypesWithName(childNamespace, typeName, results);
-            }
-        }
     }
 
     public static INamedTypeSymbol ValidateGenericTypeConstraints(
@@ -268,34 +214,37 @@ public static class AttributeAnalysisExtensions
         var referencedOriginal = referencedType.OriginalDefinition;
 
         // Check if the referenced type has an ObservableModelReference attribute back to the referencing type
-        var referencedDeclaration = referencedOriginal.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() as ClassDeclarationSyntax;
-        if (referencedDeclaration is null)
+        // Use AttributeData from symbol instead of AttributeSyntax to avoid semantic model mismatch
+        foreach (var attr in referencedOriginal.GetAttributes())
         {
-            return null;
-        }
-
-        foreach (var attributeList in referencedDeclaration.AttributeLists)
-        {
-            foreach (var attr in attributeList.Attributes)
+            // Check if this is an ObservableModelReference attribute
+            if (attr.IsAttributeOfType("ObservableModelReferenceAttribute"))
             {
-                if (attr.IsObservableModelReference(semanticModel))
-                {
-                    // Extract the type referenced by the other model
-                    var (otherReferencedType, _) = attr.ExtractReferencedModelTypeWithDiagnostic(semanticModel);
-                    if (otherReferencedType is not null)
-                    {
-                        var otherReferencedOriginal = otherReferencedType.OriginalDefinition;
+                // Get the type argument from the attribute
+                INamedTypeSymbol? otherReferencedType = null;
 
-                        // Check if it references back to the original referencing type
-                        if (SymbolEqualityComparer.Default.Equals(otherReferencedOriginal, referencingOriginal))
-                        {
-                            var diagnostic = Diagnostic.Create(
-                                DiagnosticDescriptors.CircularModelReferenceError,
-                                attribute.GetLocation(),
-                                referencingType.Name,
-                                referencedType.Name);
-                            return diagnostic;
-                        }
+                if (attr.AttributeClass?.IsGenericType == true && attr.AttributeClass.TypeArguments.Length > 0)
+                {
+                    otherReferencedType = attr.AttributeClass.TypeArguments[0] as INamedTypeSymbol;
+                }
+                else if (attr.ConstructorArguments.Length > 0 && attr.ConstructorArguments[0].Value is INamedTypeSymbol typeArg)
+                {
+                    otherReferencedType = typeArg;
+                }
+
+                if (otherReferencedType is not null)
+                {
+                    var otherReferencedOriginal = otherReferencedType.OriginalDefinition;
+
+                    // Check if it references back to the original referencing type
+                    if (SymbolEqualityComparer.Default.Equals(otherReferencedOriginal, referencingOriginal))
+                    {
+                        var diagnostic = Diagnostic.Create(
+                            DiagnosticDescriptors.CircularModelReferenceError,
+                            attribute.GetLocation(),
+                            referencingType.Name,
+                            referencedType.Name);
+                        return diagnostic;
                     }
                 }
             }
@@ -368,16 +317,16 @@ public static class AttributeAnalysisExtensions
         return "";
     }
 
-    public static (List<CommandPropertyInfo> commandProperties, List<Diagnostic> diagnostics) ExtractCommandPropertiesWithDiagnostics(this ClassDeclarationSyntax classDecl, Dictionary<string, MethodDeclarationSyntax> methods, SemanticModel? semanticModel = null)
+    public static (List<CommandPropertyInfo> commandProperties, List<Diagnostic> diagnostics) ExtractCommandPropertiesWithDiagnostics(this ClassDeclarationSyntax classDecl, Dictionary<string, MethodDeclarationSyntax> methods, SemanticModel semanticModel)
     {
         var commandProperties = new List<CommandPropertyInfo>();
         var diagnostics = new List<Diagnostic>();
-        
+
         foreach (var member in classDecl.Members.OfType<PropertyDeclarationSyntax>())
         {
             var attributes = member.AttributeLists.SelectMany(al => al.Attributes).ToArray();
             var commandAttr = attributes.FirstOrDefault(a =>
-                a.IsObservableCommand(semanticModel));
+                a.IsObservableCommand(semanticModel!));
 
             if (commandAttr != null)
             {
@@ -389,13 +338,13 @@ public static class AttributeAnalysisExtensions
                 var canExecuteMethod = canExecuteMethodArg?.Replace("nameof(", "").Replace(")", "").Trim('"');
 
                 // Analyze the execute method to determine if it supports cancellation
-                var supportsCancellation = methods.TryGetValue(executeMethod!, out var executeMethodSyntax) &&
-                    semanticModel != null &&
-                    executeMethodSyntax.HasCancellationTokenParameter(semanticModel);
+                var supportsCancellation = executeMethod is not null &&
+                                           methods.TryGetValue(executeMethod, out var executeMethodSyntax) &&
+                                           executeMethodSyntax.HasCancellationTokenParameter(semanticModel!);
 
                 // Extract trigger attributes
                 var triggerAttrs = attributes.Where(a =>
-                    a.IsObservableCommandTrigger(semanticModel));
+                    a.IsObservableCommandTrigger(semanticModel!));
                 
                 var commandTypeArguments = member.Type.IsKind(Microsoft.CodeAnalysis.CSharp.SyntaxKind.GenericName) ?
                     ((GenericNameSyntax)member.Type).TypeArgumentList.Arguments
