@@ -1,10 +1,8 @@
 using RxBlazorV2Generator.Diagnostics;
-
-using CodeFixVerifier =
-    RxBlazorV2Test.Helpers.CSharpCodeFixVerifier<RxBlazorV2Generator.Analyzers.RxBlazorDiagnosticAnalyzer,
+using CodeFixVerifier = RxBlazorV2.GeneratorTests.Helpers.CSharpCodeFixVerifier<RxBlazorV2Generator.Analyzers.RxBlazorDiagnosticAnalyzer,
         RxBlazorV2CodeFix.CodeFix.InvalidModelReferenceCodeFix>;
 
-namespace RxBlazorV2Test.Tests;
+namespace RxBlazorV2.GeneratorTests.AnalyzerAndCodefixTests;
 
 public class InvalidModelReferenceTargetErrorCodeFixTests
 {
@@ -326,7 +324,7 @@ public class InvalidModelReferenceTargetErrorCodeFixTests
             }
 
             [{|{{DiagnosticDescriptors.InvalidModelReferenceTargetError.Id}}:ObservableModelReference<Service1>|}]
-            [ObservableModelReference<ValidModel>]
+            [{|{{DiagnosticDescriptors.UnusedModelReferenceError.Id}}:ObservableModelReference<ValidModel>|}]
             [ObservableModelScope(ModelScope.Scoped)]
             public partial class TestModel : ObservableModel
             {
@@ -336,7 +334,7 @@ public class InvalidModelReferenceTargetErrorCodeFixTests
         """;
 
         // lang=csharp
-        var fixedCode = """
+        var fixedCode = $$"""
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
@@ -354,7 +352,7 @@ public class InvalidModelReferenceTargetErrorCodeFixTests
                 public partial int Counter { get; set; }
             }
 
-            [ObservableModelReference<ValidModel>]
+            [{|{{DiagnosticDescriptors.UnusedModelReferenceError.Id}}:ObservableModelReference<ValidModel>|}]
             [ObservableModelScope(ModelScope.Scoped)]
             public partial class TestModel : ObservableModel
             {

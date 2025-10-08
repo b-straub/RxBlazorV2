@@ -469,7 +469,8 @@ public static class AttributeAnalysisExtensions
                                     propertyTypeName,
                                     validatedSymbol.ContainingNamespace.ToDisplayString(),
                                     propertyName,
-                                    usedProperties));
+                                    usedProperties,
+                                    attribute.GetLocation()));
                             }
                             catch (Exceptions.DiagnosticException ex)
                             {

@@ -1,6 +1,6 @@
 using Microsoft.CodeAnalysis.Testing;
 
-namespace RxBlazorV2Test.Helpers;
+namespace RxBlazorV2.GeneratorTests.Helpers;
 
 internal static class TestShared
 {

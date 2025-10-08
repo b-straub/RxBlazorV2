@@ -1,15 +1,10 @@
-using System.Threading.Tasks;
 using RxBlazorV2Generator.Diagnostics;
-using Xunit;
-
-using CodeFixVerifier =
-    RxBlazorV2Test.Helpers.CSharpCodeFixVerifier<RxBlazorV2Generator.Analyzers.RxBlazorDiagnosticAnalyzer,
+using CodeFixVerifier = RxBlazorV2.GeneratorTests.Helpers.CSharpCodeFixVerifier<RxBlazorV2Generator.Analyzers.RxBlazorDiagnosticAnalyzer,
         RxBlazorV2CodeFix.CodeFix.CircularModelReferenceCodeFixProvider>;
 
-using AnalyzerVerifier =
-    RxBlazorV2Test.Helpers.CSharpAnalyzerVerifier<RxBlazorV2Generator.Analyzers.RxBlazorDiagnosticAnalyzer>;
+using AnalyzerVerifier = RxBlazorV2.GeneratorTests.Helpers.CSharpAnalyzerVerifier<RxBlazorV2Generator.Analyzers.RxBlazorDiagnosticAnalyzer>;
 
-namespace RxBlazorV2Test.AnalyzerAndCodefixTests;
+namespace RxBlazorV2.GeneratorTests.AnalyzerAndCodefixTests;
 
 public class CircularModelReferenceCodeFixTests
 {
@@ -67,7 +62,7 @@ public class CircularModelReferenceCodeFixTests
         """;
 
         // lang=csharp
-        var fixedCode = """
+        var fixedCode = $$"""
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
@@ -80,7 +75,7 @@ public class CircularModelReferenceCodeFixTests
             }
 
             [ObservableModelScope(ModelScope.Singleton)]
-            [ObservableModelReference(typeof(ModelA))]
+            [{|{{DiagnosticDescriptors.UnusedModelReferenceError.Id}}:ObservableModelReference(typeof(ModelA))|}]
             public partial class ModelB : ObservableModel
             {
             }
@@ -154,17 +149,28 @@ public class CircularModelReferenceCodeFixTests
             [ObservableModelReference(typeof(ModelB))]
             public partial class ModelA : ObservableModel
             {
+                public int GetRefProp()
+                {
+                    return ModelB.Prop;
+                }
             }
-
+            
             [ObservableModelScope(ModelScope.Singleton)]
             [ObservableModelReference(typeof(ModelC))]
             public partial class ModelB : ObservableModel
             {
+                public partial int Prop { get; set; }
+                
+                public int GetRefProp()
+                {
+                    return ModelC.Prop;
+                }
             }
-
+            
             [ObservableModelScope(ModelScope.Singleton)]
             public partial class ModelC : ObservableModel
             {
+                public partial int Prop { get; set; }
             }
         }
         """;

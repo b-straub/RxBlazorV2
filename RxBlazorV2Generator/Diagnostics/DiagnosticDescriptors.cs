@@ -69,6 +69,15 @@ public static class DiagnosticDescriptors
         isEnabledByDefault: true,
         description: "Model references must target classes that inherit from ObservableModel.");
 
+    public static readonly DiagnosticDescriptor UnusedModelReferenceError = new(
+        id: "RXBG008",
+        title: "Referenced model has no used properties",
+        messageFormat: "Model '{0}' references '{1}' but does not use any of its properties. Remove the [ObservableModelReference<{1}>] attribute or use at least one property from the referenced model.",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "ObservableModelReference attributes should only be used when the parent model actually uses properties from the referenced model.");
+
     public static readonly DiagnosticDescriptor ComponentNotObservableError = new(
         id: "RXBG009",
         title: "Component contains ObservableModel fields but does not inherit from ObservableComponent",

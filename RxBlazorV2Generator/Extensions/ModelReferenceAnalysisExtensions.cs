@@ -100,7 +100,8 @@ public static class ModelReferenceAnalysisExtensions
                 modelRef.ReferencedModelTypeName,
                 modelRef.ReferencedModelNamespace,
                 modelRef.PropertyName,
-                allUsedProperties.ToList()));
+                allUsedProperties.ToList(),
+                modelRef.AttributeLocation));
         }
 
         return enhancedModelReferences;

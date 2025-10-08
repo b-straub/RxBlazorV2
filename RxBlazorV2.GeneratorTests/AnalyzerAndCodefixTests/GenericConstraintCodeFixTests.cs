@@ -1,13 +1,8 @@
 using RxBlazorV2Generator.Diagnostics;
-
-using CodeFixVerifier =
-    RxBlazorV2Test.Helpers.CSharpCodeFixVerifier<RxBlazorV2Generator.Analyzers.RxBlazorDiagnosticAnalyzer,
+using CodeFixVerifier = RxBlazorV2.GeneratorTests.Helpers.CSharpCodeFixVerifier<RxBlazorV2Generator.Analyzers.RxBlazorDiagnosticAnalyzer,
         RxBlazorV2CodeFix.CodeFix.GenericConstraintCodeFixProvider>;
 
-using AnalyzerVerifier =
-    RxBlazorV2Test.Helpers.CSharpAnalyzerVerifier<RxBlazorV2Generator.Analyzers.RxBlazorDiagnosticAnalyzer>;
-
-namespace RxBlazorV2Test.Tests;
+namespace RxBlazorV2.GeneratorTests.AnalyzerAndCodefixTests;
 
 public class GenericConstraintCodeFixTests
 {
@@ -39,7 +34,7 @@ public class GenericConstraintCodeFixTests
         """;
 
         // lang=csharp
-        var fixedCode = """
+        var fixedCode = $$"""
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
@@ -54,7 +49,7 @@ public class GenericConstraintCodeFixTests
             }
 
             [ObservableModelScope(ModelScope.Singleton)]
-            [ObservableModelReference(typeof(GenericModelTwoParams<,>))]
+            [{|{{DiagnosticDescriptors.UnusedModelReferenceError.Id}}:ObservableModelReference(typeof(GenericModelTwoParams<,>))|}]
             public partial class TestModel<T, U> : ObservableModel
             {
                 public partial string Name { get; set; } = "";
@@ -145,7 +140,7 @@ public class GenericConstraintCodeFixTests
         """;
 
         // lang=csharp
-        var fixedCode = """
+        var fixedCode = $$"""
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
@@ -159,7 +154,7 @@ public class GenericConstraintCodeFixTests
             }
 
             [ObservableModelScope(ModelScope.Singleton)]
-            [ObservableModelReference(typeof(GenericModel<>))]
+            [{|{{DiagnosticDescriptors.UnusedModelReferenceError.Id}}:ObservableModelReference(typeof(GenericModel<>))|}]
             public partial class TestModel<T> : ObservableModel
             {
                 public partial string Name { get; set; } = "";
@@ -412,7 +407,7 @@ public class GenericConstraintCodeFixTests
         """;
 
         // lang=csharp
-        var fixedCode = """
+        var fixedCode = $$"""
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
@@ -428,7 +423,7 @@ public class GenericConstraintCodeFixTests
             }
 
             [ObservableModelScope(ModelScope.Singleton)]
-            [ObservableModelReference(typeof(GenericModel<>))]
+            [{|{{DiagnosticDescriptors.UnusedModelReferenceError.Id}}:ObservableModelReference(typeof(GenericModel<>))|}]
             public partial class TestModel<T> : ObservableModel where T : class, IEntity, new()
             {
                 public partial string Name { get; set; } = "";
@@ -474,7 +469,7 @@ public class GenericConstraintCodeFixTests
         """;
 
         // lang=csharp
-        var fixedCode = """
+        var fixedCode = $$"""
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
@@ -494,7 +489,7 @@ public class GenericConstraintCodeFixTests
             }
 
             [ObservableModelScope(ModelScope.Singleton)]
-            [ObservableModelReference(typeof(DictionaryModel<,>))]
+            [{|{{DiagnosticDescriptors.UnusedModelReferenceError.Id}}:ObservableModelReference(typeof(DictionaryModel<,>))|}]
             public partial class TestModel<TKey, TValue> : ObservableModel
                 where TKey : class, IKey, new()
                 where TValue : struct, IValue
@@ -534,7 +529,7 @@ public class GenericConstraintCodeFixTests
         """;
 
         // lang=csharp
-        var fixedCode = """
+        var fixedCode = $$"""
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
@@ -548,7 +543,7 @@ public class GenericConstraintCodeFixTests
             }
 
             [ObservableModelScope(ModelScope.Singleton)]
-            [ObservableModelReference(typeof(GenericModel<>))]
+            [{|{{DiagnosticDescriptors.UnusedModelReferenceError.Id}}:ObservableModelReference(typeof(GenericModel<>))|}]
             public partial class TestModel<T> : ObservableModel where T : unmanaged
             {
                 public partial string Name { get; set; } = "";
@@ -593,7 +588,7 @@ public class GenericConstraintCodeFixTests
         """;
 
         // lang=csharp
-        var fixedCode = """
+        var fixedCode = $$"""
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
@@ -614,7 +609,7 @@ public class GenericConstraintCodeFixTests
             }
 
             [ObservableModelScope(ModelScope.Singleton)]
-            [ObservableModelReference(typeof(GenericModel<>))]
+            [{|{{DiagnosticDescriptors.UnusedModelReferenceError.Id}}:ObservableModelReference(typeof(GenericModel<>))|}]
             public partial class TestModel<T> : ObservableModel where T : BaseEntity, IEntity, new()
             {
                 public partial string Name { get; set; } = "";

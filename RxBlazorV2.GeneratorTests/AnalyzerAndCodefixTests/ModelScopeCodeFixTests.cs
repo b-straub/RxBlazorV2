@@ -1,9 +1,7 @@
 using RxBlazorV2Generator.Diagnostics;
+using AnalyzerVerifier = RxBlazorV2.GeneratorTests.Helpers.CSharpAnalyzerVerifier<RxBlazorV2Generator.Analyzers.RxBlazorDiagnosticAnalyzer>;
 
-using AnalyzerVerifier =
-    RxBlazorV2Test.Helpers.CSharpAnalyzerVerifier<RxBlazorV2Generator.Analyzers.RxBlazorDiagnosticAnalyzer>;
-
-namespace RxBlazorV2Test.Tests;
+namespace RxBlazorV2.GeneratorTests.AnalyzerAndCodefixTests;
 
 public class ModelScopeCodeFixTests
 {

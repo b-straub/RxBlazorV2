@@ -1,12 +1,12 @@
 using System.Text;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Testing;
 using Microsoft.CodeAnalysis.Testing;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
 using RxBlazorV2Generator;
 
-namespace RxBlazorV2Test.Helpers;
+namespace RxBlazorV2.GeneratorTests.Helpers;
 
 /// <summary>
 /// Test helper for compilation-end diagnostics that cannot be easily code-fixed
@@ -56,40 +56,44 @@ internal class RxBlazorGeneratorTest : CSharpSourceGeneratorTest<RxBlazorGenerat
 
     public static string ObservableModelsServiceExtension(string modelName, string constrains)
     {
-        var serviceExtension = @$"
-using Microsoft.Extensions.DependencyInjection;
-using RxBlazorV2.Model;
-using Test;
+        var serviceExtension = $$"""
 
-namespace Global;
+                                 using Microsoft.Extensions.DependencyInjection;
+                                 using RxBlazorV2.Model;
+                                 using Test;
 
-public static partial class ObservableModels
-{{
-    public static IServiceCollection Initialize(IServiceCollection services)
-    {{
-        services.AddSingleton<{modelName}>();
-        return services;
-    }}
-}}";
+                                 namespace Global;
+
+                                 public static partial class ObservableModels
+                                 {
+                                     public static IServiceCollection Initialize(IServiceCollection services)
+                                     {
+                                         services.AddSingleton<{{modelName}}>();
+                                         return services;
+                                     }
+                                 }
+                                 """;
         
         serviceExtension = serviceExtension.TrimStart();
         serviceExtension = serviceExtension.Replace("\r\n", Environment.NewLine);
         serviceExtension += Environment.NewLine;
         
-        var serviceExtensionGeneric = @$"
-using Microsoft.Extensions.DependencyInjection;
-using RxBlazorV2.Model;
-using Test;
+        var serviceExtensionGeneric = $$"""
 
-namespace Global;
+                                        using Microsoft.Extensions.DependencyInjection;
+                                        using RxBlazorV2.Model;
+                                        using Test;
 
-public static partial class ObservableModels
-{{
-    public static IServiceCollection Initialize(IServiceCollection services)
-    {{
-        return services;
-    }}
-}}";
+                                        namespace Global;
+
+                                        public static partial class ObservableModels
+                                        {
+                                            public static IServiceCollection Initialize(IServiceCollection services)
+                                            {
+                                                return services;
+                                            }
+                                        }
+                                        """;
         serviceExtensionGeneric = serviceExtensionGeneric.TrimStart();
         serviceExtensionGeneric = serviceExtensionGeneric.Replace("\r\n", Environment.NewLine);
         serviceExtensionGeneric += Environment.NewLine;
@@ -98,37 +102,41 @@ public static partial class ObservableModels
     
     public static string GenricModelsServiceExtension(string modelName, string constrains)
     {
-        var serviceExtension = @$"
-using Microsoft.Extensions.DependencyInjection;
-using RxBlazorV2.Model;
-using Test;
+        var serviceExtension = $$"""
 
-namespace Global;
+                                 using Microsoft.Extensions.DependencyInjection;
+                                 using RxBlazorV2.Model;
+                                 using Test;
 
-public static partial class ObservableModels
-{{
-}}";
+                                 namespace Global;
+
+                                 public static partial class ObservableModels
+                                 {
+                                 }
+                                 """;
         serviceExtension = serviceExtension.TrimStart();
         serviceExtension = serviceExtension.Replace("\r\n", Environment.NewLine);
         serviceExtension += Environment.NewLine;
         
-        var serviceExtensionGeneric = @$"
-using Microsoft.Extensions.DependencyInjection;
-using RxBlazorV2.Model;
-using Test;
+        var serviceExtensionGeneric = $$"""
 
-namespace Global;
+                                        using Microsoft.Extensions.DependencyInjection;
+                                        using RxBlazorV2.Model;
+                                        using Test;
 
-public static partial class ObservableModels
-{{
-    public static IServiceCollection {modelName}(IServiceCollection services)
-        {constrains}
-    {{
-        services.AddSingleton<{modelName}>();
-        return services;
-    }}
+                                        namespace Global;
 
-}}";
+                                        public static partial class ObservableModels
+                                        {
+                                            public static IServiceCollection {{modelName}}(IServiceCollection services)
+                                                {{constrains}}
+                                            {
+                                                services.AddSingleton<{{modelName}}>();
+                                                return services;
+                                            }
+
+                                        }
+                                        """;
         serviceExtensionGeneric = serviceExtensionGeneric.TrimStart();
         serviceExtensionGeneric = serviceExtensionGeneric.Replace("\r\n", Environment.NewLine);
         serviceExtensionGeneric += Environment.NewLine;

@@ -1,3 +1,4 @@
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace RxBlazorV2Generator.Models;
@@ -112,13 +113,15 @@ public class ModelReferenceInfo
     public string ReferencedModelNamespace { get; }
     public string PropertyName { get; }
     public List<string> UsedProperties { get; }
+    public Location? AttributeLocation { get; }
 
-    public ModelReferenceInfo(string referencedModelTypeName, string referencedModelNamespace, string propertyName, List<string> usedProperties)
+    public ModelReferenceInfo(string referencedModelTypeName, string referencedModelNamespace, string propertyName, List<string> usedProperties, Location? attributeLocation = null)
     {
         ReferencedModelTypeName = referencedModelTypeName;
         ReferencedModelNamespace = referencedModelNamespace;
         PropertyName = propertyName;
         UsedProperties = usedProperties;
+        AttributeLocation = attributeLocation;
     }
 }
 

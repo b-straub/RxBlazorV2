@@ -1,7 +1,6 @@
-using AnalyzerVerifier =
-    RxBlazorV2Test.Helpers.CSharpAnalyzerVerifier<RxBlazorV2Generator.Analyzers.RxBlazorDiagnosticAnalyzer>;
+using AnalyzerVerifier = RxBlazorV2.GeneratorTests.Helpers.CSharpAnalyzerVerifier<RxBlazorV2Generator.Analyzers.RxBlazorDiagnosticAnalyzer>;
 
-namespace RxBlazorV2Test.GeneratorTests;
+namespace RxBlazorV2.GeneratorTests.GeneratorTests;
 
 public class SemanticResolutionTests
 {

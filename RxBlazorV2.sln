@@ -13,7 +13,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeneratorRunner", "Generato
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RxBlazorV2CodeFix", "RxBlazorV2CodeFix\RxBlazorV2CodeFix.csproj", "{2064EFF0-D54C-499B-B2F8-E92B5E26A541}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RxBlazorV2Test", "RxBlazorV2Test\RxBlazorV2Test.csproj", "{B0A2E811-9145-4E85-B2AC-C7F450F420F9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RxBlazorV2.GeneratorTests", "RxBlazorV2.GeneratorTests\RxBlazorV2.GeneratorTests.csproj", "{B0A2E811-9145-4E85-B2AC-C7F450F420F9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RxBlazorV2ExternalModel", "RxBlazorV2ExternalModel\RxBlazorV2ExternalModel.csproj", "{1B083368-F4CC-4BE9-BAB6-AF1C2F2253BC}"
 EndProject

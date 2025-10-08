@@ -21,6 +21,7 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
         DiagnosticDescriptors.RazorFileReadError,
         DiagnosticDescriptors.CircularModelReferenceError,
         DiagnosticDescriptors.InvalidModelReferenceTargetError,
+        DiagnosticDescriptors.UnusedModelReferenceError,
         DiagnosticDescriptors.ComponentNotObservableError,
         DiagnosticDescriptors.SharedModelNotSingletonError,
         DiagnosticDescriptors.TriggerTypeArgumentsMismatchError,
@@ -122,13 +123,65 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
                 return diagnostics;
 
             // Extract diagnostics using existing extension methods
-            var (_, modelReferenceDiagnostics) = classDecl.ExtractModelReferencesWithDiagnostics(semanticModel);
+            var (modelReferences, modelReferenceDiagnostics) = classDecl.ExtractModelReferencesWithDiagnostics(semanticModel);
             diagnostics.AddRange(modelReferenceDiagnostics);
 
             var methods = classDecl.CollectMethods();
-            var (_, commandPropertiesDiagnostics) = classDecl.ExtractCommandPropertiesWithDiagnostics(methods, semanticModel);
+            var (commandProperties, commandPropertiesDiagnostics) = classDecl.ExtractCommandPropertiesWithDiagnostics(methods, semanticModel);
             diagnostics.AddRange(commandPropertiesDiagnostics);
-            
+
+            // Check for unused model references (RXBG008)
+            // Build symbol map for model references
+            var modelSymbolMap = new Dictionary<string, ITypeSymbol>();
+            foreach (var modelRef in modelReferences)
+            {
+                var fullTypeName = string.IsNullOrEmpty(modelRef.ReferencedModelNamespace)
+                    ? modelRef.ReferencedModelTypeName
+                    : $"{modelRef.ReferencedModelNamespace}.{modelRef.ReferencedModelTypeName}";
+
+                var typeSymbol = compilation.GetTypeByMetadataName(fullTypeName);
+                if (typeSymbol != null)
+                {
+                    modelSymbolMap[modelRef.PropertyName] = typeSymbol;
+                }
+            }
+
+            // Create temporary model info for enhancement analysis
+            var tempModelInfo = new Models.ObservableModelInfo(
+                namedTypeSymbol.ContainingNamespace.ToDisplayString(),
+                namedTypeSymbol.Name,
+                namedTypeSymbol.ToDisplayString(),
+                new List<Models.PartialPropertyInfo>(),
+                commandProperties,
+                methods,
+                modelReferences,
+                "Singleton",
+                new List<Models.DIFieldInfo>(),
+                new List<string>(),
+                null,
+                null,
+                new List<string>());
+
+            // Enhance model references with command method analysis
+            var enhancedModelReferences = tempModelInfo.EnhanceModelReferencesWithCommandAnalysis(
+                semanticModel,
+                modelSymbolMap);
+
+            // Check for model references with no used properties
+            foreach (var modelRef in enhancedModelReferences)
+            {
+                if (modelRef.UsedProperties.Count == 0)
+                {
+                    var location = modelRef.AttributeLocation ?? classDecl.Identifier.GetLocation();
+                    var diagnostic = Diagnostic.Create(
+                        DiagnosticDescriptors.UnusedModelReferenceError,
+                        location,
+                        namedTypeSymbol.Name,
+                        modelRef.ReferencedModelTypeName);
+                    diagnostics.Add(diagnostic);
+                }
+            }
+
             // Check for shared model scoping issues using compilation
             var sharedModelDiagnostics = AnalyzeSharedModelScoping(classDecl, semanticModel, compilation);
             diagnostics.AddRange(sharedModelDiagnostics);

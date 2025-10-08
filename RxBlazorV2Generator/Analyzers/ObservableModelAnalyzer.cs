@@ -87,6 +87,21 @@ public static class ObservableModelAnalyzer
                 semanticModel,
                 modelSymbolMap);
 
+            // Check for model references with no used properties
+            foreach (var modelRef in enhancedModelReferences)
+            {
+                if (modelRef.UsedProperties.Count == 0)
+                {
+                    var location = modelRef.AttributeLocation ?? classDecl.Identifier.GetLocation();
+                    var diagnostic = Diagnostic.Create(
+                        DiagnosticDescriptors.UnusedModelReferenceError,
+                        location,
+                        namedTypeSymbol.Name,
+                        modelRef.ReferencedModelTypeName);
+                    diagnostics.Add(diagnostic);
+                }
+            }
+
             var finalModelInfo = new ObservableModelInfo(
                 namedTypeSymbol.ContainingNamespace.ToDisplayString(),
                 namedTypeSymbol.Name,

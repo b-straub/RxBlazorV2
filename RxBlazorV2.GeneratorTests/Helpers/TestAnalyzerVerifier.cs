@@ -1,14 +1,14 @@
 using System.Text;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Testing;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Testing;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
 using RxBlazorV2Generator;
 using RxBlazorV2Generator.Diagnostics;
 
-namespace RxBlazorV2Test.Helpers;
+namespace RxBlazorV2.GeneratorTests.Helpers;
 
 /// <summary>
 /// Test helper for compilation-end diagnostics that cannot be easily code-fixed
