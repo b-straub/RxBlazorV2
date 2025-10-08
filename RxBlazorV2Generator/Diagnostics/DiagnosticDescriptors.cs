@@ -11,34 +11,38 @@ public static class DiagnosticDescriptors
         category: "RxBlazorGenerator",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "An error occurred while analyzing an observable model class.");
+        description: "An error occurred while analyzing an observable model class.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/Diagnostics/Help/RXBG001.md");
 
     public static readonly DiagnosticDescriptor RazorAnalysisError = new(
-        id: "RXBG002", 
+        id: "RXBG002",
         title: "Razor component analysis error",
         messageFormat: "Error analyzing razor component '{0}': {1}",
         category: "RxBlazorGenerator",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "An error occurred while analyzing a razor component.");
+        description: "An error occurred while analyzing a razor component.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/Diagnostics/Help/RXBG002.md");
 
     public static readonly DiagnosticDescriptor CodeGenerationError = new(
         id: "RXBG003",
-        title: "Code generation error", 
+        title: "Code generation error",
         messageFormat: "Error generating code for '{0}': {1}",
         category: "RxBlazorGenerator",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "An error occurred while generating source code.");
+        description: "An error occurred while generating source code.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/Diagnostics/Help/RXBG003.md");
 
     public static readonly DiagnosticDescriptor MethodAnalysisWarning = new(
         id: "RXBG004",
         title: "Method analysis warning",
         messageFormat: "Warning analyzing method '{0}' in class '{1}': {2}",
-        category: "RxBlazorGenerator", 
+        category: "RxBlazorGenerator",
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        description: "A warning occurred while analyzing a method for property usage.");
+        description: "A warning occurred while analyzing a method for property usage.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/Diagnostics/Help/RXBG004.md");
 
     public static readonly DiagnosticDescriptor RazorFileReadError = new(
         id: "RXBG005",
@@ -47,7 +51,8 @@ public static class DiagnosticDescriptors
         category: "RxBlazorGenerator",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "An error occurred while reading a razor file.");
+        description: "An error occurred while reading a razor file.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/Diagnostics/Help/RXBG005.md");
 
     public static readonly DiagnosticDescriptor CircularModelReferenceError = new(
         id: "RXBG006",
@@ -57,7 +62,7 @@ public static class DiagnosticDescriptors
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         description: "Circular references between observable models are not allowed.",
-        helpLinkUri: null,
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/Diagnostics/Help/RXBG006.md",
         customTags: ["Remove this circular model reference", "Remove all circular model references"]);
 
     public static readonly DiagnosticDescriptor InvalidModelReferenceTargetError = new(
@@ -67,7 +72,8 @@ public static class DiagnosticDescriptors
         category: "RxBlazorGenerator",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "Model references must target classes that inherit from ObservableModel.");
+        description: "Model references must target classes that inherit from ObservableModel.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/Diagnostics/Help/RXBG007.md");
 
     public static readonly DiagnosticDescriptor UnusedModelReferenceError = new(
         id: "RXBG008",
@@ -76,7 +82,8 @@ public static class DiagnosticDescriptors
         category: "RxBlazorGenerator",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "ObservableModelReference attributes should only be used when the parent model actually uses properties from the referenced model.");
+        description: "ObservableModelReference attributes should only be used when the parent model actually uses properties from the referenced model.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/Diagnostics/Help/RXBG008.md");
 
     public static readonly DiagnosticDescriptor ComponentNotObservableError = new(
         id: "RXBG009",
@@ -85,7 +92,8 @@ public static class DiagnosticDescriptors
         category: "RxBlazorGenerator",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "Blazor components that contain ObservableModel fields must inherit from ObservableComponent<T> for reactive binding, or from LayoutComponentBase which doesn't require disposing subscriptions.");
+        description: "Blazor components that contain ObservableModel fields must inherit from ObservableComponent<T> for reactive binding, or from LayoutComponentBase which doesn't require disposing subscriptions.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/Diagnostics/Help/RXBG009.md");
 
     public static readonly DiagnosticDescriptor SharedModelNotSingletonError = new(
         id: "RXBG010",
@@ -95,6 +103,7 @@ public static class DiagnosticDescriptors
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         description: "When an ObservableModel is used by multiple ObservableComponent instances, it must be registered as Singleton (default when no attribute is specified) to ensure data consistency across components.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/Diagnostics/Help/RXBG010.md",
         customTags: [WellKnownDiagnosticTags.CompilationEnd]
         );
     
@@ -105,7 +114,8 @@ public static class DiagnosticDescriptors
         category: "RxBlazorGenerator",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "ObservableCommandTrigger generic type arguments must match the command's generic type arguments for proper type safety.");
+        description: "ObservableCommandTrigger generic type arguments must match the command's generic type arguments for proper type safety.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/Diagnostics/Help/RXBG011.md");
     
     public static readonly DiagnosticDescriptor CircularTriggerReferenceError = new(
         id: "RXBG012",
@@ -114,7 +124,8 @@ public static class DiagnosticDescriptors
         category: "RxBlazorGenerator",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "ObservableCommandTrigger cannot listen to a property that the command's execution method modifies, as this creates an infinite loop.");
+        description: "ObservableCommandTrigger cannot listen to a property that the command's execution method modifies, as this creates an infinite loop.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/Diagnostics/Help/RXBG012.md");
 
     public static readonly DiagnosticDescriptor GenericArityMismatchError = new(
         id: "RXBG013",
@@ -124,7 +135,7 @@ public static class DiagnosticDescriptors
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         description: "When referencing open generic types, the number of type parameters must match between the referenced and referencing types.",
-        helpLinkUri: null,
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/Diagnostics/Help/RXBG013.md",
         customTags: ["Adjust type parameters to match referenced type", "Remove reference"]);
 
     public static readonly DiagnosticDescriptor TypeConstraintMismatchError = new(
@@ -135,7 +146,7 @@ public static class DiagnosticDescriptors
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         description: "Type constraints must be compatible between referenced and referencing generic types to ensure type safety.",
-        helpLinkUri: null,
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/Diagnostics/Help/RXBG014.md",
         customTags: ["Adjust type parameters to match referenced type", "Remove reference"]);
 
     public static readonly DiagnosticDescriptor InvalidOpenGenericReferenceError = new(
@@ -146,6 +157,6 @@ public static class DiagnosticDescriptors
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         description: "Open generic types (typeof(MyType<,>)) can only be referenced from generic classes that can provide the required type parameters.",
-        helpLinkUri: null,
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/Diagnostics/Help/RXBG015.md",
         customTags: ["Adjust type parameters to match referenced type", "Remove reference"]);
 }
