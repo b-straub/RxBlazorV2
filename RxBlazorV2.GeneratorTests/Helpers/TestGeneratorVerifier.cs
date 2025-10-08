@@ -58,21 +58,21 @@ internal class RxBlazorGeneratorTest : CSharpSourceGeneratorTest<RxBlazorGenerat
     {
         var serviceExtension = $$"""
 
-                                 using Microsoft.Extensions.DependencyInjection;
-                                 using RxBlazorV2.Model;
-                                 using Test;
+        using Microsoft.Extensions.DependencyInjection;
+        using RxBlazorV2.Model;
+        using Test;
 
-                                 namespace Global;
+        namespace Global;
 
-                                 public static partial class ObservableModels
-                                 {
-                                     public static IServiceCollection Initialize(IServiceCollection services)
-                                     {
-                                         services.AddSingleton<{{modelName}}>();
-                                         return services;
-                                     }
-                                 }
-                                 """;
+        public static partial class ObservableModels
+        {
+            public static IServiceCollection Initialize(IServiceCollection services)
+            {
+                services.AddSingleton<{{modelName}}>();
+                return services;
+            }
+        }
+        """;
         
         serviceExtension = serviceExtension.TrimStart();
         serviceExtension = serviceExtension.Replace("\r\n", Environment.NewLine);
@@ -80,20 +80,20 @@ internal class RxBlazorGeneratorTest : CSharpSourceGeneratorTest<RxBlazorGenerat
         
         var serviceExtensionGeneric = $$"""
 
-                                        using Microsoft.Extensions.DependencyInjection;
-                                        using RxBlazorV2.Model;
-                                        using Test;
+        using Microsoft.Extensions.DependencyInjection;
+        using RxBlazorV2.Model;
+        using Test;
 
-                                        namespace Global;
+        namespace Global;
 
-                                        public static partial class ObservableModels
-                                        {
-                                            public static IServiceCollection Initialize(IServiceCollection services)
-                                            {
-                                                return services;
-                                            }
-                                        }
-                                        """;
+        public static partial class ObservableModels
+        {
+            public static IServiceCollection Initialize(IServiceCollection services)
+            {
+                return services;
+            }
+        }
+        """;
         serviceExtensionGeneric = serviceExtensionGeneric.TrimStart();
         serviceExtensionGeneric = serviceExtensionGeneric.Replace("\r\n", Environment.NewLine);
         serviceExtensionGeneric += Environment.NewLine;
@@ -104,39 +104,39 @@ internal class RxBlazorGeneratorTest : CSharpSourceGeneratorTest<RxBlazorGenerat
     {
         var serviceExtension = $$"""
 
-                                 using Microsoft.Extensions.DependencyInjection;
-                                 using RxBlazorV2.Model;
-                                 using Test;
+        using Microsoft.Extensions.DependencyInjection;
+        using RxBlazorV2.Model;
+        using Test;
 
-                                 namespace Global;
+        namespace Global;
 
-                                 public static partial class ObservableModels
-                                 {
-                                 }
-                                 """;
+        public static partial class ObservableModels
+        {
+        }
+        """;
         serviceExtension = serviceExtension.TrimStart();
         serviceExtension = serviceExtension.Replace("\r\n", Environment.NewLine);
         serviceExtension += Environment.NewLine;
         
         var serviceExtensionGeneric = $$"""
 
-                                        using Microsoft.Extensions.DependencyInjection;
-                                        using RxBlazorV2.Model;
-                                        using Test;
+        using Microsoft.Extensions.DependencyInjection;
+        using RxBlazorV2.Model;
+        using Test;
 
-                                        namespace Global;
+        namespace Global;
 
-                                        public static partial class ObservableModels
-                                        {
-                                            public static IServiceCollection {{modelName}}(IServiceCollection services)
-                                                {{constrains}}
-                                            {
-                                                services.AddSingleton<{{modelName}}>();
-                                                return services;
-                                            }
+        public static partial class ObservableModels
+        {
+            public static IServiceCollection {{modelName}}(IServiceCollection services)
+                {{constrains}}
+            {
+                services.AddSingleton<{{modelName}}>();
+                return services;
+            }
 
-                                        }
-                                        """;
+        }
+        """;
         serviceExtensionGeneric = serviceExtensionGeneric.TrimStart();
         serviceExtensionGeneric = serviceExtensionGeneric.Replace("\r\n", Environment.NewLine);
         serviceExtensionGeneric += Environment.NewLine;

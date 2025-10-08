@@ -10,52 +10,52 @@ public class GenericModelGeneratorTests
         // lang=csharp
         const string test = """
 
-                            using RxBlazorV2.Model;
-                            using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-                            namespace Test
-                            {
-                                [ObservableModelScope(ModelScope.Singleton)]
-                                public partial class GenericModel<T> : ObservableModel where T : class
-                                {
-                                    public partial T Item { get; set; }
-                                }
-                            }
-                            """;
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class GenericModel<T> : ObservableModel where T : class
+            {
+                public partial T Item { get; set; }
+            }
+        }
+        """;
 
         // lang=csharp
         const string generated = """
 
-                                 #nullable enable
-                                 using Microsoft.Extensions.DependencyInjection;
-                                 using ObservableCollections;
-                                 using R3;
-                                 using RxBlazorV2.Interface;
-                                 using RxBlazorV2.Model;
-                                 using System;
+        #nullable enable
+        using Microsoft.Extensions.DependencyInjection;
+        using ObservableCollections;
+        using R3;
+        using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using System;
 
-                                 namespace Test;
+        namespace Test;
 
-                                 public partial class GenericModel<T>
-                                 {
-                                     public override string ModelID => "Test.GenericModel<T>";
+        public partial class GenericModel<T>
+        {
+            public override string ModelID => "Test.GenericModel<T>";
 
-                                     private readonly CompositeDisposable _subscriptions = new();
-                                     protected override IDisposable Subscriptions => _subscriptions;
+            private readonly CompositeDisposable _subscriptions = new();
+            protected override IDisposable Subscriptions => _subscriptions;
 
-                                     public partial T Item
-                                     {
-                                         get => field;
-                                         set
-                                         {
-                                             field = value;
-                                             StateHasChanged(nameof(Item));
-                                         }
-                                     }
+            public partial T Item
+            {
+                get => field;
+                set
+                {
+                    field = value;
+                    StateHasChanged(nameof(Item));
+                }
+            }
 
-                                 }
+        }
 
-                                 """;
+        """;
 
         await RxBlazorGeneratorVerifier.VerifySourceGeneratorAsync(test, generated, "GenericModel<T>", "where T : class");
     }
@@ -66,63 +66,63 @@ public class GenericModelGeneratorTests
         // lang=csharp
         const string test = """
 
-                            using RxBlazorV2.Model;
-                            using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-                            namespace Test
-                            {
-                                [ObservableModelScope(ModelScope.Singleton)]
-                                public partial class GenericModel<T, P> : ObservableModel where T : class where P : struct
-                                {
-                                    public partial T Item1 { get; set; }
-                                    public partial P Item2 { get; set; }
-                                }
-                            }
-                            """;
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class GenericModel<T, P> : ObservableModel where T : class where P : struct
+            {
+                public partial T Item1 { get; set; }
+                public partial P Item2 { get; set; }
+            }
+        }
+        """;
 
         // lang=csharp
         const string generated = """
 
-                                 #nullable enable
-                                 using Microsoft.Extensions.DependencyInjection;
-                                 using ObservableCollections;
-                                 using R3;
-                                 using RxBlazorV2.Interface;
-                                 using RxBlazorV2.Model;
-                                 using System;
+        #nullable enable
+        using Microsoft.Extensions.DependencyInjection;
+        using ObservableCollections;
+        using R3;
+        using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using System;
 
-                                 namespace Test;
+        namespace Test;
 
-                                 public partial class GenericModel<T, P>
-                                 {
-                                     public override string ModelID => "Test.GenericModel<T, P>";
+        public partial class GenericModel<T, P>
+        {
+            public override string ModelID => "Test.GenericModel<T, P>";
 
-                                     private readonly CompositeDisposable _subscriptions = new();
-                                     protected override IDisposable Subscriptions => _subscriptions;
+            private readonly CompositeDisposable _subscriptions = new();
+            protected override IDisposable Subscriptions => _subscriptions;
 
-                                     public partial T Item1
-                                     {
-                                         get => field;
-                                         set
-                                         {
-                                             field = value;
-                                             StateHasChanged(nameof(Item1));
-                                         }
-                                     }
+            public partial T Item1
+            {
+                get => field;
+                set
+                {
+                    field = value;
+                    StateHasChanged(nameof(Item1));
+                }
+            }
 
-                                     public partial P Item2
-                                     {
-                                         get => field;
-                                         set
-                                         {
-                                             field = value;
-                                             StateHasChanged(nameof(Item2));
-                                         }
-                                     }
+            public partial P Item2
+            {
+                get => field;
+                set
+                {
+                    field = value;
+                    StateHasChanged(nameof(Item2));
+                }
+            }
 
-                                 }
+        }
 
-                                 """;
+        """;
 
         await RxBlazorGeneratorVerifier.VerifySourceGeneratorAsync(test, generated, "GenericModel<T, P>", "where T : class where P : struct");
     }
@@ -133,60 +133,60 @@ public class GenericModelGeneratorTests
         // lang=csharp
         const string test = """
 
-                            using RxBlazorV2.Model;
-                            using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-                            namespace Test
-                            {
-                                [ObservableModelScope(ModelScope.Singleton)]
-                                public partial class GenericModel<T> : ObservableModel where T : class
-                                {
-                                    [ObservableCommand(nameof(ExecuteMethod))]
-                                    public partial IObservableCommand<T> TestCommand { get; }
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class GenericModel<T> : ObservableModel where T : class
+            {
+                [ObservableCommand(nameof(ExecuteMethod))]
+                public partial IObservableCommand<T> TestCommand { get; }
 
-                                    private void ExecuteMethod(T item)
-                                    {
-                                    }
-                                }
-                            }
-                            """;
+                private void ExecuteMethod(T item)
+                {
+                }
+            }
+        }
+        """;
 
         // lang=csharp
         const string generated = """
 
-                                 #nullable enable
-                                 using Microsoft.Extensions.DependencyInjection;
-                                 using ObservableCollections;
-                                 using R3;
-                                 using RxBlazorV2.Interface;
-                                 using RxBlazorV2.Model;
-                                 using System;
+        #nullable enable
+        using Microsoft.Extensions.DependencyInjection;
+        using ObservableCollections;
+        using R3;
+        using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using System;
 
-                                 namespace Test;
+        namespace Test;
 
-                                 public partial class GenericModel<T>
-                                 {
-                                     public override string ModelID => "Test.GenericModel<T>";
+        public partial class GenericModel<T>
+        {
+            public override string ModelID => "Test.GenericModel<T>";
 
-                                     private readonly CompositeDisposable _subscriptions = new();
-                                     protected override IDisposable Subscriptions => _subscriptions;
+            private readonly CompositeDisposable _subscriptions = new();
+            protected override IDisposable Subscriptions => _subscriptions;
 
 
-                                     private IObservableCommand<T> _testCommand;
+            private IObservableCommand<T> _testCommand;
 
-                                     public partial IObservableCommand<T> TestCommand
-                                     {
-                                         get => _testCommand;
-                                     }
+            public partial IObservableCommand<T> TestCommand
+            {
+                get => _testCommand;
+            }
 
-                                     public GenericModel() : base()
-                                     {
-                                         // Initialize commands
-                                         _testCommand = new ObservableCommandFactory<T>(this, [""], ExecuteMethod);
-                                     }
-                                 }
+            public GenericModel() : base()
+            {
+                // Initialize commands
+                _testCommand = new ObservableCommandFactory<T>(this, [""], ExecuteMethod);
+            }
+        }
 
-                                 """;
+        """;
 
         await RxBlazorGeneratorVerifier.VerifySourceGeneratorAsync(test, generated, "GenericModel<T>", "where T : class");
     }

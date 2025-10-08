@@ -12,23 +12,23 @@ public class SharedModelScopingTests
         // lang=csharp
         var test = """
 
-                   using RxBlazorV2.Model;
-                   using RxBlazorV2.Interface;
-                   using RxBlazorV2.Component;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+        using RxBlazorV2.Component;
 
-                   namespace Test
-                   {
-                       [ObservableModelScope(ModelScope.Scoped)]
-                       public partial class TestModel : ObservableModel
-                       {
-                           public partial string Name { get; set; }
-                       }
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Scoped)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; }
+            }
 
-                       public partial class TestComponent : ObservableComponent<TestModel>
-                       {
-                       }
-                   }
-                   """;
+            public partial class TestComponent : ObservableComponent<TestModel>
+            {
+            }
+        }
+        """;
         await CodeFixVerifier.VerifyAnalyzerAsync(test);
     }
 
@@ -38,27 +38,27 @@ public class SharedModelScopingTests
         // lang=csharp
         var test = """
 
-                   using RxBlazorV2.Model;
-                   using RxBlazorV2.Interface;
-                   using RxBlazorV2.Component;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+        using RxBlazorV2.Component;
 
-                   namespace Test
-                   {
-                       [ObservableModelScope(ModelScope.Singleton)]
-                       public partial class TestModel : ObservableModel
-                       {
-                           public partial string Name { get; set; }
-                       }
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; }
+            }
 
-                       public partial class TestComponent1 : ObservableComponent<TestModel>
-                       {
-                       }
+            public partial class TestComponent1 : ObservableComponent<TestModel>
+            {
+            }
 
-                       public partial class TestComponent2 : ObservableComponent<TestModel>
-                       {
-                       }
-                   }
-                   """;
+            public partial class TestComponent2 : ObservableComponent<TestModel>
+            {
+            }
+        }
+        """;
         await CodeFixVerifier.VerifyAnalyzerAsync(test);
     }
 
@@ -68,27 +68,27 @@ public class SharedModelScopingTests
         // lang=csharp
         var test = """
 
-                   using RxBlazorV2.Model;
-                   using RxBlazorV2.Interface;
-                   using RxBlazorV2.Component;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+        using RxBlazorV2.Component;
 
-                   namespace Test
-                   {
-                       // No scope attribute - defaults to Singleton
-                       public partial class TestModel : ObservableModel
-                       {
-                           public partial string Name { get; set; }
-                       }
+        namespace Test
+        {
+            // No scope attribute - defaults to Singleton
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; }
+            }
 
-                       public partial class TestComponent1 : ObservableComponent<TestModel>
-                       {
-                       }
+            public partial class TestComponent1 : ObservableComponent<TestModel>
+            {
+            }
 
-                       public partial class TestComponent2 : ObservableComponent<TestModel>
-                       {
-                       }
-                   }
-                   """;
+            public partial class TestComponent2 : ObservableComponent<TestModel>
+            {
+            }
+        }
+        """;
         await CodeFixVerifier.VerifyAnalyzerAsync(test);
     }
 
@@ -98,27 +98,27 @@ public class SharedModelScopingTests
         // lang=csharp
         var test = $$"""
 
-                     using RxBlazorV2.Model;
-                     using RxBlazorV2.Interface;
-                     using RxBlazorV2.Component;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+        using RxBlazorV2.Component;
 
-                     namespace Test
-                     {
-                         [{|{{DiagnosticDescriptors.SharedModelNotSingletonError.Id}}:ObservableModelScope(ModelScope.Scoped)|}]
-                         public partial class TestModel : ObservableModel
-                         {
-                             public partial string Name { get; set; }
-                         }
+        namespace Test
+        {
+            [{|{{DiagnosticDescriptors.SharedModelNotSingletonError.Id}}:ObservableModelScope(ModelScope.Scoped)|}]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; }
+            }
 
-                         public partial class TestComponent1 : ObservableComponent<TestModel>
-                         {
-                         }
+            public partial class TestComponent1 : ObservableComponent<TestModel>
+            {
+            }
 
-                         public partial class TestComponent2 : ObservableComponent<TestModel>
-                         {
-                         }
-                     }
-                     """;
+            public partial class TestComponent2 : ObservableComponent<TestModel>
+            {
+            }
+        }
+        """;
         await CodeFixVerifier.VerifyAnalyzerAsync(test);
     }
 
@@ -128,27 +128,27 @@ public class SharedModelScopingTests
         // lang=csharp
         var test = $$"""
 
-                     using RxBlazorV2.Model;
-                     using RxBlazorV2.Interface;
-                     using RxBlazorV2.Component;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+        using RxBlazorV2.Component;
 
-                     namespace Test
-                     {
-                         [{|{{DiagnosticDescriptors.SharedModelNotSingletonError.Id}}:ObservableModelScope(ModelScope.Transient)|}]
-                         public partial class TestModel : ObservableModel
-                         {
-                             public partial string Name { get; set; }
-                         }
+        namespace Test
+        {
+            [{|{{DiagnosticDescriptors.SharedModelNotSingletonError.Id}}:ObservableModelScope(ModelScope.Transient)|}]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; }
+            }
 
-                         public partial class TestComponent1 : ObservableComponent<TestModel>
-                         {
-                         }
+            public partial class TestComponent1 : ObservableComponent<TestModel>
+            {
+            }
 
-                         public partial class TestComponent2 : ObservableComponent<TestModel>
-                         {
-                         }
-                     }
-                     """;
+            public partial class TestComponent2 : ObservableComponent<TestModel>
+            {
+            }
+        }
+        """;
         await CodeFixVerifier.VerifyAnalyzerAsync(test);
     }
 }

@@ -19,30 +19,30 @@ public class GenericModelDiagnosticTests
         // lang=csharp
         var test = """
 
-                   using RxBlazorV2.Model;
-                   using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-                   namespace Test
-                   {
-                       [ObservableModelScope(ModelScope.Singleton)]
-                       public partial class GenericModel<T> : ObservableModel where T : class
-                       {
-                           public partial T Item { get; set; }
-                       }
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class GenericModel<T> : ObservableModel where T : class
+            {
+                public partial T Item { get; set; }
+            }
 
-                       [ObservableModelReference(typeof(GenericModel<>))]
-                       [ObservableModelScope(ModelScope.Scoped)]
-                       public partial class ConsumerModel<T> : ObservableModel where T : class
-                       {
-                           public partial int Value { get; set; }
+            [ObservableModelReference(typeof(GenericModel<>))]
+            [ObservableModelScope(ModelScope.Scoped)]
+            public partial class ConsumerModel<T> : ObservableModel where T : class
+            {
+                public partial int Value { get; set; }
                            
-                           public T GetProp()
-                           {
-                               return GenericModel.Item;
-                           }
-                       }
-                   }
-                   """;
+                public T GetProp()
+                {
+                    return GenericModel.Item;
+                }
+            }
+        }
+        """;
         await CodeFixVerifier.VerifyAnalyzerAsync(test);
     }
 
@@ -52,25 +52,25 @@ public class GenericModelDiagnosticTests
         // lang=csharp
         var test = $$"""
 
-                     using RxBlazorV2.Model;
-                     using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-                     namespace Test
-                     {
-                         [ObservableModelScope(ModelScope.Singleton)]
-                         public partial class GenericModel<T> : ObservableModel where T : class
-                         {
-                             public partial T Item { get; set; }
-                         }
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class GenericModel<T> : ObservableModel where T : class
+            {
+                public partial T Item { get; set; }
+            }
 
-                         [{|{{DiagnosticDescriptors.GenericArityMismatchError.Id}}:ObservableModelReference(typeof(GenericModel<>))|}]
-                         [ObservableModelScope(ModelScope.Scoped)]
-                         public partial class ConsumerModel<T, P> : ObservableModel where T : class where P : struct
-                         {
-                             public partial int Value { get; set; }
-                         }
-                     }
-                     """;
+            [{|{{DiagnosticDescriptors.GenericArityMismatchError.Id}}:ObservableModelReference(typeof(GenericModel<>))|}]
+            [ObservableModelScope(ModelScope.Scoped)]
+            public partial class ConsumerModel<T, P> : ObservableModel where T : class where P : struct
+            {
+                public partial int Value { get; set; }
+            }
+        }
+        """;
         await CodeFixVerifier.VerifyAnalyzerAsync(test);
     }
 
@@ -80,26 +80,26 @@ public class GenericModelDiagnosticTests
         // lang=csharp
         var test = $$"""
 
-                     using RxBlazorV2.Model;
-                     using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-                     namespace Test
-                     {
-                         [ObservableModelScope(ModelScope.Singleton)]
-                         public partial class GenericModel<T, P> : ObservableModel where T : class where P : struct
-                         {
-                             public partial T Item1 { get; set; }
-                             public partial P Item2 { get; set; }
-                         }
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class GenericModel<T, P> : ObservableModel where T : class where P : struct
+            {
+                public partial T Item1 { get; set; }
+                public partial P Item2 { get; set; }
+            }
 
-                         [{|{{DiagnosticDescriptors.GenericArityMismatchError.Id}}:ObservableModelReference(typeof(GenericModel<,>))|}]
-                         [ObservableModelScope(ModelScope.Scoped)]
-                         public partial class ConsumerModel<T> : ObservableModel where T : class
-                         {
-                             public partial int Value { get; set; }
-                         }
-                     }
-                     """;
+            [{|{{DiagnosticDescriptors.GenericArityMismatchError.Id}}:ObservableModelReference(typeof(GenericModel<,>))|}]
+            [ObservableModelScope(ModelScope.Scoped)]
+            public partial class ConsumerModel<T> : ObservableModel where T : class
+            {
+                public partial int Value { get; set; }
+            }
+        }
+        """;
         await CodeFixVerifier.VerifyAnalyzerAsync(test);
     }
 
@@ -109,25 +109,25 @@ public class GenericModelDiagnosticTests
         // lang=csharp
         var test = $$"""
 
-                     using RxBlazorV2.Model;
-                     using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-                     namespace Test
-                     {
-                         [ObservableModelScope(ModelScope.Singleton)]
-                         public partial class GenericModel<T> : ObservableModel where T : class
-                         {
-                             public partial T Item { get; set; }
-                         }
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class GenericModel<T> : ObservableModel where T : class
+            {
+                public partial T Item { get; set; }
+            }
 
-                         [{|{{DiagnosticDescriptors.TypeConstraintMismatchError.Id}}:ObservableModelReference(typeof(GenericModel<>))|}]
-                         [ObservableModelScope(ModelScope.Scoped)]
-                         public partial class ConsumerModel<T> : ObservableModel where T : struct
-                         {
-                             public partial int Value { get; set; }
-                         }
-                     }
-                     """;
+            [{|{{DiagnosticDescriptors.TypeConstraintMismatchError.Id}}:ObservableModelReference(typeof(GenericModel<>))|}]
+            [ObservableModelScope(ModelScope.Scoped)]
+            public partial class ConsumerModel<T> : ObservableModel where T : struct
+            {
+                public partial int Value { get; set; }
+            }
+        }
+        """;
         await CodeFixVerifier.VerifyAnalyzerAsync(test);
     }
 
@@ -137,26 +137,26 @@ public class GenericModelDiagnosticTests
         // lang=csharp
         var test = $$"""
 
-                     using RxBlazorV2.Model;
-                     using RxBlazorV2.Interface;
-                     using System;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+        using System;
 
-                     namespace Test
-                     {
-                         [ObservableModelScope(ModelScope.Singleton)]
-                         public partial class GenericModel<T> : ObservableModel where T : IDisposable
-                         {
-                             public partial T Item { get; set; }
-                         }
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class GenericModel<T> : ObservableModel where T : IDisposable
+            {
+                public partial T Item { get; set; }
+            }
 
-                         [{|{{DiagnosticDescriptors.TypeConstraintMismatchError.Id}}:ObservableModelReference(typeof(GenericModel<>))|}]
-                         [ObservableModelScope(ModelScope.Scoped)]
-                         public partial class ConsumerModel<T> : ObservableModel where T : class
-                         {
-                             public partial int Value { get; set; }
-                         }
-                     }
-                     """;
+            [{|{{DiagnosticDescriptors.TypeConstraintMismatchError.Id}}:ObservableModelReference(typeof(GenericModel<>))|}]
+            [ObservableModelScope(ModelScope.Scoped)]
+            public partial class ConsumerModel<T> : ObservableModel where T : class
+            {
+                public partial int Value { get; set; }
+            }
+        }
+        """;
         await CodeFixVerifier.VerifyAnalyzerAsync(test);
     }
 
@@ -166,25 +166,25 @@ public class GenericModelDiagnosticTests
         // lang=csharp
         var test = $$"""
 
-                     using RxBlazorV2.Model;
-                     using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-                     namespace Test
-                     {
-                         [ObservableModelScope(ModelScope.Singleton)]
-                         public partial class GenericModel<T> : ObservableModel where T : class
-                         {
-                             public partial T Item { get; set; }
-                         }
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class GenericModel<T> : ObservableModel where T : class
+            {
+                public partial T Item { get; set; }
+            }
 
-                         [{|{{DiagnosticDescriptors.InvalidOpenGenericReferenceError.Id}}:ObservableModelReference(typeof(GenericModel<>))|}]
-                         [ObservableModelScope(ModelScope.Scoped)]
-                         public partial class ConsumerModel : ObservableModel
-                         {
-                             public partial int Value { get; set; }
-                         }
-                     }
-                     """;
+            [{|{{DiagnosticDescriptors.InvalidOpenGenericReferenceError.Id}}:ObservableModelReference(typeof(GenericModel<>))|}]
+            [ObservableModelScope(ModelScope.Scoped)]
+            public partial class ConsumerModel : ObservableModel
+            {
+                public partial int Value { get; set; }
+            }
+        }
+        """;
         await CodeFixVerifier.VerifyAnalyzerAsync(test);
     }
 
@@ -194,26 +194,26 @@ public class GenericModelDiagnosticTests
         // lang=csharp
         var test = $$"""
 
-                     using RxBlazorV2.Model;
-                     using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-                     namespace Test
-                     {
-                         [ObservableModelScope(ModelScope.Singleton)]
-                         public partial class GenericModel<T, P> : ObservableModel where T : class where P : struct
-                         {
-                             public partial T Item1 { get; set; }
-                             public partial P Item2 { get; set; }
-                         }
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class GenericModel<T, P> : ObservableModel where T : class where P : struct
+            {
+                public partial T Item1 { get; set; }
+                public partial P Item2 { get; set; }
+            }
 
-                         [{|{{DiagnosticDescriptors.InvalidOpenGenericReferenceError.Id}}:ObservableModelReference(typeof(GenericModel<,>))|}]
-                         [ObservableModelScope(ModelScope.Scoped)]
-                         public partial class ConsumerModel : ObservableModel
-                         {
-                             public partial int Value { get; set; }
-                         }
-                     }
-                     """;
+            [{|{{DiagnosticDescriptors.InvalidOpenGenericReferenceError.Id}}:ObservableModelReference(typeof(GenericModel<,>))|}]
+            [ObservableModelScope(ModelScope.Scoped)]
+            public partial class ConsumerModel : ObservableModel
+            {
+                public partial int Value { get; set; }
+            }
+        }
+        """;
         await CodeFixVerifier.VerifyAnalyzerAsync(test);
     }
 
@@ -224,26 +224,26 @@ public class GenericModelDiagnosticTests
         // Note: More restrictive constraints are currently not supported
         var test = $$"""
 
-                     using RxBlazorV2.Model;
-                     using RxBlazorV2.Interface;
-                     using System;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+        using System;
 
-                     namespace Test
-                     {
-                         [ObservableModelScope(ModelScope.Singleton)]
-                         public partial class GenericModel<T> : ObservableModel where T : class
-                         {
-                             public partial T Item { get; set; }
-                         }
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class GenericModel<T> : ObservableModel where T : class
+            {
+                public partial T Item { get; set; }
+            }
 
-                         [{|{{DiagnosticDescriptors.TypeConstraintMismatchError.Id}}:ObservableModelReference(typeof(GenericModel<>))|}]
-                         [ObservableModelScope(ModelScope.Scoped)]
-                         public partial class ConsumerModel<T> : ObservableModel where T : class, IDisposable
-                         {
-                             public partial int Value { get; set; }
-                         }
-                     }
-                     """;
+            [{|{{DiagnosticDescriptors.TypeConstraintMismatchError.Id}}:ObservableModelReference(typeof(GenericModel<>))|}]
+            [ObservableModelScope(ModelScope.Scoped)]
+            public partial class ConsumerModel<T> : ObservableModel where T : class, IDisposable
+            {
+                public partial int Value { get; set; }
+            }
+        }
+        """;
         await CodeFixVerifier.VerifyAnalyzerAsync(test);
     }
 
@@ -253,31 +253,31 @@ public class GenericModelDiagnosticTests
         // lang=csharp
         var test = """
 
-                   using RxBlazorV2.Model;
-                   using RxBlazorV2.Interface;
-                   using System;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+        using System;
 
-                   namespace Test
-                   {
-                       [ObservableModelScope(ModelScope.Singleton)]
-                       public partial class GenericModel<T> : ObservableModel where T : class
-                       {
-                           public partial T Item { get; set; }
-                       }
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class GenericModel<T> : ObservableModel where T : class
+            {
+                public partial T Item { get; set; }
+            }
 
-                       [ObservableModelReference(typeof(GenericModel<>))]
-                       [ObservableModelScope(ModelScope.Scoped)]
-                       public partial class ConsumerModel<T> : ObservableModel where T : class
-                       {
-                           public partial int Value { get; set; }
+            [ObservableModelReference(typeof(GenericModel<>))]
+            [ObservableModelScope(ModelScope.Scoped)]
+            public partial class ConsumerModel<T> : ObservableModel where T : class
+            {
+                public partial int Value { get; set; }
                            
-                           public T GetProp()
-                           {
-                               return GenericModel.Item;
-                           }
-                       }
-                   }
-                   """;
+                public T GetProp()
+                {
+                    return GenericModel.Item;
+                }
+            }
+        }
+        """;
         await CodeFixVerifier.VerifyAnalyzerAsync(test);
     }
 }

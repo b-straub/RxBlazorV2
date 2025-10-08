@@ -12,27 +12,27 @@ public class ObservableCommandTriggerTests
         // lang=csharp
         var test = """
 
-                   using RxBlazorV2.Model;
-                   using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-                   namespace Test
-                   {
-                       [ObservableModelScope(ModelScope.Singleton)]
-                       public partial class TestModel : ObservableModel
-                       {
-                           public partial string Name { get; set; } = "";
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; } = "";
                            
-                           [ObservableCommand(nameof(ExecuteMethod))]
-                           [ObservableCommandTrigger(nameof(Name))]
-                           public partial IObservableCommand TestCommand { get; }
+                [ObservableCommand(nameof(ExecuteMethod))]
+                [ObservableCommandTrigger(nameof(Name))]
+                public partial IObservableCommand TestCommand { get; }
                            
-                           private void ExecuteMethod()
-                           {
-                               Console.WriteLine($"Executed with Name: {Name}");
-                           }
-                       }
-                   }
-                   """;
+                private void ExecuteMethod()
+                {
+                    Console.WriteLine($"Executed with Name: {Name}");
+                }
+            }
+        }
+        """;
         await AnalyzerVerifier.VerifyAnalyzerAsync(test);
     }
 
@@ -42,29 +42,29 @@ public class ObservableCommandTriggerTests
         // lang=csharp
         var test = """
 
-                   using RxBlazorV2.Model;
-                   using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-                   namespace Test
-                   {
-                       [ObservableModelScope(ModelScope.Singleton)]
-                       public partial class TestModel : ObservableModel
-                       {
-                           public partial string Name { get; set; } = "";
-                           public partial int Count { get; set; }
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; } = "";
+                public partial int Count { get; set; }
                            
-                           [ObservableCommand(nameof(ExecuteMethod))]
-                           [ObservableCommandTrigger(nameof(Name))]
-                           [ObservableCommandTrigger(nameof(Count))]
-                           public partial IObservableCommand TestCommand { get; }
+                [ObservableCommand(nameof(ExecuteMethod))]
+                [ObservableCommandTrigger(nameof(Name))]
+                [ObservableCommandTrigger(nameof(Count))]
+                public partial IObservableCommand TestCommand { get; }
                            
-                           private void ExecuteMethod()
-                           {
-                               Console.WriteLine($"Executed with Name: {Name}, Count: {Count}");
-                           }
-                       }
-                   }
-                   """;
+                private void ExecuteMethod()
+                {
+                    Console.WriteLine($"Executed with Name: {Name}, Count: {Count}");
+                }
+            }
+        }
+        """;
         await AnalyzerVerifier.VerifyAnalyzerAsync(test);
     }
 
@@ -74,28 +74,28 @@ public class ObservableCommandTriggerTests
         // lang=csharp
         var test = """
 
-                   using RxBlazorV2.Model;
-                   using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-                   namespace Test
-                   {
-                       [ObservableModelScope(ModelScope.Singleton)]
-                       public partial class TestModel : ObservableModel
-                       {
-                           public partial string Name { get; set; } = "";
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; } = "";
                            
-                           [ObservableCommand(nameof(ExecuteAsyncMethod))]
-                           [ObservableCommandTrigger(nameof(Name))]
-                           public partial IObservableCommandAsync TestCommand { get; }
+                [ObservableCommand(nameof(ExecuteAsyncMethod))]
+                [ObservableCommandTrigger(nameof(Name))]
+                public partial IObservableCommandAsync TestCommand { get; }
                            
-                           private async Task ExecuteAsyncMethod()
-                           {
-                               await Task.Delay(100);
-                               Console.WriteLine($"Executed with Name: {Name}");
-                           }
-                       }
-                   }
-                   """;
+                private async Task ExecuteAsyncMethod()
+                {
+                    await Task.Delay(100);
+                    Console.WriteLine($"Executed with Name: {Name}");
+                }
+            }
+        }
+        """;
         await AnalyzerVerifier.VerifyAnalyzerAsync(test);
     }
 
@@ -105,27 +105,27 @@ public class ObservableCommandTriggerTests
         // lang=csharp
         var test = $$"""
 
-                     using RxBlazorV2.Model;
-                     using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-                     namespace Test
-                     {
-                         [ObservableModelScope(ModelScope.Singleton)]
-                         public partial class TestModel : ObservableModel
-                         {
-                             public partial string Name { get; set; } = "";
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; } = "";
                              
-                             [ObservableCommand(nameof(ExecuteMethodWithParam))]
-                             [{|{{DiagnosticDescriptors.TriggerTypeArgumentsMismatchError.Id}}:ObservableCommandTrigger<int>(nameof(Name), 3)|}]
-                             public partial IObservableCommand<string> TestCommand { get; }
+                [ObservableCommand(nameof(ExecuteMethodWithParam))]
+                [{|{{DiagnosticDescriptors.TriggerTypeArgumentsMismatchError.Id}}:ObservableCommandTrigger<int>(nameof(Name), 3)|}]
+                public partial IObservableCommand<string> TestCommand { get; }
                              
-                             private void ExecuteMethodWithParam(string parameter)
-                             {
-                                 Console.WriteLine($"Executed with Name: {Name}, Parameter: {parameter}");
-                             }
-                         }
-                     }
-                     """;
+                private void ExecuteMethodWithParam(string parameter)
+                {
+                    Console.WriteLine($"Executed with Name: {Name}, Parameter: {parameter}");
+                }
+            }
+        }
+        """;
         await AnalyzerVerifier.VerifyAnalyzerAsync(test);
     }
     
@@ -135,27 +135,27 @@ public class ObservableCommandTriggerTests
         // lang=csharp
         var test = """
 
-                   using RxBlazorV2.Model;
-                   using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-                   namespace Test
-                   {
-                       [ObservableModelScope(ModelScope.Singleton)]
-                       public partial class TestModel : ObservableModel
-                       {
-                           public partial string Name { get; set; } = "";
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; } = "";
                            
-                           [ObservableCommand(nameof(ExecuteMethodWithParam))]
-                           [ObservableCommandTrigger<string>(nameof(Name), "NewTest")]
-                           public partial IObservableCommand<string> TestCommand { get; }
+                [ObservableCommand(nameof(ExecuteMethodWithParam))]
+                [ObservableCommandTrigger<string>(nameof(Name), "NewTest")]
+                public partial IObservableCommand<string> TestCommand { get; }
                            
-                           private void ExecuteMethodWithParam(string parameter)
-                           {
-                               Console.WriteLine($"Executed with Name: {Name}, Parameter: {parameter}");
-                           }
-                       }
-                   }
-                   """;
+                private void ExecuteMethodWithParam(string parameter)
+                {
+                    Console.WriteLine($"Executed with Name: {Name}, Parameter: {parameter}");
+                }
+            }
+        }
+        """;
         await AnalyzerVerifier.VerifyAnalyzerAsync(test);
     }
 
@@ -165,33 +165,33 @@ public class ObservableCommandTriggerTests
         // lang=csharp
         var test = """
 
-                   using RxBlazorV2.Model;
-                   using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-                   namespace Test
-                   {
-                       [ObservableModelScope(ModelScope.Singleton)]
-                       public partial class TestModel : ObservableModel
-                       {
-                           public partial string Name { get; set; } = "";
-                           public partial bool IsEnabled { get; set; }
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; } = "";
+                public partial bool IsEnabled { get; set; }
                            
-                           [ObservableCommand(nameof(ExecuteMethod), nameof(CanExecuteMethod))]
-                           [ObservableCommandTrigger(nameof(Name))]
-                           public partial IObservableCommand TestCommand { get; }
+                [ObservableCommand(nameof(ExecuteMethod), nameof(CanExecuteMethod))]
+                [ObservableCommandTrigger(nameof(Name))]
+                public partial IObservableCommand TestCommand { get; }
                            
-                           private void ExecuteMethod()
-                           {
-                               Console.WriteLine($"Executed with Name: {Name}");
-                           }
+                private void ExecuteMethod()
+                {
+                    Console.WriteLine($"Executed with Name: {Name}");
+                }
                            
-                           private bool CanExecuteMethod()
-                           {
-                               return IsEnabled && !string.IsNullOrEmpty(Name);
-                           }
-                       }
-                   }
-                   """;
+                private bool CanExecuteMethod()
+                {
+                    return IsEnabled && !string.IsNullOrEmpty(Name);
+                }
+            }
+        }
+        """;
         await AnalyzerVerifier.VerifyAnalyzerAsync(test);
     }
 
@@ -201,33 +201,33 @@ public class ObservableCommandTriggerTests
         // lang=csharp
         var test = """
 
-                   using RxBlazorV2.Model;
-                   using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-                   namespace Test
-                   {
-                       [ObservableModelScope(ModelScope.Singleton)]
-                       public partial class TestModel : ObservableModel
-                       {
-                           public partial string Name { get; set; } = "";
-                           public partial bool ShouldTrigger { get; set; }
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; } = "";
+                public partial bool ShouldTrigger { get; set; }
                            
-                           [ObservableCommand(nameof(ExecuteMethod))]
-                           [ObservableCommandTrigger(nameof(Name), nameof(CanTriggerMethod))]
-                           public partial IObservableCommand TestCommand { get; }
+                [ObservableCommand(nameof(ExecuteMethod))]
+                [ObservableCommandTrigger(nameof(Name), nameof(CanTriggerMethod))]
+                public partial IObservableCommand TestCommand { get; }
                            
-                           private void ExecuteMethod()
-                           {
-                               Console.WriteLine($"Executed with Name: {Name}");
-                           }
+                private void ExecuteMethod()
+                {
+                    Console.WriteLine($"Executed with Name: {Name}");
+                }
                            
-                           private bool CanTriggerMethod()
-                           {
-                               return ShouldTrigger && !string.IsNullOrEmpty(Name);
-                           }
-                       }
-                   }
-                   """;
+                private bool CanTriggerMethod()
+                {
+                    return ShouldTrigger && !string.IsNullOrEmpty(Name);
+                }
+            }
+        }
+        """;
         await AnalyzerVerifier.VerifyAnalyzerAsync(test);
     }
 
@@ -237,27 +237,27 @@ public class ObservableCommandTriggerTests
         // lang=csharp
         var test = """
 
-                   using RxBlazorV2.Model;
-                   using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-                   namespace Test
-                   {
-                       [ObservableModelScope(ModelScope.Singleton)]
-                       public partial class TestModel : ObservableModel
-                       {
-                           public partial string Name { get; set; } = "";
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; } = "";
                            
-                           [ObservableCommand(nameof(ExecuteMethod))]
-                           [ObservableCommandTrigger(nameof(Name))]
-                           public partial IObservableCommand TestCommand { get; }
+                [ObservableCommand(nameof(ExecuteMethod))]
+                [ObservableCommandTrigger(nameof(Name))]
+                public partial IObservableCommand TestCommand { get; }
                            
-                           private void ExecuteMethod()
-                           {
-                               Console.WriteLine($"Executed with Name: {Name}");
-                           }
-                       }
-                   }
-                   """;
+                private void ExecuteMethod()
+                {
+                    Console.WriteLine($"Executed with Name: {Name}");
+                }
+            }
+        }
+        """;
         await AnalyzerVerifier.VerifyAnalyzerAsync(test);
     }
 
@@ -267,31 +267,31 @@ public class ObservableCommandTriggerTests
         // lang=csharp
         var test = """
 
-                   using RxBlazorV2.Model;
-                   using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-                   namespace Test
-                   {
-                       [ObservableModelScope(ModelScope.Singleton)]
-                       public partial class TestModel : ObservableModel
-                       {
-                           public partial string SearchText { get; set; } = "";
-                           public partial bool IsEnabled { get; set; }
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string SearchText { get; set; } = "";
+                public partial bool IsEnabled { get; set; }
                            
-                           [ObservableCommand(nameof(SearchMethod))]
-                           [ObservableCommandTrigger(nameof(SearchText))]
-                           [ObservableCommandTrigger(nameof(IsEnabled))]
-                           public partial IObservableCommandAsync SearchCommand { get; }
+                [ObservableCommand(nameof(SearchMethod))]
+                [ObservableCommandTrigger(nameof(SearchText))]
+                [ObservableCommandTrigger(nameof(IsEnabled))]
+                public partial IObservableCommandAsync SearchCommand { get; }
                            
-                           private async Task SearchMethod()
-                           {
-                               // Simulate search operation
-                               await Task.Delay(100);
-                               Console.WriteLine($"Searching for: {SearchText}");
-                           }
-                       }
-                   }
-                   """;
+                private async Task SearchMethod()
+                {
+                    // Simulate search operation
+                    await Task.Delay(100);
+                    Console.WriteLine($"Searching for: {SearchText}");
+                }
+            }
+        }
+        """;
         await AnalyzerVerifier.VerifyAnalyzerAsync(test);
     }
 }

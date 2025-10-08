@@ -19,29 +19,29 @@ public class UnusedModelReferenceDiagnosticTests
         // lang=csharp
         var test = """
 
-                   using RxBlazorV2.Model;
-                   using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-                   namespace Test
-                   {
-                       [ObservableModelScope(ModelScope.Transient)]
-                       public partial class CounterModel : ObservableModel
-                       {
-                           public partial int Counter1 { get; set; }
-                           public partial int Counter2 { get; set; }
-                       }
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Transient)]
+            public partial class CounterModel : ObservableModel
+            {
+                public partial int Counter1 { get; set; }
+                public partial int Counter2 { get; set; }
+            }
 
-                       [ObservableModelScope(ModelScope.Transient)]
-                       [ObservableModelReference<CounterModel>]
-                       public partial class ParentModel : ObservableModel
-                       {
-                           public partial int Value { get; set; }
+            [ObservableModelScope(ModelScope.Transient)]
+            [ObservableModelReference<CounterModel>]
+            public partial class ParentModel : ObservableModel
+            {
+                public partial int Value { get; set; }
 
-                           // Uses Counter1 from CounterModel
-                           public int Total => Value + CounterModel.Counter1;
-                       }
-                   }
-                   """;
+                // Uses Counter1 from CounterModel
+                public int Total => Value + CounterModel.Counter1;
+            }
+        }
+        """;
         await CodeFixVerifier.VerifyAnalyzerAsync(test);
     }
 
@@ -51,32 +51,32 @@ public class UnusedModelReferenceDiagnosticTests
         // lang=csharp
         var test = $$"""
 
-                     using RxBlazorV2.Model;
-                     using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-                     namespace Test
-                     {
-                         [ObservableModelScope(ModelScope.Transient)]
-                         public partial class CounterModel : ObservableModel
-                         {
-                             public partial int Counter1 { get; set; }
-                             public partial int Counter2 { get; set; }
-                         }
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Transient)]
+            public partial class CounterModel : ObservableModel
+            {
+                public partial int Counter1 { get; set; }
+                public partial int Counter2 { get; set; }
+            }
 
-                         [ObservableModelScope(ModelScope.Transient)]
-                         [{|{{DiagnosticDescriptors.UnusedModelReferenceError.Id}}:ObservableModelReference<CounterModel>|}]
-                         public partial class ParentModel : ObservableModel
-                         {
-                             public partial int Value { get; set; }
+            [ObservableModelScope(ModelScope.Transient)]
+            [{|{{DiagnosticDescriptors.UnusedModelReferenceError.Id}}:ObservableModelReference<CounterModel>|}]
+            public partial class ParentModel : ObservableModel
+            {
+                public partial int Value { get; set; }
 
-                             // Does NOT use any properties from CounterModel
-                             public void DoSomething()
-                             {
-                                 Value = 42;
-                             }
-                         }
-                     }
-                     """;
+                // Does NOT use any properties from CounterModel
+                public void DoSomething()
+                {
+                    Value = 42;
+                }
+            }
+        }
+        """;
         await CodeFixVerifier.VerifyAnalyzerAsync(test);
     }
 
@@ -86,59 +86,59 @@ public class UnusedModelReferenceDiagnosticTests
         // lang=csharp
         var test = $$"""
 
-                     using RxBlazorV2.Model;
-                     using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-                     namespace Test
-                     {
-                         [ObservableModelScope(ModelScope.Transient)]
-                         public partial class CounterModel : ObservableModel
-                         {
-                             public partial int Counter1 { get; set; }
-                             public partial int Counter2 { get; set; }
-                         }
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Transient)]
+            public partial class CounterModel : ObservableModel
+            {
+                public partial int Counter1 { get; set; }
+                public partial int Counter2 { get; set; }
+            }
 
-                         [ObservableModelScope(ModelScope.Transient)]
-                         [{|{{DiagnosticDescriptors.UnusedModelReferenceError.Id}}:ObservableModelReference<CounterModel>|}]
-                         public partial class ParentModel : ObservableModel
-                         {
-                             public partial int Value { get; set; }
+            [ObservableModelScope(ModelScope.Transient)]
+            [{|{{DiagnosticDescriptors.UnusedModelReferenceError.Id}}:ObservableModelReference<CounterModel>|}]
+            public partial class ParentModel : ObservableModel
+            {
+                public partial int Value { get; set; }
 
-                             public void DoSomething()
-                             {
-                                 Value = 42;
-                             }
-                         }
-                     }
-                     """;
+                public void DoSomething()
+                {
+                    Value = 42;
+                }
+            }
+        }
+        """;
 
         // lang=csharp
         var fixedCode = """
 
-                        using RxBlazorV2.Model;
-                        using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-                        namespace Test
-                        {
-                            [ObservableModelScope(ModelScope.Transient)]
-                            public partial class CounterModel : ObservableModel
-                            {
-                                public partial int Counter1 { get; set; }
-                                public partial int Counter2 { get; set; }
-                            }
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Transient)]
+            public partial class CounterModel : ObservableModel
+            {
+                public partial int Counter1 { get; set; }
+                public partial int Counter2 { get; set; }
+            }
 
-                            [ObservableModelScope(ModelScope.Transient)]
-                            public partial class ParentModel : ObservableModel
-                            {
-                                public partial int Value { get; set; }
+            [ObservableModelScope(ModelScope.Transient)]
+            public partial class ParentModel : ObservableModel
+            {
+                public partial int Value { get; set; }
 
-                                public void DoSomething()
-                                {
-                                    Value = 42;
-                                }
-                            }
-                        }
-                        """;
+                public void DoSomething()
+                {
+                    Value = 42;
+                }
+            }
+        }
+        """;
 
         await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode);
     }
@@ -149,35 +149,35 @@ public class UnusedModelReferenceDiagnosticTests
         // lang=csharp
         var test = $$"""
 
-                     using RxBlazorV2.Model;
-                     using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-                     namespace Test
-                     {
-                         [ObservableModelScope(ModelScope.Transient)]
-                         public partial class CounterModel : ObservableModel
-                         {
-                             public partial int Counter1 { get; set; }
-                         }
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Transient)]
+            public partial class CounterModel : ObservableModel
+            {
+                public partial int Counter1 { get; set; }
+            }
 
-                         [ObservableModelScope(ModelScope.Transient)]
-                         public partial class OtherModel : ObservableModel
-                         {
-                             public partial string Name { get; set; }
-                         }
+            [ObservableModelScope(ModelScope.Transient)]
+            public partial class OtherModel : ObservableModel
+            {
+                public partial string Name { get; set; }
+            }
 
-                         [ObservableModelScope(ModelScope.Transient)]
-                         [ObservableModelReference<CounterModel>]
-                         [{|{{DiagnosticDescriptors.UnusedModelReferenceError.Id}}:ObservableModelReference<OtherModel>|}]
-                         public partial class ParentModel : ObservableModel
-                         {
-                             public partial int Value { get; set; }
+            [ObservableModelScope(ModelScope.Transient)]
+            [ObservableModelReference<CounterModel>]
+            [{|{{DiagnosticDescriptors.UnusedModelReferenceError.Id}}:ObservableModelReference<OtherModel>|}]
+            public partial class ParentModel : ObservableModel
+            {
+                public partial int Value { get; set; }
 
-                             // Uses Counter1 but not OtherModel.Name
-                             public int Total => Value + CounterModel.Counter1;
-                         }
-                     }
-                     """;
+                // Uses Counter1 but not OtherModel.Name
+                public int Total => Value + CounterModel.Counter1;
+            }
+        }
+        """;
         await CodeFixVerifier.VerifyAnalyzerAsync(test);
     }
 
@@ -187,65 +187,65 @@ public class UnusedModelReferenceDiagnosticTests
         // lang=csharp
         var test = $$"""
 
-                     using RxBlazorV2.Model;
-                     using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-                     namespace Test
-                     {
-                         [ObservableModelScope(ModelScope.Transient)]
-                         public partial class CounterModel : ObservableModel
-                         {
-                             public partial int Counter1 { get; set; }
-                         }
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Transient)]
+            public partial class CounterModel : ObservableModel
+            {
+                public partial int Counter1 { get; set; }
+            }
 
-                         [ObservableModelScope(ModelScope.Transient)]
-                         public partial class OtherModel : ObservableModel
-                         {
-                             public partial string Name { get; set; }
-                         }
+            [ObservableModelScope(ModelScope.Transient)]
+            public partial class OtherModel : ObservableModel
+            {
+                public partial string Name { get; set; }
+            }
 
-                         [ObservableModelScope(ModelScope.Transient)]
-                         [ObservableModelReference<CounterModel>]
-                         [{|{{DiagnosticDescriptors.UnusedModelReferenceError.Id}}:ObservableModelReference<OtherModel>|}]
-                         public partial class ParentModel : ObservableModel
-                         {
-                             public partial int Value { get; set; }
+            [ObservableModelScope(ModelScope.Transient)]
+            [ObservableModelReference<CounterModel>]
+            [{|{{DiagnosticDescriptors.UnusedModelReferenceError.Id}}:ObservableModelReference<OtherModel>|}]
+            public partial class ParentModel : ObservableModel
+            {
+                public partial int Value { get; set; }
 
-                             public int Total => Value + CounterModel.Counter1;
-                         }
-                     }
-                     """;
+                public int Total => Value + CounterModel.Counter1;
+            }
+        }
+        """;
 
         // lang=csharp
         var fixedCode = """
 
-                        using RxBlazorV2.Model;
-                        using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-                        namespace Test
-                        {
-                            [ObservableModelScope(ModelScope.Transient)]
-                            public partial class CounterModel : ObservableModel
-                            {
-                                public partial int Counter1 { get; set; }
-                            }
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Transient)]
+            public partial class CounterModel : ObservableModel
+            {
+                public partial int Counter1 { get; set; }
+            }
 
-                            [ObservableModelScope(ModelScope.Transient)]
-                            public partial class OtherModel : ObservableModel
-                            {
-                                public partial string Name { get; set; }
-                            }
+            [ObservableModelScope(ModelScope.Transient)]
+            public partial class OtherModel : ObservableModel
+            {
+                public partial string Name { get; set; }
+            }
 
-                            [ObservableModelScope(ModelScope.Transient)]
-                            [ObservableModelReference<CounterModel>]
-                            public partial class ParentModel : ObservableModel
-                            {
-                                public partial int Value { get; set; }
+            [ObservableModelScope(ModelScope.Transient)]
+            [ObservableModelReference<CounterModel>]
+            public partial class ParentModel : ObservableModel
+            {
+                public partial int Value { get; set; }
 
-                                public int Total => Value + CounterModel.Counter1;
-                            }
-                        }
-                        """;
+                public int Total => Value + CounterModel.Counter1;
+            }
+        }
+        """;
 
         await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode);
     }
@@ -256,29 +256,29 @@ public class UnusedModelReferenceDiagnosticTests
         // lang=csharp
         var test = $$"""
 
-                     using RxBlazorV2.Model;
-                     using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-                     namespace Test
-                     {
-                         [ObservableModelScope(ModelScope.Transient)]
-                         public partial class CounterModel : ObservableModel
-                         {
-                             public partial int Counter1 { get; set; }
-                             public partial int Counter2 { get; set; }
-                         }
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Transient)]
+            public partial class CounterModel : ObservableModel
+            {
+                public partial int Counter1 { get; set; }
+                public partial int Counter2 { get; set; }
+            }
 
-                         [ObservableModelScope(ModelScope.Transient)]
-                         [{|{{DiagnosticDescriptors.UnusedModelReferenceError.Id}}:ObservableModelReference<CounterModel>|}]
-                         public partial class ParentModel : ObservableModel
-                         {
-                             public partial bool AddMode { get; set; }
+            [ObservableModelScope(ModelScope.Transient)]
+            [{|{{DiagnosticDescriptors.UnusedModelReferenceError.Id}}:ObservableModelReference<CounterModel>|}]
+            public partial class ParentModel : ObservableModel
+            {
+                public partial bool AddMode { get; set; }
 
-                             // Property doesn't actually use CounterModel properties (only references AddMode)
-                             public bool IsValid => AddMode;
-                         }
-                     }
-                     """;
+                // Property doesn't actually use CounterModel properties (only references AddMode)
+                public bool IsValid => AddMode;
+            }
+        }
+        """;
         await CodeFixVerifier.VerifyAnalyzerAsync(test);
     }
 
@@ -288,34 +288,34 @@ public class UnusedModelReferenceDiagnosticTests
         // lang=csharp
         var test = """
 
-                   using RxBlazorV2.Model;
-                   using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-                   namespace Test
-                   {
-                       [ObservableModelScope(ModelScope.Transient)]
-                       public partial class CounterModel : ObservableModel
-                       {
-                           public partial int Counter1 { get; set; }
-                       }
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Transient)]
+            public partial class CounterModel : ObservableModel
+            {
+                public partial int Counter1 { get; set; }
+            }
 
-                       [ObservableModelScope(ModelScope.Transient)]
-                       [ObservableModelReference<CounterModel>]
-                       public partial class ParentModel : ObservableModel
-                       {
-                           public partial int Value { get; set; }
+            [ObservableModelScope(ModelScope.Transient)]
+            [ObservableModelReference<CounterModel>]
+            public partial class ParentModel : ObservableModel
+            {
+                public partial int Value { get; set; }
 
-                           [ObservableCommand(nameof(Execute))]
-                           public partial IObservableCommand TestCommand { get; }
+                [ObservableCommand(nameof(Execute))]
+                public partial IObservableCommand TestCommand { get; }
 
-                           // Uses Counter1 in command method
-                           private void Execute()
-                           {
-                               Value = CounterModel.Counter1 * 2;
-                           }
-                       }
-                   }
-                   """;
+                // Uses Counter1 in command method
+                private void Execute()
+                {
+                    Value = CounterModel.Counter1 * 2;
+                }
+            }
+        }
+        """;
         await CodeFixVerifier.VerifyAnalyzerAsync(test);
     }
 }

@@ -108,7 +108,7 @@ public class InvalidModelReferenceTargetErrorCodeFixTests
     }
 
     [Fact]
-    public async Task RemoveInvalidInterfaceReference()
+    public async Task RemoveInvalidInterfaceReferenceAsync()
     {
         // lang=csharp
         var test = $$"""
@@ -157,7 +157,7 @@ public class InvalidModelReferenceTargetErrorCodeFixTests
     }
 
     [Fact]
-    public async Task RemoveInvalidAbstractClassReference()
+    public async Task RemoveInvalidAbstractClassReferenceAsync()
     {
         // lang=csharp
         var test = $$"""
@@ -206,7 +206,7 @@ public class InvalidModelReferenceTargetErrorCodeFixTests
     }
 
     [Fact]
-    public async Task RemoveInvalidNestedClassReference()
+    public async Task RemoveInvalidNestedClassReferenceAsync()
     {
         // lang=csharp
         var test = $$"""

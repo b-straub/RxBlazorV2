@@ -61,7 +61,7 @@ public class GenericConstraintCodeFixTests
     }
 
     [Fact]
-    public async Task RemoveGenericArityMismatchReference()
+    public async Task RemoveGenericArityMismatchReferenceAsync()
     {
         // lang=csharp
         var test = $$"""
@@ -166,7 +166,7 @@ public class GenericConstraintCodeFixTests
     }
 
     [Fact]
-    public async Task RemoveTypeConstraintMismatchReference()
+    public async Task RemoveTypeConstraintMismatchReferenceAsync()
     {
         // lang=csharp
         var test = $$"""
@@ -217,7 +217,7 @@ public class GenericConstraintCodeFixTests
     }
 
     [Fact]
-    public async Task RemoveInvalidOpenGenericReference()
+    public async Task RemoveInvalidOpenGenericReferenceAsync()
     {
         // lang=csharp
         var test = $$"""

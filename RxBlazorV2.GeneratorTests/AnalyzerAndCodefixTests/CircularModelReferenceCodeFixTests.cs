@@ -9,7 +9,7 @@ namespace RxBlazorV2.GeneratorTests.AnalyzerAndCodefixTests;
 public class CircularModelReferenceCodeFixTests
 {
     [Fact]
-    public async Task DetectSimpleCircularReference()
+    public async Task DetectSimpleCircularReferenceAsync()
     {
         // lang=csharp
         var test = $$"""
@@ -86,7 +86,7 @@ public class CircularModelReferenceCodeFixTests
     }
 
     [Fact]
-    public async Task RemoveCircularReferenceFromBothModels()
+    public async Task RemoveCircularReferenceFromBothModelsAsync()
     {
         // lang=csharp
         var test = $$"""
@@ -135,7 +135,7 @@ public class CircularModelReferenceCodeFixTests
 
 
     [Fact]
-    public async Task NoCircularReferenceWithDifferentModels()
+    public async Task NoCircularReferenceWithDifferentModelsAsync()
     {
         // lang=csharp
         var test = """
@@ -248,7 +248,7 @@ public class CircularModelReferenceCodeFixTests
     }
 
     [Fact]
-    public async Task DetectSelfReferencingModel()
+    public async Task DetectSelfReferencingModelAsync()
     {
         // lang=csharp
         var test = $$"""
@@ -270,7 +270,7 @@ public class CircularModelReferenceCodeFixTests
     }
 
     [Fact]
-    public async Task RemoveSelfReference()
+    public async Task RemoveSelfReferenceAsync()
     {
         // lang=csharp
         var test = $$"""

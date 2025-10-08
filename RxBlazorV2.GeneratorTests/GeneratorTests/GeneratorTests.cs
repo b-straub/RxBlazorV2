@@ -10,54 +10,54 @@ public class GeneratorTests
         // lang=csharp
         const string test = """
 
-                            using RxBlazorV2.Model;
-                            using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
 
-                            namespace Test
-                            {
-                                public partial class TestModel : ObservableModel
-                                {
-                                    public partial int Test { get; set; }
-                                }
-                            }
-                            """;
+        namespace Test
+        {
+            public partial class TestModel : ObservableModel
+            {
+                public partial int Test { get; set; }
+            }
+        }
+        """;
         
         // lang=csharp
         const string generated = """
 
-                                 #nullable enable
-                                 using Microsoft.Extensions.DependencyInjection;
-                                 using ObservableCollections;
-                                 using R3;
-                                 using RxBlazorV2.Interface;
-                                 using RxBlazorV2.Model;
-                                 using System;
+        #nullable enable
+        using Microsoft.Extensions.DependencyInjection;
+        using ObservableCollections;
+        using R3;
+        using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using System;
 
-                                 namespace Test;
+        namespace Test;
 
-                                 public partial class TestModel
-                                 {
-                                     public override string ModelID => "Test.TestModel";
+        public partial class TestModel
+        {
+            public override string ModelID => "Test.TestModel";
 
-                                     private readonly CompositeDisposable _subscriptions = new();
-                                     protected override IDisposable Subscriptions => _subscriptions;
+            private readonly CompositeDisposable _subscriptions = new();
+            protected override IDisposable Subscriptions => _subscriptions;
 
-                                     public partial int Test
-                                     {
-                                         get => field;
-                                         set
-                                         {
-                                             if (field != value)
-                                             {
-                                                 field = value;
-                                                 StateHasChanged(nameof(Test));
-                                             }
-                                         }
-                                     }
+            public partial int Test
+            {
+                get => field;
+                set
+                {
+                    if (field != value)
+                    {
+                        field = value;
+                        StateHasChanged(nameof(Test));
+                    }
+                }
+            }
 
-                                 }
+        }
 
-                                 """;
+        """;
         
         await RxBlazorGeneratorVerifier.VerifySourceGeneratorAsync(test, generated, "TestModel", string.Empty);
     }

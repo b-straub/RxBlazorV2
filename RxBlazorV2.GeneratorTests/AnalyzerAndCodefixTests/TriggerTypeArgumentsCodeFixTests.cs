@@ -9,7 +9,7 @@ namespace RxBlazorV2.GeneratorTests.AnalyzerAndCodefixTests;
 public class TriggerTypeArgumentsCodeFixTests
 {
     [Fact]
-    public async Task AnalyzerDetectsTriggerTypeArgumentsMismatch()
+    public async Task AnalyzerDetectsTriggerTypeArgumentsMismatchAsync()
     {
         // lang=csharp
         var test = $$"""
