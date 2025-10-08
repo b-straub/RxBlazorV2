@@ -74,42 +74,15 @@ public enum ModelScope
 
 /// <summary>
 /// Specifies the dependency injection lifetime scope for an ObservableModel class.
-/// Controls how instances of the model are created, shared, and disposed of by the DI container.
+/// Defaults to Singleton if not specified.
 /// </summary>
 /// <param name="scope">
-/// The lifetime scope for this model. If not specified, defaults to Singleton.
+/// The lifetime scope for this model (Singleton, Scoped, or Transient).
 /// </param>
 /// <remarks>
-/// <para>Default behavior: If this attribute is not applied, the model defaults to Singleton scope.</para>
-/// <para>Validation: The analyzer enforces that models used by multiple ObservableComponent&lt;T&gt; instances must have Singleton scope (diagnostic RXBG010).</para>
-/// <para>Registration: The source generator automatically registers the model with the specified scope in the DI container via the generated AddObservableModels() extension method.</para>
+/// <para><b>Important:</b> Models used by multiple components must use Singleton scope.</para>
+/// <para>See <see href="https://github.com/b-straub/RxBlazorV2/blob/master/Diagnostics/Help/RXBG010.md">RXBG010</see> for scope requirements and troubleshooting.</para>
 /// </remarks>
-/// <example>
-/// <code>
-/// // Singleton scope (recommended for shared models)
-/// [ObservableModelScope(ModelScope.Singleton)]
-/// public partial class UserSessionModel : ObservableModel
-/// {
-///     public partial string Username { get; set; }
-///     public partial bool IsAuthenticated { get; set; }
-/// }
-/// 
-/// // Scoped (for page-specific models used by single component)
-/// [ObservableModelScope(ModelScope.Scoped)]
-/// public partial class ContactFormModel : ObservableModel
-/// {
-///     public partial string Name { get; set; }
-///     public partial string Email { get; set; }
-/// }
-/// 
-/// // Default Singleton (no attribute needed)
-/// public partial class AppSettingsModel : ObservableModel
-/// {
-///     public partial string Theme { get; set; }
-///     public partial string Language { get; set; }
-/// }
-/// </code>
-/// </example>
 #pragma warning disable CS9113
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
 public class ObservableModelScopeAttribute(ModelScope scope) : Attribute
