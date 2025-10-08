@@ -28,7 +28,8 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
         DiagnosticDescriptors.CircularTriggerReferenceError,
         DiagnosticDescriptors.GenericArityMismatchError,
         DiagnosticDescriptors.TypeConstraintMismatchError,
-        DiagnosticDescriptors.InvalidOpenGenericReferenceError
+        DiagnosticDescriptors.InvalidOpenGenericReferenceError,
+        DiagnosticDescriptors.InvalidInitPropertyError
     ];
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
@@ -129,6 +130,9 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
             var methods = classDecl.CollectMethods();
             var (commandProperties, commandPropertiesDiagnostics) = classDecl.ExtractCommandPropertiesWithDiagnostics(methods, semanticModel);
             diagnostics.AddRange(commandPropertiesDiagnostics);
+
+            var (partialProperties, partialPropertyDiagnostics) = classDecl.ExtractPartialPropertiesWithDiagnostics(semanticModel);
+            diagnostics.AddRange(partialPropertyDiagnostics);
 
             // Check for unused model references (RXBG008)
             // Build symbol map for model references

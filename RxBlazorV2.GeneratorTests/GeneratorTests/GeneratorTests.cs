@@ -26,6 +26,7 @@ public class GeneratorTests
         const string generated = """
 
         #nullable enable
+        using JetBrains.Annotations;
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
@@ -45,6 +46,7 @@ public class GeneratorTests
             public partial int Test
             {
                 get => field;
+                [UsedImplicitly]
                 set
                 {
                     if (field != value)

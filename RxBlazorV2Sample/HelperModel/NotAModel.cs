@@ -1,5 +1,4 @@
 using RxBlazorV2.Model;
-using RxBlazorV2.Interface;
 
 namespace RxBlazorV2Sample.HelperModel;
 
@@ -10,23 +9,17 @@ public partial class NotAModel
     public string Name { get; set; } = "Not a model";
 }
 
-namespace Test
+[ObservableModelScope(ModelScope.Singleton)]
+public partial class MyGenericModel<T> : ObservableModel where T : new()
 {
-    [ObservableModelScope(ModelScope.Singleton)]
-    public partial class GenericModel<T> : ObservableModel
-    {
-        public partial T Value { get; set; }
-    }
+    public partial T Value { get; set; } = new();
+}
 
-    [ObservableModelScope(ModelScope.Singleton)]
-    [ObservableModelReference(typeof(GenericModel<>))]
-    public partial class TestModel<T> : ObservableModel
-    {
-        public partial string Name { get; set; } = "";
+[ObservableModelScope(ModelScope.Singleton)]
+[ObservableModelReference(typeof(MyGenericModel<>))]
+public partial class MyTestModel<T> : ObservableModel where T : new()
+{
+    public partial string Name { get; set; } = "";
 
-        public T GetProp()
-        {
-            return GenericModel.Value;
-        }
-    }
+    public T GetRefValue() => MyGenericModel.Value;
 }

@@ -5,12 +5,11 @@ using RxBlazorV2Sample.Interfaces;
 
 namespace RxBlazorV2Sample.HelperModel;
 
-[ObservableModelReference<ISettingsModel>]
 [ObservableModelScope(ModelScope.Singleton)]
 public partial class GenericModel<T, P> : ObservableModel where T : class where P : struct
 {
-    public partial ObservableList<T> Tlist { get; set; }
-    public partial ObservableList<P> Plist { get; set; }
+    public required partial ObservableList<T> Tlist { get; init; }
+    public required partial ObservableList<P> Plist { get; init; }
     
     protected override void OnContextReady()
     {
@@ -95,4 +94,9 @@ public partial class GenericModelTwoParams<T, U> : ObservableModel where T : cla
 public partial class TestModel<T, U> : ObservableModel where T : class where U : struct
 {
     public partial string Name { get; set; } = "";
+
+    public (T, U) GetReferencedProperties()
+    {
+        return (GenericModelTwoParams.Value, GenericModelTwoParams.SecondValue);
+    }
 }

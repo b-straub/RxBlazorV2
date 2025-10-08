@@ -80,27 +80,57 @@ public static class PropertyTemplate
             batchIdsParam = $", {quotedBatchIds}";
         }
 
-        sb.AppendLine($"    public partial {prop.Type} {prop.Name}");
+        // Handle required modifier
+        var requiredModifier = prop.HasRequiredModifier ? "required " : "";
+        
+        sb.AppendLine($"    public {requiredModifier}partial {prop.Type} {prop.Name}");
         sb.AppendLine("    {");
         sb.AppendLine("        get => field;");
-        sb.AppendLine("        set");
-        sb.AppendLine("        {");
 
-        if (prop.IsEquatable)
+        // If the property has init accessor, generate with init (even if invalid)
+        // The diagnostic will inform the user about invalid usage
+        if (prop.HasInitAccessor)
         {
-            sb.AppendLine("            if (field != value)");
-            sb.AppendLine("            {");
-            sb.AppendLine("                field = value;");
-            sb.AppendLine($"                StateHasChanged(nameof({prop.Name}){batchIdsParam});");
-            sb.AppendLine("            }");
+            // For IObservableCollection with init, skip reactive pattern
+            // Reactivity comes from observing the collection, not property changes
+            if (prop.IsObservableCollection)
+            {
+                sb.AppendLine("        init => field = value;");
+            }
+            else
+            {
+                // For non-IObservableCollection, still generate init but add reactive pattern
+                // This maintains compatibility but the diagnostic will warn the user
+                sb.AppendLine("        init");
+                sb.AppendLine("        {");
+                sb.AppendLine("            field = value;");
+                sb.AppendLine($"            StateHasChanged(nameof({prop.Name}){batchIdsParam});");
+                sb.AppendLine("        }");
+            }
         }
         else
         {
-            sb.AppendLine("            field = value;");
-            sb.AppendLine($"            StateHasChanged(nameof({prop.Name}){batchIdsParam});");
+            sb.AppendLine("        [UsedImplicitly]");
+            sb.AppendLine("        set");
+            sb.AppendLine("        {");
+
+            if (prop.IsEquatable)
+            {
+                sb.AppendLine("            if (field != value)");
+                sb.AppendLine("            {");
+                sb.AppendLine("                field = value;");
+                sb.AppendLine($"                StateHasChanged(nameof({prop.Name}){batchIdsParam});");
+                sb.AppendLine("            }");
+            }
+            else
+            {
+                sb.AppendLine("            field = value;");
+                sb.AppendLine($"            StateHasChanged(nameof({prop.Name}){batchIdsParam});");
+            }
+
+            sb.AppendLine("        }");
         }
 
-        sb.AppendLine("        }");
         sb.Append("    }");
         return sb.ToString();
     }

@@ -69,14 +69,18 @@ public class PartialPropertyInfo
     public bool IsObservableCollection { get; }
     public bool IsEquatable { get; }
     public string[]? BatchIds { get; }
+    public bool HasRequiredModifier { get; }
+    public bool HasInitAccessor { get; }
 
-    public PartialPropertyInfo(string name, string type, bool isObservableCollection = false, bool isEquatable = false, string[]? batchIds = null)
+    public PartialPropertyInfo(string name, string type, bool isObservableCollection = false, bool isEquatable = false, string[]? batchIds = null, bool hasRequiredModifier = false, bool hasInitAccessor = false)
     {
         Name = name;
         Type = type;
         IsObservableCollection = isObservableCollection;
         IsEquatable = isEquatable;
         BatchIds = batchIds;
+        HasRequiredModifier = hasRequiredModifier;
+        HasInitAccessor = hasInitAccessor;
     }
 }
 

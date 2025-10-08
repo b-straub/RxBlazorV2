@@ -7,29 +7,58 @@ namespace RxBlazorV2Generator.Extensions;
 
 public static class PropertyAnalysisExtensions
 {
-    public static List<PartialPropertyInfo> ExtractPartialProperties(this ClassDeclarationSyntax classDecl, SemanticModel semanticModel)
+    public static (List<PartialPropertyInfo>, List<Diagnostic>) ExtractPartialPropertiesWithDiagnostics(this ClassDeclarationSyntax classDecl, SemanticModel semanticModel)
     {
         var partialProperties = new List<PartialPropertyInfo>();
+        var diagnostics = new List<Diagnostic>();
 
         foreach (var member in classDecl.Members.OfType<PropertyDeclarationSyntax>())
         {
             if (member.Modifiers.Any(SyntaxKind.PartialKeyword) &&
-                member.AccessorList?.Accessors.Any(a => a.IsKind(SyntaxKind.GetAccessorDeclaration)) == true &&
-                member.AccessorList?.Accessors.Any(a => a.IsKind(SyntaxKind.SetAccessorDeclaration)) == true)
+                member.AccessorList?.Accessors.Any(a => a.IsKind(SyntaxKind.GetAccessorDeclaration)) == true)
             {
+                var hasSetAccessor = member.AccessorList?.Accessors.Any(a => a.IsKind(SyntaxKind.SetAccessorDeclaration)) == true;
+                var hasInitAccessor = member.AccessorList?.Accessors.Any(a => a.IsKind(SyntaxKind.InitAccessorDeclaration)) == true;
+
+                if (!hasSetAccessor && !hasInitAccessor)
+                {
+                    continue;
+                }
+
+                var hasRequiredModifier = member.Modifiers.Any(SyntaxKind.RequiredKeyword);
                 var isObservableCollection = member.IsObservableCollectionProperty(semanticModel);
                 var isEquatable = member.IsEquatableProperty(semanticModel);
                 var batchIds = member.GetObservableBatchIds(semanticModel);
+
+                // Validate init accessor - only allowed for IObservableCollection
+                if (hasInitAccessor && !isObservableCollection)
+                {
+                    var diagnostic = Diagnostic.Create(
+                        RxBlazorV2Generator.Diagnostics.DiagnosticDescriptors.InvalidInitPropertyError,
+                        member.Identifier.GetLocation(),
+                        member.Identifier.ValueText,
+                        member.Type!.ToString());
+                    diagnostics.Add(diagnostic);
+                }
+
                 partialProperties.Add(new PartialPropertyInfo(
                     member.Identifier.ValueText,
                     member.Type!.ToString(),
                     isObservableCollection,
                     isEquatable,
-                    batchIds));
+                    batchIds,
+                    hasRequiredModifier,
+                    hasInitAccessor));
             }
         }
 
-        return partialProperties;
+        return (partialProperties, diagnostics);
+    }
+
+    public static List<PartialPropertyInfo> ExtractPartialProperties(this ClassDeclarationSyntax classDecl, SemanticModel semanticModel)
+    {
+        var (properties, _) = ExtractPartialPropertiesWithDiagnostics(classDecl, semanticModel);
+        return properties;
     }
 
     public static string[]? GetObservableBatchIds(this PropertyDeclarationSyntax property, SemanticModel semanticModel)

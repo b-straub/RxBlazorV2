@@ -27,6 +27,7 @@ public class GenericModelGeneratorTests
         const string generated = """
 
         #nullable enable
+        using JetBrains.Annotations;
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
@@ -46,6 +47,7 @@ public class GenericModelGeneratorTests
             public partial T Item
             {
                 get => field;
+                [UsedImplicitly]
                 set
                 {
                     field = value;
@@ -84,6 +86,7 @@ public class GenericModelGeneratorTests
         const string generated = """
 
         #nullable enable
+        using JetBrains.Annotations;
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
@@ -103,6 +106,7 @@ public class GenericModelGeneratorTests
             public partial T Item1
             {
                 get => field;
+                [UsedImplicitly]
                 set
                 {
                     field = value;
@@ -113,6 +117,7 @@ public class GenericModelGeneratorTests
             public partial P Item2
             {
                 get => field;
+                [UsedImplicitly]
                 set
                 {
                     field = value;
@@ -155,6 +160,7 @@ public class GenericModelGeneratorTests
         const string generated = """
 
         #nullable enable
+        using JetBrains.Annotations;
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;

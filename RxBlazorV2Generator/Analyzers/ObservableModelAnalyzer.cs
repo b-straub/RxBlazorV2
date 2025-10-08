@@ -35,7 +35,7 @@ public static class ObservableModelAnalyzer
             
             // Extract all components using extension methods
             var methods = classDecl.CollectMethods();
-            var partialProperties = classDecl.ExtractPartialProperties(semanticModel);
+            var (partialProperties, partialPropertyDiagnostics) = classDecl.ExtractPartialPropertiesWithDiagnostics(semanticModel);
             var (commandProperties, commandPropertiesDiagnostics) = classDecl.ExtractCommandPropertiesWithDiagnostics(methods, semanticModel);
             var (modelReferences, modelReferenceDiagnostics) = classDecl.ExtractModelReferencesWithDiagnostics(semanticModel, serviceClasses);
             var modelScope = classDecl.ExtractModelScopeFromClass(semanticModel);
@@ -44,10 +44,13 @@ public static class ObservableModelAnalyzer
             var genericTypes = namedTypeSymbol.ExtractObservableModelGenericTypes();
             var typeConstrains = classDecl.ExtractTypeConstrains();
             var usingStatements = classDecl.ExtractUsingStatements();
-            
+
+            // Add any diagnostics from partial properties analysis
+            diagnostics.AddRange(partialPropertyDiagnostics);
+
             // Add any diagnostics from command properties analysis
             diagnostics.AddRange(commandPropertiesDiagnostics);
-            
+
             // Add any diagnostics from model reference analysis
             diagnostics.AddRange(modelReferenceDiagnostics);
 

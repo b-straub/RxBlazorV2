@@ -21,13 +21,14 @@ public static class ObservableModelCodeGenerator
             var requiredUsings = new HashSet<string>(modelInfo.UsingStatements);
 
             // Add required framework usings
-            requiredUsings.Add("RxBlazorV2.Model");
-            requiredUsings.Add("RxBlazorV2.Interface");
+            requiredUsings.Add("JetBrains.Annotations");
             requiredUsings.Add("Microsoft.Extensions.DependencyInjection");
-            requiredUsings.Add("R3");
             requiredUsings.Add("ObservableCollections");
+            requiredUsings.Add("R3");
+            requiredUsings.Add("RxBlazorV2.Interface");
+            requiredUsings.Add("RxBlazorV2.Model");
             requiredUsings.Add("System");
-
+            
             // Add System.Linq if there are model references
             if (modelInfo.ModelReferences.Any())
             {

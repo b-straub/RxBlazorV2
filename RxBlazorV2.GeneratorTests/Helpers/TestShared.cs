@@ -24,7 +24,8 @@ internal static class TestShared
                 new PackageIdentity("Microsoft.Extensions.DependencyInjection", "9.0.6"),
                 new PackageIdentity("Microsoft.AspNetCore.Components", "9.0.6"),
                 new PackageIdentity("R3", "1.3.0"),
-                new PackageIdentity("ObservableCollections.R3", "3.3.4")
+                new PackageIdentity("ObservableCollections.R3", "3.3.4"),
+                new PackageIdentity("JetBrains.Annotations", "2025.2.2")
             ]);
     }
 }
