@@ -25,7 +25,7 @@ public partial class CounterModel : ObservableModel
     [ObservableCommand(nameof(AddCount2Async), nameof(CanAddCount2))]
     public partial IObservableCommandAsync<int> AddAsync2 { get; }
     
-    [ObservableCommand(nameof(AddCountAsyncCombined), nameof(CanAddCountCombined))]
+    [ObservableCommand(nameof(AddCountAsyncCombinedAsync), nameof(CanAddCountCombined))]
     public partial IObservableCommandAsync<int> AddCombined { get; }
 
     protected override async Task OnContextReadyAsync()
@@ -71,7 +71,7 @@ public partial class CounterModel : ObservableModel
         return Counter1 > 2;
     }
     
-    private async Task AddCountAsyncCombined(int value, CancellationToken token)
+    private async Task AddCountAsyncCombinedAsync(int value, CancellationToken token)
     {
         await Task.Delay(1000, token);
         Counter2 += value;

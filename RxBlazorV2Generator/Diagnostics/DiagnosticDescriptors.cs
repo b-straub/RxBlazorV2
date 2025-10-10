@@ -170,4 +170,15 @@ public static class DiagnosticDescriptors
         description: "The 'init' accessor is only allowed for partial properties that implement IObservableCollection, as these get reactivity from observing the collection rather than property changes. For non-IObservableCollection properties, use a 'set' accessor to enable reactive property notifications.",
         helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG016.md",
         customTags: ["Convert 'init' to 'set'"]);
+
+    public static readonly DiagnosticDescriptor DerivedModelReferenceError = new(
+        id: "RXBG017",
+        title: "Cannot reference derived ObservableModel",
+        messageFormat: "Referenced model '{0}' is a derived ObservableModel (inherits from '{1}') and is not registered in DI. Derived models cannot be used with [ObservableModelReference] because they are excluded from dependency injection. Use the base model '{1}' instead, or refactor to use composition over inheritance.",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Derived ObservableModels (those that inherit from another ObservableModel) are not registered in dependency injection and cannot be used with ObservableModelReference attributes.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG017.md",
+        customTags: ["Remove ObservableModelReference attribute"]);
 }

@@ -44,6 +44,8 @@ public static class ObservableModelAnalyzer
             var genericTypes = namedTypeSymbol.ExtractObservableModelGenericTypes();
             var typeConstrains = classDecl.ExtractTypeConstrains();
             var usingStatements = classDecl.ExtractUsingStatements();
+            var baseModelType = namedTypeSymbol.GetObservableModelBaseType();
+            var baseModelTypeName = baseModelType?.ToDisplayString();
 
             // Add any diagnostics from partial properties analysis
             diagnostics.AddRange(partialPropertyDiagnostics);
@@ -67,7 +69,8 @@ public static class ObservableModelAnalyzer
                 implementedInterfaces,
                 genericTypes,
                 typeConstrains,
-                usingStatements);
+                usingStatements,
+                baseModelTypeName);
 
             // Build symbol map for model references
             var modelSymbolMap = new Dictionary<string, ITypeSymbol>();
@@ -118,7 +121,8 @@ public static class ObservableModelAnalyzer
                 implementedInterfaces,
                 genericTypes,
                 typeConstrains,
-                usingStatements);
+                usingStatements,
+                baseModelTypeName);
 
             return (finalModelInfo, diagnostics);
         }
@@ -174,6 +178,8 @@ public static class ObservableModelAnalyzer
             var genericTypes = namedTypeSymbol.ExtractObservableModelGenericTypes();
             var typeConstrains = classDecl.ExtractTypeConstrains();
             var usingStatements = classDecl.ExtractUsingStatements();
+            var baseModelType = namedTypeSymbol.GetObservableModelBaseType();
+            var baseModelTypeName = baseModelType?.ToDisplayString();
 
             var modelInfo = new ObservableModelInfo(
                 namedTypeSymbol.ContainingNamespace.ToDisplayString(),
@@ -188,7 +194,8 @@ public static class ObservableModelAnalyzer
                 implementedInterfaces,
                 genericTypes,
                 typeConstrains,
-                usingStatements);
+                usingStatements,
+                baseModelTypeName);
 
             // Build symbol map for model references
             var modelSymbolMap = new Dictionary<string, ITypeSymbol>();
@@ -224,7 +231,8 @@ public static class ObservableModelAnalyzer
                 implementedInterfaces,
                 genericTypes,
                 typeConstrains,
-                usingStatements);
+                usingStatements,
+                baseModelTypeName);
         }
         catch (Exception)
         {

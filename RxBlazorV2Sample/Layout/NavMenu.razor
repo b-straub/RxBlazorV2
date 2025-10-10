@@ -1,7 +1,24 @@
 ﻿<MudNavMenu>
     <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
-    <MudNavLink Href="counter1" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Add">Counter 1 </MudNavLink>
-    <MudNavLink Href="counter2" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Add">Counter 2</MudNavLink>
-    <MudNavLink Href="test" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.BugReport">Test</MudNavLink>
-    <MudNavLink Href="testEquatable" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.BugReport">Test Equatable</MudNavLink>
+
+    <MudNavGroup Title="Samples" Icon="@Icons.Material.Filled.Code" Expanded="true">
+        <MudNavLink Href="samples/basic-commands" Icon="@Icons.Material.Filled.PlayArrow">Basic Commands</MudNavLink>
+        <MudNavLink Href="samples/parameterized-commands" Icon="@Icons.Material.Filled.Input">Parameterized Commands</MudNavLink>
+        <MudNavLink Href="samples/commands-with-canexecute" Icon="@Icons.Material.Filled.CheckCircle">Commands with CanExecute</MudNavLink>
+        <MudNavLink Href="samples/commands-with-cancellation" Icon="@Icons.Material.Filled.Cancel">Commands with Cancellation</MudNavLink>
+        <MudNavLink Href="samples/command-triggers" Icon="@Icons.Material.Filled.FlashOn">Command Triggers</MudNavLink>
+        <MudNavLink Href="samples/model-references" Icon="@Icons.Material.Filled.Link">Model References</MudNavLink>
+        <MudNavLink Href="samples/generic-models" Icon="@Icons.Material.Filled.Category">Generic Models</MudNavLink>
+        <MudNavLink Href="samples/observable-batches" Icon="@Icons.Material.Filled.Layers">Observable Batches</MudNavLink>
+        <MudNavLink Href="samples/value-equality" Icon="@Icons.Material.Filled.Compare">Value Equality</MudNavLink>
+        <MudNavLink Href="samples/cross-component-communication" Icon="@Icons.Material.Filled.Hub">Cross Component Communication</MudNavLink>
+    </MudNavGroup>
+
+    <MudNavGroup Title="Legacy Examples" Icon="@Icons.Material.Filled.Archive">
+        <MudNavLink Href="counter1" Icon="@Icons.Material.Filled.Add">Counter 1</MudNavLink>
+        <MudNavLink Href="counter2" Icon="@Icons.Material.Filled.Add">Counter 2</MudNavLink>
+        <MudNavLink Href="test" Icon="@Icons.Material.Filled.BugReport">Test</MudNavLink>
+        <MudNavLink Href="testEquatable" Icon="@Icons.Material.Filled.BugReport">Test Equatable</MudNavLink>
+        <MudNavLink Href="weather" Icon="@Icons.Material.Filled.Cloud">Weather</MudNavLink>
+    </MudNavGroup>
 </MudNavMenu>

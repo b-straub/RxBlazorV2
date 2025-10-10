@@ -1,0 +1,32 @@
+@inherits ObservableComponent<CrossComponentCommunicationModel>
+
+<MudCard>
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">Component 3 - Message Editor</MudText>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudStack Spacing="3">
+            <MudTextField @bind-Value="@Model.SharedMessage"
+                          Label="Shared Message"
+                          Variant="Variant.Outlined"
+                          Lines="3" />
+
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                Changes to this message will be reflected in Component 2 and below
+            </MudText>
+
+            <MudChip T="string" Color="@(Model.SharedCounter > 10 ? Color.Success : Color.Default)">
+                Counter: @Model.SharedCounter
+            </MudChip>
+
+            @if (Model.SharedCounter > 10)
+            {
+                <MudAlert Severity="Severity.Success">
+                    Counter exceeded 10!
+                </MudAlert>
+            }
+        </MudStack>
+    </MudCardContent>
+</MudCard>

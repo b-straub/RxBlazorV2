@@ -1,0 +1,100 @@
+@page "/samples/commands-with-cancellation"
+@using RxBlazorV2Sample.Samples.Helpers
+@inherits ObservableComponent<CommandsWithCancellationModel>
+
+<PageTitle>Commands with Cancellation</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium">
+    <MudText Typo="Typo.h3" GutterBottom="true">Commands with Cancellation</MudText>
+    <MudText Typo="Typo.body1" Class="mb-4">
+        Demonstrates async commands with cancellation token support for long-running operations.
+    </MudText>
+
+    <MudCard>
+        <MudCardContent>
+            <MudStack Spacing="4">
+                <MudAlert Severity="Severity.Info">
+                    @Model.Status
+                </MudAlert>
+
+                <MudProgressLinear Value="@Model.Progress"
+                                   Color="Color.Primary"
+                                   Size="Size.Large"
+                                   Class="my-4">
+                    <MudText Typo="Typo.body2">@Model.Progress%</MudText>
+                </MudProgressLinear>
+
+                <UsageWithLogging Usage=@Model.Usage LogEntries=@Model.LogEntries/>
+
+                <MudText Typo="Typo.h6">Simple Long Operation</MudText>
+                <MudStack Row="true" Spacing="2">
+                    <MudButton
+                        Variant="Variant.Filled"
+                        Color="Color.Primary"
+                        Disabled="@Model.LongOperationCommand.Executing"
+                        OnClick="@(() => Model.LongOperationCommand.ExecuteAsync())">
+                        Start Operation
+                    </MudButton>
+
+                    <MudButton
+                        Variant="Variant.Filled"
+                        Color="Color.Error"
+                        Disabled="@(!Model.LongOperationCommand.Executing)"
+                        OnClick="@(() => Model.LongOperationCommand.Cancel())">
+                        Cancel
+                    </MudButton>
+                </MudStack>
+
+                <MudDivider />
+
+                <MudText Typo="Typo.h6">Parameterized Long Operation</MudText>
+                <MudStack Row="true" Spacing="2">
+                    <MudButton
+                        Variant="Variant.Filled"
+                        Color="Color.Secondary"
+                        Disabled="@Model.LongOperationWithParamCommand.Executing"
+                        OnClick="@(() => Model.LongOperationWithParamCommand.ExecuteAsync(5))">
+                        Start (5 iterations)
+                    </MudButton>
+
+                    <MudButton
+                        Variant="Variant.Filled"
+                        Color="Color.Tertiary"
+                        Disabled="@Model.LongOperationWithParamCommand.Executing"
+                        OnClick="@(() => Model.LongOperationWithParamCommand.ExecuteAsync(10))">
+                        Start (10 iterations)
+                    </MudButton>
+
+                    <MudButton
+                        Variant="Variant.Filled"
+                        Color="Color.Error"
+                        Disabled="@(!Model.LongOperationWithParamCommand.Executing)"
+                        OnClick="@(() => Model.LongOperationWithParamCommand.Cancel())">
+                        Cancel
+                    </MudButton>
+                </MudStack>
+            </MudStack>
+        </MudCardContent>
+    </MudCard>
+
+    <MudPaper Class="pa-4 mt-4">
+        <MudText Typo="Typo.h6" GutterBottom="true">Key Concepts</MudText>
+        <MudList T="string">
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Async commands with CancellationToken parameter support cancellation
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Method signature: <code>Task Method(CancellationToken)</code> or <code>Task Method(T param, CancellationToken)</code>
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Use <strong>Command.Cancel()</strong> to request cancellation
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Use <strong>Command.Executing</strong> to check if command is running
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Always handle <strong>OperationCanceledException</strong> in your code
+            </MudListItem>
+        </MudList>
+    </MudPaper>
+</MudContainer>

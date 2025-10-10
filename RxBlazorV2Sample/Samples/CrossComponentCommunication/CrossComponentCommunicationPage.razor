@@ -1,0 +1,63 @@
+@page "/samples/cross-component-communication"
+@using RxBlazorV2Sample.Samples.Helpers
+@inherits ObservableComponent<CrossComponentCommunicationModel>
+
+<PageTitle>Cross Component Communication</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large">
+    <MudText Typo="Typo.h3" GutterBottom="true">Cross Component Communication</MudText>
+    <MudText Typo="Typo.body1" Class="mb-4">
+        Demonstrates multiple components sharing the same scoped observable model for seamless communication and state synchronization.
+    </MudText>
+
+    <MudAlert Severity="Severity.Info" Class="mb-4">
+        All three components below share the same model instance. Changes in one component automatically update all others!
+    </MudAlert>
+
+    <MudCard Class="mb-4">
+        <MudCardContent>
+            <UsageWithLogging Usage=@Model.Usage LogEntries=@Model.LogEntries/>
+        </MudCardContent>
+    </MudCard>
+
+    <MudGrid>
+        <MudItem xs="12" md="4">
+            <CrossComponentCommunicationComponent1 />
+        </MudItem>
+
+        <MudItem xs="12" md="4">
+            <CrossComponentCommunicationComponent2 />
+        </MudItem>
+
+        <MudItem xs="12" md="4">
+            <CrossComponentCommunicationComponent3 />
+        </MudItem>
+    </MudGrid>
+
+    <MudPaper Class="pa-4 mt-4">
+        <MudText Typo="Typo.h6" GutterBottom="true">Key Concepts</MudText>
+        <MudList T="string">
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Multiple components can inherit from <strong>ObservableComponent&lt;T&gt;</strong> with the same model
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                All components sharing a scoped model receive automatic updates when properties change
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                No manual event handling or message passing required
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Component 1 controls the counter
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Component 2 displays status and message
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Component 3 allows editing the shared message and reacts to counter
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Perfect for building modular, reactive UIs with shared state
+            </MudListItem>
+        </MudList>
+    </MudPaper>
+</MudContainer>

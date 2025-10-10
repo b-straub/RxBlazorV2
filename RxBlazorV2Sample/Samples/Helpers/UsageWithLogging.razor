@@ -1,0 +1,31 @@
+<MudCard>
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">@Usage</MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudIconButton Icon="@Icons.Material.Filled.ClearAll" Color="Color.Default" OnClick=@(() => LogEntries.Clear())/>
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudTable Items=@LogEntries Dense="true">
+            <HeaderContent>
+                <MudTh>Message</MudTh>
+                <MudTh>TimeStamp</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Message">@context.Message</MudTd>
+                <MudTd DataLabel="TimeStamp">@context.Timestamp.ToLongTimeString()</MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudCardContent>
+</MudCard>
+
+@code
+{
+    [Parameter]
+    public required IList<LogEntry> LogEntries { get; init; }
+
+    [Parameter]
+    public required string Usage { get; init; }
+}

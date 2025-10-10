@@ -50,8 +50,15 @@ public static class DIRegistrationTemplate
         sb.AppendLine("    public static IServiceCollection Initialize(IServiceCollection services)");
         sb.AppendLine("    {");
 
-        // Generate registrations for each model
-        foreach (var model in models.Where(m => m.GenericTypes.Length == 0))
+        // Collect all base model type names to exclude from DI registration
+        var baseModelTypeNames = models
+            .Where(m => !string.IsNullOrEmpty(m.BaseModelTypeName))
+            .Select(m => m.BaseModelTypeName)
+            .Distinct()
+            .ToArray();
+
+        // Generate registrations for each model (excluding base models and generic models)
+        foreach (var model in models.Where(m => m.GenericTypes.Length == 0 && !baseModelTypeNames.Contains(m.FullyQualifiedName)))
         {
             sb.AppendLine(GenerateModelRegistration(model));
 
@@ -111,7 +118,14 @@ public static class DIRegistrationTemplate
         sb.AppendLine("public static partial class ObservableModels");
         sb.AppendLine("{");
 
-        foreach (var model in models.Where(m => m.GenericTypes.Length > 0))
+        // Collect all base model type names to exclude from DI registration
+        var baseModelTypeNames = models
+            .Where(m => !string.IsNullOrEmpty(m.BaseModelTypeName))
+            .Select(m => m.BaseModelTypeName)
+            .Distinct()
+            .ToArray();
+
+        foreach (var model in models.Where(m => m.GenericTypes.Length > 0 && !baseModelTypeNames.Contains(m.FullyQualifiedName)))
         {
             sb.AppendLine(GenerateGenericModelRegistrationMethod(model));
             sb.AppendLine();
@@ -130,24 +144,8 @@ public static class DIRegistrationTemplate
         var scope = GetModelScope(model);
         var registrationMethod = GetRegistrationMethod(scope);
 
-        if (model.ModelReferences.Any() || model.DIFields.Any())
-        {
-            // Model has dependencies - use factory
-            var paramResolvers = new List<string>();
-
-            // Add model reference resolvers
-            paramResolvers.AddRange(model.ModelReferences.Select(mr =>
-                $"sp.GetRequiredService<{mr.ReferencedModelTypeName}>()"));
-
-            // Add DI field resolvers
-            paramResolvers.AddRange(model.DIFields.Select(df =>
-                $"sp.GetRequiredService<{df.FieldType}>()"));
-
-            var allResolvers = string.Join(", ", paramResolvers);
-            return $"        services.{registrationMethod}<{model.ClassName}>(sp => new {model.ClassName}({allResolvers}));";
-        }
-
-        // Model has no dependencies - simple registration
+        // Simple registration - DI automatically resolves all constructor parameters
+        // (both model references and service dependencies)
         return $"        services.{registrationMethod}<{model.ClassName}>();";
     }
 
@@ -172,28 +170,9 @@ public static class DIRegistrationTemplate
         var scope = GetModelScope(model);
         var registrationMethod = GetRegistrationMethod(scope);
 
-        // Generate registration
-        if (model.ModelReferences.Any() || model.DIFields.Any())
-        {
-            // Model has dependencies - use factory
-            var paramResolvers = new List<string>();
-
-            // Add model reference resolvers
-            paramResolvers.AddRange(model.ModelReferences.Select(mr =>
-                $"sp.GetRequiredService<{mr.ReferencedModelTypeName}>()"));
-
-            // Add DI field resolvers
-            paramResolvers.AddRange(model.DIFields.Select(df =>
-                $"sp.GetRequiredService<{df.FieldType}>()"));
-
-            var allResolvers = string.Join(", ", paramResolvers);
-            sb.AppendLine($"        services.{registrationMethod}<{model.ClassName}{model.GenericTypes}>(sp => new {model.ClassName}{model.GenericTypes}({allResolvers}));");
-        }
-        else
-        {
-            // Model has no dependencies - simple registration
-            sb.AppendLine($"        services.{registrationMethod}<{model.ClassName}{model.GenericTypes}>();");
-        }
+        // Simple registration - DI automatically resolves all constructor parameters
+        // (both model references and service dependencies)
+        sb.AppendLine($"        services.{registrationMethod}<{model.ClassName}{model.GenericTypes}>();");
 
         // Generate interface mappings
         foreach (var interfaceType in model.ImplementedInterfaces)

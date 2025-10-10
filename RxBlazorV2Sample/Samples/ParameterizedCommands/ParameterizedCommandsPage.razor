@@ -1,0 +1,100 @@
+@page "/samples/parameterized-commands"
+@using RxBlazorV2Sample.Samples.Helpers
+@inherits ObservableComponent<ParameterizedCommandsModel>
+
+<PageTitle>Parameterized Commands</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium">
+    <MudText Typo="Typo.h3" GutterBottom="true">Parameterized Commands</MudText>
+    <MudText Typo="Typo.body1" Class="mb-4">
+        Demonstrates commands that accept parameters (sync and async).
+    </MudText>
+
+    <MudCard>
+        <MudCardContent>
+            <MudStack Spacing="4">
+                <MudAlert Severity="Severity.Info">
+                    Counter: @Model.Counter
+                </MudAlert>
+
+                <UsageWithLogging Usage=@Model.Usage LogEntries=@Model.LogEntries/>
+
+                <MudText Typo="Typo.h6">Integer Parameter Commands</MudText>
+                <MudStack Row="true" Spacing="2">
+                    <MudButton
+                        Variant="Variant.Filled"
+                        Color="Color.Primary"
+                        OnClick="@(() => Model.AddCommand.Execute(1))">
+                        Add 1 (Sync)
+                    </MudButton>
+
+                    <MudButton
+                        Variant="Variant.Filled"
+                        Color="Color.Primary"
+                        OnClick="@(() => Model.AddCommand.Execute(5))">
+                        Add 5 (Sync)
+                    </MudButton>
+
+                    <MudButton
+                        Variant="Variant.Filled"
+                        Color="Color.Primary"
+                        OnClick="@(() => Model.AddCommand.Execute(10))">
+                        Add 10 (Sync)
+                    </MudButton>
+                </MudStack>
+
+                <MudStack Row="true" Spacing="2">
+                    <MudButton
+                        Variant="Variant.Filled"
+                        Color="Color.Secondary"
+                        Disabled="@Model.AddAsyncCommand.Executing"
+                        OnClick="@(() => Model.AddAsyncCommand.ExecuteAsync(2))">
+                        Add 2 (Async)
+                    </MudButton>
+
+                    <MudButton
+                        Variant="Variant.Filled"
+                        Color="Color.Secondary"
+                        Disabled="@Model.AddAsyncCommand.Executing"
+                        OnClick="@(() => Model.AddAsyncCommand.ExecuteAsync(10))">
+                        Add 10 (Async)
+                    </MudButton>
+                </MudStack>
+
+                <MudDivider />
+
+                <MudText Typo="Typo.h6">String Parameter Commands</MudText>
+                <MudStack Row="true" Spacing="2">
+                    <MudButton
+                        Variant="Variant.Outlined"
+                        Color="Color.Tertiary"
+                        OnClick="@(() => Model.SetMessageCommand.Execute("Hello"))">
+                        Set "Hello"
+                    </MudButton>
+
+                    <MudButton
+                        Variant="Variant.Outlined"
+                        Color="Color.Tertiary"
+                        OnClick="@(() => Model.SetMessageCommand.Execute("World"))">
+                        Set "World"
+                    </MudButton>
+                </MudStack>
+            </MudStack>
+        </MudCardContent>
+    </MudCard>
+
+    <MudPaper Class="pa-4 mt-4">
+        <MudText Typo="Typo.h6" GutterBottom="true">Key Concepts</MudText>
+        <MudList T="string">
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                <strong>IObservableCommand&lt;T&gt;</strong> - for sync commands with parameter of type T
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                <strong>IObservableCommandAsync&lt;T&gt;</strong> - for async commands with parameter of type T
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Execute methods must have matching parameter type
+            </MudListItem>
+        </MudList>
+    </MudPaper>
+</MudContainer>

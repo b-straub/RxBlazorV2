@@ -1,0 +1,151 @@
+@page "/samples/observable-batches"
+@using RxBlazorV2Sample.Samples.Helpers
+@inherits ObservableComponent<ObservableBatchesModel>
+
+<PageTitle>Observable Batches</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium">
+    <MudText Typo="Typo.h3" GutterBottom="true">Observable Batches</MudText>
+    <MudText Typo="Typo.body1" Class="mb-4">
+        Demonstrates batched property change notifications using [ObservableBatch] attribute for optimized updates.
+    </MudText>
+
+    <MudCard Class="mb-4">
+        <MudCardContent>
+            <MudStack Spacing="2">
+                <MudAlert Severity="Severity.Info">
+                    Update Count: @Model.UpdateCount
+                </MudAlert>
+                <MudAlert Severity="Severity.Normal">
+                    @Model.LastUpdate
+                </MudAlert>
+
+                <UsageWithLogging Usage=@Model.Usage LogEntries=@Model.LogEntries/>
+            </MudStack>
+        </MudCardContent>
+    </MudCard>
+
+    <MudGrid>
+        <MudItem xs="12" md="6">
+            <MudCard Class="mb-4">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Individual Properties</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="2">
+                        <MudTextField @bind-Value="@Model.FirstName"
+                                      Label="First Name"
+                                      Variant="Variant.Outlined" />
+                        <MudTextField @bind-Value="@Model.LastName"
+                                      Label="Last Name"
+                                      Variant="Variant.Outlined" />
+                        <MudButton
+                            Variant="Variant.Filled"
+                            Color="Color.Primary"
+                            OnClick="@(() => Model.UpdateNameCommand.Execute())">
+                            Update Name
+                        </MudButton>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Coordinates Batch</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="2">
+                        <MudAlert Severity="Severity.Info">
+                            <strong>Latitude:</strong> @Model.Latitude.ToString("F4")<br/>
+                            <strong>Longitude:</strong> @Model.Longitude.ToString("F4")
+                        </MudAlert>
+                        <MudButton
+                            Variant="Variant.Filled"
+                            Color="Color.Secondary"
+                            OnClick="@(() => Model.UpdateCoordinatesCommand.Execute())">
+                            Update Coordinates
+                        </MudButton>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudCard Class="mb-4">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Measurements Batch</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="2">
+                        <MudAlert Severity="Severity.Info">
+                            <strong>Temperature:</strong> @Model.Temperature°C<br/>
+                            <strong>Humidity:</strong> @Model.Humidity%
+                        </MudAlert>
+                        <MudButton
+                            Variant="Variant.Filled"
+                            Color="Color.Tertiary"
+                            OnClick="@(() => Model.UpdateMeasurementsCommand.Execute())">
+                            Update Measurements
+                        </MudButton>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">All-Data Batch</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="2">
+                        <MudAlert Severity="Severity.Info">
+                            <strong>Temperature:</strong> @Model.Temperature°C<br/>
+                            <strong>Humidity:</strong> @Model.Humidity%<br/>
+                            <strong>Pressure:</strong> @Model.Pressure hPa
+                        </MudAlert>
+                        <MudButton
+                            Variant="Variant.Filled"
+                            Color="Color.Success"
+                            OnClick="@(() => Model.UpdateAllDataCommand.Execute())">
+                            Update All Data
+                        </MudButton>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    <MudPaper Class="pa-4 mt-4">
+        <MudText Typo="Typo.h6" GutterBottom="true">Key Concepts</MudText>
+        <MudList T="string">
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                <strong>[ObservableBatch("name")]</strong> - Groups properties for batch notification
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Properties in the same batch notify together as a single change
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                A property can belong to multiple batches
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Coordinates batch: Latitude + Longitude notify together
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Measurements batch: Temperature + Humidity notify together
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                All-data batch: Temperature + Humidity + Pressure notify together
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Optimizes UI updates by reducing the number of change notifications
+            </MudListItem>
+        </MudList>
+    </MudPaper>
+</MudContainer>

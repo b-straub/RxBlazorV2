@@ -1,0 +1,171 @@
+@page "/samples/value-equality"
+@using RxBlazorV2Sample.Samples.Helpers
+@inherits ObservableComponent<ValueEqualityModel>
+
+<PageTitle>Value Equality</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium">
+    <MudText Typo="Typo.h3" GutterBottom="true">Value Equality</MudText>
+    <MudText Typo="Typo.body1" Class="mb-4">
+        Demonstrates how the framework optimizes change notifications using value equality for records, structs, and value types.
+    </MudText>
+
+    <MudCard Class="mb-4">
+        <MudCardContent>
+            <MudStack Spacing="2">
+                <MudAlert Severity="Severity.Success">
+                    @Model.LastMessage
+                </MudAlert>
+
+                <UsageWithLogging Usage=@Model.Usage LogEntries=@Model.LogEntries/>
+            </MudStack>
+        </MudCardContent>
+    </MudCard>
+
+    <MudGrid>
+        <MudItem xs="12" md="6">
+            <MudCard Class="mb-4">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Record Type (PersonRecord)</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="2">
+                        <MudAlert Severity="Severity.Normal">
+                            Current: @Model.CurrentPerson.Name, Age @Model.CurrentPerson.Age
+                        </MudAlert>
+                        <MudButton
+                            Variant="Variant.Filled"
+                            Color="Color.Primary"
+                            OnClick="@(() => Model.SetPersonToSameValueCommand.Execute())">
+                            Set to Same Value (Alice, 30)
+                        </MudButton>
+                        <MudButton
+                            Variant="Variant.Outlined"
+                            Color="Color.Secondary"
+                            OnClick="@(() => Model.SetPersonToDifferentValueCommand.Execute())">
+                            Set to Different Value (Bob, 25)
+                        </MudButton>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                            Records use value equality - setting to same value won't trigger change notification
+                        </MudText>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Record Struct (PointStruct)</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="2">
+                        <MudAlert Severity="Severity.Normal">
+                            Current: X=@Model.CurrentPoint.X, Y=@Model.CurrentPoint.Y
+                        </MudAlert>
+                        <MudButton
+                            Variant="Variant.Filled"
+                            Color="Color.Primary"
+                            OnClick="@(() => Model.SetPointToSameValueCommand.Execute())">
+                            Set to Same Value (10.5, 20.3)
+                        </MudButton>
+                        <MudButton
+                            Variant="Variant.Outlined"
+                            Color="Color.Secondary"
+                            OnClick="@(() => Model.SetPointToDifferentValueCommand.Execute())">
+                            Set to Different Value (15.0, 25.0)
+                        </MudButton>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                            Record structs also use value equality
+                        </MudText>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudCard Class="mb-4">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Guid (Value Type)</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="2">
+                        <MudAlert Severity="Severity.Normal">
+                            <div style="word-break: break-all;">@Model.CurrentGuid</div>
+                        </MudAlert>
+                        <MudButton
+                            Variant="Variant.Filled"
+                            Color="Color.Primary"
+                            OnClick="@(() => Model.SetGuidToSameValueCommand.Execute())">
+                            Set to Same Value
+                        </MudButton>
+                        <MudButton
+                            Variant="Variant.Outlined"
+                            Color="Color.Secondary"
+                            OnClick="@(() => Model.SetGuidToNewValueCommand.Execute())">
+                            Set to New Guid
+                        </MudButton>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                            Guids are value types with built-in equality
+                        </MudText>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Other Value Types</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="2">
+                        <MudAlert Severity="Severity.Normal">
+                            DateTime: @Model.CurrentDateTime.ToString("yyyy-MM-dd HH:mm:ss")
+                        </MudAlert>
+                        <MudAlert Severity="Severity.Normal">
+                            Decimal: @Model.CurrentDecimal
+                        </MudAlert>
+                        <MudTextField @bind-Value="@Model.CurrentDecimal"
+                                      Label="Decimal Value"
+                                      Variant="Variant.Outlined" />
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                            All primitive value types (int, decimal, DateTime, etc.) use value equality
+                        </MudText>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    <MudPaper Class="pa-4 mt-4">
+        <MudText Typo="Typo.h6" GutterBottom="true">Key Concepts</MudText>
+        <MudList T="string">
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                The generator optimizes notifications using value equality
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Setting a property to the same value (by equality) won't trigger OnPropertyChanged
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Records implement value equality automatically
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Record structs also implement value equality
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Primitive types (int, decimal, Guid, DateTime) use value equality
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Regular classes use reference equality (unless overridden)
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                This optimization reduces unnecessary UI updates
+            </MudListItem>
+        </MudList>
+    </MudPaper>
+</MudContainer>

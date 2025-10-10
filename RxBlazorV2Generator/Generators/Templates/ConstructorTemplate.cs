@@ -57,7 +57,10 @@ public static class ConstructorTemplate
 
         var allParams = string.Join(", ", constructorParams);
 
-        sb.AppendLine($"    public {modelInfo.ClassName}({allParams}) : base()");
+        // Don't call : base() for derived models (those that inherit from another ObservableModel)
+        // The base class constructor will be called implicitly
+        var baseCall = string.IsNullOrEmpty(modelInfo.BaseModelTypeName) ? " : base()" : "";
+        sb.AppendLine($"    public {modelInfo.ClassName}({allParams}){baseCall}");
         sb.AppendLine("    {");
 
         // Assign referenced models
@@ -116,7 +119,10 @@ public static class ConstructorTemplate
     {
         var sb = new StringBuilder();
 
-        sb.AppendLine($"    public {modelInfo.ClassName}() : base()");
+        // Don't call : base() for derived models (those that inherit from another ObservableModel)
+        // The base class constructor will be called implicitly
+        var baseCall = string.IsNullOrEmpty(modelInfo.BaseModelTypeName) ? " : base()" : "";
+        sb.AppendLine($"    public {modelInfo.ClassName}(){baseCall}");
         sb.AppendLine("    {");
 
         // Initialize IObservableCollection properties

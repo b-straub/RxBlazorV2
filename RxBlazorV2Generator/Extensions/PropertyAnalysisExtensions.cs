@@ -94,8 +94,8 @@ public static class PropertyAnalysisExtensions
         }
     }
 
-    public static List<string> AnalyzeMethodForPropertyUsage(this Dictionary<string, MethodDeclarationSyntax> methods, 
-        string methodName, 
+    public static List<string> AnalyzeMethodForPropertyUsage(this Dictionary<string, MethodDeclarationSyntax> methods,
+        string methodName,
         ObservableModelInfo modelInfo)
     {
         try
@@ -139,26 +139,142 @@ public static class PropertyAnalysisExtensions
         }
     }
 
+    public static List<string> AnalyzeMethodForPropertyModifications(this Dictionary<string, MethodDeclarationSyntax> methods,
+        string methodName,
+        ObservableModelInfo modelInfo)
+    {
+        try
+        {
+            if (!methods.TryGetValue(methodName, out var method))
+            {
+                return new List<string>();
+            }
+
+            var modifiedProperties = new HashSet<string>();
+            var partialPropertyNames = new HashSet<string>(modelInfo.PartialProperties.Select(p => p.Name));
+
+            // Walk through the method body and find property modifications (syntactic analysis only)
+            var descendants = method.DescendantNodes();
+            foreach (var node in descendants)
+            {
+                // Look for assignment expressions: property = value
+                if (node is AssignmentExpressionSyntax assignment)
+                {
+                    var leftSide = assignment.Left;
+
+                    // Handle direct property assignment: MyProperty = value
+                    if (leftSide is IdentifierNameSyntax identifier)
+                    {
+                        var identifierName = identifier.Identifier.ValueText;
+                        if (partialPropertyNames.Contains(identifierName))
+                        {
+                            modifiedProperties.Add(identifierName);
+                        }
+                    }
+                    // Handle member access: this.MyProperty = value
+                    else if (leftSide is MemberAccessExpressionSyntax memberAccess)
+                    {
+                        var memberName = memberAccess.Name.Identifier.ValueText;
+                        if (partialPropertyNames.Contains(memberName))
+                        {
+                            modifiedProperties.Add(memberName);
+                        }
+                    }
+                }
+                // Look for increment/decrement operations: MyProperty++, MyProperty--, ++MyProperty, --MyProperty
+                else if (node is PostfixUnaryExpressionSyntax postfixUnary &&
+                         (postfixUnary.IsKind(SyntaxKind.PostIncrementExpression) ||
+                          postfixUnary.IsKind(SyntaxKind.PostDecrementExpression)))
+                {
+                    if (postfixUnary.Operand is IdentifierNameSyntax identifier)
+                    {
+                        var identifierName = identifier.Identifier.ValueText;
+                        if (partialPropertyNames.Contains(identifierName))
+                        {
+                            modifiedProperties.Add(identifierName);
+                        }
+                    }
+                    else if (postfixUnary.Operand is MemberAccessExpressionSyntax memberAccess)
+                    {
+                        var memberName = memberAccess.Name.Identifier.ValueText;
+                        if (partialPropertyNames.Contains(memberName))
+                        {
+                            modifiedProperties.Add(memberName);
+                        }
+                    }
+                }
+                else if (node is PrefixUnaryExpressionSyntax prefixUnary &&
+                         (prefixUnary.IsKind(SyntaxKind.PreIncrementExpression) ||
+                          prefixUnary.IsKind(SyntaxKind.PreDecrementExpression)))
+                {
+                    if (prefixUnary.Operand is IdentifierNameSyntax identifier)
+                    {
+                        var identifierName = identifier.Identifier.ValueText;
+                        if (partialPropertyNames.Contains(identifierName))
+                        {
+                            modifiedProperties.Add(identifierName);
+                        }
+                    }
+                    else if (prefixUnary.Operand is MemberAccessExpressionSyntax memberAccess)
+                    {
+                        var memberName = memberAccess.Name.Identifier.ValueText;
+                        if (partialPropertyNames.Contains(memberName))
+                        {
+                            modifiedProperties.Add(memberName);
+                        }
+                    }
+                }
+            }
+
+            return modifiedProperties.ToList();
+        }
+        catch (Exception)
+        {
+            // Return empty list on analysis error rather than throwing
+            return new List<string>();
+        }
+    }
+
     public static List<string> GetObservedPropertiesForCommand(this ObservableModelInfo modelInfo, CommandPropertyInfo command)
     {
         var observedProps = new HashSet<string>();
-        
-        // Analyze execute method for property usage
-        if (command.ExecuteMethod != null)
+
+        // Get the trigger property names for this command
+        var triggerPropertyNames = new HashSet<string>(
+            command.Triggers.Select(t => t.TriggerProperty));
+
+        // Analyze execute method for property MODIFICATIONS
+        if (command.ExecuteMethod != null && modelInfo.Methods.TryGetValue(command.ExecuteMethod, out var executeMethod))
         {
-            var executeProps = modelInfo.Methods.AnalyzeMethodForPropertyUsage(command.ExecuteMethod, modelInfo);
-            foreach (var prop in executeProps)
+            var modifiedProps = modelInfo.Methods.AnalyzeMethodForPropertyModifications(command.ExecuteMethod, modelInfo);
+            foreach (var prop in modifiedProps)
                 observedProps.Add(prop);
         }
-        
-        // Analyze canExecute method for property usage
+
+        // Analyze canExecute method for property dependencies
         if (command.CanExecuteMethod != null)
         {
             var canExecuteProps = modelInfo.Methods.AnalyzeMethodForPropertyUsage(command.CanExecuteMethod, modelInfo);
             foreach (var prop in canExecuteProps)
                 observedProps.Add(prop);
         }
-        
+
+        // CRITICAL: Remove trigger properties from _observedProperties if they're not modified
+        // This prevents circular triggers: when the command completes, StateHasChanged(_observedProperties)
+        // would notify about trigger properties, causing the command to re-trigger itself
+        var modifiedPropsInExecute = command.ExecuteMethod != null && modelInfo.Methods.TryGetValue(command.ExecuteMethod, out var execMethod)
+            ? new HashSet<string>(modelInfo.Methods.AnalyzeMethodForPropertyModifications(command.ExecuteMethod, modelInfo))
+            : new HashSet<string>();
+
+        foreach (var triggerProp in triggerPropertyNames)
+        {
+            // Only keep trigger property in _observedProperties if it's actually modified
+            if (!modifiedPropsInExecute.Contains(triggerProp))
+            {
+                observedProps.Remove(triggerProp);
+            }
+        }
+
         return observedProps.ToList();
     }
 

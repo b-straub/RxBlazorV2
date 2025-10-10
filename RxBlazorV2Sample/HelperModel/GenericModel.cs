@@ -1,15 +1,14 @@
 using ObservableCollections;
 using RxBlazorV2.Interface;
 using RxBlazorV2.Model;
-using RxBlazorV2Sample.Interfaces;
 
 namespace RxBlazorV2Sample.HelperModel;
 
 [ObservableModelScope(ModelScope.Singleton)]
-public partial class GenericModel<T, P> : ObservableModel where T : class where P : struct
+public partial class GenericModel<T, TP> : ObservableModel where T : class where TP : struct
 {
     public required partial ObservableList<T> Tlist { get; init; }
-    public required partial ObservableList<P> Plist { get; init; }
+    public required partial ObservableList<TP> Plist { get; init; }
     
     protected override void OnContextReady()
     {
@@ -19,10 +18,10 @@ public partial class GenericModel<T, P> : ObservableModel where T : class where 
 
 [ObservableModelReference(typeof(GenericModel<,>))]
 [ObservableModelScope(ModelScope.Singleton)]
-public partial class AnotherGenericModel<T, P> : ObservableModel where T : class where P : struct
+public partial class AnotherGenericModel<T, TP> : ObservableModel where T : class where TP : struct
 {
     public IList<T> Tlist => GenericModel.Tlist;
-    public IList<P> Plist => GenericModel.Plist;
+    public IList<TP> Plist => GenericModel.Plist;
     
     [ObservableCommand(nameof(AddItemToTList), nameof(AddItemToTListCe))]
     public partial IObservableCommand<T> AddToTList { get; }
@@ -31,7 +30,7 @@ public partial class AnotherGenericModel<T, P> : ObservableModel where T : class
     public partial IObservableCommand ClearTList { get; }
     
     [ObservableCommand(nameof(AddItemToPList), nameof(AddItemToPListCe))]
-    public partial IObservableCommand<P> AddToPList { get; }
+    public partial IObservableCommand<TP> AddToPList { get; }
     
     [ObservableCommand(nameof(ClearPListCmd), nameof(ClearPListCmdCe))]
     public partial IObservableCommand ClearPList { get; }
@@ -56,7 +55,7 @@ public partial class AnotherGenericModel<T, P> : ObservableModel where T : class
         return Tlist.Count > 0;
     }
     
-    private void AddItemToPList(P item)
+    private void AddItemToPList(TP item)
     {
         Plist.Add(item);
     }
@@ -83,19 +82,19 @@ public partial class AnotherGenericModel<T, P> : ObservableModel where T : class
 }
 
 [ObservableModelScope(ModelScope.Singleton)]
-public partial class GenericModelTwoParams<T, U> : ObservableModel where T : class where U : struct
+public partial class GenericModelTwoParams<T, TU> : ObservableModel where T : class where TU : struct
 {
     public partial T Value { get; set; } = null!;
-    public partial U SecondValue { get; set; }
+    public partial TU SecondValue { get; set; }
 }
 
 [ObservableModelScope(ModelScope.Singleton)]
 [ObservableModelReference(typeof(GenericModelTwoParams<,>))]
-public partial class TestModel<T, U> : ObservableModel where T : class where U : struct
+public partial class TestModel<T, TU> : ObservableModel where T : class where TU : struct
 {
     public partial string Name { get; set; } = "";
 
-    public (T, U) GetReferencedProperties()
+    public (T, TU) GetReferencedProperties()
     {
         return (GenericModelTwoParams.Value, GenericModelTwoParams.SecondValue);
     }

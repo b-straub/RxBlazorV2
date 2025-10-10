@@ -1,0 +1,101 @@
+@page "/samples/command-triggers"
+@using RxBlazorV2Sample.Samples.Helpers
+@inherits ObservableComponent<CommandTriggersModel>
+
+<PageTitle>Command Triggers</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium">
+    <MudText Typo="Typo.h3" GutterBottom="true">Command Triggers</MudText>
+    <MudText Typo="Typo.body1" Class="mb-4">
+        Demonstrates commands that automatically execute when specific properties change.
+    </MudText>
+
+    <MudCard>
+        <MudCardContent>
+            <MudStack Spacing="4">
+                <MudAlert Severity="Severity.Info">
+                    Search Count: @Model.SearchCount
+                </MudAlert>
+
+                <MudAlert Severity="Severity.Normal">
+                    @Model.SearchResults
+                </MudAlert>
+
+                <UsageWithLogging Usage=@Model.Usage LogEntries=@Model.LogEntries/>
+
+                <MudTextField @bind-Value="@Model.SearchText"
+                              Label="Search Text"
+                              Variant="Variant.Outlined"
+                              Placeholder="Type to trigger search..."
+                              HelperText="@($"Minimum {Model.MinLength} characters required")" />
+
+                <MudSlider @bind-Value="@Model.MinLength"
+                           Min="1" Max="10" Step="1"
+                           Color="Color.Primary">
+                    Min Length: @Model.MinLength
+                </MudSlider>
+
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                    @if (Model.SearchCommand.Executing)
+                    {
+                        <span>⏳ Searching...</span>
+                    }
+                    else if (Model.SearchCommand.CanExecute)
+                    {
+                        <span>✓ Will auto-search when SearchText changes</span>
+                    }
+                    else
+                    {
+                        <span>⚠ Search requires at least @Model.MinLength characters</span>
+                    }
+                </MudText>
+
+                <MudDivider />
+
+                <MudText Typo="Typo.h6">Parameterized Trigger</MudText>
+                <MudText Typo="Typo.caption" Class="mb-2">
+                    This command is triggered by SearchText changes with "auto" as parameter
+                </MudText>
+
+                <MudStack Row="true" Spacing="2">
+                    <MudButton
+                        Variant="Variant.Outlined"
+                        Color="Color.Primary"
+                        Disabled="@Model.ParametrizedSearchCommand.Executing"
+                        OnClick="@(() => Model.ParametrizedSearchCommand.ExecuteAsync("manual"))">
+                        Manual Search
+                    </MudButton>
+
+                    <MudButton
+                        Variant="Variant.Outlined"
+                        Color="Color.Secondary"
+                        Disabled="@Model.ParametrizedSearchCommand.Executing"
+                        OnClick="@(() => Model.ParametrizedSearchCommand.ExecuteAsync("detailed"))">
+                        Detailed Search
+                    </MudButton>
+                </MudStack>
+            </MudStack>
+        </MudCardContent>
+    </MudCard>
+
+    <MudPaper Class="pa-4 mt-4">
+        <MudText Typo="Typo.h6" GutterBottom="true">Key Concepts</MudText>
+        <MudList T="string">
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                <strong>[ObservableCommandTrigger(nameof(Property))]</strong> - Command executes when property changes
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                <strong>[ObservableCommandTrigger&lt;T&gt;(nameof(Property), value)]</strong> - Parameterized trigger with value
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Triggers respect CanExecute logic - won't execute if CanExecute returns false
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Multiple triggers can be applied to the same command
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Useful for auto-search, validation, and reactive workflows
+            </MudListItem>
+        </MudList>
+    </MudPaper>
+</MudContainer>

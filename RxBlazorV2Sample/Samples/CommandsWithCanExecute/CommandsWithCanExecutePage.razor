@@ -1,0 +1,90 @@
+@page "/samples/commands-with-canexecute"
+@using RxBlazorV2Sample.Samples.Helpers
+@inherits ObservableComponent<CommandsWithCanExecuteModel>
+
+<PageTitle>Commands with CanExecute</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium">
+    <MudText Typo="Typo.h3" GutterBottom="true">Commands with CanExecute</MudText>
+    <MudText Typo="Typo.body1" Class="mb-4">
+        Demonstrates commands with CanExecute logic that dynamically enables/disables based on model state.
+    </MudText>
+
+    <MudCard>
+        <MudCardContent>
+            <MudStack Spacing="4">
+                <MudAlert Severity="Severity.Info">
+                    Counter: @Model.Counter
+                </MudAlert>
+
+                <MudAlert Severity="@(Model.IsEnabled ? Severity.Success : Severity.Warning)">
+                    Status: @Model.Message
+                </MudAlert>
+
+                <UsageWithLogging Usage=@Model.Usage LogEntries=@Model.LogEntries/>
+
+                <MudSwitch @bind-Value="@Model.IsEnabled"
+                           Label="@(Model.IsEnabled ? "Enabled" : "Disabled")"
+                           Color="Color.Success" />
+
+                <MudStack Row="true" Spacing="2">
+                    <MudButton
+                        Variant="Variant.Filled"
+                        Color="Color.Primary"
+                        Disabled="@(!Model.IncrementCommand.CanExecute)"
+                        OnClick="@(() => Model.IncrementCommand.Execute())">
+                        Increment
+                        @if (!Model.IncrementCommand.CanExecute)
+                        {
+                            <MudText Typo="Typo.caption" Class="ml-2">(Max: 10)</MudText>
+                        }
+                    </MudButton>
+
+                    <MudButton
+                        Variant="Variant.Filled"
+                        Color="Color.Secondary"
+                        Disabled="@(!Model.AddValueCommand.CanExecute)"
+                        OnClick="@(() => Model.AddValueCommand.Execute(5))">
+                        Add 5
+                        @if (!Model.AddValueCommand.CanExecute)
+                        {
+                            <MudText Typo="Typo.caption" Class="ml-2">(Max: 20)</MudText>
+                        }
+                    </MudButton>
+
+                    <MudButton
+                        Variant="Variant.Outlined"
+                        Color="Color.Error"
+                        Disabled="@(!Model.ResetCommand.CanExecute)"
+                        OnClick="@(() => Model.ResetCommand.Execute())">
+                        Reset
+                    </MudButton>
+                </MudStack>
+            </MudStack>
+        </MudCardContent>
+    </MudCard>
+
+    <MudPaper Class="pa-4 mt-4">
+        <MudText Typo="Typo.h6" GutterBottom="true">Key Concepts</MudText>
+        <MudList T="string">
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                CanExecute methods control whether a command can be executed
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Commands automatically re-evaluate CanExecute when observable properties change
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Bind button Disabled property to !Command.CanExecute
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Increment can only execute when enabled and counter &lt; 10
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                AddValue can only execute when enabled and counter &lt; 20
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Reset can only execute when counter &gt; 0
+            </MudListItem>
+        </MudList>
+    </MudPaper>
+</MudContainer>

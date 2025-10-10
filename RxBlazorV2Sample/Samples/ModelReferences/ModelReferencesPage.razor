@@ -1,0 +1,140 @@
+@page "/samples/model-references"
+@using RxBlazorV2Sample.Samples.ModelReferences
+@using RxBlazorV2Sample.Samples.Helpers
+@inherits ObservableComponent<ModelReferencesModel>
+@inject ModelReferencesSharedModel SharedModel
+
+<PageTitle>Model References</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium">
+    <MudText Typo="Typo.h3" GutterBottom="true">Model References</MudText>
+    <MudText Typo="Typo.body1" Class="mb-4">
+        Demonstrates one model referencing another model with automatic dependency injection and reactive subscriptions.
+    </MudText>
+
+    <MudGrid>
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Shared Settings Model (Singleton)</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="3">
+                        <MudAlert Severity="@(SharedModel.Theme == "Light" ? Severity.Info : Severity.Normal)">
+                            Theme: @SharedModel.Theme
+                        </MudAlert>
+
+                        <MudAlert Severity="Severity.Normal">
+                            Language: @SharedModel.Language
+                        </MudAlert>
+
+                        <MudAlert Severity="@(SharedModel.NotificationsEnabled ? Severity.Success : Severity.Warning)">
+                            Notifications: @(SharedModel.NotificationsEnabled ? "Enabled" : "Disabled")
+                        </MudAlert>
+
+                        <MudButton
+                            Variant="Variant.Filled"
+                            Color="Color.Primary"
+                            OnClick="@(() => SharedModel.ToggleThemeCommand.Execute())"
+                            StartIcon="@Icons.Material.Filled.Palette">
+                            Toggle Theme
+                        </MudButton>
+
+                        <MudButton
+                            Variant="Variant.Outlined"
+                            Color="Color.Secondary"
+                            OnClick="@(() => SharedModel.ToggleNotificationsCommand.Execute())"
+                            StartIcon="@Icons.Material.Filled.Notifications">
+                            Toggle Notifications
+                        </MudButton>
+
+                        <MudSelect @bind-Value="@SharedModel.Language"
+                                   Label="Language"
+                                   Variant="Variant.Outlined">
+                            <MudSelectItem Value="@("English")">English</MudSelectItem>
+                            <MudSelectItem Value="@("German")">German</MudSelectItem>
+                            <MudSelectItem Value="@("French")">French</MudSelectItem>
+                        </MudSelect>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Consumer Model (Scoped)</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="3">
+                        <MudAlert Severity="Severity.Info">
+                            Notification Count: @Model.NotificationCount
+                        </MudAlert>
+
+                        <MudAlert Severity="Severity.Normal">
+                            @Model.Message
+                        </MudAlert>
+
+                        <UsageWithLogging Usage=@Model.Usage LogEntries=@Model.LogEntries/>
+
+                        <MudButton
+                            Variant="Variant.Filled"
+                            Color="Color.Success"
+                            Disabled="@(!Model.SendNotificationCommand.CanExecute)"
+                            OnClick="@(() => Model.SendNotificationCommand.Execute())"
+                            StartIcon="@Icons.Material.Filled.Send">
+                            Send Notification
+                        </MudButton>
+
+                        <MudButton
+                            Variant="Variant.Outlined"
+                            Color="Color.Tertiary"
+                            OnClick="@(() => Model.UpdateMessageCommand.Execute())"
+                            StartIcon="@Icons.Material.Filled.Update">
+                            Update Message
+                        </MudButton>
+
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                            @if (Model.SendNotificationCommand.CanExecute)
+                            {
+                                <span>✓ Notifications enabled - command will auto-trigger on toggle</span>
+                            }
+                            else
+                            {
+                                <span>⚠ Notifications disabled - command cannot execute</span>
+                            }
+                        </MudText>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    <MudPaper Class="pa-4 mt-4">
+        <MudText Typo="Typo.h6" GutterBottom="true">Key Concepts</MudText>
+        <MudList T="string">
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                <strong>[ObservableModelReference&lt;T&gt;]</strong> - Declares dependency on another model
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Referenced model is automatically injected via constructor
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Access referenced model via protected property (e.g., ModelReferencesSharedModel)
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Observable changes in referenced model automatically propagate
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Command triggers can reference properties from injected models
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                CanExecute can use properties from referenced models
+            </MudListItem>
+        </MudList>
+    </MudPaper>
+</MudContainer>

@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Time.Testing;
 using R3;
 using RxBlazorV2.CoreTests.TestFixtures;
-using Xunit.Abstractions;
 
 namespace RxBlazorV2.CoreTests;
 

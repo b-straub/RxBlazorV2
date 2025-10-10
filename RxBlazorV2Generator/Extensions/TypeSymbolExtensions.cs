@@ -10,16 +10,34 @@ public static class TypeSymbolExtensions
         // Only check partial classes with base types
         if (!classDecl.Modifiers.Any(Microsoft.CodeAnalysis.CSharp.SyntaxKind.PartialKeyword))
             return false;
-            
-        // Check if it has a base type that could be ObservableModel
-        // We need to be more specific to avoid ComponentBase classes
-        return classDecl.BaseList?.Types.Any(t => 
+
+        if (classDecl.BaseList?.Types.Any() != true)
+            return false;
+
+        // Two-tier filter to minimize semantic analysis overhead:
+        // 1. Clear cases: Direct ObservableModel inheritance (fast path)
+        var hasDirect = classDecl.BaseList.Types.Any(t =>
         {
             var typeString = t.Type.ToString();
-            return typeString.Equals("ObservableModel") || 
-                   typeString.EndsWith(".ObservableModel") ||
-                   (typeString.Contains("ObservableModel") && !typeString.Contains("ComponentBase"));
-        }) == true;
+            return typeString.Equals("ObservableModel") ||
+                   typeString.EndsWith(".ObservableModel");
+        });
+
+        if (hasDirect)
+            return true;
+
+        // 2. Candidates: Other partial classes with base types that could be derived ObservableModels
+        // Exclude obvious non-candidates to reduce semantic analysis load
+        var hasCandidate = classDecl.BaseList.Types.Any(t =>
+        {
+            var typeString = t.Type.ToString();
+            // Exclude common non-ObservableModel base types
+            return !typeString.Contains("ComponentBase") &&
+                   !typeString.Contains("Exception") &&
+                   !typeString.Contains("Attribute");
+        });
+
+        return hasCandidate;
     }
 
     public static bool InheritsFromObservableModel(this INamedTypeSymbol classSymbol)
@@ -32,8 +50,33 @@ public static class TypeSymbolExtensions
                 return true;
             baseType = baseType.BaseType;
         }
-        
+
         return false;
+    }
+
+    public static INamedTypeSymbol? GetObservableModelBaseType(this INamedTypeSymbol classSymbol)
+    {
+        // Get the immediate base type
+        var baseType = classSymbol.BaseType;
+
+        if (baseType is null)
+        {
+            return null;
+        }
+
+        // If the immediate base type is ObservableModel itself, no intermediate base
+        if (baseType.Name == "ObservableModel")
+        {
+            return null;
+        }
+
+        // Check if the base type inherits from ObservableModel
+        if (baseType.InheritsFromObservableModel())
+        {
+            return baseType;
+        }
+
+        return null;
     }
     
     public static bool InheritsFromIObservableModel(this INamedTypeSymbol typeSymbol)

@@ -8,8 +8,34 @@ This diagnostic is reported when a command is triggered by a property that the c
 
 This error occurs when:
 - A command has an `ObservableCommandTrigger` for a property
-- The command's execution method modifies that same property
+- The command's execution method **modifies (writes to)** that same property
 - This creates an infinite execution loop
+
+## Important: Reading vs Writing
+
+**Reading a trigger property is safe and allowed:**
+- ✅ Your command can READ the trigger property's value
+- ✅ The generator automatically handles read-only trigger properties
+- ✅ No circular trigger occurs if the property is only read
+
+**Writing to a trigger property causes an error:**
+- ❌ Modifying (assigning, incrementing) the trigger property creates infinite loop
+- ❌ This diagnostic fires when the trigger property is written
+
+Example of safe usage:
+```csharp
+[ObservableCommand(nameof(SearchAsync))]
+[ObservableCommandTrigger(nameof(SearchText))]  // ✅ Safe: SearchText triggers command
+public partial IObservableCommandAsync SearchCommand { get; }
+
+private async Task SearchAsync()
+{
+    Results = $"Searching for '{SearchText}'...";  // ✅ Reading SearchText is OK
+    await Task.Delay(500);
+    Results = $"Found results for: {SearchText}";  // ✅ Still OK - only reading
+    // SearchText is never modified, so no circular trigger
+}
+```
 
 ## How to Fix
 

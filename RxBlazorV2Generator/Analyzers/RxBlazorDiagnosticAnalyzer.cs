@@ -29,7 +29,8 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
         DiagnosticDescriptors.GenericArityMismatchError,
         DiagnosticDescriptors.TypeConstraintMismatchError,
         DiagnosticDescriptors.InvalidOpenGenericReferenceError,
-        DiagnosticDescriptors.InvalidInitPropertyError
+        DiagnosticDescriptors.InvalidInitPropertyError,
+        DiagnosticDescriptors.DerivedModelReferenceError
     ];
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>

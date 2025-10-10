@@ -7,16 +7,17 @@ namespace GeneratorRunner
         private static readonly string[] SourcePaths =
         [
             //"../RxBlazorV2ExternalModel/Models/Model.cs",
-            "../RxBlazorV2Sample/HelperModel/Switcher.cs",
-            "../RxBlazorV2Sample/Models/CounterModel.cs"
+            "../RxBlazorV2Sample/Samples/CommandTriggers/CommandTriggersModel.cs",
+            "../RxBlazorV2Sample/Samples/Helpers/SampleBaseModel.cs",
+            "../RxBlazorV2Sample/Samples/Helpers/LogEntry.cs"
             //"../../WebAppBase/WebAppBase.Shared/Models/Sync/SyncNotificationModel.cs",
             //"../../WebAppBase/WebAppBase.Shared/Models/Sync/SyncModels.cs",
             //"../../WebAppBase/WebAppBase.Shared/Services/AdaptivePollerService.cs",
         ];
-        
+
         private static readonly string[] AdditionalTextPaths =
         [
-            //"../RxBlazorV2ExternalModel/Components/ExternalModel.razor"
+            "../RxBlazorV2Sample/Samples/CommandTriggers/CommandTriggersPage.razor"
             //"../../WebAppBase/WebAppBase.Shared/Components/SyncManager.razor"
         ];
 

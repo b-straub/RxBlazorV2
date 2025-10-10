@@ -1,0 +1,145 @@
+@page "/samples/generic-models"
+@using RxBlazorV2Sample.Samples.Helpers
+@inherits ObservableComponent<GenericModelsModel<string, int>>
+
+<PageTitle>Generic Models</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium">
+    <MudText Typo="Typo.h3" GutterBottom="true">Generic Models</MudText>
+    <MudText Typo="Typo.body1" Class="mb-4">
+        Demonstrates generic observable models with type parameters and constraints.
+    </MudText>
+
+    <MudCard Class="mb-4">
+        <MudCardContent>
+            <MudStack Spacing="2">
+                <MudAlert Severity="Severity.Info">
+                    @Model.Status
+                </MudAlert>
+
+                <UsageWithLogging Usage=@Model.Usage LogEntries=@Model.LogEntries/>
+            </MudStack>
+        </MudCardContent>
+    </MudCard>
+
+    <MudGrid>
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Items (string - class constraint)</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="3">
+                        <MudTable Items="@Model.Items"
+                                  Dense="true"
+                                  Hover="true">
+                            <HeaderContent>
+                                <MudTh>Item</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd>@context</MudTd>
+                            </RowTemplate>
+                            <NoRecordsContent>
+                                <MudText>No items yet</MudText>
+                            </NoRecordsContent>
+                        </MudTable>
+
+                        <MudStack Row="true" Spacing="2">
+                            <MudButton
+                                Variant="Variant.Filled"
+                                Color="Color.Primary"
+                                Disabled="@(!Model.AddItemCommand.CanExecute)"
+                                OnClick="@(() => Model.AddItemCommand.Execute($"Item {Random.Shared.Next(1000)}"))">
+                                Add Item
+                                @if (!Model.AddItemCommand.CanExecute)
+                                {
+                                    <span class="ml-2">(Max: 5)</span>
+                                }
+                            </MudButton>
+
+                            <MudButton
+                                Variant="Variant.Outlined"
+                                Color="Color.Error"
+                                Disabled="@(!Model.ClearItemsCommand.CanExecute)"
+                                OnClick="@(() => Model.ClearItemsCommand.Execute())">
+                                Clear
+                            </MudButton>
+                        </MudStack>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Values (int - struct constraint)</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="3">
+                        <MudTable Items="@Model.Values"
+                                  Dense="true"
+                                  Hover="true">
+                            <HeaderContent>
+                                <MudTh>Value</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd>@context</MudTd>
+                            </RowTemplate>
+                            <NoRecordsContent>
+                                <MudText>No values yet</MudText>
+                            </NoRecordsContent>
+                        </MudTable>
+
+                        <MudStack Row="true" Spacing="2">
+                            <MudButton
+                                Variant="Variant.Filled"
+                                Color="Color.Secondary"
+                                Disabled="@(!Model.AddValueCommand.CanExecute)"
+                                OnClick="@(() => Model.AddValueCommand.Execute(Random.Shared.Next(1, 100)))">
+                                Add Value
+                                @if (!Model.AddValueCommand.CanExecute)
+                                {
+                                    <span class="ml-2">(Max: 10)</span>
+                                }
+                            </MudButton>
+
+                            <MudButton
+                                Variant="Variant.Outlined"
+                                Color="Color.Error"
+                                Disabled="@(!Model.ClearValuesCommand.CanExecute)"
+                                OnClick="@(() => Model.ClearValuesCommand.Execute())">
+                                Clear
+                            </MudButton>
+                        </MudStack>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    <MudPaper Class="pa-4 mt-4">
+        <MudText Typo="Typo.h6" GutterBottom="true">Key Concepts</MudText>
+        <MudList T="string">
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Generic models: <code>class GenericModel&lt;T, P&gt; : ObservableModel</code>
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Type constraints: <code>where T : class where P : struct</code>
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Generic model references: <code>[ObservableModelReference(typeof(GenericModel&lt;,&gt;))]</code>
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Constraints must match between referenced and referencing models
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Generic commands: <code>IObservableCommand&lt;T&gt;</code> with type parameter
+            </MudListItem>
+        </MudList>
+    </MudPaper>
+</MudContainer>

@@ -2,11 +2,10 @@ using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using RxBlazorV2.CoreTests.TestFixtures;
 using RxBlazorV2.Model;
-using Xunit.Abstractions;
 
 namespace RxBlazorV2.CoreTests;
 
-public class ObservableComponentTests : TestContext
+public class ObservableComponentTests : Bunit.TestContext
 {
     private readonly ITestOutputHelper _output;
 

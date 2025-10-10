@@ -1,0 +1,28 @@
+@inherits ObservableComponent<CrossComponentCommunicationModel>
+
+<MudCard>
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">Component 2 - Status Display</MudText>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudStack Spacing="3">
+            <MudAlert Severity="@(Model.IsActive ? Severity.Success : Severity.Warning)">
+                Status: @(Model.IsActive ? "Active" : "Inactive")
+            </MudAlert>
+
+            <MudAlert Severity="Severity.Normal">
+                @Model.SharedMessage
+            </MudAlert>
+
+            <MudButton
+                Variant="Variant.Filled"
+                Color="Color.Primary"
+                OnClick="@(() => Model.ToggleActiveCommand.Execute())"
+                StartIcon="@Icons.Material.Filled.PowerSettingsNew">
+                Toggle Status
+            </MudButton>
+        </MudStack>
+    </MudCardContent>
+</MudCard>

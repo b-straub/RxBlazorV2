@@ -444,6 +444,20 @@ public static class AttributeAnalysisExtensions
                     
                     if (referencedModelType != null)
                     {
+                        // FATAL ERROR: Check if referenced model is a derived ObservableModel
+                        // This must be checked first as it's a fatal configuration error
+                        var baseModelType = referencedModelType.GetObservableModelBaseType();
+                        if (baseModelType != null)
+                        {
+                            var derivedDiagnostic = Diagnostic.Create(
+                                DiagnosticDescriptors.DerivedModelReferenceError,
+                                attribute.GetLocation(),
+                                referencedModelType.Name,
+                                baseModelType.Name);
+                            diagnostics.Add(derivedDiagnostic);
+                            continue; // Skip all other checks - this is a fatal error
+                        }
+
                         // Get the referencing class symbol for constraint validation
                         var referencingClassSymbol = semanticModel.GetDeclaredSymbol(classDecl);
                         if (referencingClassSymbol is INamedTypeSymbol referencingTypeSymbol)
