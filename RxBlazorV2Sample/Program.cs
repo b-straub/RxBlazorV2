@@ -23,8 +23,4 @@ RxBlazorV2ExternalModel.ObservableModels.Initialize(builder.Services);
 ObservableModels.GenericModelsBaseModel<string, int>(builder.Services);
 ObservableModels.GenericModelsModel<string, int>(builder.Services);
 
-// Register generic models for legacy examples
-ObservableModels.GenericModel<string, int>(builder.Services);
-ObservableModels.AnotherGenericModel<string, int>(builder.Services);
-
 await builder.Build().RunAsync();

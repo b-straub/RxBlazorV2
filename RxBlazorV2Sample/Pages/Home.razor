@@ -1,7 +1,342 @@
-﻿@page "/"
+@page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>RxBlazorV2 - Reactive Blazor Framework</PageTitle>
 
-<MudText Typo="Typo.h3" GutterBottom="true">Hello, world!</MudText>
-<MudText Typo="Typo.body1">Welcome to your new app with MudBlazor!</MudText>
-<MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Rocket">Get Started</MudButton>
+<MudContainer MaxWidth="MaxWidth.Large">
+    <MudStack Spacing="4">
+        <!-- Hero Section -->
+        <MudPaper Class="pa-8 mt-4" Elevation="0" Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <MudStack Spacing="3" AlignItems="AlignItems.Center" Class="text-center">
+                <MudIcon Icon="@Icons.Material.Filled.Bolt" Size="Size.Large" Style="color: white; font-size: 80px;"/>
+                <MudText Typo="Typo.h2" Style="color: white; font-weight: 600;">RxBlazorV2</MudText>
+                <MudText Typo="Typo.h6" Style="color: rgba(255,255,255,0.9);">
+                    A Reactive Programming Framework for Blazor Applications
+                </MudText>
+                <MudText Typo="Typo.body1" Style="color: rgba(255,255,255,0.8); max-width: 800px;">
+                    Built on top of R3 (Reactive Extensions), RxBlazorV2 uses Roslyn source generation to automatically create
+                    observable models with command bindings, dependency injection support, and seamless reactive state management.
+                </MudText>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Default"
+                           Size="Size.Large"
+                           StartIcon="@Icons.Custom.Brands.GitHub"
+                           Href="https://github.com/b-straub/RxBlazorV2"
+                           Target="_blank"
+                           Style="background: white; color: #667eea; margin-top: 16px;">
+                    View on GitHub
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+
+        <!-- Key Features -->
+        <MudText Typo="Typo.h4" GutterBottom="true" Class="mt-6">Key Features</MudText>
+        <MudGrid>
+            <MudItem xs="12" md="4">
+                <MudCard Elevation="2">
+                    <MudCardContent>
+                        <MudStack Spacing="2" AlignItems="AlignItems.Center" Class="text-center">
+                            <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Size="Size.Large" Color="Color.Primary"/>
+                            <MudText Typo="Typo.h6">Source Generation</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Tertiary">
+                                Automatic code generation using Roslyn analyzers. Write less boilerplate, focus on business logic.
+                            </MudText>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <MudItem xs="12" md="4">
+                <MudCard Elevation="2">
+                    <MudCardContent>
+                        <MudStack Spacing="2" AlignItems="AlignItems.Center" Class="text-center">
+                            <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Large" Color="Color.Secondary"/>
+                            <MudText Typo="Typo.h6">Reactive by Design</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Tertiary">
+                                Built on R3 reactive extensions. Automatic UI updates when state changes.
+                            </MudText>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <MudItem xs="12" md="4">
+                <MudCard Elevation="2">
+                    <MudCardContent>
+                        <MudStack Spacing="2" AlignItems="AlignItems.Center" Class="text-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Tertiary"/>
+                            <MudText Typo="Typo.h6">Type-Safe Commands</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Tertiary">
+                                Observable commands with CanExecute logic, cancellation support, and automatic trigger bindings.
+                            </MudText>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Interactive Samples -->
+        <MudText Typo="Typo.h4" GutterBottom="true" Class="mt-6">Interactive Samples</MudText>
+        <MudText Typo="Typo.body1" Color="Color.Tertiary" Class="mb-4">
+            Explore comprehensive examples demonstrating all features of RxBlazorV2
+        </MudText>
+
+        <MudGrid>
+            <!-- Basic Commands -->
+            <MudItem xs="12" md="6">
+                <MudCard Elevation="2" Class="hover-card" Style="height: 100%;">
+                    <MudCardContent>
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.PlayArrow" Color="Color.Primary"/>
+                                <MudText Typo="Typo.h6">Basic Commands</MudText>
+                            </MudStack>
+                            <MudText Typo="Typo.body2" Color="Color.Tertiary">
+                                Learn the fundamentals: sync and async commands, observable properties, and reactive state management.
+                            </MudText>
+                            <MudButton Variant="Variant.Text"
+                                       Color="Color.Primary"
+                                       Href="samples/basic-commands"
+                                       EndIcon="@Icons.Material.Filled.ArrowForward">
+                                Explore
+                            </MudButton>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- Parameterized Commands -->
+            <MudItem xs="12" md="6">
+                <MudCard Elevation="2" Class="hover-card" Style="height: 100%;">
+                    <MudCardContent>
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Input" Color="Color.Secondary"/>
+                                <MudText Typo="Typo.h6">Parameterized Commands</MudText>
+                            </MudStack>
+                            <MudText Typo="Typo.body2" Color="Color.Tertiary">
+                                Commands that accept parameters with full type safety and automatic change tracking.
+                            </MudText>
+                            <MudButton Variant="Variant.Text"
+                                       Color="Color.Secondary"
+                                       Href="samples/parameterized-commands"
+                                       EndIcon="@Icons.Material.Filled.ArrowForward">
+                                Explore
+                            </MudButton>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- Commands with CanExecute -->
+            <MudItem xs="12" md="6">
+                <MudCard Elevation="2" Class="hover-card" Style="height: 100%;">
+                    <MudCardContent>
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success"/>
+                                <MudText Typo="Typo.h6">Commands with CanExecute</MudText>
+                            </MudStack>
+                            <MudText Typo="Typo.body2" Color="Color.Tertiary">
+                                Conditional command execution with automatic UI state updates based on business rules.
+                            </MudText>
+                            <MudButton Variant="Variant.Text"
+                                       Color="Color.Success"
+                                       Href="samples/commands-with-canexecute"
+                                       EndIcon="@Icons.Material.Filled.ArrowForward">
+                                Explore
+                            </MudButton>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- Commands with Cancellation -->
+            <MudItem xs="12" md="6">
+                <MudCard Elevation="2" Class="hover-card" Style="height: 100%;">
+                    <MudCardContent>
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Cancel" Color="Color.Error"/>
+                                <MudText Typo="Typo.h6">Commands with Cancellation</MudText>
+                            </MudStack>
+                            <MudText Typo="Typo.body2" Color="Color.Tertiary">
+                                Long-running async operations with built-in cancellation support and progress tracking.
+                            </MudText>
+                            <MudButton Variant="Variant.Text"
+                                       Color="Color.Error"
+                                       Href="samples/commands-with-cancellation"
+                                       EndIcon="@Icons.Material.Filled.ArrowForward">
+                                Explore
+                            </MudButton>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- Command Triggers -->
+            <MudItem xs="12" md="6">
+                <MudCard Elevation="2" Class="hover-card" Style="height: 100%;">
+                    <MudCardContent>
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.FlashOn" Color="Color.Warning"/>
+                                <MudText Typo="Typo.h6">Command Triggers</MudText>
+                            </MudStack>
+                            <MudText Typo="Typo.body2" Color="Color.Tertiary">
+                                Automatic command execution when properties change. Compare Switch vs Merge strategies.
+                            </MudText>
+                            <MudButton Variant="Variant.Text"
+                                       Color="Color.Warning"
+                                       Href="samples/command-triggers"
+                                       EndIcon="@Icons.Material.Filled.ArrowForward">
+                                Explore
+                            </MudButton>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- Model References -->
+            <MudItem xs="12" md="6">
+                <MudCard Elevation="2" Class="hover-card" Style="height: 100%;">
+                    <MudCardContent>
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Link" Color="Color.Info"/>
+                                <MudText Typo="Typo.h6">Model References</MudText>
+                            </MudStack>
+                            <MudText Typo="Typo.body2" Color="Color.Tertiary">
+                                Share state between models with automatic dependency injection and reactive updates.
+                            </MudText>
+                            <MudButton Variant="Variant.Text"
+                                       Color="Color.Info"
+                                       Href="samples/model-references"
+                                       EndIcon="@Icons.Material.Filled.ArrowForward">
+                                Explore
+                            </MudButton>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- Generic Models -->
+            <MudItem xs="12" md="6">
+                <MudCard Elevation="2" Class="hover-card" Style="height: 100%;">
+                    <MudCardContent>
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Category" Color="Color.Primary"/>
+                                <MudText Typo="Typo.h6">Generic Models</MudText>
+                            </MudStack>
+                            <MudText Typo="Typo.body2" Color="Color.Tertiary">
+                                Type-safe generic observable models with full constraint support and DI integration.
+                            </MudText>
+                            <MudButton Variant="Variant.Text"
+                                       Color="Color.Primary"
+                                       Href="samples/generic-models"
+                                       EndIcon="@Icons.Material.Filled.ArrowForward">
+                                Explore
+                            </MudButton>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- Observable Batches -->
+            <MudItem xs="12" md="6">
+                <MudCard Elevation="2" Class="hover-card" Style="height: 100%;">
+                    <MudCardContent>
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Layers" Color="Color.Secondary"/>
+                                <MudText Typo="Typo.h6">Observable Batches</MudText>
+                            </MudStack>
+                            <MudText Typo="Typo.body2" Color="Color.Tertiary">
+                                Batch multiple property changes together to reduce UI update overhead and improve performance.
+                            </MudText>
+                            <MudButton Variant="Variant.Text"
+                                       Color="Color.Secondary"
+                                       Href="samples/observable-batches"
+                                       EndIcon="@Icons.Material.Filled.ArrowForward">
+                                Explore
+                            </MudButton>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- Value Equality -->
+            <MudItem xs="12" md="6">
+                <MudCard Elevation="2" Class="hover-card" Style="height: 100%;">
+                    <MudCardContent>
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Compare" Color="Color.Tertiary"/>
+                                <MudText Typo="Typo.h6">Value Equality</MudText>
+                            </MudStack>
+                            <MudText Typo="Typo.body2" Color="Color.Tertiary">
+                                Automatic value equality implementation for observable models using source generation.
+                            </MudText>
+                            <MudButton Variant="Variant.Text"
+                                       Color="Color.Tertiary"
+                                       Href="samples/value-equality"
+                                       EndIcon="@Icons.Material.Filled.ArrowForward">
+                                Explore
+                            </MudButton>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- Cross Component Communication -->
+            <MudItem xs="12" md="6">
+                <MudCard Elevation="2" Class="hover-card" Style="height: 100%;">
+                    <MudCardContent>
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Hub" Color="Color.Success"/>
+                                <MudText Typo="Typo.h6">Cross Component Communication</MudText>
+                            </MudStack>
+                            <MudText Typo="Typo.body2" Color="Color.Tertiary">
+                                Share models and state across multiple Blazor components with reactive synchronization.
+                            </MudText>
+                            <MudButton Variant="Variant.Text"
+                                       Color="Color.Success"
+                                       Href="samples/cross-component-communication"
+                                       EndIcon="@Icons.Material.Filled.ArrowForward">
+                                Explore
+                            </MudButton>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Getting Started -->
+        <MudPaper Class="pa-6 mt-6" Elevation="2">
+            <MudText Typo="Typo.h5" GutterBottom="true">Getting Started</MudText>
+            <MudText Typo="Typo.body1" Class="mb-4">
+                Add RxBlazorV2 to your Blazor project and start building reactive applications:
+            </MudText>
+            <MudPaper Elevation="0" Class="pa-4 mb-4" Style="background-color: #f5f5f5;">
+                <code style="font-family: 'Courier New', monospace;">
+                    dotnet add package RxBlazorV2
+                </code>
+            </MudPaper>
+            <MudText Typo="Typo.body2" Color="Color.Tertiary">
+                Check out the samples above to see RxBlazorV2 in action and learn best practices for reactive Blazor development.
+            </MudText>
+        </MudPaper>
+    </MudStack>
+</MudContainer>
+
+<style>
+    .hover-card {
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+
+    .hover-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.15) !important;
+    }
+</style>
