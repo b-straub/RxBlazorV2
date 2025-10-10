@@ -1,4 +1,4 @@
-<MudCard>
+<MudCard Class="@Class">
     <MudCardHeader>
         <CardHeaderContent>
             <MudText Typo="Typo.h6">@Usage</MudText>
@@ -28,4 +28,7 @@
 
     [Parameter]
     public required string Usage { get; init; }
+
+    [Parameter]
+    public required string Class { get; init; } = string.Empty;
 }

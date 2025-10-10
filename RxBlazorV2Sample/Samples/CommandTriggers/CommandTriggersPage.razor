@@ -4,102 +4,234 @@
 
 <PageTitle>Command Triggers</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Medium">
+<MudContainer MaxWidth="MaxWidth.Large">
     <MudText Typo="Typo.h3" GutterBottom="true">Command Triggers</MudText>
     <MudText Typo="Typo.body1" Class="mb-4">
-        Demonstrates commands that automatically execute when specific properties change.
+        Demonstrates commands that automatically execute when specific properties change with different cancellation strategies.
     </MudText>
 
-    <MudCard>
+    <MudGrid>
+        <!-- Switch Strategy (Cancelable) -->
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Switch Strategy (Cancelable)</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="3">
+                        <MudAlert Severity="Severity.Info" Dense="true">
+                            <strong>AwaitOperation.Switch:</strong> Only the latest triggered command executes.
+                            Previous executions are <strong>cancelled</strong>.
+                        </MudAlert>
+
+                        <MudTextField @bind-Value="@Model.SwitchSearchText"
+                                      Immediate="true"
+                                      Label="Search Text (Switch)"
+                                      Variant="Variant.Outlined"
+                                      Placeholder="Type quickly to see cancellations..."
+                                      HelperText="@($"Min {Model.MinLength} chars - Type fast to cancel previous searches")"/>
+
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                            @if (Model.SwitchSearchCommand.Executing)
+                            {
+                                <span>⏳ Searching...</span>
+                            }
+                            else if (Model.SwitchSearchCommand.CanExecute)
+                            {
+                                <span>✓ Ready to search</span>
+                            }
+                            else
+                            {
+                                <span>⚠ Requires at least @Model.MinLength characters</span>
+                            }
+                        </MudText>
+
+                        <MudDivider/>
+
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                            Search Results (@Model.SwitchSearchResults.Count):
+                        </MudText>
+
+                        @if (Model.SwitchSearchResults.Count == 0)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Tertiary">
+                                No searches yet. Start typing to trigger searches.
+                            </MudText>
+                        }
+                        else
+                        {
+                            <MudList T="string" Dense="true" Class="py-0">
+                                @foreach (var result in Enumerable.Reverse(Model.SwitchSearchResults))
+                                {
+                                    <MudListItem T="string" Class="px-2">
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                            @if (result.Cancelled)
+                                            {
+                                                <MudIcon Icon="@Icons.Material.Filled.Cancel" Size="Size.Small" Color="Color.Error"/>
+                                                <MudText Typo="Typo.caption" Color="Color.Error">
+                                                    <strong>@result.Query</strong> - Cancelled
+                                                </MudText>
+                                            }
+                                            else if (result.EndTime.HasValue)
+                                            {
+                                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Success"/>
+                                                <MudText Typo="Typo.caption">
+                                                    <strong>@result.Query</strong> - Completed (@((result.EndTime.Value - result.StartTime).TotalMilliseconds)ms)
+                                                </MudText>
+                                            }
+                                            else
+                                            {
+                                                <MudProgressCircular Size="Size.Small" Indeterminate="true"/>
+                                                <MudText Typo="Typo.caption">
+                                                    <strong>@result.Query</strong> - Running...
+                                                </MudText>
+                                            }
+                                        </MudStack>
+                                    </MudListItem>
+                                }
+                            </MudList>
+                        }
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Merge Strategy (Parallel) -->
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Merge Strategy (Parallel)</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="3">
+                        <MudAlert Severity="Severity.Warning" Dense="true">
+                            <strong>Parallel Execution:</strong> All triggered commands run in parallel.
+                            Results are <strong>merged</strong> as they complete.
+                        </MudAlert>
+
+                        <MudTextField @bind-Value="@Model.MergeSearchText"
+                                      Immediate="true"
+                                      Label="Search Text (Merge)"
+                                      Variant="Variant.Outlined"
+                                      Placeholder="Type quickly to see parallel execution..."
+                                      HelperText="@($"Min {Model.MinLength} chars - All searches complete in parallel")"/>
+
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                            @if (Model.MergeSearchCommand.Executing)
+                            {
+                                <span>⏳ Searching...</span>
+                            }
+                            else if (Model.MergeSearchCommand.CanExecute)
+                            {
+                                <span>✓ Ready to search</span>
+                            }
+                            else
+                            {
+                                <span>⚠ Requires at least @Model.MinLength characters</span>
+                            }
+                        </MudText>
+
+                        <MudDivider/>
+
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                            Search Results (@Model.MergeSearchResults.Count):
+                        </MudText>
+
+                        @if (Model.MergeSearchResults.Count == 0)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Tertiary">
+                                No searches yet. Start typing to trigger searches.
+                            </MudText>
+                        }
+                        else
+                        {
+                            <MudList T="string" Dense="true" Class="py-0">
+                                @foreach (var result in Enumerable.Reverse(Model.MergeSearchResults))
+                                {
+                                    <MudListItem T="string" Class="px-2">
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                            @if (result.EndTime.HasValue)
+                                            {
+                                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Success"/>
+                                                <MudText Typo="Typo.caption">
+                                                    <strong>@result.Query</strong> - Completed (@((result.EndTime.Value - result.StartTime).TotalMilliseconds)ms)
+                                                </MudText>
+                                            }
+                                            else
+                                            {
+                                                <MudProgressCircular Size="Size.Small" Indeterminate="true"/>
+                                                <MudText Typo="Typo.caption">
+                                                    <strong>@result.Query</strong> - Running...
+                                                </MudText>
+                                            }
+                                        </MudStack>
+                                    </MudListItem>
+                                }
+                            </MudList>
+                        }
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    <MudCard Class="mt-4">
         <MudCardContent>
-            <MudStack Spacing="4">
-                <MudAlert Severity="Severity.Info">
-                    Search Count: @Model.SearchCount
-                </MudAlert>
-
-                <MudAlert Severity="Severity.Normal">
-                    @Model.SearchResults
-                </MudAlert>
-
-                <UsageWithLogging Usage=@Model.Usage LogEntries=@Model.LogEntries/>
-
-                <MudTextField @bind-Value="@Model.SearchText"
-                              Immediate="true"
-                              Label="Search Text"
-                              Variant="Variant.Outlined"
-                              Placeholder="Type to trigger search..."
-                              HelperText="@($"Minimum {Model.MinLength} characters required")"/>
-
-                <MudStack Row="true" AlignItems="AlignItems.Center">
-                    <MudSwitch @bind-Value="@Model.ParameterizedSearch" Label="Parameterized search" Color="Color.Info" />
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                <MudStack>
+                    <MudText Typo="Typo.body1">
+                        <strong>Total Searches: @Model.SearchCount</strong>
+                    </MudText>
+                    <MudText Typo="Typo.caption">
+                        @Model.SearchResults
+                    </MudText>
+                </MudStack>
+                <MudStack Row="true" Spacing="2">
                     <MudSlider @bind-Value="@Model.MinLength"
                                Min="1" Max="10" Step="1"
                                Color="Color.Primary">
                         Min Length: @Model.MinLength
                     </MudSlider>
-                </MudStack>
-                
-                <MudText Typo="Typo.caption" Class="mud-text-secondary">
-                    @if (Model.SearchCommand.Executing)
-                    {
-                        <span>⏳ Searching...</span>
-                    }
-                    else if (Model.SearchCommand.CanExecute)
-                    {
-                        <span>✓ Will auto-search when SearchText changes</span>
-                    }
-                    else
-                    {
-                        <span>⚠ Search requires at least @Model.MinLength characters</span>
-                    }
-                </MudText>
-
-                <MudDivider/>
-
-                <MudText Typo="Typo.h6">Parameterized Trigger</MudText>
-                <MudText Typo="Typo.caption" Class="mb-2">
-                    This command is triggered by SearchText changes with "auto" as parameter
-                </MudText>
-
-                <MudStack Row="true" Spacing="2">
                     <MudButton
                         Variant="Variant.Outlined"
-                        Color="Color.Primary"
-                        Disabled="@Model.ParametrizedSearchCommand.Executing"
-                        OnClick="@(() => Model.ParametrizedSearchCommand.ExecuteAsync("manual"))">
-                        Manual Search
-                    </MudButton>
-
-                    <MudButton
-                        Variant="Variant.Outlined"
-                        Color="Color.Secondary"
-                        Disabled="@Model.ParametrizedSearchCommand.Executing"
-                        OnClick="@(() => Model.ParametrizedSearchCommand.ExecuteAsync("detailed"))">
-                        Detailed Search
+                        Color="Color.Error"
+                        OnClick="@(() => Model.ClearResultsCommand.Execute())"
+                        Disabled="@(!Model.ClearResultsCommand.CanExecute)"
+                        StartIcon="@Icons.Material.Filled.Clear">
+                        Clear Results
                     </MudButton>
                 </MudStack>
             </MudStack>
         </MudCardContent>
     </MudCard>
 
+    <UsageWithLogging Usage=@Model.Usage LogEntries=@Model.LogEntries Class="mt-4"/>
+
     <MudPaper Class="pa-4 mt-4">
         <MudText Typo="Typo.h6" GutterBottom="true">Key Concepts</MudText>
         <MudList T="string">
-            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
-                <strong>[ObservableCommandTrigger(nameof(Property))]</strong> - Command executes when property changes
+            <MudListItem T="string" Icon="@Icons.Material.Filled.SwapHoriz">
+                <strong>Switch (Cancelable):</strong> Uses <code>CancellationToken</code> and <code>AwaitOperation.Switch</code>
+                - Previous operations are cancelled when new trigger occurs
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.CallSplit">
+                <strong>Merge (Parallel):</strong> No <code>CancellationToken</code> - All triggered operations run to completion in parallel
             </MudListItem>
             <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
-                <strong>[ObservableCommandTrigger&lt;T&gt;(nameof(Property), value)]</strong> - Parameterized trigger
-                with value
+                <strong>[ObservableCommandTrigger(nameof(Property))]</strong> - Command executes automatically when property changes
             </MudListItem>
             <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
-                Triggers respect CanExecute logic - won't execute if CanExecute returns false
+                Triggers respect <code>CanExecute</code> logic - won't execute if <code>CanExecute</code> returns false
             </MudListItem>
-            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
-                Multiple triggers can be applied to the same command
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Info">
+                <strong>Use Switch for:</strong> Auto-complete, live search, validation (where only latest value matters)
             </MudListItem>
-            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
-                Useful for auto-search, validation, and reactive workflows
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Info">
+                <strong>Use Merge for:</strong> Logging, analytics, notifications (where all events matter)
             </MudListItem>
         </MudList>
     </MudPaper>
