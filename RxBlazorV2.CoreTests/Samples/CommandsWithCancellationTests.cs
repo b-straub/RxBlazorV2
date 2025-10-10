@@ -27,7 +27,7 @@ public class CommandsWithCancellationTests
     {
         // Act
         var task = _model.LongOperationCommand.ExecuteAsync();
-        await Task.Delay(1000); // Let it run a bit
+        await Task.Delay(1000, TestContext.Current.CancellationToken); // Let it run a bit
         _model.LongOperationCommand.Cancel();
 
         try
@@ -60,7 +60,7 @@ public class CommandsWithCancellationTests
     {
         // Act
         var task = _model.LongOperationWithParamCommand.ExecuteAsync(10);
-        await Task.Delay(1500); // Let it run a bit
+        await Task.Delay(1500, TestContext.Current.CancellationToken); // Let it run a bit
         _model.LongOperationWithParamCommand.Cancel();
 
         try

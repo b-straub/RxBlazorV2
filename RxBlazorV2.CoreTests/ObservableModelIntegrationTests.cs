@@ -22,7 +22,7 @@ public class ObservableModelIntegrationTests
         var notificationCount = 0;
         var values = new List<int>();
 
-        var observable = Observable.Range(0, 5);
+        var observable = Observable.Range(0, 5, cancellationToken: TestContext.Current.CancellationToken);
 
         var subscription = observable
             .ObserveOn(fakeTimeProvider)

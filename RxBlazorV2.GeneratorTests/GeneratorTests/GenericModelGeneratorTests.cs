@@ -178,7 +178,7 @@ public class GenericModelGeneratorTests
             protected override IDisposable Subscriptions => _subscriptions;
 
 
-            private IObservableCommand<T> _testCommand;
+            private ObservableCommand<T> _testCommand;
 
             public partial IObservableCommand<T> TestCommand
             {

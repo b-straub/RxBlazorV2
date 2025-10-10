@@ -135,8 +135,31 @@ public class RxBlazorGenerator : IIncrementalGenerator
                 }
             });
 
-        // Generate constructors for Razor code-behind classes
-        context.RegisterSourceOutput(combinedRazorInfo.Combine(msbuildProvider).Combine(observableModelClasses),
+        // Detect missing code-behind files for .razor files that use ObservableComponent
+        var missingCodeBehinds = razorFiles.Collect()
+            .Combine(razorCodeBehindClasses.Collect())
+            .Combine(observableModelClasses)
+            .SelectMany(static (combined, _) =>
+            {
+                var ((razorFilesList, codeBehindsList), models) = combined;
+                return RazorAnalyzer.DetectMissingCodeBehindFiles(razorFilesList, codeBehindsList, models);
+            });
+
+        // Merge existing and missing code-behind infos
+        var allRazorCodeBehinds = combinedRazorInfo
+            .Collect()
+            .Combine(missingCodeBehinds.Collect())
+            .SelectMany(static (combined, _) =>
+            {
+                var (existing, missing) = combined;
+                var all = new List<RazorCodeBehindInfo?>();
+                all.AddRange(existing);
+                all.AddRange(missing);
+                return all;
+            });
+
+        // Generate constructors for all Razor code-behind classes (both existing and missing)
+        context.RegisterSourceOutput(allRazorCodeBehinds.Combine(msbuildProvider).Combine(observableModelClasses),
             static (spc, combined) =>
             {
                 var ((source, config), models) = combined;

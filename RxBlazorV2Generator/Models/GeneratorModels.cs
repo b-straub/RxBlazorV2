@@ -156,7 +156,7 @@ public class RazorCodeBehindInfo(
 {
     public string Namespace => namespaceName;
     public string ClassName => className;
-    
+
     public List<string> ObservableModelFields => observableModelFields;
     public List<string> UsedProperties => usedProperties;
     public Dictionary<string, string> FieldToTypeMap => fieldToTypeMap ?? new Dictionary<string, string>();

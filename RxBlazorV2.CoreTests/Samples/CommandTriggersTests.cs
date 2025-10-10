@@ -16,11 +16,11 @@ public class CommandTriggersTests
     {
         // Arrange
         _model.SearchText = "test";
-        await Task.Delay(100); // Allow reactive pipeline to process
+        await Task.Delay(100, TestContext.Current.CancellationToken); // Allow reactive pipeline to process
 
         // Act
         _model.SearchText = "new search";
-        await Task.Delay(600); // Wait for debounce and execution
+        await Task.Delay(600, TestContext.Current.CancellationToken); // Wait for debounce and execution
 
         // Assert
         Assert.Contains("Found results for 'new search'", _model.SearchResults);
@@ -67,15 +67,15 @@ public class CommandTriggersTests
     {
         // Arrange
         _model.SearchText = "test";
-        await Task.Delay(100);
+        await Task.Delay(100, TestContext.Current.CancellationToken);
 
         // Act
         await _model.SearchCommand.ExecuteAsync();
-        await Task.Delay(100);
-        
-        
+        await Task.Delay(100, TestContext.Current.CancellationToken);
+
+
         await _model.SearchCommand.ExecuteAsync();
-        await Task.Delay(100);
+        await Task.Delay(100, TestContext.Current.CancellationToken);
         
         // Assert search count
         // 2 from _model.SearchText -> PerformSearchAsync, PerformParametrizedSearchAsync
@@ -88,13 +88,13 @@ public class CommandTriggersTests
     {
         // Arrange
         _model.SearchText = "test1";
-        await Task.Delay(10);
+        await Task.Delay(10, TestContext.Current.CancellationToken);
         _model.SearchText = "test2";
-        await Task.Delay(10);
+        await Task.Delay(10, TestContext.Current.CancellationToken);
         _model.SearchText = "test3";
-        await Task.Delay(10);
+        await Task.Delay(10, TestContext.Current.CancellationToken);
 
-        await Task.Delay(2000);
+        await Task.Delay(2000, TestContext.Current.CancellationToken);
         // Assert search count
         // 1 from _model.SearchText -> PerformSearchAsync
         // 3 from _model.SearchText -> PerformParametrizedSearchAsync

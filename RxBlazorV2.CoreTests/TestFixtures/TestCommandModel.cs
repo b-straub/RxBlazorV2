@@ -62,7 +62,7 @@ public partial class TestCommandModel : ObservableModel
         {
             throw new InvalidOperationException("Test exception");
         }
-        await Task.Delay(10);
+        await Task.Delay(10, CancellationToken.None);
         ExecuteCount++;
         Value++;
     }
@@ -73,7 +73,7 @@ public partial class TestCommandModel : ObservableModel
         {
             throw new InvalidOperationException("Test exception");
         }
-        await Task.Delay(10);
+        await Task.Delay(10, CancellationToken.None);
         ExecuteCount++;
         LastParameter = param;
         Value += param;

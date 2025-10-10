@@ -26,14 +26,14 @@ public interface IObservableCommand<in T> : IObservableCommandBase
 
 public interface IObservableCommandAsync : IObservableCommandAsyncBase
 {
-    public Task ExecuteAsync(CancellationToken? externalToken = null);
+    public Task ExecuteAsync();
 
     public void Cancel();
 }
 
 public interface IObservableCommandAsync<in T> : IObservableCommandAsyncBase
 {
-    public Task ExecuteAsync(T parameter, CancellationToken? externalToken = null);
+    public Task ExecuteAsync(T parameter);
     
     public void Cancel();
 }

@@ -2,6 +2,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Models;
 using System.Collections.Immutable;
+using System.IO;
 using System.Text.RegularExpressions;
 
 namespace RxBlazorV2Generator.Analyzers;
@@ -322,5 +323,97 @@ public static class RazorAnalyzer
             baseType = baseType.BaseType;
         }
         return false;
+    }
+
+    /// <summary>
+    /// Detects .razor files that inherit from ObservableComponent but don't have a code-behind file.
+    /// Returns RazorCodeBehindInfo for these files so they can be processed by the regular pipeline.
+    /// </summary>
+    public static List<RazorCodeBehindInfo> DetectMissingCodeBehindFiles(
+        ImmutableArray<AdditionalText> razorFiles,
+        ImmutableArray<RazorCodeBehindInfo?> existingCodeBehinds,
+        ImmutableArray<ObservableModelInfo?> observableModels)
+    {
+        var missingCodeBehinds = new List<RazorCodeBehindInfo>();
+        var existingCodeBehindNames = new HashSet<string>(
+            existingCodeBehinds.Where(c => c != null).Select(c => c!.ClassName));
+
+        foreach (var razorFile in razorFiles)
+        {
+            try
+            {
+                var razorContent = razorFile.GetText()?.ToString() ?? string.Empty;
+                var fileName = Path.GetFileNameWithoutExtension(razorFile.Path);
+
+                // Skip if code-behind already exists
+                if (existingCodeBehindNames.Contains(fileName))
+                {
+                    continue;
+                }
+
+                // Check if the .razor file has @inherits ObservableComponent<T>
+                var inheritsMatch = Regex.Match(razorContent, @"@inherits\s+ObservableComponent<(\S+)>");
+                if (inheritsMatch.Success)
+                {
+                    var modelType = inheritsMatch.Groups[1].Value;
+                    var namespaceName = ExtractNamespaceFromPath(razorFile.Path);
+
+                    // Create RazorCodeBehindInfo with Model field (ObservableComponent<T> pattern)
+                    var observableModelFields = new List<string> { "Model" };
+                    var fieldToTypeMap = new Dictionary<string, string> { { "Model", modelType } };
+
+                    // Analyze razor content for property usage
+                    var (usedProperties, fieldToPropertiesMap) = AnalyzeRazorContent(
+                        razorContent,
+                        observableModelFields,
+                        observableModels);
+
+                    missingCodeBehinds.Add(new RazorCodeBehindInfo(
+                        namespaceName,
+                        fileName,
+                        observableModelFields,
+                        usedProperties,
+                        fieldToTypeMap,
+                        fieldToPropertiesMap));
+                }
+            }
+            catch (Exception)
+            {
+                // Skip files that can't be analyzed
+                continue;
+            }
+        }
+
+        return missingCodeBehinds;
+    }
+
+    private static string ExtractNamespaceFromPath(string filePath)
+    {
+        // Extract namespace from file path
+        // Example: /Users/.../RxBlazorV2Sample/Samples/CommandTriggers/Page.razor
+        // -> RxBlazorV2Sample.Samples.CommandTriggers
+
+        var segments = filePath.Replace('\\', '/').Split('/');
+        var relevantSegments = new List<string>();
+        var foundProject = false;
+
+        foreach (var segment in segments)
+        {
+            if (segment.EndsWith(".csproj") || segment.EndsWith("Sample") || segment.EndsWith("Tests"))
+            {
+                relevantSegments.Clear();
+                relevantSegments.Add(segment.Replace(".csproj", ""));
+                foundProject = true;
+                continue;
+            }
+
+            if (foundProject && !segment.EndsWith(".razor") && !segment.EndsWith(".cs"))
+            {
+                // This is a directory after the project root
+                relevantSegments.Add(segment);
+            }
+        }
+
+        return relevantSegments.Any() ? string.Join(".", relevantSegments) : "Unknown";
     }
 }

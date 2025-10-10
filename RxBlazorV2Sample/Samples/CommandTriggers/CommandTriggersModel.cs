@@ -12,12 +12,13 @@ public partial class CommandTriggersModel : SampleBaseModel
     public partial int MinLength { get; set; } = 3;
     public partial string SearchResults { get; set; } = "No search performed yet";
     public partial int SearchCount { get; set; }
+    public partial bool ParameterizedSearch { get; set; }
 
     [ObservableCommand(nameof(PerformSearchAsync), nameof(CanPerformSearch))]
     [ObservableCommandTrigger(nameof(SearchText))]
     public partial IObservableCommandAsync SearchCommand { get; }
 
-    [ObservableCommand(nameof(PerformParametrizedSearchAsync))]
+    [ObservableCommand(nameof(PerformParametrizedSearchAsync), nameof(CanPerformParametrizedSearch))]
     [ObservableCommandTrigger<string>(nameof(SearchText), "auto")]
     public partial IObservableCommandAsync<string> ParametrizedSearchCommand { get; }
 
@@ -44,5 +45,10 @@ public partial class CommandTriggersModel : SampleBaseModel
         SearchCount++;
         SearchResults = $"Search #{SearchCount}: Found results for '{SearchText}' in {mode} mode at {DateTime.Now:HH:mm:ss}";
         LogEntries.Add(new LogEntry($"Search #{SearchCount} completed in {mode} mode", DateTime.Now));
+    }
+    
+    private bool CanPerformParametrizedSearch()
+    {
+        return !string.IsNullOrEmpty(SearchText) && ParameterizedSearch;
     }
 }

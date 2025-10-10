@@ -19,7 +19,8 @@ public static class CommandTemplate
         foreach (var cmd in commandProperties)
         {
             var backingFieldName = GetBackingFieldName(cmd.Name);
-            sb.AppendLine($"    private {cmd.Type} {backingFieldName};");
+            var concreteType = GetConcreteCommandType(cmd.Type);
+            sb.AppendLine($"    private {concreteType} {backingFieldName};");
         }
         return sb.ToString().TrimEnd('\r', '\n');
     }
@@ -125,6 +126,17 @@ public static class CommandTemplate
     }
 
     /// <summary>
+    /// Converts interface command type to concrete implementation type.
+    /// </summary>
+    private static string GetConcreteCommandType(string interfaceType)
+    {
+        // Convert IObservableCommand -> ObservableCommand
+        // Convert IObservableCommandAsync -> ObservableCommandAsync
+        // Preserve generic parameters if present
+        return interfaceType.Replace("IObservableCommand", "ObservableCommand");
+    }
+
+    /// <summary>
     /// Gets the factory call for command initialization.
     /// </summary>
     private static string GetFactoryCall(CommandPropertyInfo command, string observedPropsArray)
@@ -201,16 +213,24 @@ public static class CommandTemplate
     private static string GetTriggerCall(CommandPropertyInfo command, string backingField, string? parameter = null)
     {
         // Determine trigger call based on method signature
-        if (parameter is not null)
+        if (command.Type.Contains("IObservableCommandAsync"))
         {
-            return command.Type.Contains("IObservableCommandAsync")
-                ? $"            .Subscribe(_ => {backingField}.ExecuteAsync({parameter})));"
-                : $"            .Subscribe(_ => {backingField}.Execute({parameter})));";
+            // Use SubscribeAwait for async commands
+            if (parameter is not null)
+            {
+                return $"            .SubscribeAwait(async (_, ct) => await {backingField}.ExecuteAsync({parameter}, ct), AwaitOperation.Switch));";
+            }
+
+            return $"            .SubscribeAwait(async (_, ct) => await {backingField}.ExecuteAsync(ct), AwaitOperation.Switch));";
         }
 
-        return command.Type.Contains("IObservableCommandAsync")
-            ? $"            .Subscribe(_ => {backingField}.ExecuteAsync()));"
-            : $"            .Subscribe(_ => {backingField}.Execute()));";
+        // Use Subscribe for sync commands
+        if (parameter is not null)
+        {
+            return $"            .Subscribe(_ => {backingField}.Execute({parameter})));";
+        }
+
+        return $"            .Subscribe(_ => {backingField}.Execute()));";
     }
 
     /// <summary>

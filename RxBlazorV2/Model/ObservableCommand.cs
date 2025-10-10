@@ -121,7 +121,8 @@ public class ObservableCommandFactory<T>(
 public abstract class ObservableCommandAsync(ObservableModel model, string[] observedProperties)
     : ObservableCommandAsyncBase(model, observedProperties), IObservableCommandAsync
 {
-    public abstract Task ExecuteAsync(CancellationToken? externalToken = null);
+    public abstract Task ExecuteAsync(CancellationToken? externalCancellationToken);
+    public abstract Task ExecuteAsync();
 }
 
 public class ObservableCommandAsyncFactory(
@@ -134,7 +135,12 @@ public class ObservableCommandAsyncFactory(
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;
 
-    public override async Task ExecuteAsync(CancellationToken? externalToken = null)
+    public override async Task ExecuteAsync(CancellationToken? externalCancellationToken)
+    {
+        await ExecuteAsync();
+    }
+    
+    public override async Task ExecuteAsync()
     {
         Executing = true;
         _model.StateHasChanged(_observedProperties);
@@ -165,8 +171,15 @@ public class ObservableCommandAsyncCancelableFactory(
 {
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;
-
-    public override async Task ExecuteAsync(CancellationToken? externalToken = null)
+    private CancellationToken? _externalCancellationToken;
+    
+    public override async Task ExecuteAsync(CancellationToken? externalCancellationToken)
+    {
+        _externalCancellationToken  = externalCancellationToken;
+        await ExecuteAsync();
+    }
+    
+    public override async Task ExecuteAsync()
     {
         // Early exit if suspension already aborted
         if (_model.IsSuspensionAborted())
@@ -174,7 +187,8 @@ public class ObservableCommandAsyncCancelableFactory(
             return;
         }
 
-        ResetCancellationToken(externalToken);
+        ResetCancellationToken(_externalCancellationToken);
+        _externalCancellationToken = null;
         Executing = true;
 
         // If this is the first command in suspension, bypass suspension for immediate UI feedback
@@ -217,7 +231,8 @@ public class ObservableCommandAsyncCancelableFactory(
 public abstract class ObservableCommandAsync<T>(ObservableModel model, string[] observedProperties)
     : ObservableCommandAsyncBase(model, observedProperties), IObservableCommandAsync<T>
 {
-    public abstract Task ExecuteAsync(T parameter, CancellationToken? externalToken = null);
+    public abstract Task ExecuteAsync(T parameter, CancellationToken? externalCancellationToken);
+    public abstract Task ExecuteAsync(T parameter);
 }
 
 public class ObservableCommandAsyncFactory<T>(
@@ -230,7 +245,12 @@ public class ObservableCommandAsyncFactory<T>(
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;
 
-    public override async Task ExecuteAsync(T parameter, CancellationToken? externalToken = null)
+    public override async Task ExecuteAsync(T parameter, CancellationToken? externalCancellationToken)
+    {
+        await ExecuteAsync(parameter);
+    }
+    
+    public override async Task ExecuteAsync(T parameter)
     {
         Executing = true;
         _model.StateHasChanged(_observedProperties);
@@ -261,8 +281,15 @@ public class ObservableCommandAsyncCancelableFactory<T>(
 {
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;
-
-    public override async Task ExecuteAsync(T parameter, CancellationToken? externalToken = null)
+    private CancellationToken? _externalCancellationToken;
+    
+    public override async Task ExecuteAsync(T parameter, CancellationToken? externalCancellationToken)
+    {
+        _externalCancellationToken  = externalCancellationToken;
+        await ExecuteAsync(parameter);
+    }
+    
+    public override async Task ExecuteAsync(T parameter)
     {
         // Early exit if suspension already aborted
         if (_model.IsSuspensionAborted())
@@ -270,7 +297,8 @@ public class ObservableCommandAsyncCancelableFactory<T>(
             return;
         }
 
-        ResetCancellationToken(externalToken);
+        ResetCancellationToken(_externalCancellationToken);
+        _externalCancellationToken = null;
         Executing = true;
 
         // If this is the first command in suspension, bypass suspension for immediate UI feedback
