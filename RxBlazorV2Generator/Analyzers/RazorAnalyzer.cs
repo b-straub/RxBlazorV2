@@ -1,4 +1,5 @@
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Models;
 using System.Collections.Immutable;
@@ -67,7 +68,8 @@ public static class RazorAnalyzer
             // Find fields of ObservableModel type and check for ObservableComponent<T> base class
             var observableModelFields = new List<string>();
             var fieldToTypeMap = new Dictionary<string, string>();
-            
+            var injectedProperties = new HashSet<string>();
+
             // Check if this inherits from ObservableComponent<T>
             var baseModelType = GetObservableComponentBaseModelType(classSymbol);
             if (baseModelType != null)
@@ -76,7 +78,7 @@ public static class RazorAnalyzer
                 observableModelFields.Add("Model");
                 fieldToTypeMap["Model"] = baseModelType;
             }
-            
+
             // Find explicit fields of ObservableModel type
             foreach (var field in classDecl.Members.OfType<FieldDeclarationSyntax>())
             {
@@ -96,6 +98,27 @@ public static class RazorAnalyzer
                 }
             }
 
+            // Find [Inject] properties of ObservableModel type
+            foreach (var property in classDecl.Members.OfType<PropertyDeclarationSyntax>())
+            {
+                var propertySymbol = semanticModel.GetDeclaredSymbol(property) as IPropertySymbol;
+                if (propertySymbol?.Type != null && IsObservableModelType(propertySymbol.Type))
+                {
+                    // Check if it has [Inject] attribute
+                    var hasInjectAttribute = propertySymbol.GetAttributes().Any(attr =>
+                        attr.AttributeClass?.Name == "Inject" ||
+                        attr.AttributeClass?.Name == "InjectAttribute");
+
+                    if (hasInjectAttribute)
+                    {
+                        var propertyName = property.Identifier.ValueText;
+                        observableModelFields.Add(propertyName);
+                        fieldToTypeMap[propertyName] = propertySymbol.Type.ToDisplayString();
+                        injectedProperties.Add(propertyName); // Track as injected property
+                    }
+                }
+            }
+
             // Check for diagnostic: Has ObservableModel fields but not derived from ObservableComponent or LayoutComponentBase
             var hasObservableModelFields = observableModelFields.Any(f => f != "Model");
             var isObservableComponent = IsObservableComponent(classSymbol);
@@ -111,18 +134,27 @@ public static class RazorAnalyzer
                     [],
                     fieldToTypeMap,
                     new Dictionary<string, List<string>>(),
-                    true); // HasDiagnosticIssue = true
+                    true, // HasDiagnosticIssue = true
+                    null,
+                    injectedProperties);
             }
 
             if (!observableModelFields.Any()) return null;
-            
-            // Return basic info - property analysis will be done later with additional texts
+
+            // Analyze code-behind for property accesses, passing the fieldToTypeMap
+            var codeBehindPropertyAccesses = AnalyzeCodeBehindPropertyAccesses(classDecl, semanticModel, observableModelFields, fieldToTypeMap);
+
+            // Return basic info - razor file property analysis will be done later with additional texts
             return new RazorCodeBehindInfo(
                 classSymbol.ContainingNamespace.ToDisplayString(),
                 classSymbol.Name,
                 observableModelFields,
-                [], // Empty for now, will be filled later
-                fieldToTypeMap);
+                [], // Empty for now, will be filled later from razor file
+                fieldToTypeMap,
+                null, // fieldToPropertiesMap will be merged later
+                false,
+                codeBehindPropertyAccesses,
+                injectedProperties);
         }
         catch (Exception)
         {
@@ -157,13 +189,34 @@ public static class RazorAnalyzer
             var (usedProperties, fieldToPropertiesMap) = AnalyzeRazorContent(razorContent,
                 codeBehindInfo.ObservableModelFields, observableModels);
 
+            // Merge code-behind property accesses with razor file property accesses
+            var mergedFieldToPropertiesMap = new Dictionary<string, List<string>>(fieldToPropertiesMap);
+            foreach (var kvp in codeBehindInfo.CodeBehindPropertyAccesses)
+            {
+                if (!mergedFieldToPropertiesMap.ContainsKey(kvp.Key))
+                {
+                    mergedFieldToPropertiesMap[kvp.Key] = new List<string>();
+                }
+
+                foreach (var property in kvp.Value)
+                {
+                    if (!mergedFieldToPropertiesMap[kvp.Key].Contains(property))
+                    {
+                        mergedFieldToPropertiesMap[kvp.Key].Add(property);
+                    }
+                }
+            }
+
             return new RazorCodeBehindInfo(
                 codeBehindInfo.Namespace,
                 codeBehindInfo.ClassName,
                 codeBehindInfo.ObservableModelFields,
                 usedProperties,
                 codeBehindInfo.FieldToTypeMap,
-                fieldToPropertiesMap);
+                mergedFieldToPropertiesMap,
+                false,
+                null,
+                codeBehindInfo.InjectedProperties);
         }
         catch (Exception)
         {
@@ -263,6 +316,60 @@ public static class RazorAnalyzer
         }
     }
 
+    /// <summary>
+    /// Analyzes code-behind class for property accesses on observable model fields using syntax-only analysis.
+    /// Returns a dictionary mapping field names to lists of accessed property names.
+    /// This uses IdentifierNameSyntax to cover all access patterns including
+    /// expression-bodied properties, methods, and fields without requiring semantic analysis.
+    /// </summary>
+    private static Dictionary<string, List<string>> AnalyzeCodeBehindPropertyAccesses(
+        ClassDeclarationSyntax classDecl,
+        SemanticModel semanticModel,
+        List<string> modelFields,
+        Dictionary<string, string> fieldToTypeMap)
+    {
+        var fieldToPropertiesMap = new Dictionary<string, List<string>>();
+
+        try
+        {
+            // Initialize dictionary for all model fields
+            foreach (var field in modelFields)
+            {
+                fieldToPropertiesMap[field] = new List<string>();
+            }
+
+            // Analyze all descendant nodes looking for identifiers matching our model fields
+            foreach (var identifier in classDecl.DescendantNodes().OfType<IdentifierNameSyntax>())
+            {
+                var identifierText = identifier.Identifier.ValueText;
+
+                // Check if this identifier matches one of our model fields
+                if (modelFields.Contains(identifierText))
+                {
+                    // Check if this identifier is part of a member access expression (e.g., Model.Property)
+                    if (identifier.Parent is MemberAccessExpressionSyntax memberAccess &&
+                        memberAccess.Expression == identifier)
+                    {
+                        var propertyName = memberAccess.Name.Identifier.ValueText;
+
+                        // Add to the map if not already there
+                        if (!fieldToPropertiesMap[identifierText].Contains(propertyName))
+                        {
+                            fieldToPropertiesMap[identifierText].Add(propertyName);
+                        }
+                    }
+                }
+            }
+
+            return fieldToPropertiesMap;
+        }
+        catch (Exception)
+        {
+            // Return empty results on analysis error
+            return fieldToPropertiesMap;
+        }
+    }
+
     private static bool IsObservableModelType(ITypeSymbol typeSymbol)
     {
         // Check if it's a class that inherits from ObservableModel
@@ -327,6 +434,7 @@ public static class RazorAnalyzer
 
     /// <summary>
     /// Detects .razor files that inherit from ObservableComponent but don't have a code-behind file.
+    /// Also detects .razor files with @inject directives for ObservableModel types.
     /// Returns RazorCodeBehindInfo for these files so they can be processed by the regular pipeline.
     /// </summary>
     public static List<RazorCodeBehindInfo> DetectMissingCodeBehindFiles(
@@ -337,6 +445,15 @@ public static class RazorAnalyzer
         var missingCodeBehinds = new List<RazorCodeBehindInfo>();
         var existingCodeBehindNames = new HashSet<string>(
             existingCodeBehinds.Where(c => c != null).Select(c => c!.ClassName));
+
+        // Build a map of type names to full type names from observable models
+        var typeNameToFullName = new Dictionary<string, string>();
+        foreach (var model in observableModels.Where(m => m != null))
+        {
+            var simpleTypeName = model!.ClassName;
+            var fullTypeName = model.FullyQualifiedName;
+            typeNameToFullName[simpleTypeName] = fullTypeName;
+        }
 
         foreach (var razorFile in razorFiles)
         {
@@ -351,17 +468,43 @@ public static class RazorAnalyzer
                     continue;
                 }
 
+                var observableModelFields = new List<string>();
+                var fieldToTypeMap = new Dictionary<string, string>();
+                var injectedProperties = new HashSet<string>();
+                var namespaceName = ExtractNamespaceFromPath(razorFile.Path);
+
                 // Check if the .razor file has @inherits ObservableComponent<T>
                 var inheritsMatch = Regex.Match(razorContent, @"@inherits\s+ObservableComponent<(\S+)>");
                 if (inheritsMatch.Success)
                 {
                     var modelType = inheritsMatch.Groups[1].Value;
-                    var namespaceName = ExtractNamespaceFromPath(razorFile.Path);
 
                     // Create RazorCodeBehindInfo with Model field (ObservableComponent<T> pattern)
-                    var observableModelFields = new List<string> { "Model" };
-                    var fieldToTypeMap = new Dictionary<string, string> { { "Model", modelType } };
+                    observableModelFields.Add("Model");
+                    fieldToTypeMap["Model"] = modelType;
+                }
 
+                // Check for @inject directives with ObservableModel types
+                var injectMatches = Regex.Matches(razorContent, @"@inject\s+([a-zA-Z_][a-zA-Z0-9_\.]*)\s+([a-zA-Z_][a-zA-Z0-9_]*)");
+                foreach (Match injectMatch in injectMatches)
+                {
+                    var typeName = injectMatch.Groups[1].Value;
+                    var fieldName = injectMatch.Groups[2].Value;
+
+                    // Check if this type is an ObservableModel (by simple name or full name)
+                    var simpleTypeName = typeName.Contains('.') ? typeName.Substring(typeName.LastIndexOf('.') + 1) : typeName;
+
+                    if (typeNameToFullName.TryGetValue(simpleTypeName, out var fullTypeName))
+                    {
+                        observableModelFields.Add(fieldName);
+                        fieldToTypeMap[fieldName] = fullTypeName;
+                        injectedProperties.Add(fieldName); // Track as injected property
+                    }
+                }
+
+                // Only create RazorCodeBehindInfo if we found any ObservableModel fields
+                if (observableModelFields.Any())
+                {
                     // Analyze razor content for property usage
                     var (usedProperties, fieldToPropertiesMap) = AnalyzeRazorContent(
                         razorContent,
@@ -374,7 +517,10 @@ public static class RazorAnalyzer
                         observableModelFields,
                         usedProperties,
                         fieldToTypeMap,
-                        fieldToPropertiesMap));
+                        fieldToPropertiesMap,
+                        false,
+                        null,
+                        injectedProperties));
                 }
             }
             catch (Exception)

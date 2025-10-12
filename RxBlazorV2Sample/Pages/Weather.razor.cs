@@ -9,6 +9,8 @@ public partial class Weather : ObservableComponent<WeatherModel>
 {
     private readonly ISettingsModel _settings;
     
+    private bool NotInComponentObservation => Model.NotInComponentObservation;
+    
     protected override async Task OnInitializedAsync()
     {
         // Load initial weather data

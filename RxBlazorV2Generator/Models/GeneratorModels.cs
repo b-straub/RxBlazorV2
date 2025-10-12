@@ -152,7 +152,9 @@ public class RazorCodeBehindInfo(
     List<string> usedProperties,
     Dictionary<string, string>? fieldToTypeMap = null,
     Dictionary<string, List<string>>? fieldToPropertiesMap = null,
-    bool hasDiagnosticIssue = false)
+    bool hasDiagnosticIssue = false,
+    Dictionary<string, List<string>>? codeBehindPropertyAccesses = null,
+    HashSet<string>? injectedProperties = null)
 {
     public string Namespace => namespaceName;
     public string ClassName => className;
@@ -162,4 +164,6 @@ public class RazorCodeBehindInfo(
     public Dictionary<string, string> FieldToTypeMap => fieldToTypeMap ?? new Dictionary<string, string>();
     public Dictionary<string, List<string>> FieldToPropertiesMap => fieldToPropertiesMap ?? new Dictionary<string, List<string>>();
     public bool HasDiagnosticIssue => hasDiagnosticIssue;
+    public Dictionary<string, List<string>> CodeBehindPropertyAccesses => codeBehindPropertyAccesses ?? new Dictionary<string, List<string>>();
+    public HashSet<string> InjectedProperties => injectedProperties ?? new HashSet<string>();
 }

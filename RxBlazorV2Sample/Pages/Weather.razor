@@ -4,6 +4,11 @@
 <PageTitle>Reactive Weather</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.Large">
+    @if (NotInComponentObservation)
+    {
+        <MudText>@Model.IsDay</MudText>
+    }
+    
     <MudGrid>
         <MudItem xs="12">
             <MudText Typo="Typo.h3" GutterBottom="true">🌤️ Reactive Weather Forecast</MudText>

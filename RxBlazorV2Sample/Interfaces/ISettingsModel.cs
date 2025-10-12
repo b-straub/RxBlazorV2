@@ -29,6 +29,8 @@ public interface ISettingsModel : IObservableModel
     /// </summary>
     int RefreshInterval { get; set; }
     
+    public bool NotInComponentObservation { get; set; }
+    
     /// <summary>
     /// Gets the current MudBlazor theme based on dark mode setting.
     /// </summary>

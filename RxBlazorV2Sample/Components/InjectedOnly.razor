@@ -1,0 +1,6 @@
+@inherits ObservableComponent<SettingsModel>
+@inject CounterModel CounterModel
+
+<MudText Typo="Typo.h2">InjectedOnly</MudText>
+<MudText>@CounterModel.Counter1</MudText>
+<MudText>@Model.IsDay</MudText>

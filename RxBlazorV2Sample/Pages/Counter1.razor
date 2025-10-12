@@ -7,6 +7,9 @@
 <MudText Typo="Typo.h3" GutterBottom="true">Counter</MudText>
 
 <MudAlert Severity="Severity.Info" Class="mt-4 mb-4">Current count 1: @Model.Counter1</MudAlert>
-<Counter2Display />
-<ButtonFor1And2 />
-
+<MudStack>
+    <Counter2Display/>
+    <InjectedOnly/>
+    <InjectOnlyCB/>
+    <ButtonFor1And2/>
+</MudStack>

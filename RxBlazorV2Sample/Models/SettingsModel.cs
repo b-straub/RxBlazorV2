@@ -12,6 +12,7 @@ public partial class SettingsModel : ObservableModel, ISettingsModel
     public partial bool IsDay { get; set; } = false;
     public partial bool AutoRefresh { get; set; } = true;
     public partial int RefreshInterval { get; set; } = 5;
+    public partial bool NotInComponentObservation { get; set; }
 
     // Computed property for MudBlazor theme
     public MudTheme CurrentTheme => IsDay ? DarkTheme : LightTheme;

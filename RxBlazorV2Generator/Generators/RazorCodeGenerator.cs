@@ -41,7 +41,8 @@ public static class RazorCodeGenerator
         if (isObservableComponent)
         {
             // ObservableComponent<T> pattern - generate subscriptions and OnInitialize
-            var diFields = razorInfo.ObservableModelFields.Where(f => f != "Model").ToList();
+            // Exclude "Model" and injected properties from DI constructor parameters
+            var diFields = razorInfo.ObservableModelFields.Where(f => f != "Model" && !razorInfo.InjectedProperties.Contains(f)).ToList();
             
             // Generate CompositeDisposable for subscription management
             if (razorInfo.FieldToPropertiesMap.Any())
