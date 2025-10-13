@@ -147,19 +147,6 @@ public class ModelScopeCodeFixProvider : CodeFixProvider
 
     private static SyntaxNode AddUsingStatementIfNeeded(SyntaxNode root, string namespaceName)
     {
-        if (root is CompilationUnitSyntax compilationUnit)
-        {
-            var hasUsing = compilationUnit.Usings.Any(u => u.Name?.ToString() == namespaceName);
-
-            if (!hasUsing)
-            {
-                var newUsing = SyntaxFactory.UsingDirective(
-                    SyntaxFactory.IdentifierName(namespaceName));
-
-                return compilationUnit.WithUsings(compilationUnit.Usings.Add(newUsing));
-            }
-        }
-
-        return root;
+        return SyntaxHelpers.AddUsingDirectives(root, namespaceName);
     }
 }

@@ -3,7 +3,6 @@ using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Diagnostics;
-using System;
 using System.Collections.Immutable;
 using System.Composition;
 using System.Linq;
@@ -46,27 +45,7 @@ public class CircularTriggerReferenceCodeFixProvider : CodeFixProvider
 
     private static Document RemoveCircularTrigger(Document document, SyntaxNode root, AttributeSyntax circularTriggerAttribute)
     {
-        var attributeList = circularTriggerAttribute.Parent as AttributeListSyntax;
-        if (attributeList is null) return document;
-
-        SyntaxNode newRoot;
-        if (attributeList.Attributes.Count == 1)
-        {
-            // Remove the entire attribute list if it's the only attribute
-            var tempRoot = root.RemoveNode(attributeList, Microsoft.CodeAnalysis.SyntaxRemoveOptions.KeepNoTrivia) ?? 
-                throw new InvalidOperationException("Failed to remove attribute list from syntax tree");
-            newRoot = tempRoot;
-        }
-        else
-        {
-            // Remove just this attribute from the list
-            var newAttributeList = attributeList.RemoveNode(circularTriggerAttribute, Microsoft.CodeAnalysis.SyntaxRemoveOptions.KeepNoTrivia) ?? 
-                throw new InvalidOperationException("Failed to remove attribute from attribute list");
-            var tempRoot = root.ReplaceNode(attributeList, newAttributeList) ?? 
-                throw new InvalidOperationException("Failed to replace attribute list in syntax tree");
-            newRoot = tempRoot;
-        }
-
+        var newRoot = SyntaxHelpers.RemoveAttributeFromClass(root, circularTriggerAttribute);
         return document.WithSyntaxRoot(newRoot);
     }
 }

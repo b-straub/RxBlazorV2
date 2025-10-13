@@ -4,14 +4,14 @@ using RxBlazorV2.Model;
 
 namespace RxBlazorV2.Component;
 
-public class ObservableComponent : OwningComponentBase, IAsyncDisposable
+public abstract class ObservableComponent : OwningComponentBase, IAsyncDisposable
 {
     protected override void OnAfterRender(bool firstRender)
     {
         base.OnAfterRender(firstRender);
         if (firstRender)
         {
-            OnInitialize();
+            InitializeGeneratedCode();
             OnContextReady();
         }
     }
@@ -21,13 +21,14 @@ public class ObservableComponent : OwningComponentBase, IAsyncDisposable
         await base.OnAfterRenderAsync(firstRender);
         if (firstRender)
         {
+            await InitializeGeneratedCodeAsync();
             await OnContextReadyAsync();
         }
     }
-    
-    protected virtual void OnInitialize()
-    {
-    }
+
+    protected abstract void InitializeGeneratedCode();
+
+    protected abstract Task InitializeGeneratedCodeAsync();
     
     protected virtual void OnContextReady()
     {
@@ -53,7 +54,7 @@ public class ObservableComponent : OwningComponentBase, IAsyncDisposable
     }
 }
 
-public class ObservableComponent<T> : OwningComponentBase<T>, IAsyncDisposable where T : ObservableModel
+public abstract class ObservableComponent<T> : OwningComponentBase<T>, IAsyncDisposable where T : ObservableModel
 {
     public T Model => Service;
     
@@ -62,7 +63,7 @@ public class ObservableComponent<T> : OwningComponentBase<T>, IAsyncDisposable w
         base.OnAfterRender(firstRender);
         if (firstRender)
         {
-            OnInitialize();
+            InitializeGeneratedCode();
             OnContextReady();
             Model.ContextReady();
         }
@@ -73,14 +74,15 @@ public class ObservableComponent<T> : OwningComponentBase<T>, IAsyncDisposable w
         await base.OnAfterRenderAsync(firstRender);
         if (firstRender)
         {
+            await InitializeGeneratedCodeAsync();
             await OnContextReadyAsync();
             await Model.ContextReadyAsync();
         }
     }
     
-    protected virtual void OnInitialize()
-    {
-    }
+    protected abstract void InitializeGeneratedCode();
+
+    protected abstract Task InitializeGeneratedCodeAsync();
     
     protected virtual void OnContextReady()
     {
@@ -106,7 +108,7 @@ public class ObservableComponent<T> : OwningComponentBase<T>, IAsyncDisposable w
     }
 }
 
-public class ObservableLayoutComponentBase : ObservableComponent
+public abstract class ObservableLayoutComponentBase : ObservableComponent
 {
     internal const string BodyPropertyName = nameof(Body);
 

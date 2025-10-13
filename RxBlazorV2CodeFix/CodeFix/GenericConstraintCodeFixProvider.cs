@@ -152,19 +152,7 @@ public class GenericConstraintCodeFixProvider : CodeFixProvider
 
     private static INamedTypeSymbol? ExtractReferencedTypeSymbol(AttributeSyntax attribute, SemanticModel semanticModel)
     {
-        if (attribute.ArgumentList is null || attribute.ArgumentList.Arguments.Count == 0)
-        {
-            return null;
-        }
-
-        var firstArgument = attribute.ArgumentList.Arguments[0];
-        if (firstArgument.Expression is not TypeOfExpressionSyntax typeOfExpression)
-        {
-            return null;
-        }
-
-        var typeInfo = semanticModel.GetTypeInfo(typeOfExpression.Type);
-        return typeInfo.Type as INamedTypeSymbol;
+        return SyntaxHelpers.ExtractTypeFromAttribute(attribute, semanticModel);
     }
 
     private static ClassDeclarationSyntax AdjustClassTypeParameters(
@@ -276,34 +264,7 @@ public class GenericConstraintCodeFixProvider : CodeFixProvider
 
     private static Task<Document> RemoveAttributeAsync(Document document, SyntaxNode root, AttributeSyntax attribute, CancellationToken cancellationToken)
     {
-        var attributeList = attribute.Parent as AttributeListSyntax;
-        if (attributeList is null)
-        {
-            return Task.FromResult(document);
-        }
-
-        SyntaxNode? newRoot;
-
-        if (attributeList.Attributes.Count == 1)
-        {
-            if (attributeList.Parent is ClassDeclarationSyntax classDecl)
-            {
-                var newAttributeLists = classDecl.AttributeLists.RemoveKeepTrivia(attributeList);
-                var newClassDecl = classDecl.WithAttributeLists(newAttributeLists);
-                newRoot = root.ReplaceNode(classDecl, newClassDecl);
-            }
-            else
-            {
-                newRoot = root;
-            }
-        }
-        else
-        {
-            var newAttributes = attributeList.Attributes.Remove(attribute);
-            var newAttributeList = attributeList.WithAttributes(newAttributes);
-            newRoot = root.ReplaceNode(attributeList, newAttributeList);
-        }
-
+        var newRoot = SyntaxHelpers.RemoveAttributeFromClass(root, attribute);
         return Task.FromResult(document.WithSyntaxRoot(newRoot));
     }
 }

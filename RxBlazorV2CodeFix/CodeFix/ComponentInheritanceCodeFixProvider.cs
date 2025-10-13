@@ -214,27 +214,6 @@ public class ComponentInheritanceCodeFixProvider : CodeFixProvider
 
     private static SyntaxNode AddUsingStatementIfNeeded(SyntaxNode root, string namespaceName)
     {
-        if (root is CompilationUnitSyntax compilationUnit)
-        {
-            var hasUsing = compilationUnit.Usings.Any(u => u.Name?.ToString() == namespaceName);
-
-            if (!hasUsing)
-            {
-                // Create new using directive with proper trivia based on existing usings
-                var newUsing = SyntaxFactory.UsingDirective(
-                    SyntaxFactory.ParseName(namespaceName));
-
-                // If there are existing usings, copy trivia from the last one
-                if (compilationUnit.Usings.Any())
-                {
-                    var lastUsing = compilationUnit.Usings.Last();
-                    newUsing = newUsing.WithTriviaFrom(lastUsing);
-                }
-
-                return compilationUnit.WithUsings(compilationUnit.Usings.Add(newUsing));
-            }
-        }
-
-        return root;
+        return SyntaxHelpers.AddUsingDirectives(root, namespaceName);
     }
 }

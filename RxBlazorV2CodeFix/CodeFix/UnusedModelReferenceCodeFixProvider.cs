@@ -59,37 +59,7 @@ public class UnusedModelReferenceCodeFixProvider : CodeFixProvider
         AttributeSyntax attribute,
         CancellationToken cancellationToken)
     {
-        var attributeList = attribute.Parent as AttributeListSyntax;
-        if (attributeList == null)
-        {
-            return Task.FromResult(document);
-        }
-
-        SyntaxNode newRoot;
-
-        if (attributeList.Attributes.Count == 1)
-        {
-            // Remove the entire attribute list if this is the only attribute
-            if (attributeList.Parent is ClassDeclarationSyntax classDecl)
-            {
-                var newAttributeLists = classDecl.AttributeLists.RemoveKeepTrivia(attributeList);
-                var newClassDecl = classDecl.WithAttributeLists(newAttributeLists);
-                newRoot = root.ReplaceNode(classDecl, newClassDecl);
-            }
-            else
-            {
-                // For other node types, just return the original document
-                newRoot = root;
-            }
-        }
-        else
-        {
-            // Remove just this attribute from the list
-            var newAttributes = attributeList.Attributes.Remove(attribute);
-            var newAttributeList = attributeList.WithAttributes(newAttributes);
-            newRoot = root.ReplaceNode(attributeList, newAttributeList);
-        }
-
+        var newRoot = SyntaxHelpers.RemoveAttributeFromClass(root, attribute);
         return Task.FromResult(document.WithSyntaxRoot(newRoot));
     }
 }

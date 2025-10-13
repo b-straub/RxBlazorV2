@@ -1,5 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using RxBlazorV2Generator.Diagnostics;
 using RxBlazorV2Generator.Models;
 
 namespace RxBlazorV2Generator.Extensions;
@@ -105,5 +106,33 @@ public static class ModelReferenceAnalysisExtensions
         }
 
         return enhancedModelReferences;
+    }
+
+    /// <summary>
+    /// Analyzes enhanced model references for unused references and creates diagnostics.
+    /// This is the single source of truth for UnusedModelReferenceError (RXBG008) detection.
+    /// </summary>
+    public static List<Diagnostic> CreateUnusedModelReferenceDiagnostics(
+        this List<ModelReferenceInfo> enhancedModelReferences,
+        INamedTypeSymbol classSymbol,
+        ClassDeclarationSyntax classDecl)
+    {
+        var diagnostics = new List<Diagnostic>();
+
+        foreach (var modelRef in enhancedModelReferences)
+        {
+            if (modelRef.UsedProperties.Count == 0)
+            {
+                var location = modelRef.AttributeLocation ?? classDecl.Identifier.GetLocation();
+                var diagnostic = Diagnostic.Create(
+                    DiagnosticDescriptors.UnusedModelReferenceError,
+                    location,
+                    classSymbol.Name,
+                    modelRef.ReferencedModelTypeName);
+                diagnostics.Add(diagnostic);
+            }
+        }
+
+        return diagnostics;
     }
 }

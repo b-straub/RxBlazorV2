@@ -201,8 +201,9 @@ public static class RazorAnalyzer
 
         if (razorFile == null)
         {
-            // Return null instead of throwing - diagnostic will be reported at generator level
-            return null;
+            // No .razor file found - return code-behind info as-is
+            // This can happen for pure code-behind components or when .razor file is in a different location
+            return codeBehindInfo;
         }
 
         try
@@ -527,7 +528,8 @@ public static class RazorAnalyzer
                 var namespaceName = ExtractNamespaceFromPath(razorFile.Path);
 
                 // Check if the .razor file has @inherits ObservableComponent<T>
-                var inheritsMatch = Regex.Match(razorContent, @"@inherits\s+ObservableComponent<(\S+)>");
+                // Use .+? to handle generic types with multiple type parameters (e.g., GenericModel<string, int>)
+                var inheritsMatch = Regex.Match(razorContent, @"@inherits\s+\S*ObservableComponent<(.+?)>\s*$", RegexOptions.Multiline);
                 if (inheritsMatch.Success)
                 {
                     var modelType = inheritsMatch.Groups[1].Value;

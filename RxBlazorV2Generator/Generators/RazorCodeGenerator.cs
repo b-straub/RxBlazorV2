@@ -14,13 +14,9 @@ public static class RazorCodeGenerator
         try
         {
             // Check for diagnostic issues first
+            // Note: Diagnostic is reported by analyzer, we just skip code generation here
             if (razorInfo.HasDiagnosticIssue)
             {
-                var diagnostic = Diagnostic.Create(
-                    DiagnosticDescriptors.ComponentNotObservableWarning,
-                    Location.None,
-                    razorInfo.ClassName);
-                context.ReportDiagnostic(diagnostic);
                 return; // Don't generate code for components with diagnostic issues
             }
             var sb = new StringBuilder();
@@ -41,7 +37,7 @@ public static class RazorCodeGenerator
         
         if (isObservableComponent)
         {
-            // ObservableComponent<T> pattern - generate subscriptions and OnInitialize
+            // ObservableComponent<T> pattern - generate subscriptions and lifecycle hooks
             // No constructor needed - Blazor handles DI automatically via [Inject] and @inject
 
             // Generate CompositeDisposable for subscription management
@@ -51,37 +47,21 @@ public static class RazorCodeGenerator
                 sb.AppendLine();
             }
 
-            // Generate OnContextReady and OnContextReadyAsync for injected models
-            if (razorInfo.InjectedProperties.Any())
-            {
-                sb.AppendLine("    protected override void OnContextReady()");
-                sb.AppendLine("    {");
-                foreach (var injectedProp in razorInfo.InjectedProperties)
-                {
-                    sb.AppendLine($"        {injectedProp}.ContextReady();");
-                }
-                sb.AppendLine("        base.OnContextReady();");
-                sb.AppendLine("    }");
-                sb.AppendLine("    ");
+            // Generate InitializeGeneratedCode method (ALWAYS generated to satisfy abstract contract)
+            sb.AppendLine("    protected override void InitializeGeneratedCode()");
+            sb.AppendLine("    {");
 
-                sb.AppendLine("    protected override async Task OnContextReadyAsync()");
-                sb.AppendLine("    {");
-                foreach (var injectedProp in razorInfo.InjectedProperties)
-                {
-                    sb.AppendLine($"        await {injectedProp}.ContextReadyAsync();");
-                }
-                sb.AppendLine("        await base.OnContextReadyAsync();");
-                sb.AppendLine("    }");
-                sb.AppendLine("    ");
+            // Call ContextReady on injected models
+            foreach (var injectedProp in razorInfo.InjectedProperties)
+            {
+                sb.AppendLine($"        {injectedProp}.ContextReady();");
             }
 
-            // Generate OnInitialize method for subscription setup
+            // Set up subscriptions if any
             if (razorInfo.FieldToPropertiesMap.Any())
             {
-                sb.AppendLine("    protected override void OnInitialize()");
-                sb.AppendLine("    {");
                 sb.AppendLine("        // Subscribe to model changes for component base model and other models from properties");
-                
+
                 foreach (var fieldProps in razorInfo.FieldToPropertiesMap)
                 {
                     var fieldName = fieldProps.Key;
@@ -112,10 +92,30 @@ public static class RazorCodeGenerator
                     sb.AppendLine("                InvokeAsync(StateHasChanged);");
                     sb.AppendLine("            }));");
                 }
-                
-                sb.AppendLine("    }");
-                sb.AppendLine("    ");
             }
+
+            sb.AppendLine("    }");
+            sb.AppendLine("    ");
+
+            // Generate InitializeGeneratedCodeAsync method (ALWAYS generated to satisfy abstract contract)
+            if (razorInfo.InjectedProperties.Any())
+            {
+                sb.AppendLine("    protected override async Task InitializeGeneratedCodeAsync()");
+                sb.AppendLine("    {");
+                foreach (var injectedProp in razorInfo.InjectedProperties)
+                {
+                    sb.AppendLine($"        await {injectedProp}.ContextReadyAsync();");
+                }
+                sb.AppendLine("    }");
+            }
+            else
+            {
+                sb.AppendLine("    protected override Task InitializeGeneratedCodeAsync()");
+                sb.AppendLine("    {");
+                sb.AppendLine("        return Task.CompletedTask;");
+                sb.AppendLine("    }");
+            }
+            sb.AppendLine("    ");
 
             // Generate Dispose method
             if (razorInfo.FieldToPropertiesMap.Any())
@@ -138,35 +138,19 @@ public static class RazorCodeGenerator
                 sb.AppendLine();
             }
 
-            // Generate OnContextReady and OnContextReadyAsync for injected models
-            if (razorInfo.InjectedProperties.Any())
-            {
-                sb.AppendLine("    protected override void OnContextReady()");
-                sb.AppendLine("    {");
-                foreach (var injectedProp in razorInfo.InjectedProperties)
-                {
-                    sb.AppendLine($"        {injectedProp}.ContextReady();");
-                }
-                sb.AppendLine("        base.OnContextReady();");
-                sb.AppendLine("    }");
-                sb.AppendLine("    ");
+            // Generate InitializeGeneratedCode method (ALWAYS generated to satisfy abstract contract)
+            sb.AppendLine("    protected override void InitializeGeneratedCode()");
+            sb.AppendLine("    {");
 
-                sb.AppendLine("    protected override async Task OnContextReadyAsync()");
-                sb.AppendLine("    {");
-                foreach (var injectedProp in razorInfo.InjectedProperties)
-                {
-                    sb.AppendLine($"        await {injectedProp}.ContextReadyAsync();");
-                }
-                sb.AppendLine("        await base.OnContextReadyAsync();");
-                sb.AppendLine("    }");
-                sb.AppendLine("    ");
+            // Call ContextReady on injected models
+            foreach (var injectedProp in razorInfo.InjectedProperties)
+            {
+                sb.AppendLine($"        {injectedProp}.ContextReady();");
             }
 
-            // Generate OnInitialize method for subscription setup
+            // Set up subscriptions if any
             if (razorInfo.FieldToPropertiesMap.Any())
             {
-                sb.AppendLine("    protected override void OnInitialize()");
-                sb.AppendLine("    {");
                 sb.AppendLine("        // Subscribe to model changes for injected models");
 
                 foreach (var fieldProps in razorInfo.FieldToPropertiesMap)
@@ -199,10 +183,30 @@ public static class RazorCodeGenerator
                     sb.AppendLine("                InvokeAsync(StateHasChanged);");
                     sb.AppendLine("            }));");
                 }
-
-                sb.AppendLine("    }");
-                sb.AppendLine("    ");
             }
+
+            sb.AppendLine("    }");
+            sb.AppendLine("    ");
+
+            // Generate InitializeGeneratedCodeAsync method (ALWAYS generated to satisfy abstract contract)
+            if (razorInfo.InjectedProperties.Any())
+            {
+                sb.AppendLine("    protected override async Task InitializeGeneratedCodeAsync()");
+                sb.AppendLine("    {");
+                foreach (var injectedProp in razorInfo.InjectedProperties)
+                {
+                    sb.AppendLine($"        await {injectedProp}.ContextReadyAsync();");
+                }
+                sb.AppendLine("    }");
+            }
+            else
+            {
+                sb.AppendLine("    protected override Task InitializeGeneratedCodeAsync()");
+                sb.AppendLine("    {");
+                sb.AppendLine("        return Task.CompletedTask;");
+                sb.AppendLine("    }");
+            }
+            sb.AppendLine("    ");
 
             // Generate Dispose method
             if (razorInfo.FieldToPropertiesMap.Any())

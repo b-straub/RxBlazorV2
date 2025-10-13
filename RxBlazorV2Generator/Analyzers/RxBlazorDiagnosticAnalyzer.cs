@@ -172,20 +172,11 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
                 semanticModel,
                 modelSymbolMap);
 
-            // Check for model references with no used properties
-            foreach (var modelRef in enhancedModelReferences)
-            {
-                if (modelRef.UsedProperties.Count == 0)
-                {
-                    var location = modelRef.AttributeLocation ?? classDecl.Identifier.GetLocation();
-                    var diagnostic = Diagnostic.Create(
-                        DiagnosticDescriptors.UnusedModelReferenceError,
-                        location,
-                        namedTypeSymbol.Name,
-                        modelRef.ReferencedModelTypeName);
-                    diagnostics.Add(diagnostic);
-                }
-            }
+            // Check for unused model references using SSOT helper
+            var unusedDiagnostics = enhancedModelReferences.CreateUnusedModelReferenceDiagnostics(
+                namedTypeSymbol,
+                classDecl);
+            diagnostics.AddRange(unusedDiagnostics);
 
             // Check for shared model scoping issues using compilation
             var sharedModelDiagnostics = AnalyzeSharedModelScoping(classDecl, semanticModel, compilation);

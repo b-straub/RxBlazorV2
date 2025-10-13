@@ -81,44 +81,7 @@ public class CircularModelReferenceCodeFixProvider : CodeFixProvider
         AttributeSyntax attribute,
         CancellationToken cancellationToken)
     {
-        // Find the attribute list containing this attribute
-        var attributeList = attribute.Parent as AttributeListSyntax;
-        if (attributeList is null)
-        {
-            return Task.FromResult(document);
-        }
-
-        SyntaxNode? newRoot;
-        if (attributeList.Attributes.Count == 1)
-        {
-            // If this is the only attribute in the list, remove the entire attribute list
-            newRoot = root.RemoveNode(attributeList, SyntaxRemoveOptions.KeepNoTrivia);
-            if (newRoot is null)
-            {
-                return Task.FromResult(document);
-            }
-        }
-        else
-        {
-            // If there are multiple attributes in the list, remove only this attribute
-            var newAttributeList = attributeList.RemoveNode(attribute, SyntaxRemoveOptions.KeepNoTrivia);
-            if (newAttributeList is null)
-            {
-                return Task.FromResult(document);
-            }
-            var replacedRoot = root.ReplaceNode(attributeList, newAttributeList);
-            if (replacedRoot is null)
-            {
-                return Task.FromResult(document);
-            }
-            newRoot = replacedRoot;
-        }
-
-        if (newRoot is null)
-        {
-            return Task.FromResult(document);
-        }
-
+        var newRoot = SyntaxHelpers.RemoveAttributeFromClass(root, attribute);
         return Task.FromResult(document.WithSyntaxRoot(newRoot));
     }
 
@@ -191,32 +154,7 @@ public class CircularModelReferenceCodeFixProvider : CodeFixProvider
 
     private static INamedTypeSymbol? GetReferencedType(AttributeSyntax attribute, SemanticModel semanticModel)
     {
-        // Try generic syntax first: ObservableModelReference<T>
-        if (attribute.Name is GenericNameSyntax genericName && genericName.TypeArgumentList?.Arguments.Count > 0)
-        {
-            var typeArgument = genericName.TypeArgumentList.Arguments.First();
-            var typeInfo = semanticModel.GetTypeInfo(typeArgument);
-            return typeInfo.Type as INamedTypeSymbol;
-        }
-
-        // Try typeof() syntax: ObservableModelReference(typeof(T))
-        if (attribute.ArgumentList?.Arguments.Count > 0)
-        {
-            var firstArgument = attribute.ArgumentList.Arguments.First();
-            if (firstArgument.Expression is TypeOfExpressionSyntax typeOfExpression)
-            {
-                var typeInfo = semanticModel.GetTypeInfo(typeOfExpression.Type);
-                if (typeInfo.Type is INamedTypeSymbol namedType)
-                {
-                    // For constructed generic types, get the generic definition
-                    return namedType.IsGenericType && namedType.TypeArguments.Length > 0
-                        ? namedType.ConstructedFrom
-                        : namedType;
-                }
-            }
-        }
-
-        return null;
+        return SyntaxHelpers.ExtractTypeFromAttribute(attribute, semanticModel);
     }
 
     private static Task<Document> RemoveBothAttributesAsync(
