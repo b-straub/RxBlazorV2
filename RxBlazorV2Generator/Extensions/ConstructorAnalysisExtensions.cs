@@ -15,14 +15,14 @@ public static class ConstructorAnalysisExtensions
     /// Parameters that are ObservableModels become ModelReferenceInfo, others become DIFieldInfo.
     /// Returns unregistered services and information about DI fields for scope checking.
     /// </summary>
-    public static (List<ModelReferenceInfo> modelReferences, List<DIFieldInfo> diFields, List<(string parameterName, string parameterType, Location? location)> unregisteredServices, List<(DIFieldInfo diField, string? serviceScope, Location? location)> diFieldsWithScope) ExtractPartialConstructorDependencies(
+    public static (List<ModelReferenceInfo> modelReferences, List<DIFieldInfo> diFields, List<(string parameterName, string parameterType, ITypeSymbol? typeSymbol, Location? location)> unregisteredServices, List<(DIFieldInfo diField, string? serviceScope, Location? location)> diFieldsWithScope) ExtractPartialConstructorDependencies(
         this ClassDeclarationSyntax classDecl,
         SemanticModel semanticModel,
         ServiceInfoList? serviceClasses = null)
     {
         var modelReferences = new List<ModelReferenceInfo>();
         var diFields = new List<DIFieldInfo>();
-        var unregisteredServices = new List<(string parameterName, string parameterType, Location? location)>();
+        var unregisteredServices = new List<(string parameterName, string parameterType, ITypeSymbol? typeSymbol, Location? location)>();
         var diFieldsWithScope = new List<(DIFieldInfo diField, string? serviceScope, Location? location)>();
 
         // Find all partial constructors
@@ -110,7 +110,7 @@ public static class ConstructorAnalysisExtensions
                 var isRegistered = parameterType.IsDIInjectableType(semanticModel, serviceClasses, null);
                 if (!isRegistered)
                 {
-                    unregisteredServices.Add((parameterName, parameterTypeName, parameter.Type?.GetLocation()));
+                    unregisteredServices.Add((parameterName, parameterTypeName, parameterType, parameter.Type?.GetLocation()));
                 }
 
                 // Try to detect service scope for scope violation checking

@@ -97,8 +97,8 @@ public static class PropertyTemplate
 
         // Handle required modifier
         var requiredModifier = prop.HasRequiredModifier ? "required " : "";
-        
-        sb.AppendLine($"    public {requiredModifier}partial {prop.Type} {prop.Name}");
+
+        sb.AppendLine($"    {prop.Accessibility} {requiredModifier}partial {prop.Type} {prop.Name}");
         sb.AppendLine("    {");
         sb.AppendLine("        get => field;");
 

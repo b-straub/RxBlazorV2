@@ -17,12 +17,19 @@ internal static class TestShared
 
     public static ReferenceAssemblies ReferenceAssemblies()
     {
-        return Microsoft.CodeAnalysis.Testing.ReferenceAssemblies.Net.Net90
+        var net10 = new ReferenceAssemblies(
+            "net10.0",
+            new PackageIdentity(
+                "Microsoft.NETCore.App.Ref",
+                "10.0.0-rc.1.25451.107"),
+            Path.Combine("ref", "net10.0"));
+        
+        return net10
             .AddPackages([
                 new PackageIdentity("Microsoft.Net.Compilers.Toolset",
-                    "4.14.0"), // Use the latest version of the compiler toolset
-                new PackageIdentity("Microsoft.Extensions.DependencyInjection", "9.0.6"),
-                new PackageIdentity("Microsoft.AspNetCore.Components", "9.0.6"),
+                    "5.0.0-2.final"), // Use the latest version of the compiler toolset
+                new PackageIdentity("Microsoft.Extensions.DependencyInjection", "10.0.0-rc.1.25451.107"),
+                new PackageIdentity("Microsoft.AspNetCore.Components", "10.0.0-rc.1.25451.107"),
                 new PackageIdentity("R3", "1.3.0"),
                 new PackageIdentity("ObservableCollections.R3", "3.3.4"),
                 new PackageIdentity("JetBrains.Annotations", "2025.2.2")

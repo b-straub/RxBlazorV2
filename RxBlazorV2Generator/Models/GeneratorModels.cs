@@ -76,8 +76,9 @@ public class PartialPropertyInfo
     public string[]? BatchIds { get; }
     public bool HasRequiredModifier { get; }
     public bool HasInitAccessor { get; }
+    public string Accessibility { get; }
 
-    public PartialPropertyInfo(string name, string type, bool isObservableCollection = false, bool isEquatable = false, string[]? batchIds = null, bool hasRequiredModifier = false, bool hasInitAccessor = false)
+    public PartialPropertyInfo(string name, string type, bool isObservableCollection = false, bool isEquatable = false, string[]? batchIds = null, bool hasRequiredModifier = false, bool hasInitAccessor = false, string accessibility = "public")
     {
         Name = name;
         Type = type;
@@ -86,6 +87,7 @@ public class PartialPropertyInfo
         BatchIds = batchIds;
         HasRequiredModifier = hasRequiredModifier;
         HasInitAccessor = hasInitAccessor;
+        Accessibility = accessibility;
     }
 }
 
@@ -97,8 +99,9 @@ public class CommandPropertyInfo
     public string? CanExecuteMethod { get; }
     public bool SupportsCancellation { get; }
     public List<CommandTriggerInfo> Triggers { get; }
+    public string Accessibility { get; }
 
-    public CommandPropertyInfo(string name, string type, string executeMethod, string? canExecuteMethod, bool supportsCancellation = false, List<CommandTriggerInfo>? triggers = null)
+    public CommandPropertyInfo(string name, string type, string executeMethod, string? canExecuteMethod, bool supportsCancellation = false, List<CommandTriggerInfo>? triggers = null, string accessibility = "public")
     {
         Name = name;
         Type = type;
@@ -106,6 +109,7 @@ public class CommandPropertyInfo
         CanExecuteMethod = canExecuteMethod;
         SupportsCancellation = supportsCancellation;
         Triggers = triggers ?? [];
+        Accessibility = accessibility;
     }
 }
 

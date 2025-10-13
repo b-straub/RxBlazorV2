@@ -15,6 +15,7 @@ public class CrossComponentCommunicationTests
     public void IncrementCommand_ShouldIncrementSharedCounter()
     {
         // Act
+        _model.SharedCounter = 0;
         _model.IncrementCommand.Execute();
 
         // Assert

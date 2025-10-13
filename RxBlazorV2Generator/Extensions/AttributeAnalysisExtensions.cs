@@ -134,14 +134,24 @@ public static class AttributeAnalysisExtensions
                         triggers.Add(new CommandTriggerInfo(triggerProperty!, canTriggerMethod, parameterArg));
                     }
                 }
-                
+
+                // Extract accessibility modifier
+                var accessibility = member.Modifiers
+                    .Where(m => m.IsKind(Microsoft.CodeAnalysis.CSharp.SyntaxKind.PublicKeyword) ||
+                                m.IsKind(Microsoft.CodeAnalysis.CSharp.SyntaxKind.PrivateKeyword) ||
+                                m.IsKind(Microsoft.CodeAnalysis.CSharp.SyntaxKind.ProtectedKeyword) ||
+                                m.IsKind(Microsoft.CodeAnalysis.CSharp.SyntaxKind.InternalKeyword))
+                    .Select(m => m.ValueText)
+                    .FirstOrDefault() ?? "public";
+
                 commandProperties.Add(new CommandPropertyInfo(
                     member.Identifier.ValueText,
                     member.Type!.ToString(),
                     executeMethod!,
                     canExecuteMethod,
                     supportsCancellation,
-                    triggers));
+                    triggers,
+                    accessibility));
             }
         }
 

@@ -119,7 +119,7 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
     private static List<Diagnostic> AnalyzeObservableModelForDiagnostics(ClassDeclarationSyntax classDecl, SemanticModel semanticModel, Compilation compilation)
     {
         var diagnostics = new List<Diagnostic>();
-        
+
         try
         {
             if (semanticModel.GetDeclaredSymbol(classDecl) is not { } namedTypeSymbol)
@@ -129,19 +129,34 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
             if (!namedTypeSymbol.InheritsFromObservableModel())
                 return diagnostics;
 
+            // Collect service registrations from the compilation
+            var serviceClasses = CollectServiceRegistrations(compilation);
+
             // Extract model references and DI fields from partial constructor parameters
-            var (modelReferences, diFields, unregisteredServices, diFieldsWithScope) = classDecl.ExtractPartialConstructorDependencies(semanticModel);
+            var (modelReferences, diFields, unregisteredServices, diFieldsWithScope) = classDecl.ExtractPartialConstructorDependencies(semanticModel, serviceClasses);
 
             // Report informational warnings for unregistered services
-            foreach (var (paramName, paramType, location) in unregisteredServices)
+            foreach (var (paramName, paramType, typeSymbol, location) in unregisteredServices)
             {
-                if (location != null)
+                if (location is not null && typeSymbol is not null)
                 {
+                    // Get simple type name (without namespace)
+                    var simpleTypeName = typeSymbol.Name;
+
+                    // Determine if it's an interface
+                    var isInterface = typeSymbol.TypeKind == TypeKind.Interface;
+
+                    // Create appropriate registration example
+                    var registrationExample = isInterface
+                        ? $"'services.AddScoped<{simpleTypeName}, YourImplementation>()'"
+                        : $"'services.AddScoped<{simpleTypeName}>()' or 'services.AddScoped<IYourInterface, {simpleTypeName}>()'";
+
                     var diagnostic = Diagnostic.Create(
                         DiagnosticDescriptors.UnregisteredServiceWarning,
                         location,
                         paramName,
-                        paramType);
+                        simpleTypeName,
+                        registrationExample);
                     diagnostics.Add(diagnostic);
                 }
             }
@@ -398,5 +413,157 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
         }
 
         return diagnostics;
+    }
+
+    /// <summary>
+    /// Collects DI service registrations from the semantic model's syntax tree.
+    /// Scans for AddSingleton/AddScoped/AddTransient calls.
+    /// </summary>
+    private static ServiceInfoList? CollectServiceRegistrations(Compilation compilation)
+    {
+        var mergedServices = new ServiceInfoList();
+
+        foreach (var syntaxTree in compilation.SyntaxTrees)
+        {
+            var semanticModel = compilation.GetSemanticModel(syntaxTree);
+            var root = syntaxTree.GetRoot();
+
+            // Find all invocation expressions that look like service registrations
+            var invocations = root.DescendantNodes()
+                .OfType<InvocationExpressionSyntax>()
+                .Where(invocation => ServiceAnalyzer.IsServiceRegistration(invocation));
+
+            foreach (var invocation in invocations)
+            {
+                // Analyze the service registration directly
+                var serviceInfo = AnalyzeServiceRegistration(invocation, semanticModel);
+
+                if (serviceInfo is not null)
+                {
+                    foreach (var service in serviceInfo.Services)
+                    {
+                        mergedServices.AddService(service);
+                    }
+                }
+            }
+        }
+
+        return mergedServices.Services.Any() ? mergedServices : null;
+    }
+
+    /// <summary>
+    /// Analyzes a service registration invocation and extracts service info.
+    /// This is a simplified version of ServiceAnalyzer.GetServiceClassInfo that works in analyzer context.
+    /// </summary>
+    private static ServiceInfoList? AnalyzeServiceRegistration(InvocationExpressionSyntax invocation, SemanticModel semanticModel)
+    {
+        var serviceInfoList = new ServiceInfoList();
+
+        try
+        {
+            if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
+            {
+                return null;
+            }
+
+            // Extract scope from method name (AddSingleton, AddScoped, AddTransient)
+            var methodName = memberAccess.Name is GenericNameSyntax genericName
+                ? genericName.Identifier.ValueText
+                : memberAccess.Name.Identifier.ValueText;
+
+            var scope = ExtractScopeFromMethodName(methodName);
+
+            // Handle generic service registrations like AddScoped<MyService>()
+            if (memberAccess.Name is GenericNameSyntax genericNameSyntax)
+            {
+                foreach (var typeArg in genericNameSyntax.TypeArgumentList.Arguments)
+                {
+                    var typeSymbol = semanticModel.GetTypeInfo(typeArg).Type as INamedTypeSymbol;
+                    if (typeSymbol is not null)
+                    {
+                        serviceInfoList.AddService(new ServiceInfo(
+                            typeSymbol.ContainingNamespace.ToDisplayString(),
+                            typeSymbol.Name,
+                            typeSymbol.ToDisplayString(),
+                            scope));
+                    }
+                }
+            }
+            // Handle factory registrations like AddScoped(sp => new HttpClient())
+            else if (invocation.ArgumentList.Arguments.Count > 0)
+            {
+                foreach (var argument in invocation.ArgumentList.Arguments)
+                {
+                    // Look for lambda expressions or delegates that create instances
+                    if (argument.Expression is SimpleLambdaExpressionSyntax lambda)
+                    {
+                        // Find object creation expressions in the lambda body
+                        var objectCreations = lambda.Body.DescendantNodesAndSelf()
+                            .OfType<ObjectCreationExpressionSyntax>();
+
+                        foreach (var objectCreation in objectCreations)
+                        {
+                            var typeSymbol = semanticModel.GetTypeInfo(objectCreation.Type).Type as INamedTypeSymbol;
+                            if (typeSymbol is not null)
+                            {
+                                serviceInfoList.AddService(new ServiceInfo(
+                                    typeSymbol.ContainingNamespace.ToDisplayString(),
+                                    typeSymbol.Name,
+                                    typeSymbol.ToDisplayString(),
+                                    scope));
+                            }
+                        }
+                    }
+                    // Also check for parenthesized lambda expressions
+                    else if (argument.Expression is ParenthesizedLambdaExpressionSyntax parenthesizedLambda)
+                    {
+                        var objectCreations = parenthesizedLambda.Body.DescendantNodesAndSelf()
+                            .OfType<ObjectCreationExpressionSyntax>();
+
+                        foreach (var objectCreation in objectCreations)
+                        {
+                            var typeSymbol = semanticModel.GetTypeInfo(objectCreation.Type).Type as INamedTypeSymbol;
+                            if (typeSymbol is not null)
+                            {
+                                serviceInfoList.AddService(new ServiceInfo(
+                                    typeSymbol.ContainingNamespace.ToDisplayString(),
+                                    typeSymbol.Name,
+                                    typeSymbol.ToDisplayString(),
+                                    scope));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        catch
+        {
+            return null;
+        }
+
+        return serviceInfoList.Services.Any() ? serviceInfoList : null;
+    }
+
+    /// <summary>
+    /// Extracts the service scope (Singleton, Scoped, Transient) from the DI registration method name.
+    /// </summary>
+    private static string? ExtractScopeFromMethodName(string methodName)
+    {
+        if (methodName.IndexOf("Singleton", StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            return "Singleton";
+        }
+
+        if (methodName.IndexOf("Scoped", StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            return "Scoped";
+        }
+
+        if (methodName.IndexOf("Transient", StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            return "Transient";
+        }
+
+        return null;
     }
 }

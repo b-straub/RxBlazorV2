@@ -195,7 +195,7 @@ public static class DiagnosticDescriptors
     public static readonly DiagnosticDescriptor UnregisteredServiceWarning = new(
         id: "RXBG020",
         title: "Partial constructor parameter type may not be registered in DI",
-        messageFormat: "Parameter '{0}' of type '{1}' is not detected as registered in the dependency injection container. If this service is not registered, add a service registration in your Program.cs or Startup.cs (e.g., 'services.AddScoped<{1}>()' or 'services.AddScoped<IYourInterface, {1}>()'). If the service is already registered via an interface or factory, you can ignore this warning.",
+        messageFormat: "Parameter '{0}' of type '{1}' is not detected as registered in the dependency injection container. If this service is not registered, add a service registration in your Program.cs or Startup.cs (e.g., {2}). If the service is already registered via an interface or factory, you can ignore this warning.",
         category: "RxBlazorGenerator",
         DiagnosticSeverity.Info,
         isEnabledByDefault: true,

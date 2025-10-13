@@ -36,7 +36,7 @@ public static class CommandTemplate
         foreach (var cmd in commandProperties)
         {
             var backingField = GetBackingFieldName(cmd.Name);
-            sb.AppendLine($"    public partial {cmd.Type} {cmd.Name}");
+            sb.AppendLine($"    {cmd.Accessibility} partial {cmd.Type} {cmd.Name}");
             sb.AppendLine("    {");
             sb.AppendLine($"        get => {backingField};");
             sb.AppendLine("    }");

@@ -269,4 +269,250 @@ public class UnregisteredServiceDiagnosticTests
         """;
         await AnalyzerVerifier.VerifyAnalyzerAsync(test);
     }
+
+    [Fact]
+    public async Task RegisteredInterfaceService_NoErrorsExpected()
+    {
+        // lang=csharp
+        var test = """
+
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+        using Microsoft.Extensions.DependencyInjection;
+
+        namespace Test
+        {
+            public interface IValidationService
+            {
+                bool IsValid();
+            }
+
+            public class ValidationService : IValidationService
+            {
+                public bool IsValid() => true;
+            }
+
+            public static class ServiceRegistration
+            {
+                public static void ConfigureServices(IServiceCollection services)
+                {
+                    // Register the service
+                    services.AddSingleton<IValidationService, ValidationService>();
+                }
+            }
+
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class MyModel : ObservableModel
+            {
+                // IValidationService is registered - no diagnostic expected
+                public partial MyModel(IValidationService validationService);
+
+                public bool CheckValid() => ValidationService.IsValid();
+            }
+        }
+        """;
+        await AnalyzerVerifier.VerifyAnalyzerAsync(test);
+    }
+
+    [Fact]
+    public async Task RegisteredConcreteService_NoErrorsExpected()
+    {
+        // lang=csharp
+        var test = """
+
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+        using Microsoft.Extensions.DependencyInjection;
+
+        namespace Test
+        {
+            public class EmailService
+            {
+                public void SendEmail(string to) { }
+            }
+
+            public static class ServiceRegistration
+            {
+                public static void ConfigureServices(IServiceCollection services)
+                {
+                    // Register the concrete service
+                    services.AddScoped<EmailService>();
+                }
+            }
+
+            [ObservableModelScope(ModelScope.Scoped)]
+            public partial class NotificationModel : ObservableModel
+            {
+                // EmailService is registered - no diagnostic expected
+                public partial NotificationModel(EmailService emailService);
+
+                public void Notify() => EmailService.SendEmail("test@example.com");
+            }
+        }
+        """;
+        await AnalyzerVerifier.VerifyAnalyzerAsync(test);
+    }
+
+    [Fact]
+    public async Task RegisteredAndUnregisteredServices_DiagnosticOnUnregisteredOnly()
+    {
+        // lang=csharp
+        var test = $$"""
+
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+        using Microsoft.Extensions.DependencyInjection;
+
+        namespace Test
+        {
+            public interface IRegisteredService { }
+            public class RegisteredService : IRegisteredService { }
+            public interface IUnregisteredService { }
+
+            public static class ServiceRegistration
+            {
+                public static void ConfigureServices(IServiceCollection services)
+                {
+                    // Only register IRegisteredService
+                    services.AddSingleton<IRegisteredService, RegisteredService>();
+                }
+            }
+
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class MyModel : ObservableModel
+            {
+                // IRegisteredService is registered (OK), IUnregisteredService is not (diagnostic)
+                public partial MyModel(
+                    IRegisteredService registeredService,
+                    {|{{DiagnosticDescriptors.UnregisteredServiceWarning.Id}}:IUnregisteredService|} unregisteredService);
+            }
+        }
+        """;
+        await AnalyzerVerifier.VerifyAnalyzerAsync(test);
+    }
+
+    [Fact]
+    public async Task ServiceRegisteredViaFactory_DiagnosticExpected()
+    {
+        // lang=csharp
+        var test = $$"""
+
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+        using Microsoft.Extensions.DependencyInjection;
+
+        namespace Test
+        {
+            public class DatabaseService
+            {
+                public DatabaseService(string connectionString) { }
+            }
+
+            public static class ServiceRegistration
+            {
+                public static void ConfigureServices(IServiceCollection services)
+                {
+                    // Register via factory - may not be detected by static analysis
+                    services.AddSingleton(sp => new DatabaseService("connection-string"));
+                }
+            }
+
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class DataModel : ObservableModel
+            {
+                // Factory detection is complex and may not work in all cases
+                // This diagnostic can be safely ignored if the service is actually registered
+                public partial DataModel({|{{DiagnosticDescriptors.UnregisteredServiceWarning.Id}}:DatabaseService|} databaseService);
+            }
+        }
+        """;
+        await AnalyzerVerifier.VerifyAnalyzerAsync(test);
+    }
+
+    [Fact]
+    public async Task MultipleServicesAllRegistered_NoErrorsExpected()
+    {
+        // lang=csharp
+        var test = """
+
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+        using Microsoft.Extensions.DependencyInjection;
+
+        namespace Test
+        {
+            public interface IServiceA { }
+            public class ServiceA : IServiceA { }
+            public interface IServiceB { }
+            public class ServiceB : IServiceB { }
+            public interface IServiceC { }
+            public class ServiceC : IServiceC { }
+
+            public static class ServiceRegistration
+            {
+                public static void ConfigureServices(IServiceCollection services)
+                {
+                    // All services registered as Singleton to avoid scope violations
+                    services.AddSingleton<IServiceA, ServiceA>();
+                    services.AddSingleton<IServiceB, ServiceB>();
+                    services.AddSingleton<IServiceC, ServiceC>();
+                }
+            }
+
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class MyModel : ObservableModel
+            {
+                // All services are registered - no diagnostics expected
+                public partial MyModel(
+                    IServiceA serviceA,
+                    IServiceB serviceB,
+                    IServiceC serviceC);
+            }
+        }
+        """;
+        await AnalyzerVerifier.VerifyAnalyzerAsync(test);
+    }
+
+    [Fact]
+    public async Task RegisteredServiceDifferentScopes_NoErrorsExpected()
+    {
+        // lang=csharp
+        var test = """
+
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+        using Microsoft.Extensions.DependencyInjection;
+
+        namespace Test
+        {
+            public interface ISingletonService { }
+            public class SingletonService : ISingletonService { }
+            public interface IScopedService { }
+            public class ScopedService : IScopedService { }
+            public interface ITransientService { }
+            public class TransientService : ITransientService { }
+
+            public static class ServiceRegistration
+            {
+                public static void ConfigureServices(IServiceCollection services)
+                {
+                    services.AddSingleton<ISingletonService, SingletonService>();
+                    services.AddScoped<IScopedService, ScopedService>();
+                    services.AddTransient<ITransientService, TransientService>();
+                }
+            }
+
+            [ObservableModelScope(ModelScope.Transient)]
+            public partial class MyModel : ObservableModel
+            {
+                // Transient model can inject all service scopes - no diagnostics expected
+                public partial MyModel(
+                    ISingletonService singletonService,
+                    IScopedService scopedService,
+                    ITransientService transientService);
+            }
+        }
+        """;
+        await AnalyzerVerifier.VerifyAnalyzerAsync(test);
+    }
 }

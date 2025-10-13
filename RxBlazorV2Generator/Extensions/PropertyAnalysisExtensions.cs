@@ -41,6 +41,15 @@ public static class PropertyAnalysisExtensions
                     diagnostics.Add(diagnostic);
                 }
 
+                // Extract accessibility modifier
+                var accessibility = member.Modifiers
+                    .Where(m => m.IsKind(SyntaxKind.PublicKeyword) ||
+                                m.IsKind(SyntaxKind.PrivateKeyword) ||
+                                m.IsKind(SyntaxKind.ProtectedKeyword) ||
+                                m.IsKind(SyntaxKind.InternalKeyword))
+                    .Select(m => m.ValueText)
+                    .FirstOrDefault() ?? "public";
+
                 partialProperties.Add(new PartialPropertyInfo(
                     member.Identifier.ValueText,
                     member.Type!.ToString(),
@@ -48,7 +57,8 @@ public static class PropertyAnalysisExtensions
                     isEquatable,
                     batchIds,
                     hasRequiredModifier,
-                    hasInitAccessor));
+                    hasInitAccessor,
+                    accessibility));
             }
         }
 
