@@ -30,10 +30,17 @@ public static class ServiceAnalyzer
 
             if (invocation.Expression is MemberAccessExpressionSyntax memberAccess)
             {
+                // Extract scope from method name (AddSingleton, AddScoped, AddTransient)
+                var methodName = memberAccess.Name is GenericNameSyntax genericName
+                    ? genericName.Identifier.ValueText
+                    : memberAccess.Name.Identifier.ValueText;
+
+                var scope = ExtractScopeFromMethodName(methodName);
+
                 // Handle generic service registrations like AddScoped<MyService>()
-                if (memberAccess.Name is GenericNameSyntax genericName)
+                if (memberAccess.Name is GenericNameSyntax genericNameSyntax)
                 {
-                    foreach (var typeArg in genericName.TypeArgumentList.Arguments)
+                    foreach (var typeArg in genericNameSyntax.TypeArgumentList.Arguments)
                     {
                         var typeSymbol = semanticModel.GetTypeInfo(typeArg).Type as INamedTypeSymbol;
                         if (typeSymbol != null)
@@ -41,7 +48,8 @@ public static class ServiceAnalyzer
                             serviceInfoList.AddService(new ServiceInfo(
                                 typeSymbol.ContainingNamespace.ToDisplayString(),
                                 typeSymbol.Name,
-                                typeSymbol.ToDisplayString()));
+                                typeSymbol.ToDisplayString(),
+                                scope));
                         }
                     }
                 }
@@ -56,7 +64,7 @@ public static class ServiceAnalyzer
                             // Find object creation expressions in the lambda body
                             var objectCreations = lambda.Body.DescendantNodesAndSelf()
                                 .OfType<ObjectCreationExpressionSyntax>();
-                            
+
                             foreach (var objectCreation in objectCreations)
                             {
                                 var typeSymbol = semanticModel.GetTypeInfo(objectCreation.Type).Type as INamedTypeSymbol;
@@ -65,7 +73,8 @@ public static class ServiceAnalyzer
                                     serviceInfoList.AddService(new ServiceInfo(
                                         typeSymbol.ContainingNamespace.ToDisplayString(),
                                         typeSymbol.Name,
-                                        typeSymbol.ToDisplayString()));
+                                        typeSymbol.ToDisplayString(),
+                                        scope));
                                 }
                             }
                         }
@@ -74,7 +83,7 @@ public static class ServiceAnalyzer
                         {
                             var objectCreations = parenthesizedLambda.Body.DescendantNodesAndSelf()
                                 .OfType<ObjectCreationExpressionSyntax>();
-                            
+
                             foreach (var objectCreation in objectCreations)
                             {
                                 var typeSymbol = semanticModel.GetTypeInfo(objectCreation.Type).Type as INamedTypeSymbol;
@@ -83,7 +92,8 @@ public static class ServiceAnalyzer
                                     serviceInfoList.AddService(new ServiceInfo(
                                         typeSymbol.ContainingNamespace.ToDisplayString(),
                                         typeSymbol.Name,
-                                        typeSymbol.ToDisplayString()));
+                                        typeSymbol.ToDisplayString(),
+                                        scope));
                                 }
                             }
                         }
@@ -112,5 +122,28 @@ public static class ServiceAnalyzer
     {
         var (serviceInfo, _) = GetServiceClassInfoWithDiagnostics(context);
         return serviceInfo;
+    }
+
+    /// <summary>
+    /// Extracts the service scope (Singleton, Scoped, Transient) from the DI registration method name.
+    /// </summary>
+    private static string? ExtractScopeFromMethodName(string methodName)
+    {
+        if (methodName.IndexOf("Singleton", StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            return "Singleton";
+        }
+
+        if (methodName.IndexOf("Scoped", StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            return "Scoped";
+        }
+
+        if (methodName.IndexOf("Transient", StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            return "Transient";
+        }
+
+        return null;
     }
 }

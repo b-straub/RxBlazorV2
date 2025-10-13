@@ -33,9 +33,10 @@ public class AttributeResolutionTests
             using Test.SubNamespace;
 
             [ObservableModelScope(ModelScope.Singleton)]
-            [ObservableModelReference<CounterModel>]
             public partial class MainModel : ObservableModel
             {
+                public partial MainModel(CounterModel counterModel);
+
                 [ObservableCommand(nameof(IncrementCounter))]
                 public partial IObservableCommand IncrementCommand { get; }
 
@@ -68,9 +69,10 @@ public class AttributeResolutionTests
             }
 
             [ObservableModelScope(ModelScope.Singleton)]
-            [ObservableModelReference<CounterModel>]
             public partial class MainModel : ObservableModel
             {
+                public partial MainModel(CounterModel counterModel);
+
                 [ObservableCommand(nameof(IncrementCounter))]
                 public partial IObservableCommand IncrementCommand { get; }
 
@@ -103,9 +105,10 @@ public class AttributeResolutionTests
             }
 
             [ObservableModelScopeAttribute(ModelScope.Singleton)]
-            [ObservableModelReferenceAttribute<CounterModel>]
             public partial class MainModel : ObservableModel
             {
+                public partial MainModel(CounterModel counterModel);
+
                 [ObservableCommandAttribute(nameof(IncrementCounter))]
                 public partial IObservableCommand IncrementCommand { get; }
 
@@ -208,10 +211,10 @@ public class AttributeResolutionTests
             }
 
             [ObservableModelScope(ModelScope.Singleton)]
-            [ObservableModelReference<Counter1Model>]
-            [ObservableModelReference<Counter2Model>]
             public partial class MainModel : ObservableModel
             {
+                public partial MainModel(Counter1Model counter1Model, Counter2Model counter2Model);
+
                 [ObservableCommand(nameof(IncrementBoth))]
                 public partial IObservableCommand IncrementCommand { get; }
 

@@ -78,11 +78,11 @@ public static class DiagnosticDescriptors
     public static readonly DiagnosticDescriptor UnusedModelReferenceError = new(
         id: "RXBG008",
         title: "Referenced model has no used properties",
-        messageFormat: "Model '{0}' references '{1}' but does not use any of its properties. Remove the [ObservableModelReference<{1}>] attribute or use at least one property from the referenced model.",
+        messageFormat: "Model '{0}' references '{1}' but does not use any of its properties. Remove the constructor parameter or use at least one property from the referenced model.",
         category: "RxBlazorGenerator",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "ObservableModelReference attributes should only be used when the parent model actually uses properties from the referenced model.",
+        description: "Constructor parameters that are ObservableModels should only be used when the parent model actually uses properties from the referenced model.",
         helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG008.md");
 
     public static readonly DiagnosticDescriptor ComponentNotObservableWarning = new(
@@ -174,11 +174,41 @@ public static class DiagnosticDescriptors
     public static readonly DiagnosticDescriptor DerivedModelReferenceError = new(
         id: "RXBG017",
         title: "Cannot reference derived ObservableModel",
-        messageFormat: "Referenced model '{0}' is a derived ObservableModel (inherits from '{1}') and is not registered in DI. Derived models cannot be used with [ObservableModelReference] because they are excluded from dependency injection. Use the base model '{1}' instead, or refactor to use composition over inheritance.",
+        messageFormat: "Referenced model '{0}' is a derived ObservableModel (inherits from '{1}') and is not registered in DI. Derived models cannot be injected via constructor parameters because they are excluded from dependency injection. Use the base model '{1}' instead, or refactor to use composition over inheritance.",
         category: "RxBlazorGenerator",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "Derived ObservableModels (those that inherit from another ObservableModel) are not registered in dependency injection and cannot be used with ObservableModelReference attributes.",
+        description: "Derived ObservableModels (those that inherit from another ObservableModel) are not registered in dependency injection and cannot be injected via constructor parameters.",
         helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG017.md",
-        customTags: ["Remove ObservableModelReference attribute"]);
+        customTags: ["Remove constructor parameter"]);
+
+    public static readonly DiagnosticDescriptor RazorInheritanceMismatchWarning = new(
+        id: "RXBG019",
+        title: "Razor file @inherits directive doesn't match code-behind",
+        messageFormat: "Component '{0}' code-behind inherits from '{1}' but the .razor file is missing the corresponding @inherits directive. Add '@inherits {1}' to the .razor file.",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "When a .razor.cs file inherits from ObservableComponent, the .razor file must have a matching @inherits directive to ensure proper partial class merging and lifecycle hook execution.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG019.md");
+
+    public static readonly DiagnosticDescriptor UnregisteredServiceWarning = new(
+        id: "RXBG020",
+        title: "Partial constructor parameter type may not be registered in DI",
+        messageFormat: "Parameter '{0}' of type '{1}' is not detected as registered in the dependency injection container. If this service is not registered, add a service registration in your Program.cs or Startup.cs (e.g., 'services.AddScoped<{1}>()' or 'services.AddScoped<IYourInterface, {1}>()'). If the service is already registered via an interface or factory, you can ignore this warning.",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Info,
+        isEnabledByDefault: true,
+        description: "Partial constructor parameters should be registered in the DI container. The generator will create the constructor implementation. This is an informational warning - if the service is registered via interfaces, factories, or other means not detectable by static analysis, you can safely ignore it.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG020.md");
+
+    public static readonly DiagnosticDescriptor DiServiceScopeViolationWarning = new(
+        id: "RXBG021",
+        title: "DI service scope violation",
+        messageFormat: "ObservableModel '{0}' with '{1}' scope is injecting service '{2}' of type '{3}' with '{4}' scope. This violates DI scoping rules: {1} services cannot depend on {4} services as it may lead to captive dependencies or disposed services.",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "Dependency injection scoping rules must be followed: Singleton services can only inject Singleton services. Scoped services can inject Singleton and Scoped services. Transient services can inject any scope. Violating these rules can lead to runtime errors or captive dependencies.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG021.md");
 }

@@ -5,13 +5,13 @@ using RxBlazorV2Sample.Services;
 
 namespace RxBlazorV2Sample.Models;
 
-[ObservableModelReference<SettingsModel>]
 [ObservableModelScope(ModelScope.Scoped)]
 public partial class WeatherModel : ObservableModel
 {
-    private readonly HttpClient _httpClient;
-    private readonly OpenMeteoApiClient _openMeteoClient;
-    public bool NotInComponentObservation => SettingsModel.NotInComponentObservation;
+    // Declare partial constructor with dependencies
+    public partial WeatherModel(SettingsModel settings, HttpClient httpClient, OpenMeteoApiClient openMeteoClient);
+
+    public bool NotInComponentObservation => Settings.NotInComponentObservation;
     public partial bool IsDay { get; set; }
     public partial bool IsLoading { get; set; }
     public partial string? ErrorMessage { get; set; }
@@ -24,7 +24,7 @@ public partial class WeatherModel : ObservableModel
     public partial IObservableCommandAsync LoadWeatherCommand { get; }
 
     [ObservableCommand(nameof(RefreshAsync), nameof(CanRefresh))]
-    [ObservableCommandTrigger(nameof(SettingsModel.IsDay))]
+    [ObservableCommandTrigger(nameof(Settings.IsDay))]
     public partial IObservableCommandAsync RefreshCommand { get; }
 
     [ObservableCommand(nameof(ChangeLocationAsync), nameof(CanChangeLocation))]
@@ -40,7 +40,7 @@ public partial class WeatherModel : ObservableModel
 
     private bool CanRefresh()
     {
-        return !IsLoading && Forecasts != null && SettingsModel.AutoRefresh;
+        return !IsLoading && Forecasts != null && Settings.AutoRefresh;
     }
 
     private bool CanChangeLocation()
@@ -55,7 +55,7 @@ public partial class WeatherModel : ObservableModel
             IsLoading = true;
             ErrorMessage = null;
 
-            var forecasts = await _openMeteoClient.GetWeatherForecastAsync(CurrentLocation, SettingsModel.IsDay);
+            var forecasts = await OpenMeteoClient.GetWeatherForecastAsync(CurrentLocation, Settings.IsDay);
             
             if (forecasts.Length > 0)
             {

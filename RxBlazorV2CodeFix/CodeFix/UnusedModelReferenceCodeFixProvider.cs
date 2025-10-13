@@ -36,30 +36,30 @@ public class UnusedModelReferenceCodeFixProvider : CodeFixProvider
             var diagnosticSpan = diagnostic.Location.SourceSpan;
             var node = root.FindNode(diagnosticSpan);
 
-            // Find the attribute that contains the unused reference
-            var attribute = node.FirstAncestorOrSelf<AttributeSyntax>();
-            if (attribute == null)
+            // Find the constructor parameter that contains the unused reference
+            var parameter = node.FirstAncestorOrSelf<ParameterSyntax>();
+            if (parameter == null)
             {
                 continue;
             }
 
-            // Code Fix: Remove the unused model reference attribute
-            var removeAttributeAction = CodeAction.Create(
-                title: "Remove unused model reference attribute",
-                createChangedDocument: c => RemoveAttributeAsync(context.Document, root, attribute, c),
+            // Code Fix: Remove the unused model reference parameter
+            var removeParameterAction = CodeAction.Create(
+                title: "Remove unused constructor parameter",
+                createChangedDocument: c => RemoveParameterAsync(context.Document, root, parameter, c),
                 equivalenceKey: "RemoveUnusedModelReference");
 
-            context.RegisterCodeFix(removeAttributeAction, diagnostic);
+            context.RegisterCodeFix(removeParameterAction, diagnostic);
         }
     }
 
-    private static Task<Document> RemoveAttributeAsync(
+    private static Task<Document> RemoveParameterAsync(
         Document document,
         SyntaxNode root,
-        AttributeSyntax attribute,
+        ParameterSyntax parameter,
         CancellationToken cancellationToken)
     {
-        var newRoot = SyntaxHelpers.RemoveAttributeFromClass(root, attribute);
+        var newRoot = SyntaxHelpers.RemoveConstructorParameter(root, parameter);
         return Task.FromResult(document.WithSyntaxRoot(newRoot));
     }
 }

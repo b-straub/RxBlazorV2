@@ -40,7 +40,22 @@ public static class PropertyTemplate
         var sb = new StringBuilder();
         foreach (var modelRef in modelReferences)
         {
-            sb.AppendLine($"    protected {modelRef.ReferencedModelTypeName} {modelRef.PropertyName} {{ get; private set; }}");
+            sb.AppendLine($"    protected {modelRef.ReferencedModelTypeName} {modelRef.PropertyName} {{ get; }}");
+        }
+        return sb.ToString().TrimEnd('\r', '\n');
+    }
+
+    /// <summary>
+    /// Generates protected properties for DI injected services.
+    /// </summary>
+    /// <param name="diFields">Collection of DI fields.</param>
+    /// <returns>Generated properties code.</returns>
+    public static string GenerateDIFieldProperties(IEnumerable<DIFieldInfo> diFields)
+    {
+        var sb = new StringBuilder();
+        foreach (var diField in diFields)
+        {
+            sb.AppendLine($"    protected {diField.FieldType} {diField.FieldName} {{ get; }}");
         }
         return sb.ToString().TrimEnd('\r', '\n');
     }

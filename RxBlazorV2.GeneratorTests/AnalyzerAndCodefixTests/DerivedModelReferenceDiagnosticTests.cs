@@ -31,9 +31,10 @@ public class DerivedModelReferenceDiagnosticTests
             }
 
             [ObservableModelScope(ModelScope.Transient)]
-            [ObservableModelReference<CounterModel>]
             public partial class ParentModel : ObservableModel
             {
+                public partial ParentModel(CounterModel counterModel);
+
                 public partial int Value { get; set; }
 
                 public int Total => Value + CounterModel.Counter1;
@@ -69,9 +70,10 @@ public class DerivedModelReferenceDiagnosticTests
             }
 
             [ObservableModelScope(ModelScope.Transient)]
-            [{|{{DiagnosticDescriptors.DerivedModelReferenceError.Id}}:ObservableModelReference<DerivedModel>|}]
             public partial class ParentModel : ObservableModel
             {
+                public partial ParentModel({|{{DiagnosticDescriptors.DerivedModelReferenceError.Id}}:DerivedModel|} derivedModel);
+
                 public partial int Value { get; set; }
             }
         }
@@ -105,9 +107,10 @@ public class DerivedModelReferenceDiagnosticTests
             }
 
             [ObservableModelScope(ModelScope.Transient)]
-            [{|{{DiagnosticDescriptors.DerivedModelReferenceError.Id}}:ObservableModelReference<DerivedModel>|}]
             public partial class ParentModel : ObservableModel
             {
+                public partial ParentModel({|{{DiagnosticDescriptors.DerivedModelReferenceError.Id}}:DerivedModel|} derivedModel);
+
                 public partial int Value { get; set; }
             }
         }
@@ -173,9 +176,10 @@ public class DerivedModelReferenceDiagnosticTests
             }
 
             [ObservableModelScope(ModelScope.Transient)]
-            [ObservableModelReference<BaseModel>]
             public partial class ParentModel : ObservableModel
             {
+                public partial ParentModel(BaseModel baseModel);
+
                 public partial int Value { get; set; }
 
                 public ObservableList<string> GetLogs() => BaseModel.LogEntries;
@@ -215,10 +219,10 @@ public class DerivedModelReferenceDiagnosticTests
             }
 
             [ObservableModelScope(ModelScope.Transient)]
-            [ObservableModelReference<OtherModel>]
-            [{|{{DiagnosticDescriptors.DerivedModelReferenceError.Id}}:ObservableModelReference<DerivedModel>|}]
             public partial class ParentModel : ObservableModel
             {
+                public partial ParentModel(OtherModel otherModel, {|{{DiagnosticDescriptors.DerivedModelReferenceError.Id}}:DerivedModel|} derivedModel);
+
                 public partial int Value { get; set; }
 
                 public string GetInfo() => OtherModel.Name;
@@ -258,10 +262,10 @@ public class DerivedModelReferenceDiagnosticTests
             }
 
             [ObservableModelScope(ModelScope.Transient)]
-            [ObservableModelReference<OtherModel>]
-            [{|{{DiagnosticDescriptors.DerivedModelReferenceError.Id}}:ObservableModelReference<DerivedModel>|}]
             public partial class ParentModel : ObservableModel
             {
+                public partial ParentModel(OtherModel otherModel, {|{{DiagnosticDescriptors.DerivedModelReferenceError.Id}}:DerivedModel|} derivedModel);
+
                 public partial int Value { get; set; }
 
                 public string GetInfo() => OtherModel.Name;
@@ -296,9 +300,10 @@ public class DerivedModelReferenceDiagnosticTests
             }
 
             [ObservableModelScope(ModelScope.Transient)]
-            [ObservableModelReference<OtherModel>]
             public partial class ParentModel : ObservableModel
             {
+                public partial ParentModel(OtherModel otherModel);
+
                 public partial int Value { get; set; }
 
                 public string GetInfo() => OtherModel.Name;
@@ -337,9 +342,10 @@ public class DerivedModelReferenceDiagnosticTests
             }
 
             [ObservableModelScope(ModelScope.Transient)]
-            [{|{{DiagnosticDescriptors.DerivedModelReferenceError.Id}}:ObservableModelReference<DerivedModel>|}]
             public partial class ParentModel : ObservableModel
             {
+                public partial ParentModel({|{{DiagnosticDescriptors.DerivedModelReferenceError.Id}}:DerivedModel|} derivedModel);
+
                 public partial int Value { get; set; }
             }
         }

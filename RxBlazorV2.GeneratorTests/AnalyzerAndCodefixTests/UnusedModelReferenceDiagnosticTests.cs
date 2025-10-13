@@ -32,9 +32,10 @@ public class UnusedModelReferenceDiagnosticTests
             }
 
             [ObservableModelScope(ModelScope.Transient)]
-            [ObservableModelReference<CounterModel>]
             public partial class ParentModel : ObservableModel
             {
+                public partial ParentModel(CounterModel counterModel);
+
                 public partial int Value { get; set; }
 
                 // Uses Counter1 from CounterModel
@@ -64,9 +65,10 @@ public class UnusedModelReferenceDiagnosticTests
             }
 
             [ObservableModelScope(ModelScope.Transient)]
-            [{|{{DiagnosticDescriptors.UnusedModelReferenceError.Id}}:ObservableModelReference<CounterModel>|}]
             public partial class ParentModel : ObservableModel
             {
+                public partial ParentModel({|{{DiagnosticDescriptors.UnusedModelReferenceError.Id}}:CounterModel|} counterModel);
+
                 public partial int Value { get; set; }
 
                 // Does NOT use any properties from CounterModel
@@ -99,9 +101,10 @@ public class UnusedModelReferenceDiagnosticTests
             }
 
             [ObservableModelScope(ModelScope.Transient)]
-            [{|{{DiagnosticDescriptors.UnusedModelReferenceError.Id}}:ObservableModelReference<CounterModel>|}]
             public partial class ParentModel : ObservableModel
             {
+                public partial ParentModel({|{{DiagnosticDescriptors.UnusedModelReferenceError.Id}}:CounterModel|} counterModel);
+
                 public partial int Value { get; set; }
 
                 public void DoSomething()
@@ -167,10 +170,10 @@ public class UnusedModelReferenceDiagnosticTests
             }
 
             [ObservableModelScope(ModelScope.Transient)]
-            [ObservableModelReference<CounterModel>]
-            [{|{{DiagnosticDescriptors.UnusedModelReferenceError.Id}}:ObservableModelReference<OtherModel>|}]
             public partial class ParentModel : ObservableModel
             {
+                public partial ParentModel(CounterModel counterModel, {|{{DiagnosticDescriptors.UnusedModelReferenceError.Id}}:OtherModel|} otherModel);
+
                 public partial int Value { get; set; }
 
                 // Uses Counter1 but not OtherModel.Name
@@ -205,10 +208,10 @@ public class UnusedModelReferenceDiagnosticTests
             }
 
             [ObservableModelScope(ModelScope.Transient)]
-            [ObservableModelReference<CounterModel>]
-            [{|{{DiagnosticDescriptors.UnusedModelReferenceError.Id}}:ObservableModelReference<OtherModel>|}]
             public partial class ParentModel : ObservableModel
             {
+                public partial ParentModel(CounterModel counterModel, {|{{DiagnosticDescriptors.UnusedModelReferenceError.Id}}:OtherModel|} otherModel);
+
                 public partial int Value { get; set; }
 
                 public int Total => Value + CounterModel.Counter1;
@@ -237,9 +240,10 @@ public class UnusedModelReferenceDiagnosticTests
             }
 
             [ObservableModelScope(ModelScope.Transient)]
-            [ObservableModelReference<CounterModel>]
             public partial class ParentModel : ObservableModel
             {
+                public partial ParentModel(CounterModel counterModel);
+
                 public partial int Value { get; set; }
 
                 public int Total => Value + CounterModel.Counter1;
@@ -269,9 +273,10 @@ public class UnusedModelReferenceDiagnosticTests
             }
 
             [ObservableModelScope(ModelScope.Transient)]
-            [{|{{DiagnosticDescriptors.UnusedModelReferenceError.Id}}:ObservableModelReference<CounterModel>|}]
             public partial class ParentModel : ObservableModel
             {
+                public partial ParentModel({|{{DiagnosticDescriptors.UnusedModelReferenceError.Id}}:CounterModel|} counterModel);
+
                 public partial bool AddMode { get; set; }
 
                 // Property doesn't actually use CounterModel properties (only references AddMode)
@@ -300,9 +305,10 @@ public class UnusedModelReferenceDiagnosticTests
             }
 
             [ObservableModelScope(ModelScope.Transient)]
-            [ObservableModelReference<CounterModel>]
             public partial class ParentModel : ObservableModel
             {
+                public partial ParentModel(CounterModel counterModel);
+
                 public partial int Value { get; set; }
 
                 [ObservableCommand(nameof(Execute))]

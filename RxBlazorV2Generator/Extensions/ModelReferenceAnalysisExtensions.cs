@@ -102,15 +102,17 @@ public static class ModelReferenceAnalysisExtensions
                 modelRef.ReferencedModelNamespace,
                 modelRef.PropertyName,
                 allUsedProperties.ToList(),
-                modelRef.AttributeLocation));
+                modelRef.AttributeLocation,
+                modelRef.IsDerivedModel,
+                modelRef.BaseObservableModelType));
         }
 
         return enhancedModelReferences;
     }
 
     /// <summary>
-    /// Analyzes enhanced model references for unused references and creates diagnostics.
-    /// This is the single source of truth for UnusedModelReferenceError (RXBG008) detection.
+    /// Analyzes enhanced model references for derived models and unused references, and creates diagnostics.
+    /// This is the single source of truth for DerivedModelReferenceError (RXBG017) and UnusedModelReferenceError (RXBG008) detection.
     /// </summary>
     public static List<Diagnostic> CreateUnusedModelReferenceDiagnostics(
         this List<ModelReferenceInfo> enhancedModelReferences,
@@ -121,7 +123,19 @@ public static class ModelReferenceAnalysisExtensions
 
         foreach (var modelRef in enhancedModelReferences)
         {
-            if (modelRef.UsedProperties.Count == 0)
+            // Check for derived models first (RXBG017) - this takes precedence over unused properties
+            if (modelRef.IsDerivedModel)
+            {
+                var location = modelRef.AttributeLocation ?? classDecl.Identifier.GetLocation();
+                var diagnostic = Diagnostic.Create(
+                    DiagnosticDescriptors.DerivedModelReferenceError,
+                    location,
+                    modelRef.ReferencedModelTypeName,
+                    modelRef.BaseObservableModelType ?? "ObservableModel");
+                diagnostics.Add(diagnostic);
+            }
+            // Check for unused properties (RXBG008) only if not a derived model
+            else if (modelRef.UsedProperties.Count == 0)
             {
                 var location = modelRef.AttributeLocation ?? classDecl.Identifier.GetLocation();
                 var diagnostic = Diagnostic.Create(

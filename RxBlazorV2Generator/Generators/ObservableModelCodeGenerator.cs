@@ -75,6 +75,13 @@ public static class ObservableModelCodeGenerator
                 sb.AppendLine();
             }
 
+            // Generate protected properties for DI injected services
+            if (modelInfo.DIFields.Any())
+            {
+                sb.AppendLine(PropertyTemplate.GenerateDIFieldProperties(modelInfo.DIFields));
+                sb.AppendLine();
+            }
+
             // Generate partial property implementations with field keyword
             if (modelInfo.PartialProperties.Any())
             {

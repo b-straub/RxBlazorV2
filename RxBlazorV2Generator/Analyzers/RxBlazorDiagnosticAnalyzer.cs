@@ -6,6 +6,8 @@ using RxBlazorV2Generator.Diagnostics;
 using RxBlazorV2Generator.Extensions;
 using RxBlazorV2Generator.Models;
 using System.Collections.Immutable;
+using System.IO;
+using System.Text.RegularExpressions;
 
 namespace RxBlazorV2Generator.Analyzers;
 
@@ -30,7 +32,10 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
         DiagnosticDescriptors.TypeConstraintMismatchError,
         DiagnosticDescriptors.InvalidOpenGenericReferenceError,
         DiagnosticDescriptors.InvalidInitPropertyError,
-        DiagnosticDescriptors.DerivedModelReferenceError
+        DiagnosticDescriptors.DerivedModelReferenceError,
+        DiagnosticDescriptors.RazorInheritanceMismatchWarning,
+        DiagnosticDescriptors.UnregisteredServiceWarning,
+        DiagnosticDescriptors.DiServiceScopeViolationWarning
     ];
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
@@ -79,16 +84,16 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
     private static void AnalyzeRazorCodeBehindClass(SyntaxNodeAnalysisContext context)
     {
         var classDecl = (ClassDeclarationSyntax)context.Node;
-        
+
         // Only analyze classes that might be Razor code-behind classes
-        if (!RazorAnalyzer.IsRazorCodeBehindClass(classDecl, context.SemanticModel)) 
+        if (!RazorAnalyzer.IsRazorCodeBehindClass(classDecl, context.SemanticModel))
             return;
 
         try
         {
             // Use the analyzer-compatible method to get diagnostics
-            var diagnostics = AnalyzeRazorCodeBehindForDiagnostics(classDecl, context.SemanticModel);
-            
+            var diagnostics = AnalyzeRazorCodeBehindForDiagnostics(classDecl, context.SemanticModel, context.Compilation);
+
             // Report all diagnostics found
             foreach (var diagnostic in diagnostics)
             {
@@ -103,7 +108,7 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
                 classDecl.Identifier.GetLocation(),
                 classDecl.Identifier.ValueText,
                 ex.Message);
-            
+
             context.ReportDiagnostic(diagnostic);
         }
     }
@@ -124,9 +129,44 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
             if (!namedTypeSymbol.InheritsFromObservableModel())
                 return diagnostics;
 
-            // Extract diagnostics using existing extension methods
-            var (modelReferences, modelReferenceDiagnostics) = classDecl.ExtractModelReferencesWithDiagnostics(semanticModel);
-            diagnostics.AddRange(modelReferenceDiagnostics);
+            // Extract model references and DI fields from partial constructor parameters
+            var (modelReferences, diFields, unregisteredServices, diFieldsWithScope) = classDecl.ExtractPartialConstructorDependencies(semanticModel);
+
+            // Report informational warnings for unregistered services
+            foreach (var (paramName, paramType, location) in unregisteredServices)
+            {
+                if (location != null)
+                {
+                    var diagnostic = Diagnostic.Create(
+                        DiagnosticDescriptors.UnregisteredServiceWarning,
+                        location,
+                        paramName,
+                        paramType);
+                    diagnostics.Add(diagnostic);
+                }
+            }
+
+            // Check for DI scope violations
+            var modelScope = classDecl.ExtractModelScopeFromClass(semanticModel);
+            foreach (var (diField, serviceScope, location) in diFieldsWithScope)
+            {
+                if (serviceScope != null && location != null)
+                {
+                    var violation = CheckScopeViolation(modelScope, serviceScope);
+                    if (violation != null)
+                    {
+                        var diagnostic = Diagnostic.Create(
+                            DiagnosticDescriptors.DiServiceScopeViolationWarning,
+                            location,
+                            namedTypeSymbol.Name,
+                            modelScope,
+                            diField.FieldName,
+                            diField.FieldType,
+                            serviceScope);
+                        diagnostics.Add(diagnostic);
+                    }
+                }
+            }
 
             var methods = classDecl.CollectMethods();
             var (commandProperties, commandPropertiesDiagnostics) = classDecl.ExtractCommandPropertiesWithDiagnostics(methods, semanticModel);
@@ -308,10 +348,37 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
     }
 
     /// <summary>
+    /// Checks if there's a DI scope violation between model scope and service scope.
+    /// Returns a message describing the violation, or null if no violation.
+    ///
+    /// DI Scoping Rules:
+    /// - Singleton can only inject Singleton
+    /// - Scoped can inject Singleton or Scoped
+    /// - Transient can inject anything
+    /// </summary>
+    private static string? CheckScopeViolation(string modelScope, string serviceScope)
+    {
+        if (modelScope == "Singleton" && serviceScope != "Singleton")
+        {
+            return $"Singleton services cannot depend on {serviceScope} services (captive dependency)";
+        }
+
+        if (modelScope == "Scoped" && serviceScope == "Transient")
+        {
+            return $"Scoped services should not depend on Transient services (may cause issues with disposal)";
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// Analyzer-compatible method to get diagnostics from Razor code-behind classes.
     /// Uses the same detection logic as the generator (SSOT) by calling RazorAnalyzer.GetRazorCodeBehindInfo.
+    ///
+    /// Note: RXBG019 (RazorInheritanceMismatchWarning) is reported by the source generator instead of the analyzer
+    /// because it requires access to AdditionalTexts (.razor files) which analyzers cannot efficiently access.
     /// </summary>
-    private static List<Diagnostic> AnalyzeRazorCodeBehindForDiagnostics(ClassDeclarationSyntax classDecl, SemanticModel semanticModel)
+    private static List<Diagnostic> AnalyzeRazorCodeBehindForDiagnostics(ClassDeclarationSyntax classDecl, SemanticModel semanticModel, Compilation compilation)
     {
         var diagnostics = new List<Diagnostic>();
 

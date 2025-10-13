@@ -108,11 +108,16 @@ public class RxBlazorGenerator : IIncrementalGenerator
             });
 
         // Register syntax provider for Razor code-behind files
-        var razorCodeBehindClasses = context.SyntaxProvider
+        // Store both the info and the context for later RXBG019 diagnostic checking
+        var razorCodeBehindClassesWithContext = context.SyntaxProvider
             .CreateSyntaxProvider(
                 predicate: static (s, _) => RazorAnalyzer.IsRazorCodeBehindClass(s),
-                transform: static (ctx, _) => RazorAnalyzer.GetRazorCodeBehindInfo(ctx))
-            .Where(static m => m is not null);
+                transform: static (ctx, _) => (Info: RazorAnalyzer.GetRazorCodeBehindInfo(ctx), ClassDecl: (ClassDeclarationSyntax)ctx.Node, SemanticModel: ctx.SemanticModel))
+            .Where(static m => m.Info is not null);
+
+        // Extract just the info for compatibility with existing code
+        var razorCodeBehindClasses = razorCodeBehindClassesWithContext
+            .Select(static (item, _) => item.Info);
 
         // Register additional text provider for .razor files
         var razorFiles = context.AdditionalTextsProvider
@@ -156,6 +161,80 @@ public class RxBlazorGenerator : IIncrementalGenerator
                 all.AddRange(existing);
                 all.AddRange(missing);
                 return all;
+            });
+
+        // Report RXBG009 diagnostics for razor files with @inject ObservableModel but no ObservableComponent inheritance
+        context.RegisterSourceOutput(missingCodeBehinds.Collect().Combine(razorFiles.Collect()),
+            static (spc, combined) =>
+            {
+                var (codeBehindInfos, allRazorFiles) = combined;
+
+                foreach (var info in codeBehindInfos.Where(i => i != null && i.HasDiagnosticIssue))
+                {
+                    // Find the corresponding .razor file to get its location
+                    var razorFile = allRazorFiles.FirstOrDefault(f =>
+                        System.IO.Path.GetFileNameWithoutExtension(f.Path) == info!.ClassName);
+
+                    if (razorFile != null)
+                    {
+                        var location = Location.Create(
+                            razorFile.Path,
+                            Microsoft.CodeAnalysis.Text.TextSpan.FromBounds(0, 0),
+                            new Microsoft.CodeAnalysis.Text.LinePositionSpan(
+                                new Microsoft.CodeAnalysis.Text.LinePosition(0, 0),
+                                new Microsoft.CodeAnalysis.Text.LinePosition(0, 0)));
+
+                        var diagnostic = Diagnostic.Create(
+                            Diagnostics.DiagnosticDescriptors.ComponentNotObservableWarning,
+                            location,
+                            info!.ClassName);
+
+                        spc.ReportDiagnostic(diagnostic);
+                    }
+                }
+            });
+
+        // Check for RXBG019: .razor file inheritance mismatch
+        var razorInheritanceChecks = razorCodeBehindClassesWithContext
+            .Combine(razorFiles.Collect())
+            .Select(static (combined, _) =>
+            {
+                var (codeBehindContext, allRazorFiles) = combined;
+
+                // Find the corresponding .razor file
+                var razorFile = allRazorFiles.FirstOrDefault(f =>
+                    System.IO.Path.GetFileNameWithoutExtension(f.Path) == codeBehindContext.Info?.ClassName);
+
+                if (razorFile == null || codeBehindContext.Info == null)
+                {
+                    return (ClassDecl: codeBehindContext.ClassDecl, SemanticModel: codeBehindContext.SemanticModel, RazorFile: (AdditionalText?)null, ClassName: codeBehindContext.Info?.ClassName);
+                }
+
+                return (ClassDecl: codeBehindContext.ClassDecl, SemanticModel: codeBehindContext.SemanticModel, RazorFile: (AdditionalText?)razorFile, ClassName: codeBehindContext.Info.ClassName);
+            });
+
+        // Report RXBG019 diagnostics
+        context.RegisterSourceOutput(razorInheritanceChecks,
+            static (spc, checkInfo) =>
+            {
+                if (checkInfo.RazorFile != null && checkInfo.ClassDecl != null && checkInfo.SemanticModel != null)
+                {
+                    var (hasMatch, expectedInherits) = RazorAnalyzer.CheckRazorInheritanceMatch(
+                        checkInfo.ClassDecl,
+                        checkInfo.SemanticModel,
+                        checkInfo.RazorFile);
+
+                    if (!hasMatch && expectedInherits != null)
+                    {
+                        var diagnostic = Diagnostic.Create(
+                            Diagnostics.DiagnosticDescriptors.RazorInheritanceMismatchWarning,
+                            checkInfo.ClassDecl.Identifier.GetLocation(),
+                            checkInfo.ClassName,
+                            expectedInherits);
+
+                        spc.ReportDiagnostic(diagnostic);
+                    }
+                }
             });
 
         // Generate constructors for all Razor code-behind classes (both existing and missing)

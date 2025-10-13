@@ -5,16 +5,15 @@ using RxBlazorV2.Model;
 namespace RxBlazorV2Sample.Samples.ModelPatterns;
 
 /// <summary>
-/// Shopping cart model - demonstrates ModelReference pattern.
-/// Uses ModelReference to ProductCatalogModel to automatically recalculate total when prices change.
+/// Shopping cart model - demonstrates partial constructor pattern.
+/// Injects ProductCatalogModel via constructor to automatically recalculate total when prices change.
 ///
-/// Use ModelReference when:
+/// Use partial constructor injection when:
 /// - Your model needs to REACT to changes in another model (side effects/business logic)
 /// - You need to perform calculations or updates based on referenced model changes
 /// - The relationship is at the model/business logic level
 /// </summary>
 [ObservableModelScope(ModelScope.Scoped)]
-[ObservableModelReference<ProductCatalogModel>]
 public partial class ShoppingCartModel : ObservableModel
 {
     public partial int LaptopQuantity { get; set; } = 0;
@@ -24,12 +23,15 @@ public partial class ShoppingCartModel : ObservableModel
     // Total is calculated based on quantities and prices from ProductCatalogModel
     public partial decimal Total { get; set; } = 0m;
 
+    // Declare partial constructor with ProductCatalogModel dependency
+    public partial ShoppingCartModel(ProductCatalogModel productCatalog);
+
     private CompositeDisposable? _localSubscriptions;
 
     protected override void OnContextReady()
     {
         // Subscribe to any property changes (quantities or prices) to recalculate total
-        // ProductCatalogModel.Observable is automatically merged thanks to ModelReference
+        // ProductCatalog.Observable is automatically merged via constructor injection
         _localSubscriptions = new CompositeDisposable();
         _localSubscriptions.Add(Observable.Subscribe(props => RecalculateTotal()));
 
@@ -49,9 +51,9 @@ public partial class ShoppingCartModel : ObservableModel
     // This method is called when quantities change OR when ProductCatalog prices change (via merged Observable)
     private void RecalculateTotal()
     {
-        Total = (LaptopQuantity * ProductCatalogModel.LaptopPrice) +
-                (MouseQuantity * ProductCatalogModel.MousePrice) +
-                (KeyboardQuantity * ProductCatalogModel.KeyboardPrice);
+        Total = (LaptopQuantity * ProductCatalog.LaptopPrice) +
+                (MouseQuantity * ProductCatalog.MousePrice) +
+                (KeyboardQuantity * ProductCatalog.KeyboardPrice);
     }
 
     [ObservableCommand(nameof(AddLaptop))]

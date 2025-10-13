@@ -22,9 +22,10 @@ public class SemanticResolutionTests
             }
 
             [ObservableModelScope(ModelScope.Singleton)]
-            [ObservableModelReference<CounterModel>]
             public partial class MainModel : ObservableModel
             {
+                public partial MainModel(CounterModel counterModel);
+
                 [ObservableCommand(nameof(IncrementCounter))]
                 public partial IObservableCommand IncrementCommand { get; }
 
@@ -63,9 +64,10 @@ public class SemanticResolutionTests
             using Test.Core.Models;
 
             [ObservableModelScope(ModelScope.Singleton)]
-            [ObservableModelReference<NestedCounter>]
             public partial class MainModel : ObservableModel
             {
+                public partial MainModel(NestedCounter nestedCounter);
+
                 [ObservableCommand(nameof(IncrementNested))]
                 public partial IObservableCommand IncrementCommand { get; }
 
@@ -98,9 +100,10 @@ public class SemanticResolutionTests
             }
 
             [ObservableModelScope(ModelScope.Singleton)]
-            [ObservableModelReference<CounterModel>]
             public partial class MainModel : ObservableModel
             {
+                public partial MainModel(CounterModel counterModel);
+
                 [ObservableCommand(nameof(ProcessCounter))]
                 public partial IObservableCommand ProcessCommand { get; }
 
@@ -134,9 +137,10 @@ public class SemanticResolutionTests
             }
 
             [ObservableModelScope(ModelScope.Singleton)]
-            [ObservableModelReference<CounterModel>]
             public partial class MainModel : ObservableModel
             {
+                public partial MainModel(CounterModel counterModel);
+
                 [ObservableCommand(nameof(ProcessCounter))]
                 public partial IObservableCommand ProcessCommand { get; }
 
@@ -174,9 +178,10 @@ public class SemanticResolutionTests
             }
 
             [ObservableModelScope(ModelScope.Singleton)]
-            [ObservableModelReference(typeof(GenericCounter<>))]
             public partial class MainModel<T> : ObservableModel where T : struct
             {
+                public partial MainModel(GenericCounter<T> genericCounter);
+
                 [ObservableCommand(nameof(IncrementValue))]
                 public partial IObservableCommand IncrementCommand { get; }
 
@@ -210,9 +215,10 @@ public class SemanticResolutionTests
             }
 
             [ObservableModelScope(ModelScope.Singleton)]
-            [ObservableModelReference<CounterModel>]
             public partial class MainModel : ObservableModel
             {
+                public partial MainModel(CounterModel counterModel);
+
                 public partial string Name { get; set; }
 
                 [ObservableCommand(nameof(ProcessData))]
@@ -254,10 +260,10 @@ public class SemanticResolutionTests
             }
 
             [ObservableModelScope(ModelScope.Singleton)]
-            [ObservableModelReference<Counter1Model>]
-            [ObservableModelReference<Counter2Model>]
             public partial class MainModel : ObservableModel
             {
+                public partial MainModel(Counter1Model counter1Model, Counter2Model counter2Model);
+
                 [ObservableCommand(nameof(ProcessAll))]
                 public partial IObservableCommand ProcessCommand { get; }
 
@@ -292,9 +298,10 @@ public class SemanticResolutionTests
             }
 
             [ObservableModelScope(ModelScope.Singleton)]
-            [ObservableModelReference<CounterModel>]
             public partial class MainModel : ObservableModel
             {
+                public partial MainModel(CounterModel counterModel);
+
                 [ObservableCommand(nameof(SafeIncrement))]
                 public partial IObservableCommand IncrementCommand { get; }
 

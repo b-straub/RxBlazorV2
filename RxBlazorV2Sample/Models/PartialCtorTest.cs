@@ -1,20 +1,14 @@
+using RxBlazorV2.Model;
 using RxBlazorV2Sample.Interfaces;
+using RxBlazorV2Sample.Services;
 
 namespace RxBlazorV2Sample.Models;
 
-public partial class PartialCtorTest
+[ObservableModelScope(ModelScope.Scoped)]
+public partial class PartialCtorTest : ObservableModel
 {
-    partial PartialCtorTest(CounterModel counter, ISettingsModel settings);
-}
+    public partial string SearchText { get; set; } = string.Empty;
+    public partial PartialCtorTest(CounterModel counter, ISettingsModel settings, LocationService  locationService);
 
-public partial class PartialCtorTest
-{
-    protected CounterModel Counter { get; }
-    protected ISettingsModel Settings { get; }
-    
-    partial PartialCtorTest(CounterModel counter, ISettingsModel settings)
-    {
-        Counter = counter;
-        Settings = settings;
-    }
+    public bool IsDay1 => Counter.Counter1 == 1 && Settings.IsDay;
 }

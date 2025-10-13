@@ -211,4 +211,42 @@ internal static class SyntaxHelpers
 
         return null;
     }
+
+    /// <summary>
+    /// Removes a constructor parameter from a partial constructor declaration.
+    /// If the parameter is the last one, removes the entire partial constructor declaration.
+    /// </summary>
+    public static SyntaxNode RemoveConstructorParameter(
+        SyntaxNode root,
+        ParameterSyntax parameter)
+    {
+        var constructor = parameter.FirstAncestorOrSelf<ConstructorDeclarationSyntax>();
+        if (constructor is null)
+        {
+            return root;
+        }
+
+        var parameters = constructor.ParameterList.Parameters;
+        if (parameters.Count == 1)
+        {
+            // This was the only parameter - remove the entire constructor declaration
+            var classDecl = constructor.FirstAncestorOrSelf<ClassDeclarationSyntax>();
+            if (classDecl is not null)
+            {
+                var newMembers = classDecl.Members.RemoveKeepTrivia(constructor);
+                var newClassDecl = classDecl.WithMembers(newMembers);
+                return root.ReplaceNode(classDecl, newClassDecl);
+            }
+        }
+        else
+        {
+            // Remove just the parameter, preserving trivia
+            var newParameters = parameters.RemoveKeepTrivia(parameter);
+            var newParameterList = constructor.ParameterList.WithParameters(newParameters);
+            var newConstructor = constructor.WithParameterList(newParameterList);
+            return root.ReplaceNode(constructor, newConstructor);
+        }
+
+        return root;
+    }
 }

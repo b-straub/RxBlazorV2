@@ -37,9 +37,15 @@ public static class ObservableModelAnalyzer
             var methods = classDecl.CollectMethods();
             var (partialProperties, partialPropertyDiagnostics) = classDecl.ExtractPartialPropertiesWithDiagnostics(semanticModel);
             var (commandProperties, commandPropertiesDiagnostics) = classDecl.ExtractCommandPropertiesWithDiagnostics(methods, semanticModel);
-            var (modelReferences, modelReferenceDiagnostics) = classDecl.ExtractModelReferencesWithDiagnostics(semanticModel, serviceClasses);
+
+            // Extract model references and DI fields from partial constructor parameters
+            var (modelReferences, diFields, _, _) = classDecl.ExtractPartialConstructorDependencies(semanticModel, serviceClasses);
+
+            // Also extract any additional DI fields from private field declarations (for non-constructor injected dependencies)
+            var additionalDIFields = classDecl.ExtractDIFields(semanticModel, serviceClasses, observableModelClasses);
+            diFields.AddRange(additionalDIFields);
+
             var modelScope = classDecl.ExtractModelScopeFromClass(semanticModel);
-            var diFields = classDecl.ExtractDIFields(semanticModel, serviceClasses, observableModelClasses);
             var implementedInterfaces = namedTypeSymbol.ExtractObservableModelInterfaces();
             var genericTypes = namedTypeSymbol.ExtractObservableModelGenericTypes();
             var typeConstrains = classDecl.ExtractTypeConstrains();
@@ -52,9 +58,6 @@ public static class ObservableModelAnalyzer
 
             // Add any diagnostics from command properties analysis
             diagnostics.AddRange(commandPropertiesDiagnostics);
-
-            // Add any diagnostics from model reference analysis
-            diagnostics.AddRange(modelReferenceDiagnostics);
 
             var modelInfo = new ObservableModelInfo(
                 namedTypeSymbol.ContainingNamespace.ToDisplayString(),
@@ -162,9 +165,15 @@ public static class ObservableModelAnalyzer
             var methods = classDecl.CollectMethods();
             var partialProperties = classDecl.ExtractPartialProperties(semanticModel);
             var (commandProperties, _) = classDecl.ExtractCommandPropertiesWithDiagnostics(methods, semanticModel);
-            var (modelReferences, _) = classDecl.ExtractModelReferencesWithDiagnostics(semanticModel, serviceClasses);
+
+            // Extract model references and DI fields from partial constructor parameters
+            var (modelReferences, diFields, _, _) = classDecl.ExtractPartialConstructorDependencies(semanticModel, serviceClasses);
+
+            // Also extract any additional DI fields from private field declarations
+            var additionalDIFields = classDecl.ExtractDIFields(semanticModel, serviceClasses, null);
+            diFields.AddRange(additionalDIFields);
+
             var modelScope = classDecl.ExtractModelScopeFromClass(semanticModel);
-            var diFields = classDecl.ExtractDIFields(semanticModel, serviceClasses, null);
             var implementedInterfaces = namedTypeSymbol.ExtractObservableModelInterfaces();
             var genericTypes = namedTypeSymbol.ExtractObservableModelGenericTypes();
             var typeConstrains = classDecl.ExtractTypeConstrains();

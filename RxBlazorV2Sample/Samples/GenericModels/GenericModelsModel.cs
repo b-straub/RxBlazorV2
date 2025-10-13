@@ -12,7 +12,6 @@ public partial class GenericModelsBaseModel<T, TP> : ObservableModel where T : c
     public required partial ObservableList<TP> Values { get; init; }
 }
 
-[ObservableModelReference(typeof(GenericModelsBaseModel<,>))]
 [ObservableModelScope(ModelScope.Scoped)]
 public partial class GenericModelsModel<T, TP> : ObservableModel where T : class where TP : struct
 {
@@ -20,8 +19,11 @@ public partial class GenericModelsModel<T, TP> : ObservableModel where T : class
     public required partial ObservableList<LogEntry> LogEntries { get; init; }
     public partial string Status { get; set; } = "Ready";
 
-    public IList<T> Items => GenericModelsBaseModel.Items;
-    public IList<TP> Values => GenericModelsBaseModel.Values;
+    // Declare partial constructor with generic base model dependency
+    public partial GenericModelsModel(GenericModelsBaseModel<T, TP> genericModelsBase);
+
+    public IList<T> Items => GenericModelsBase.Items;
+    public IList<TP> Values => GenericModelsBase.Values;
 
     [ObservableCommand(nameof(AddItem), nameof(CanAddItem))]
     public partial IObservableCommand<T> AddItemCommand { get; }
@@ -37,49 +39,49 @@ public partial class GenericModelsModel<T, TP> : ObservableModel where T : class
 
     private void AddItem(T item)
     {
-        GenericModelsBaseModel.Items.Add(item);
-        Status = $"Added item. Total items: {GenericModelsBaseModel.Items.Count}";
-        LogEntries.Add(new LogEntry($"Added item: {item}. Total: {GenericModelsBaseModel.Items.Count}", DateTime.Now));
+        GenericModelsBase.Items.Add(item);
+        Status = $"Added item. Total items: {GenericModelsBase.Items.Count}";
+        LogEntries.Add(new LogEntry($"Added item: {item}. Total: {GenericModelsBase.Items.Count}", DateTime.Now));
     }
 
     private bool CanAddItem()
     {
-        return GenericModelsBaseModel.Items.Count < 5;
+        return GenericModelsBase.Items.Count < 5;
     }
 
     private void AddValue(TP value)
     {
-        GenericModelsBaseModel.Values.Add(value);
-        Status = $"Added value. Total values: {GenericModelsBaseModel.Values.Count}";
-        LogEntries.Add(new LogEntry($"Added value: {value}. Total: {GenericModelsBaseModel.Values.Count}", DateTime.Now));
+        GenericModelsBase.Values.Add(value);
+        Status = $"Added value. Total values: {GenericModelsBase.Values.Count}";
+        LogEntries.Add(new LogEntry($"Added value: {value}. Total: {GenericModelsBase.Values.Count}", DateTime.Now));
     }
 
     private bool CanAddValue()
     {
-        return GenericModelsBaseModel.Values.Count < 10;
+        return GenericModelsBase.Values.Count < 10;
     }
 
     private void ClearItems()
     {
-        GenericModelsBaseModel.Items.Clear();
+        GenericModelsBase.Items.Clear();
         Status = "All items cleared";
         LogEntries.Add(new LogEntry("All items cleared", DateTime.Now));
     }
 
     private bool CanClearItems()
     {
-        return GenericModelsBaseModel.Items.Count > 0;
+        return GenericModelsBase.Items.Count > 0;
     }
 
     private void ClearValues()
     {
-        GenericModelsBaseModel.Values.Clear();
+        GenericModelsBase.Values.Clear();
         Status = "All values cleared";
         LogEntries.Add(new LogEntry("All values cleared", DateTime.Now));
     }
 
     private bool CanClearValues()
     {
-        return GenericModelsBaseModel.Values.Count > 0;
+        return GenericModelsBase.Values.Count > 0;
     }
 }

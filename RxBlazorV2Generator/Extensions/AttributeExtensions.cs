@@ -42,16 +42,6 @@ public static class AttributeExtensions
     }
 
     /// <summary>
-    /// Checks if an attribute is ObservableModelReference or ObservableModelReference&lt;T&gt;
-    /// </summary>
-    public static bool IsObservableModelReference(
-        this AttributeSyntax attribute,
-        SemanticModel semanticModel)
-    {
-        return attribute.IsAttributeOfType(semanticModel, "ObservableModelReferenceAttribute");
-    }
-
-    /// <summary>
     /// Checks if an attribute is ObservableModelScope
     /// </summary>
     public static bool IsObservableModelScope(

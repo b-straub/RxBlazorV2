@@ -36,30 +36,30 @@ public class DerivedModelReferenceCodeFixProvider : CodeFixProvider
             var diagnosticSpan = diagnostic.Location.SourceSpan;
             var node = root.FindNode(diagnosticSpan);
 
-            // Find the attribute that contains the derived model reference
-            var attribute = node.FirstAncestorOrSelf<AttributeSyntax>();
-            if (attribute == null)
+            // Find the constructor parameter that contains the derived model reference
+            var parameter = node.FirstAncestorOrSelf<ParameterSyntax>();
+            if (parameter == null)
             {
                 continue;
             }
 
-            // Code Fix: Remove the derived model reference attribute
-            var removeAttributeAction = CodeAction.Create(
-                title: "Remove ObservableModelReference attribute",
-                createChangedDocument: c => RemoveAttributeAsync(context.Document, root, attribute, c),
+            // Code Fix: Remove the derived model reference parameter
+            var removeParameterAction = CodeAction.Create(
+                title: "Remove constructor parameter",
+                createChangedDocument: c => RemoveParameterAsync(context.Document, root, parameter, c),
                 equivalenceKey: "RemoveDerivedModelReference");
 
-            context.RegisterCodeFix(removeAttributeAction, diagnostic);
+            context.RegisterCodeFix(removeParameterAction, diagnostic);
         }
     }
 
-    private static Task<Document> RemoveAttributeAsync(
+    private static Task<Document> RemoveParameterAsync(
         Document document,
         SyntaxNode root,
-        AttributeSyntax attribute,
+        ParameterSyntax parameter,
         CancellationToken cancellationToken)
     {
-        var newRoot = SyntaxHelpers.RemoveAttributeFromClass(root, attribute);
+        var newRoot = SyntaxHelpers.RemoveConstructorParameter(root, parameter);
         return Task.FromResult(document.WithSyntaxRoot(newRoot));
     }
 }

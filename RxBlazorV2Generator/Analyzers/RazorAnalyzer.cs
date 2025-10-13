@@ -206,6 +206,9 @@ public static class RazorAnalyzer
             return codeBehindInfo;
         }
 
+        // Note: RXBG019 diagnostic check is performed separately in the generator using CheckRazorInheritanceMatch
+        // to avoid storing diagnostic information in RazorCodeBehindInfo
+
         try
         {
             var razorContent = razorFile.GetText()?.ToString() ?? string.Empty;
@@ -560,6 +563,14 @@ public static class RazorAnalyzer
                 // Only create RazorCodeBehindInfo if we found any ObservableModel fields
                 if (observableModelFields.Any())
                 {
+                    // Check if the razor file has @inherits ObservableComponent<T> or ObservableComponent
+                    var hasObservableComponentInheritance = inheritsMatch.Success ||
+                        Regex.IsMatch(razorContent, @"@inherits\s+\S*ObservableComponent\s*$", RegexOptions.Multiline);
+
+                    // If we have ObservableModel @inject directives but no ObservableComponent inheritance,
+                    // this is a diagnostic case - report warning but don't generate code
+                    var hasDiagnosticIssue = !hasObservableComponentInheritance;
+
                     // Analyze razor content for property usage
                     var (usedProperties, fieldToPropertiesMap) = AnalyzeRazorContent(
                         razorContent,
@@ -573,9 +584,10 @@ public static class RazorAnalyzer
                         usedProperties,
                         fieldToTypeMap,
                         fieldToPropertiesMap,
-                        false,
+                        hasDiagnosticIssue, // Set diagnostic flag if no ObservableComponent inheritance
                         null,
-                        injectedProperties));
+                        injectedProperties,
+                        hasObservableComponentInheritance)); // Pass isObservableComponent flag
                 }
             }
             catch (Exception)
@@ -616,5 +628,190 @@ public static class RazorAnalyzer
         }
 
         return relevantSegments.Any() ? string.Join(".", relevantSegments) : "Unknown";
+    }
+
+    /// <summary>
+    /// Checks if a .razor file has the correct @inherits directive matching the code-behind class inheritance.
+    /// Returns a tuple (hasInheritanceMatch, expectedInheritsDirective) where:
+    /// - hasInheritanceMatch: true if .razor file has matching @inherits or if not applicable
+    /// - expectedInheritsDirective: the expected @inherits directive if mismatch found, null otherwise
+    /// </summary>
+    public static (bool hasInheritanceMatch, string? expectedInheritsDirective) CheckRazorInheritanceMatch(
+        ClassDeclarationSyntax codeBehindClass,
+        SemanticModel semanticModel,
+        AdditionalText razorFile)
+    {
+        try
+        {
+            if (semanticModel.GetDeclaredSymbol(codeBehindClass) is not INamedTypeSymbol classSymbol)
+            {
+                return (true, null); // Cannot analyze, assume match
+            }
+
+            // Check if this class inherits from ObservableComponent (generic or non-generic)
+            var (isObservableComponent, baseTypeName) = GetObservableComponentInheritanceInfo(classSymbol);
+            if (!isObservableComponent || baseTypeName == null)
+            {
+                return (true, null); // Not an ObservableComponent, no @inherits needed
+            }
+
+            // Read the .razor file content
+            var razorContent = razorFile.GetText()?.ToString() ?? string.Empty;
+
+            // Check for @inherits directive matching the expected base type
+            // Need to check both fully qualified and short form
+            // e.g., both "ObservableComponent<Namespace.Model>" and "ObservableComponent<Model>"
+            if (HasMatchingInheritsDirective(razorContent, baseTypeName))
+            {
+                return (true, null); // Match found, all good
+            }
+            else
+            {
+                return (false, baseTypeName); // Mismatch found, return expected directive
+            }
+        }
+        catch (Exception)
+        {
+            return (true, null); // On error, assume match to avoid false positives
+        }
+    }
+
+    /// <summary>
+    /// Checks if razor content has a matching @inherits directive.
+    /// Handles both fully qualified and short form type names, with or without namespace prefixes.
+    /// </summary>
+    private static bool HasMatchingInheritsDirective(string razorContent, string expectedBaseTypeName)
+    {
+        // Extract all @inherits directives from the razor content
+        var inheritsMatches = Regex.Matches(razorContent, @"@inherits\s+([^\s\r\n]+)", RegexOptions.Multiline);
+
+        foreach (Match inheritsMatch in inheritsMatches)
+        {
+            var inheritsTypeName = inheritsMatch.Groups[1].Value;
+
+            // Check if this inherits directive matches the expected type
+            if (IsMatchingType(inheritsTypeName, expectedBaseTypeName))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Checks if two type names match, handling various forms:
+    /// - Exact match: "ObservableComponent" == "ObservableComponent"
+    /// - With namespace prefix: "RxBlazorV2.Component.ObservableComponent<TestModel>" matches "ObservableComponent<TestModel>"
+    /// - Short type arguments: "ObservableComponent<TestModel>" matches "ObservableComponent<Namespace.TestModel>"
+    /// </summary>
+    private static bool IsMatchingType(string actualTypeName, string expectedTypeName)
+    {
+        // Exact match
+        if (actualTypeName == expectedTypeName)
+        {
+            return true;
+        }
+
+        // Extract base class and type arguments for both
+        var actualParts = ParseTypeName(actualTypeName);
+        var expectedParts = ParseTypeName(expectedTypeName);
+
+        if (actualParts == null || expectedParts == null)
+        {
+            return false;
+        }
+
+        // Check if base class names match (ignoring namespace prefixes)
+        var actualBaseName = actualParts.Value.baseName.Split('.').Last();
+        var expectedBaseName = expectedParts.Value.baseName.Split('.').Last();
+
+        if (actualBaseName != expectedBaseName)
+        {
+            return false;
+        }
+
+        // If no type arguments, we're done
+        if (actualParts.Value.typeArgs == null && expectedParts.Value.typeArgs == null)
+        {
+            return true;
+        }
+
+        if (actualParts.Value.typeArgs == null || expectedParts.Value.typeArgs == null)
+        {
+            return false;
+        }
+
+        // Check if type arguments match (comparing short forms)
+        var actualTypeArgShort = actualParts.Value.typeArgs.Split('.').Last();
+        var expectedTypeArgShort = expectedParts.Value.typeArgs.Split('.').Last();
+
+        return actualTypeArgShort == expectedTypeArgShort;
+    }
+
+    /// <summary>
+    /// Parses a type name into base name and type arguments.
+    /// E.g., "Namespace.ObservableComponent<Namespace.Model>" -> ("Namespace.ObservableComponent", "Namespace.Model")
+    /// </summary>
+    private static (string baseName, string? typeArgs)? ParseTypeName(string typeName)
+    {
+        if (typeName.Contains("<"))
+        {
+            var match = Regex.Match(typeName, @"^([^<]+)<(.+)>$");
+            if (match.Success)
+            {
+                return (match.Groups[1].Value, match.Groups[2].Value);
+            }
+            return null;
+        }
+        else
+        {
+            return (typeName, null);
+        }
+    }
+
+    /// <summary>
+    /// Gets the ObservableComponent inheritance information for a class.
+    /// Returns (isObservableComponent, baseTypeName) where baseTypeName is the DIRECT base class
+    /// that the code-behind inherits from (e.g., ObservableComponent, ObservableLayoutComponentBase, etc.).
+    /// </summary>
+    private static (bool isObservableComponent, string? baseTypeName) GetObservableComponentInheritanceInfo(INamedTypeSymbol classSymbol)
+    {
+        var directBaseType = classSymbol.BaseType;
+        if (directBaseType == null)
+        {
+            return (false, null);
+        }
+
+        // Check if the direct base type or any of its ancestors is ObservableComponent
+        var checkType = directBaseType;
+        var isObservableComponent = false;
+        while (checkType != null)
+        {
+            if (checkType.Name == "ObservableComponent" || checkType.Name == "ObservableLayoutComponentBase")
+            {
+                isObservableComponent = true;
+                break;
+            }
+            checkType = checkType.BaseType;
+        }
+
+        if (!isObservableComponent)
+        {
+            return (false, null);
+        }
+
+        // Return the DIRECT base type name, not the ancestor
+        if (directBaseType.TypeArguments.Length == 1)
+        {
+            // Generic: ObservableComponent<ModelType>
+            var modelType = directBaseType.TypeArguments[0].ToDisplayString();
+            return (true, $"{directBaseType.Name}<{modelType}>");
+        }
+        else
+        {
+            // Non-generic: ObservableComponent or ObservableLayoutComponentBase
+            return (true, directBaseType.Name);
+        }
     }
 }

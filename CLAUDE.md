@@ -63,16 +63,25 @@ public partial class MyModel : ObservableModel
 }
 ```
 
-### Model References and DI
+### Model References and DI (Partial Constructor Pattern)
 ```csharp
-[ObservableModelReference<OtherModel>]
 public partial class MyModel : ObservableModel
 {
-    // Generator creates: protected OtherModel OtherModel { get; }
-    // Generator creates constructor with DI injection
-    // Generator merges observables from referenced models
+    // Declare partial constructor with ObservableModel dependencies
+    public partial MyModel(OtherModel other, SomeService service);
+
+    // Generator creates: protected OtherModel Other { get; }
+    // Generator creates constructor implementation with DI injection
+    // Generator merges observables from referenced ObservableModels
+    // Non-ObservableModel params become private fields with underscore prefix
 }
 ```
+
+**Key Points:**
+- All constructor parameters are considered DI dependencies
+- ObservableModel parameters become `protected` properties with auto-subscription
+- Other service parameters become `private readonly` fields
+- Property names use PascalCase of parameter names (e.g., `other` → `Other`)
 
 ### Generated Code Patterns
 - **Properties**: Use `field` keyword with `StateHasChanged(nameof(PropertyName))`
@@ -86,7 +95,6 @@ public partial class MyModel : ObservableModel
 
 - `[ObservableModelScope]` - Controls DI lifetime (Singleton, Scoped, Transient)
 - `[ObservableCommand]` - Links command properties to implementation methods
-- `[ObservableModelReference<T>]` - Injects and subscribes to other observable models
 
 ## Command Method Signatures
 
@@ -117,7 +125,11 @@ Task Method(T param, CancellationToken token) → IObservableCommandAsync<T> // 
 ## Development Notes
 
 - Use GeneratorRunner for testing generator changes - modify as needed for different test scenarios
-- The generator uses semantic analysis for DI field detection rather than hardcoded type lists  
+- The generator uses semantic analysis for DI field detection rather than hardcoded type lists
 - Property initializers should be set on partial property declarations, not in generated code
 - Field keyword approach is used for generated property implementations
 - All command methods must be private and follow specific signature patterns for proper generation
+- **Partial Constructor Pattern**: Declare dependencies via partial constructors (C# 14 feature)
+  - ObservableModel dependencies are auto-detected and subscribed
+  - Generated properties for ObservableModels are `protected` (accessible in derived classes)
+  - Regular DI services become private fields with underscore prefix

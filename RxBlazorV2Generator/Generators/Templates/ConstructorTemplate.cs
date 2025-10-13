@@ -1,4 +1,5 @@
 using RxBlazorV2Generator.Models;
+using RxBlazorV2Generator.Extensions;
 using System.Text;
 
 namespace RxBlazorV2Generator.Generators.Templates;
@@ -46,34 +47,34 @@ public static class ConstructorTemplate
 
         // Add model reference parameters
         constructorParams.AddRange(modelInfo.ModelReferences.Select(mr =>
-            $"{mr.ReferencedModelTypeName} {mr.PropertyName.ToLowerInvariant()}"));
+            $"{mr.ReferencedModelTypeName} {mr.PropertyName.ToCamelCase()}"));
 
-        // Add DI field parameters
+        // Add DI field parameters (FieldName is now a PascalCase property name)
         constructorParams.AddRange(modelInfo.DIFields.Select(df =>
-        {
-            var paramName = df.FieldName.StartsWith("_") ? df.FieldName.Substring(1) : df.FieldName;
-            return $"{df.FieldType} {paramName.ToLowerInvariant()}";
-        }));
+            $"{df.FieldType} {df.FieldName.ToCamelCase()}"));
 
         var allParams = string.Join(", ", constructorParams);
 
         // Don't call : base() for derived models (those that inherit from another ObservableModel)
         // The base class constructor will be called implicitly
         var baseCall = string.IsNullOrEmpty(modelInfo.BaseModelTypeName) ? " : base()" : "";
-        sb.AppendLine($"    public {modelInfo.ClassName}({allParams}){baseCall}");
+
+        // Only use partial keyword if there are actual constructor parameters
+        // Models with only observable collections/commands don't need partial constructors
+        var partialKeyword = constructorParams.Any() ? "partial " : "";
+        sb.AppendLine($"    public {partialKeyword}{modelInfo.ClassName}({allParams}){baseCall}");
         sb.AppendLine("    {");
 
         // Assign referenced models
         foreach (var modelRef in modelInfo.ModelReferences)
         {
-            sb.AppendLine($"        {modelRef.PropertyName} = {modelRef.PropertyName.ToLowerInvariant()};");
+            sb.AppendLine($"        {modelRef.PropertyName} = {modelRef.PropertyName.ToCamelCase()};");
         }
 
-        // Assign DI fields
+        // Assign DI fields (FieldName is now a PascalCase property name)
         foreach (var diField in modelInfo.DIFields)
         {
-            var paramName = diField.FieldName.StartsWith("_") ? diField.FieldName.Substring(1) : diField.FieldName;
-            sb.AppendLine($"        {diField.FieldName} = {paramName.ToLowerInvariant()};");
+            sb.AppendLine($"        {diField.FieldName} = {diField.FieldName.ToCamelCase()};");
         }
 
         // Initialize IObservableCollection properties
@@ -122,6 +123,7 @@ public static class ConstructorTemplate
         // Don't call : base() for derived models (those that inherit from another ObservableModel)
         // The base class constructor will be called implicitly
         var baseCall = string.IsNullOrEmpty(modelInfo.BaseModelTypeName) ? " : base()" : "";
+        // For parameterless constructors (only commands/collections), don't use partial keyword
         sb.AppendLine($"    public {modelInfo.ClassName}(){baseCall}");
         sb.AppendLine("    {");
 

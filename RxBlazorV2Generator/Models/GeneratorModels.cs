@@ -14,11 +14,12 @@ public class ServiceInfoList
     }
 }
 
-public class ServiceInfo(string namespaceName, string className, string fullyQualifiedName)
+public class ServiceInfo(string namespaceName, string className, string fullyQualifiedName, string? serviceScope = null)
 {
     public string Namespace { get; } = namespaceName;
     public string ClassName { get; } = className;
     public string FullyQualifiedName { get; } = fullyQualifiedName;
+    public string? ServiceScope { get; } = serviceScope;
 }
 
 public class ObservableModelInfo
@@ -122,14 +123,18 @@ public class ModelReferenceInfo
     public string PropertyName { get; }
     public List<string> UsedProperties { get; }
     public Location? AttributeLocation { get; }
+    public bool IsDerivedModel { get; }
+    public string? BaseObservableModelType { get; }
 
-    public ModelReferenceInfo(string referencedModelTypeName, string referencedModelNamespace, string propertyName, List<string> usedProperties, Location? attributeLocation = null)
+    public ModelReferenceInfo(string referencedModelTypeName, string referencedModelNamespace, string propertyName, List<string> usedProperties, Location? attributeLocation = null, bool isDerivedModel = false, string? baseObservableModelType = null)
     {
         ReferencedModelTypeName = referencedModelTypeName;
         ReferencedModelNamespace = referencedModelNamespace;
         PropertyName = propertyName;
         UsedProperties = usedProperties;
         AttributeLocation = attributeLocation;
+        IsDerivedModel = isDerivedModel;
+        BaseObservableModelType = baseObservableModelType;
     }
 }
 

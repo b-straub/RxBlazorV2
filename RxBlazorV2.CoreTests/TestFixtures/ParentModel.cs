@@ -3,9 +3,10 @@ using RxBlazorV2.Model;
 namespace RxBlazorV2.CoreTests.TestFixtures;
 
 [ObservableModelScope(ModelScope.Transient)]
-[ObservableModelReference<CounterModel>]
 public partial class ParentModel : ObservableModel
 {
+    public partial ParentModel(CounterModel counterModel);
+
     public partial bool AddMode { get; set; }
     public partial bool Add10 { get; set; }
 
