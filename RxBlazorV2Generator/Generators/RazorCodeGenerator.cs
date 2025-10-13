@@ -17,7 +17,7 @@ public static class RazorCodeGenerator
             if (razorInfo.HasDiagnosticIssue)
             {
                 var diagnostic = Diagnostic.Create(
-                    DiagnosticDescriptors.ComponentNotObservableError,
+                    DiagnosticDescriptors.ComponentNotObservableWarning,
                     Location.None,
                     razorInfo.ClassName);
                 context.ReportDiagnostic(diagnostic);
@@ -42,33 +42,13 @@ public static class RazorCodeGenerator
         if (isObservableComponent)
         {
             // ObservableComponent<T> pattern - generate subscriptions and OnInitialize
-            // Exclude "Model" and injected properties from DI constructor parameters
-            var diFields = razorInfo.ObservableModelFields.Where(f => f != "Model" && !razorInfo.InjectedProperties.Contains(f)).ToList();
-            
+            // No constructor needed - Blazor handles DI automatically via [Inject] and @inject
+
             // Generate CompositeDisposable for subscription management
             if (razorInfo.FieldToPropertiesMap.Any())
             {
                 sb.AppendLine("    protected CompositeDisposable Subscriptions { get; } = new();");
                 sb.AppendLine();
-            }
-            
-            // Generate constructor only if there are DI fields (not Model property)
-            if (diFields.Any())
-            {
-                var modelParams = diFields.Select(field => 
-                    $"{razorInfo.FieldToTypeMap[field]} {field.TrimStart('_')}").ToList();
-                
-                sb.AppendLine($"    public {razorInfo.ClassName}({string.Join(", ", modelParams)})");
-                sb.AppendLine("    {");
-                
-                foreach (var field in diFields)
-                {
-                    var paramName = field.TrimStart('_');
-                    sb.AppendLine($"        {field} = {paramName};");
-                }
-                
-                sb.AppendLine("    }");
-                sb.AppendLine("    ");
             }
 
             // Generate OnContextReady and OnContextReadyAsync for injected models

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Components;
 using RxBlazorV2.Model;
 
@@ -103,4 +104,22 @@ public class ObservableComponent<T> : OwningComponentBase<T>, IAsyncDisposable w
     {
         await OnDisposeAsync();
     }
+}
+
+public class ObservableLayoutComponentBase : ObservableComponent
+{
+    internal const string BodyPropertyName = nameof(Body);
+
+    /// <summary>
+    /// Gets the content to be rendered inside the layout.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? Body { get; set; }
+
+    /// <inheritdoc />
+    // Derived instances of LayoutComponentBase do not appear in any statically analyzable
+    // calls of OpenComponent<T> where T is well-known. Consequently we have to explicitly provide a hint to the trimmer to preserve
+    // properties.
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ObservableLayoutComponentBase))]
+    public override Task SetParametersAsync(ParameterView parameters) => base.SetParametersAsync(parameters);
 }

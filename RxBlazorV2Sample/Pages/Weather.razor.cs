@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Components;
 using MudBlazor;
 using RxBlazorV2.Component;
 using RxBlazorV2Sample.Interfaces;
@@ -7,7 +8,8 @@ namespace RxBlazorV2Sample.Pages;
 
 public partial class Weather : ObservableComponent<WeatherModel>
 {
-    private readonly ISettingsModel _settings;
+    [Inject]
+    public required ISettingsModel Settings { get; init; }
     
     private bool NotInComponentObservation => Model.NotInComponentObservation;
     

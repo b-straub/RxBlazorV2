@@ -22,7 +22,7 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
         DiagnosticDescriptors.CircularModelReferenceError,
         DiagnosticDescriptors.InvalidModelReferenceTargetError,
         DiagnosticDescriptors.UnusedModelReferenceError,
-        DiagnosticDescriptors.ComponentNotObservableError,
+        DiagnosticDescriptors.ComponentNotObservableWarning,
         DiagnosticDescriptors.SharedModelNotSingletonError,
         DiagnosticDescriptors.TriggerTypeArgumentsMismatchError,
         DiagnosticDescriptors.CircularTriggerReferenceError,
@@ -317,63 +317,28 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
     }
 
     /// <summary>
-    /// Analyzer-compatible method to get diagnostics from Razor code-behind classes
+    /// Analyzer-compatible method to get diagnostics from Razor code-behind classes.
+    /// Uses the same detection logic as the generator (SSOT) by calling RazorAnalyzer.GetRazorCodeBehindInfo.
     /// </summary>
     private static List<Diagnostic> AnalyzeRazorCodeBehindForDiagnostics(ClassDeclarationSyntax classDecl, SemanticModel semanticModel)
     {
         var diagnostics = new List<Diagnostic>();
-        
-        // Check if this class has ObservableModel attributes but doesn't inherit from ObservableComponent
-        var hasObservableModelAttributes = classDecl.AttributeLists
-            .SelectMany(al => al.Attributes)
-            .Any(attr => attr.IsObservableModelScope(semanticModel) ||
-                        attr.IsObservableModelReference(semanticModel));
-        
-        if (hasObservableModelAttributes)
+
+        // Use the same detection logic as the generator
+        var razorInfo = RazorAnalyzer.GetRazorCodeBehindInfo(classDecl, semanticModel);
+
+        // Check if we found a diagnostic issue
+        if (razorInfo?.HasDiagnosticIssue == true)
         {
-            // Check if it inherits from ObservableComponent
-            bool inheritsFromObservableComponent = false;
-            
-            if (classDecl.BaseList?.Types.Count > 0)
-            {
-                foreach (var baseType in classDecl.BaseList.Types)
-                {
-                    var typeInfo = semanticModel.GetTypeInfo(baseType.Type);
-                    if (typeInfo.Type is INamedTypeSymbol baseTypeSymbol)
-                    {
-                        var currentType = baseTypeSymbol;
-                        while (currentType != null)
-                        {
-                            if (currentType.Name.Contains("ObservableComponent"))
-                            {
-                                inheritsFromObservableComponent = true;
-                                break;
-                            }
-                            currentType = currentType.BaseType;
-                        }
-                        if (inheritsFromObservableComponent) break;
-                    }
-                }
-            }
-            
-            if (!inheritsFromObservableComponent)
-            {
-                // Find the ObservableModelScope attribute for location
-                var attributeNode = classDecl.AttributeLists
-                    .SelectMany(al => al.Attributes)
-                    .FirstOrDefault(attr => attr.IsObservableModelScope(semanticModel));
-                
-                var location = attributeNode?.GetLocation() ?? classDecl.GetLocation();
-                
-                var diagnostic = Diagnostic.Create(
-                    DiagnosticDescriptors.ComponentNotObservableError,
-                    location,
-                    classDecl.Identifier.Text);
-                    
-                diagnostics.Add(diagnostic);
-            }
+            var location = classDecl.Identifier.GetLocation();
+            var diagnostic = Diagnostic.Create(
+                DiagnosticDescriptors.ComponentNotObservableWarning,
+                location,
+                classDecl.Identifier.Text);
+
+            diagnostics.Add(diagnostic);
         }
-        
+
         return diagnostics;
     }
 }

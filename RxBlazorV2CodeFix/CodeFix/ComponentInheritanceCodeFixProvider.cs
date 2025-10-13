@@ -18,7 +18,7 @@ namespace RxBlazorV2CodeFix.CodeFix;
 public class ComponentInheritanceCodeFixProvider : CodeFixProvider
 {
     public sealed override ImmutableArray<string> FixableDiagnosticIds =>
-        [DiagnosticDescriptors.ComponentNotObservableError.Id];
+        [DiagnosticDescriptors.ComponentNotObservableWarning.Id];
 
     public sealed override FixAllProvider GetFixAllProvider() => WellKnownFixAllProviders.BatchFixer;
 
@@ -37,57 +37,116 @@ public class ComponentInheritanceCodeFixProvider : CodeFixProvider
             {
                 var className = classDeclaration.Identifier.Text;
 
-                // Code fix 1: Change inheritance to ObservableComponent
-                var changeInheritanceAction = CodeAction.Create(
-                    title: $"Change {className} to inherit from ObservableComponent",
-                    createChangedDocument: c => Task.FromResult(ChangeToObservableComponent(context.Document, root, classDeclaration)),
-                    equivalenceKey: "ChangeToObservableComponent");
+                // Check base type to determine appropriate fix
+                var baseType = classDeclaration.BaseList?.Types.FirstOrDefault()?.Type.ToString();
+                if (baseType != null)
+                {
+                    string targetType;
+                    string title;
 
-                context.RegisterCodeFix(changeInheritanceAction, diagnostic);
+                    if (baseType.Contains("LayoutComponentBase"))
+                    {
+                        // LayoutComponentBase → ObservableLayoutComponentBase
+                        targetType = "ObservableLayoutComponentBase";
+                        title = $"Change {className} to inherit from ObservableLayoutComponentBase";
+                    }
+                    else if (baseType.Contains("ComponentBase") || baseType.Contains("OwningComponentBase"))
+                    {
+                        // ComponentBase/OwningComponentBase → ObservableComponent
+                        targetType = "ObservableComponent";
+                        title = $"Change {className} to inherit from ObservableComponent";
+                    }
+                    else
+                    {
+                        return; // Unknown base type
+                    }
 
-                // Code fix 2: Remove ObservableModel attributes
-                var removeAttributesAction = CodeAction.Create(
-                    title: $"Remove ObservableModel attributes from {className}",
-                    createChangedDocument: c => Task.FromResult(RemoveObservableModelAttributes(context.Document, root, classDeclaration)),
-                    equivalenceKey: "RemoveAttributes");
+                    // Code fix: Change inheritance
+                    var changeInheritanceAction = CodeAction.Create(
+                        title: title,
+                        createChangedDocument: c => Task.FromResult(ChangeToObservableComponent(context.Document, root, classDeclaration, targetType)),
+                        equivalenceKey: "ChangeToObservableComponent");
 
-                context.RegisterCodeFix(removeAttributesAction, diagnostic);
+                    context.RegisterCodeFix(changeInheritanceAction, diagnostic);
+                }
             }
         }
     }
 
-    private static Document ChangeToObservableComponent(Document document, SyntaxNode root, ClassDeclarationSyntax classDeclaration)
+    private static Document ChangeToObservableComponent(Document document, SyntaxNode root, ClassDeclarationSyntax classDeclaration, string targetTypeName = "ObservableComponent")
     {
         var newClassDeclaration = classDeclaration;
 
-        // Find the model type from ObservableModelScope or ObservableModelReference attributes
-        var modelType = FindModelTypeFromAttributes(classDeclaration);
-        if (modelType == null)
-        {
-            // If we can't determine the model type, just use ComponentBase -> ObservableComponent without type arguments
-            // This may cause compilation errors but is the best we can do
-            modelType = "TModel"; // Generic placeholder
-        }
+        // Check if there are [Inject] properties with ObservableModel types
+        // If so, use non-generic version (since models are injected manually)
+        // Otherwise, use generic version if we can determine the model type
+        var hasInjectProperties = classDeclaration.Members
+            .OfType<PropertyDeclarationSyntax>()
+            .Any(p => p.AttributeLists
+                .SelectMany(al => al.Attributes)
+                .Any(attr => attr.Name.ToString().Contains("Inject")));
 
-        // Update base class from ComponentBase to ObservableComponent<T>
+        // Update base class from ComponentBase/OwningComponentBase/LayoutComponentBase to target Observable type
         if (newClassDeclaration.BaseList is not null)
         {
             var componentBaseType = newClassDeclaration.BaseList.Types
-                .FirstOrDefault(t => t.Type.ToString().Contains("ComponentBase"));
+                .FirstOrDefault(t => t.Type.ToString().Contains("ComponentBase") ||
+                                    t.Type.ToString().Contains("OwningComponentBase"));
 
             if (componentBaseType is not null)
             {
-                // Create ObservableComponent<ModelType>
-                var genericName = SyntaxFactory.GenericName(
-                    SyntaxFactory.Identifier("ObservableComponent"))
-                    .WithTypeArgumentList(
-                        SyntaxFactory.TypeArgumentList(
-                            SyntaxFactory.SingletonSeparatedList<TypeSyntax>(
-                                SyntaxFactory.IdentifierName(modelType))));
-                
-                var observableComponentType = SyntaxFactory.SimpleBaseType(genericName)
+                TypeSyntax observableComponentTypeSyntax;
+
+                // Check if the base class is generic (e.g., OwningComponentBase<T>)
+                var isGenericBase = componentBaseType.Type is GenericNameSyntax genericBase;
+
+                if (isGenericBase && componentBaseType.Type is GenericNameSyntax genericBaseName)
+                {
+                    // Extract the generic type parameter from OwningComponentBase<T>
+                    var genericTypeArg = genericBaseName.TypeArgumentList.Arguments.FirstOrDefault();
+                    if (genericTypeArg is not null)
+                    {
+                        // Create ObservableComponent<T> with the same type parameter
+                        observableComponentTypeSyntax = SyntaxFactory.GenericName(
+                            SyntaxFactory.Identifier(targetTypeName))
+                            .WithTypeArgumentList(
+                                SyntaxFactory.TypeArgumentList(
+                                    SyntaxFactory.SingletonSeparatedList(genericTypeArg)));
+                    }
+                    else
+                    {
+                        observableComponentTypeSyntax = SyntaxFactory.IdentifierName(targetTypeName);
+                    }
+                }
+                else if (hasInjectProperties)
+                {
+                    // Use non-generic version when models are injected
+                    observableComponentTypeSyntax = SyntaxFactory.IdentifierName(targetTypeName);
+                }
+                else
+                {
+                    // Find the model type from attributes for generic version
+                    var modelType = FindModelTypeFromAttributes(classDeclaration);
+                    if (modelType is not null)
+                    {
+                        // Create generic version with ModelType
+                        observableComponentTypeSyntax = SyntaxFactory.GenericName(
+                            SyntaxFactory.Identifier(targetTypeName))
+                            .WithTypeArgumentList(
+                                SyntaxFactory.TypeArgumentList(
+                                    SyntaxFactory.SingletonSeparatedList<TypeSyntax>(
+                                        SyntaxFactory.IdentifierName(modelType))));
+                    }
+                    else
+                    {
+                        // Fallback to non-generic if no model type found
+                        observableComponentTypeSyntax = SyntaxFactory.IdentifierName(targetTypeName);
+                    }
+                }
+
+                var observableComponentType = SyntaxFactory.SimpleBaseType(observableComponentTypeSyntax)
                     .WithTriviaFrom(componentBaseType);
-                
+
                 var newTypes = newClassDeclaration.BaseList.Types.Replace(componentBaseType, observableComponentType);
                 var newBaseList = newClassDeclaration.BaseList.WithTypes(newTypes);
                 newClassDeclaration = newClassDeclaration.WithBaseList(newBaseList);
@@ -95,15 +154,17 @@ public class ComponentInheritanceCodeFixProvider : CodeFixProvider
         }
         else
         {
-            // Add ObservableComponent<T> as base class if no base list exists
-            var genericName = SyntaxFactory.GenericName(
-                SyntaxFactory.Identifier("ObservableComponent"))
-                .WithTypeArgumentList(
-                    SyntaxFactory.TypeArgumentList(
-                        SyntaxFactory.SingletonSeparatedList<TypeSyntax>(
-                            SyntaxFactory.IdentifierName(modelType))));
-            
-            var baseType = SyntaxFactory.SimpleBaseType(genericName);
+            // Add target type as base class if no base list exists
+            TypeSyntax baseTypeSyntax = hasInjectProperties
+                ? SyntaxFactory.IdentifierName(targetTypeName)
+                : SyntaxFactory.GenericName(
+                    SyntaxFactory.Identifier(targetTypeName))
+                    .WithTypeArgumentList(
+                        SyntaxFactory.TypeArgumentList(
+                            SyntaxFactory.SingletonSeparatedList<TypeSyntax>(
+                                SyntaxFactory.IdentifierName("TModel")))); // Generic placeholder
+
+            var baseType = SyntaxFactory.SimpleBaseType(baseTypeSyntax);
             var baseList = SyntaxFactory.BaseList(SyntaxFactory.SingletonSeparatedList<BaseTypeSyntax>(baseType));
             newClassDeclaration = newClassDeclaration.WithBaseList(baseList);
         }
@@ -116,69 +177,6 @@ public class ComponentInheritanceCodeFixProvider : CodeFixProvider
         newRoot = AddUsingStatementIfNeeded(newRoot, "RxBlazorV2.Component");
 
         return document.WithSyntaxRoot(newRoot);
-    }
-
-    private static Document RemoveObservableModelAttributes(Document document, SyntaxNode root, ClassDeclarationSyntax classDeclaration)
-    {
-        var newClassDeclaration = classDeclaration;
-        var modifiedAttributeLists = new List<AttributeListSyntax>();
-        var attributeListsToRemove = new List<AttributeListSyntax>();
-
-        // Process all attribute lists in a single pass
-        foreach (var attributeList in classDeclaration.AttributeLists)
-        {
-            var nonObservableModelAttributes = attributeList.Attributes
-                .Where(attr => !IsObservableModelAttribute(attr))
-                .ToList();
-
-            if (nonObservableModelAttributes.Count == 0)
-            {
-                // Remove entire attribute list if all attributes are ObservableModel-related
-                attributeListsToRemove.Add(attributeList);
-            }
-            else if (nonObservableModelAttributes.Count < attributeList.Attributes.Count)
-            {
-                // Create new attribute list with only non-ObservableModel attributes
-                var newAttributes = SyntaxFactory.SeparatedList(nonObservableModelAttributes);
-                var newAttributeList = attributeList.WithAttributes(newAttributes);
-                modifiedAttributeLists.Add(newAttributeList);
-            }
-            else
-            {
-                // Keep the attribute list as-is (no ObservableModel attributes found)
-                modifiedAttributeLists.Add(attributeList);
-            }
-        }
-
-        // Apply all changes in a single operation
-        var finalAttributeLists = new List<AttributeListSyntax>();
-        
-        foreach (var attributeList in classDeclaration.AttributeLists)
-        {
-            if (!attributeListsToRemove.Contains(attributeList))
-            {
-                var replacement = modifiedAttributeLists.FirstOrDefault(m => 
-                    m.GetLocation().SourceSpan.Equals(attributeList.GetLocation().SourceSpan));
-                finalAttributeLists.Add(replacement ?? attributeList);
-            }
-        }
-
-        // Create new class declaration with updated attribute lists
-        newClassDeclaration = newClassDeclaration.WithAttributeLists(
-            SyntaxFactory.List(finalAttributeLists));
-
-        // Preserve original class trivia
-        newClassDeclaration = newClassDeclaration.WithTriviaFrom(classDeclaration);
-
-        var newRoot = root.ReplaceNode(classDeclaration, newClassDeclaration);
-        return document.WithSyntaxRoot(newRoot);
-    }
-
-    private static bool IsObservableModelAttribute(AttributeSyntax attribute)
-    {
-        var attributeName = attribute.Name.ToString();
-        return attributeName.Contains("ObservableModelScope") ||
-               attributeName.Contains("ObservableModelReference");
     }
 
     private static string? FindModelTypeFromAttributes(ClassDeclarationSyntax classDeclaration)

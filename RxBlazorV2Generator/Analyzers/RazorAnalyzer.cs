@@ -17,7 +17,10 @@ public static class RazorAnalyzer
                classDecl.BaseList?.Types.Any(t =>
                {
                    var typeName = t.Type.ToString();
-                   return typeName.Contains("ObservableComponent");
+                   return typeName.Contains("ObservableComponent") ||
+                          typeName.Contains("ComponentBase") ||
+                          typeName.Contains("OwningComponentBase") ||
+                          typeName.Contains("LayoutComponentBase");
                }) == true;
     }
 
@@ -30,12 +33,15 @@ public static class RazorAnalyzer
                 var typeInfo = semanticModel.GetTypeInfo(baseType.Type);
                 if (typeInfo.Type is INamedTypeSymbol baseTypeSymbol)
                 {
-                    // Check if this type or any of its base types are ObservableComponent
+                    // Check if this type or any of its base types are ObservableComponent, ComponentBase, OwningComponentBase, or LayoutComponentBase
                     var currentType = baseTypeSymbol;
                     while (currentType != null)
                     {
                         var fullName = currentType.ToDisplayString();
-                        if (fullName.Contains("ObservableComponent"))
+                        if (fullName.Contains("ObservableComponent") ||
+                            fullName.Contains("ComponentBase") ||
+                            fullName.Contains("OwningComponentBase") ||
+                            fullName.Contains("LayoutComponentBase"))
                         {
                             return true;
                         }
@@ -49,10 +55,14 @@ public static class RazorAnalyzer
 
     public static RazorCodeBehindInfo? GetRazorCodeBehindInfo(GeneratorSyntaxContext context)
     {
+        var classDecl = (ClassDeclarationSyntax)context.Node;
+        return GetRazorCodeBehindInfo(classDecl, context.SemanticModel);
+    }
+
+    public static RazorCodeBehindInfo? GetRazorCodeBehindInfo(ClassDeclarationSyntax classDecl, SemanticModel semanticModel)
+    {
         try
         {
-            var classDecl = (ClassDeclarationSyntax)context.Node;
-            var semanticModel = context.SemanticModel;
 
             if (semanticModel.GetDeclaredSymbol(classDecl) is not INamedTypeSymbol classSymbol)
             {
@@ -71,6 +81,15 @@ public static class RazorAnalyzer
                 // Add "Model" as a virtual field for ObservableComponent<T>
                 observableModelFields.Add("Model");
                 fieldToTypeMap["Model"] = baseModelType;
+            }
+
+            // Check if this inherits from OwningComponentBase<T> where T is an ObservableModel
+            var owningComponentBaseModelType = GetOwningComponentBaseModelType(classSymbol, semanticModel);
+            if (owningComponentBaseModelType != null)
+            {
+                // Add "Service" as a virtual field for OwningComponentBase<T>
+                observableModelFields.Add("Service");
+                fieldToTypeMap["Service"] = owningComponentBaseModelType;
             }
 
             // Find explicit fields of ObservableModel type
@@ -114,12 +133,23 @@ public static class RazorAnalyzer
             }
 
             // Check for diagnostic: Has ObservableModel fields but not derived from ObservableComponent
-            var hasObservableModelFields = observableModelFields.Any(f => f != "Model");
             var isObservableComponent = IsObservableComponent(classSymbol);
+            var isComponentBase = IsComponentBase(classSymbol);
+            var isLayoutComponent = IsLayoutComponent(classSymbol);
 
+            // For diagnostic purposes:
+            // - If it's ObservableComponent, check for fields OTHER than the virtual "Model" or "Service" properties
+            // - If it's not ObservableComponent, check for ANY ObservableModel fields (including injected "Model" or "Service")
+            var hasObservableModelFields = isObservableComponent
+                ? observableModelFields.Any(f => f != "Model" && f != "Service")
+                : observableModelFields.Any();
+
+            // Report diagnostic for any component with ObservableModel fields that doesn't inherit from ObservableComponent
+            // ComponentBase: Can be changed to ObservableComponent (code fix available)
+            // LayoutComponentBase/OwningComponentBase: Cannot be changed (user must handle manually)
             if (hasObservableModelFields && !isObservableComponent)
             {
-                // This will be handled by returning a special diagnostic info
+                // Return diagnostic info but no code generation
                 return new RazorCodeBehindInfo(
                     classSymbol.ContainingNamespace.ToDisplayString(),
                     classSymbol.Name,
@@ -127,9 +157,10 @@ public static class RazorAnalyzer
                     [],
                     fieldToTypeMap,
                     new Dictionary<string, List<string>>(),
-                    true, // HasDiagnosticIssue = true
-                    null,
-                    injectedProperties);
+                    hasDiagnosticIssue: true, // Report diagnostic
+                    codeBehindPropertyAccesses: null,
+                    injectedProperties: injectedProperties,
+                    isObservableComponent: false); // Not an ObservableComponent
             }
 
             if (!observableModelFields.Any()) return null;
@@ -152,8 +183,6 @@ public static class RazorAnalyzer
         catch (Exception)
         {
             // Report diagnostic instead of throwing
-            var classDecl = (ClassDeclarationSyntax)context.Node;
-            var location = classDecl.Identifier.GetLocation();
             // Note: Can't report diagnostic here in static method, will be handled at generator level
             return null;
         }
@@ -207,7 +236,7 @@ public static class RazorAnalyzer
                 usedProperties,
                 codeBehindInfo.FieldToTypeMap,
                 mergedFieldToPropertiesMap,
-                false,
+                codeBehindInfo.HasDiagnosticIssue,
                 null,
                 codeBehindInfo.InjectedProperties);
         }
@@ -401,12 +430,43 @@ public static class RazorAnalyzer
         return null;
     }
 
+    private static string? GetOwningComponentBaseModelType(INamedTypeSymbol classSymbol, SemanticModel semanticModel)
+    {
+        var baseType = classSymbol.BaseType;
+        while (baseType != null)
+        {
+            if (baseType.Name == "OwningComponentBase" && baseType.TypeArguments.Length == 1)
+            {
+                var typeArg = baseType.TypeArguments[0];
+                // Check if the type argument is an ObservableModel
+                if (IsObservableModelType(typeArg))
+                {
+                    return typeArg.ToDisplayString();
+                }
+            }
+            baseType = baseType.BaseType;
+        }
+        return null;
+    }
+
     private static bool IsObservableComponent(INamedTypeSymbol classSymbol)
     {
         var baseType = classSymbol.BaseType;
         while (baseType != null)
         {
-            if (baseType.Name == "ObservableComponent")
+            if (baseType.Name == "ObservableComponent" || baseType.Name == "ObservableLayoutComponentBase")
+                return true;
+            baseType = baseType.BaseType;
+        }
+        return false;
+    }
+
+    private static bool IsComponentBase(INamedTypeSymbol classSymbol)
+    {
+        var baseType = classSymbol.BaseType;
+        while (baseType != null)
+        {
+            if (baseType.Name == "ComponentBase")
                 return true;
             baseType = baseType.BaseType;
         }

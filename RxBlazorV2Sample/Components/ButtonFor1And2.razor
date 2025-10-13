@@ -10,27 +10,27 @@
         Increment Counter1 Async
     </MudButton>
 
-    <MudButton @onclick="() => Model.Add2.Execute(_switcher.Count)" Variant="Variant.Filled" 
-               Color=@(_switcher.AddMode ? Color.Success : Color.Error)
+    <MudButton @onclick="() => Model.Add2.Execute(Switcher.Count)" Variant="Variant.Filled" 
+               Color=@(Switcher.AddMode ? Color.Success : Color.Error)
                Disabled="@(!Model.Add2.CanExecute)">
         @AddText
     </MudButton>
 
-    <MudButton @onclick="() => Model.AddAsync2.ExecuteAsync(_switcher.Count)" Variant="Variant.Filled"
-               Color=@(_switcher.AddMode ? Color.Success : Color.Error)
+    <MudButton @onclick="() => Model.AddAsync2.ExecuteAsync(Switcher.Count)" Variant="Variant.Filled"
+               Color=@(Switcher.AddMode ? Color.Success : Color.Error)
                Disabled="@(!Model.Add2.CanExecute || Model.AddAsync2.Executing)">
         @(AddText + " Async")
     </MudButton>
     
-    <MudButton @onclick="() => _switcher.SwitchOnAdd10.Execute()" Variant="Variant.Filled"
+    <MudButton @onclick="() => Switcher.SwitchOnAdd10.Execute()" Variant="Variant.Filled"
                Color=Color.Primary
-               Disabled="@(!_switcher.SwitchOnAdd10.CanExecute)">
+               Disabled="@(!Switcher.SwitchOnAdd10.CanExecute)">
         SwitchOn Add10
     </MudButton>
 
-    <MudSwitch @bind-Value="_switcher.Add10" Color="Color.Info" UncheckedColor="Color.Secondary"
-               Label=@(_switcher.Add10 ? "10" : "5")/>
+    <MudSwitch @bind-Value="Switcher.Add10" Color="Color.Info" UncheckedColor="Color.Secondary"
+               Label=@(Switcher.Add10 ? "10" : "5")/>
 
-    <MudSwitch @bind-Value="_switcher.AddMode" Color="Color.Success" UncheckedColor="Color.Error"
-               Label=@(_switcher.AddMode ? "Add" : "Subtract")/>
+    <MudSwitch @bind-Value="Switcher.AddMode" Color="Color.Success" UncheckedColor="Color.Error"
+               Label=@(Switcher.AddMode ? "Add" : "Subtract")/>
 </MudStack>

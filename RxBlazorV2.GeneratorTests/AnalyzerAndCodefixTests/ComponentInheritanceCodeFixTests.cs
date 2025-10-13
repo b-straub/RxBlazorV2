@@ -24,10 +24,10 @@ public class ComponentInheritanceCodeFixTests
                 public partial string Name { get; set; }
             }
 
-            [{|{{DiagnosticDescriptors.ComponentNotObservableError.Id}}:ObservableModelScope(ModelScope.Singleton)|}]
-            public partial class TestComponent : ComponentBase
+            public partial class {|{{DiagnosticDescriptors.ComponentNotObservableWarning.Id}}:TestComponent|} : ComponentBase
             {
-                protected TestModel Model { get; set; }
+                [Inject]
+                public required TestModel Model { get; init; }
             }
         }
         """;
@@ -48,10 +48,10 @@ public class ComponentInheritanceCodeFixTests
                 public partial string Name { get; set; }
             }
 
-            [ObservableModelScope(ModelScope.Singleton)]
-            public partial class TestComponent : ObservableComponent<TestModel>
+            public partial class TestComponent : ObservableComponent
             {
-                protected TestModel Model { get; set; }
+                [Inject]
+                public required TestModel Model { get; init; }
             }
         }
         """;
@@ -60,7 +60,7 @@ public class ComponentInheritanceCodeFixTests
     }
 
     [Fact]
-    public async Task RemoveObservableModelAttributes_RemovesAllModelAttributes()
+    public async Task ChangeToObservableComponent_FixesOwningComponentBaseInheritance()
     {
         // lang=csharp
         var test = $$"""
@@ -71,16 +71,16 @@ public class ComponentInheritanceCodeFixTests
 
         namespace Test
         {
+            [ObservableModelScope(ModelScope.Singleton)]
             public partial class TestModel : ObservableModel
             {
                 public partial string Name { get; set; }
             }
 
-            [{|{{DiagnosticDescriptors.ComponentNotObservableError.Id}}:ObservableModelScope(ModelScope.Singleton)|}]
-            [ObservableModelReference<TestModel>]
-            public partial class TestComponent : ComponentBase
+            public partial class {|{{DiagnosticDescriptors.ComponentNotObservableWarning.Id}}:TestComponent|} : OwningComponentBase
             {
-                protected TestModel Model { get; set; }
+                [Inject]
+                public required TestModel Model { get; init; }
             }
         }
         """;
@@ -91,22 +91,73 @@ public class ComponentInheritanceCodeFixTests
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
         using Microsoft.AspNetCore.Components;
+        using RxBlazorV2.Component;
 
         namespace Test
         {
+            [ObservableModelScope(ModelScope.Singleton)]
             public partial class TestModel : ObservableModel
             {
                 public partial string Name { get; set; }
             }
 
-            public partial class TestComponent : ComponentBase
+            public partial class TestComponent : ObservableComponent
             {
-                protected TestModel Model { get; set; }
+                [Inject]
+                public required TestModel Model { get; init; }
             }
         }
         """;
 
-        await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode, codeActionIndex: 1);
+        await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode);
     }
 
+    [Fact]
+    public async Task ChangeToObservableComponent_FixesOwningComponentBaseGenericInheritance()
+    {
+        // lang=csharp
+        var test = $$"""
+
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+        using Microsoft.AspNetCore.Components;
+
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; }
+            }
+
+            public partial class {|{{DiagnosticDescriptors.ComponentNotObservableWarning.Id}}:TestComponent|} : OwningComponentBase<TestModel>
+            {
+            }
+        }
+        """;
+
+        // lang=csharp
+        var fixedCode = """
+
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+        using Microsoft.AspNetCore.Components;
+        using RxBlazorV2.Component;
+
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; }
+            }
+
+            public partial class TestComponent : ObservableComponent<TestModel>
+            {
+            }
+        }
+        """;
+
+        await CodeFixVerifier.VerifyCodeFixAsync(test, fixedCode);
+    }
 }

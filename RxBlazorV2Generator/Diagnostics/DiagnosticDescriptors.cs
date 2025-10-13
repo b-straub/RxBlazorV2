@@ -85,14 +85,14 @@ public static class DiagnosticDescriptors
         description: "ObservableModelReference attributes should only be used when the parent model actually uses properties from the referenced model.",
         helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG008.md");
 
-    public static readonly DiagnosticDescriptor ComponentNotObservableError = new(
+    public static readonly DiagnosticDescriptor ComponentNotObservableWarning = new(
         id: "RXBG009",
-        title: "Component contains ObservableModel fields but does not inherit from ObservableComponent",
-        messageFormat: "Component '{0}' contains ObservableModel fields but does not inherit from ObservableComponent<T> or LayoutComponentBase. Components using ObservableModel should inherit from ObservableComponent<T> for reactive binding.",
+        title: "Component contains ObservableModel without reactive binding",
+        messageFormat: "Component '{0}' contains ObservableModel fields but does not inherit from ObservableComponent. Consider inheriting from ObservableComponent or ObservableComponent<T> for automatic reactive updates.",
         category: "RxBlazorGenerator",
-        DiagnosticSeverity.Error,
+        DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        description: "Blazor components that contain ObservableModel fields must inherit from ObservableComponent<T> for reactive binding, or from LayoutComponentBase which doesn't require disposing subscriptions.",
+        description: "Blazor components that contain ObservableModel fields should inherit from ObservableComponent or ObservableComponent<T> to enable automatic reactive binding and UI updates when model properties change.",
         helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG009.md");
 
     public static readonly DiagnosticDescriptor SharedModelNotSingletonError = new(

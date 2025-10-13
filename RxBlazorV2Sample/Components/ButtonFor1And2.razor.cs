@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Components;
 using RxBlazorV2.Component;
 using RxBlazorV2Sample.HelperModel;
 using CounterModel = RxBlazorV2Sample.Models.CounterModel;
@@ -6,10 +7,11 @@ namespace RxBlazorV2Sample.Components;
 
 public partial class ButtonFor1And2 : ObservableComponent<CounterModel>
 {
-    private readonly Switcher _switcher;
+    [Inject]
+    public required Switcher Switcher { get; init; }
     
-    private string AddText => _switcher.AddMode ? 
-        _switcher.Add10 ? "Add 10 to Counter 2" : "Add 5 to Counter 2" 
+    private string AddText => Switcher.AddMode ? 
+        Switcher.Add10 ? "Add 10 to Counter 2" : "Add 5 to Counter 2" 
         : 
-        _switcher.Add10 ? "Subtract 10 from Counter 2" : "Subtract 5 from Counter 2";
+        Switcher.Add10 ? "Subtract 10 from Counter 2" : "Subtract 5 from Counter 2";
 }

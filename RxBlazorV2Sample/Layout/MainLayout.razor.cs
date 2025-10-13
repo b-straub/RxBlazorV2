@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Components;
-using SettingsModel = RxBlazorV2Sample.Models.SettingsModel;
+using RxBlazorV2.Component;
+using RxBlazorV2Sample.Interfaces;
 
 namespace RxBlazorV2Sample.Layout;
 
-public partial class MainLayout : LayoutComponentBase
+public partial class MainLayout : ObservableLayoutComponentBase
 {
-    private readonly SettingsModel _settingsModel;
+    [Inject]
+    public required ISettingsModel Settings { get; init; }
 
     private bool _drawerOpen = true;
 

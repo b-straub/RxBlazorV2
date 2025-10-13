@@ -42,26 +42,26 @@
 
                         <MudDivider/>
 
-                        <MudButton @onclick="() => _settings.ToggleUnitCommand.Execute()"
+                        <MudButton @onclick="() => Settings.ToggleUnitCommand.Execute()"
                                    Variant="Variant.Outlined"
                                    StartIcon="@Icons.Material.Filled.Thermostat">
-                            Unit: @_settings.TemperatureUnit
+                            Unit: @Settings.TemperatureUnit
                         </MudButton>
 
-                        <MudSwitch @bind-Value="_settings.AutoRefresh"
+                        <MudSwitch @bind-Value="Settings.AutoRefresh"
                                    Label="Auto Refresh"
                                    Color="Color.Success"/>
 
-                        <MudSlider @bind-Value="_settings.RefreshInterval"
+                        <MudSlider @bind-Value="Settings.RefreshInterval"
                                    Min="1" Max="30" Step="1"
-                                   Disabled="!_settings.AutoRefresh">
-                            Refresh: @_settings.RefreshInterval min
+                                   Disabled="!Settings.AutoRefresh">
+                            Refresh: @Settings.RefreshInterval min
                         </MudSlider>
 
-                        <MudButton @onclick="() => _settings.ToggleThemeCommand.Execute()"
+                        <MudButton @onclick="() => Settings.ToggleThemeCommand.Execute()"
                                    Variant="Variant.Text"
-                                   StartIcon="@(_settings.IsDay ? Icons.Material.Filled.DarkMode : Icons.Material.Filled.LightMode)">
-                            @(_settings.IsDay ? "Night" : "Day")
+                                   StartIcon="@(Settings.IsDay ? Icons.Material.Filled.DarkMode : Icons.Material.Filled.LightMode)">
+                            @(Settings.IsDay ? "Night" : "Day")
                         </MudButton>
                     </MudStack>
                 </MudCardContent>
@@ -152,7 +152,7 @@
                                     <MudText Typo="Typo.body2">@context.Date.ToString("ddd, MMM dd")</MudText>
                                 </MudTd>
                                 <MudTd DataLabel="Temperature">
-                                    @if (_settings.TemperatureUnit == "Celsius")
+                                    @if (Settings.TemperatureUnit == "Celsius")
                                     {
                                         <MudChip T="string" Color="GetTemperatureColor(context.TemperatureC)"
                                                  Size="Size.Small">
@@ -178,13 +178,13 @@
                         </MudTable>
 
                         <!-- Auto-refresh indicator -->
-                        @if (_settings.AutoRefresh && Model.Forecasts.Any())
+                        @if (Settings.AutoRefresh && Model.Forecasts.Any())
                         {
                             <MudAlert Severity="Severity.Info" Variant="Variant.Text" Class="mt-4">
                                 <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.AutoMode"/>
                                     <MudText Typo="Typo.caption">
-                                        Auto-refreshing every @_settings.RefreshInterval minutes
+                                        Auto-refreshing every @Settings.RefreshInterval minutes
                                     </MudText>
                                 </MudStack>
                             </MudAlert>
