@@ -53,33 +53,30 @@ public abstract class ObservableModel : IObservableModel
         return Task.CompletedTask;
     }
     
-    protected void StateHasChanged(string? propertyName, params string[] batchIds)
+    protected void StateHasChanged(string propertyName, params string[] batchIds)
     {
-        var isSuspended = _suspendNotifications && (_suspendedBatchIds.Count == 0 || batchIds.Any(id => _suspendedBatchIds.Contains(id)));
-
-        if (isSuspended)
-        {
-            _pendingNotifications.Add(propertyName ?? ModelID);
-            return;
-        }
-
-        PropertyChangedSubject.OnNext([propertyName ?? ModelID]);
+        StateHasChanged([propertyName], batchIds);
     }
 
     protected internal void StateHasChanged(string[] propertyNames, params string[] batchIds)
     {
+        if (propertyNames.Length == 0)
+        {
+            throw new InvalidOperationException("State has changed without a properties!");
+        }
+
         var isSuspended = _suspendNotifications && (_suspendedBatchIds.Count == 0 || batchIds.Any(id => _suspendedBatchIds.Contains(id)));
 
         if (isSuspended)
         {
-            foreach (var name in propertyNames.Length == 0 ? [ModelID] : propertyNames)
+            foreach (var name in propertyNames)
             {
                 _pendingNotifications.Add(name);
             }
             return;
         }
 
-        PropertyChangedSubject.OnNext(propertyNames.Length == 0 ? [ModelID] : propertyNames);
+        PropertyChangedSubject.OnNext(propertyNames);
     }
 
     /// <summary>

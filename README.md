@@ -36,6 +36,52 @@ Commands link UI actions to model methods with automatic `CanExecute` tracking. 
 ### Model References
 Models can reference and react to changes in other models through automatic dependency injection and reactive subscriptions.
 
+**Two Patterns for Working with Multiple Models:**
+
+#### 1. ModelReference Pattern (Model-to-Model)
+Use `[ObservableModelReference<T>]` when your **model** needs to react to changes in another model for **business logic or side effects**.
+
+```csharp
+[ObservableModelReference<ProductCatalogModel>]
+public partial class ShoppingCartModel : ObservableModel
+{
+    public partial decimal Total { get; set; }
+
+    // Automatically recalculates when ProductCatalog prices change
+    private void RecalculateTotal()
+    {
+        Total = Quantity * ProductCatalogModel.Price;
+    }
+}
+```
+
+✅ **Use when:**
+- Your model needs to perform calculations based on another model's data
+- You need business logic to execute when referenced model changes
+- The relationship is at the model/domain logic level
+- Observable streams are automatically merged
+
+#### 2. Component Injection Pattern (Component-to-Models)
+Use `@inject` or `[Inject]` when your **component** needs to display data from multiple models with **automatic reactive updates**.
+
+```csharp
+@inherits ObservableComponent<ShoppingCartModel>
+@inject UserProfileModel UserProfile
+@inject ProductCatalogModel Catalog
+
+<MudText>Cart Total: @Model.Total</MudText>
+<MudText>User: @UserProfile.UserName</MudText>
+<MudText>Laptop Price: @Catalog.LaptopPrice</MudText>
+```
+
+✅ **Use when:**
+- Your component needs to display properties from multiple models
+- No business logic needed - just UI composition
+- Generator automatically creates subscriptions for accessed properties
+- Component re-renders when any referenced property changes
+
+**See `/samples/model-patterns` for a complete working example demonstrating both patterns.**
+
 ### Observable Collections
 Built-in support for reactive collections with automatic change notifications and batch update capabilities.
 
@@ -74,6 +120,7 @@ See the **RxBlazorV2Sample** project for comprehensive, interactive examples dem
 - **Commands with CanExecute** - Conditional command execution with automatic UI updates
 - **Commands with Cancellation** - Long-running async operations with cancellation support
 - **Command Triggers** - Automatic command execution with Switch vs Merge strategies
+- **Model Patterns** - ModelReference vs Component Injection - when to use each pattern
 - **Model References** - Sharing state between models with reactive updates
 - **Generic Models** - Type-safe generic observable models with DI integration
 - **Observable Batches** - Batch multiple property changes for performance

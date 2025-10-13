@@ -17,11 +17,7 @@ public static class RazorAnalyzer
                classDecl.BaseList?.Types.Any(t =>
                {
                    var typeName = t.Type.ToString();
-                   return typeName.Contains("ObservableComponent") ||
-                          typeName.Contains("ComponentBase") ||
-                          typeName.Contains("OwningComponentBase") ||
-                          typeName.EndsWith(".ComponentBase") ||
-                          typeName.EndsWith(".OwningComponentBase");
+                   return typeName.Contains("ObservableComponent");
                }) == true;
     }
 
@@ -34,14 +30,12 @@ public static class RazorAnalyzer
                 var typeInfo = semanticModel.GetTypeInfo(baseType.Type);
                 if (typeInfo.Type is INamedTypeSymbol baseTypeSymbol)
                 {
-                    // Check if this type or any of its base types are component base types
+                    // Check if this type or any of its base types are ObservableComponent
                     var currentType = baseTypeSymbol;
                     while (currentType != null)
                     {
                         var fullName = currentType.ToDisplayString();
-                        if (fullName.Contains("ComponentBase") ||
-                            fullName.Contains("OwningComponentBase") ||
-                            fullName.Contains("ObservableComponent"))
+                        if (fullName.Contains("ObservableComponent"))
                         {
                             return true;
                         }
@@ -119,12 +113,11 @@ public static class RazorAnalyzer
                 }
             }
 
-            // Check for diagnostic: Has ObservableModel fields but not derived from ObservableComponent or LayoutComponentBase
+            // Check for diagnostic: Has ObservableModel fields but not derived from ObservableComponent
             var hasObservableModelFields = observableModelFields.Any(f => f != "Model");
             var isObservableComponent = IsObservableComponent(classSymbol);
-            var isLayoutComponent = IsLayoutComponent(classSymbol);
-            
-            if (hasObservableModelFields && !isObservableComponent && !isLayoutComponent)
+
+            if (hasObservableModelFields && !isObservableComponent)
             {
                 // This will be handled by returning a special diagnostic info
                 return new RazorCodeBehindInfo(

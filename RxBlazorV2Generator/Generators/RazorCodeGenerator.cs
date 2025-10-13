@@ -28,6 +28,7 @@ public static class RazorCodeGenerator
         sb.AppendLine("using R3;");
         sb.AppendLine("using ObservableCollections;");
         sb.AppendLine("using System;");
+        sb.AppendLine("using System.Threading.Tasks;");
         sb.AppendLine("using Microsoft.Extensions.DependencyInjection;");
         sb.AppendLine();
         sb.AppendLine($"namespace {razorInfo.Namespace};");
@@ -70,6 +71,30 @@ public static class RazorCodeGenerator
                 sb.AppendLine("    ");
             }
 
+            // Generate OnContextReady and OnContextReadyAsync for injected models
+            if (razorInfo.InjectedProperties.Any())
+            {
+                sb.AppendLine("    protected override void OnContextReady()");
+                sb.AppendLine("    {");
+                foreach (var injectedProp in razorInfo.InjectedProperties)
+                {
+                    sb.AppendLine($"        {injectedProp}.ContextReady();");
+                }
+                sb.AppendLine("        base.OnContextReady();");
+                sb.AppendLine("    }");
+                sb.AppendLine("    ");
+
+                sb.AppendLine("    protected override async Task OnContextReadyAsync()");
+                sb.AppendLine("    {");
+                foreach (var injectedProp in razorInfo.InjectedProperties)
+                {
+                    sb.AppendLine($"        await {injectedProp}.ContextReadyAsync();");
+                }
+                sb.AppendLine("        await base.OnContextReadyAsync();");
+                sb.AppendLine("    }");
+                sb.AppendLine("    ");
+            }
+
             // Generate OnInitialize method for subscription setup
             if (razorInfo.FieldToPropertiesMap.Any())
             {
@@ -84,7 +109,6 @@ public static class RazorCodeGenerator
 
                     var propertyList = new List<string>();
                     propertyList.AddRange(properties.Select(p => $"\"{p}\""));
-                    propertyList.Add($"{fieldName}.ModelID");
 
                     // Add observable collection properties from the model
                     if (razorInfo.FieldToTypeMap.TryGetValue(fieldName, out var fieldType))
@@ -126,24 +150,45 @@ public static class RazorCodeGenerator
         }
         else
         {
-            // LayoutComponentBase pattern - generate constructor DI and subscriptions
-            if (razorInfo.ObservableModelFields.Any())
+            // Non-generic ObservableComponent pattern - models are injected via @inject or [Inject]
+            // Generate CompositeDisposable for subscription management
+            if (razorInfo.FieldToPropertiesMap.Any())
             {
-                var modelParams = razorInfo.FieldToTypeMap
-                    .Select(kvp => $"{kvp.Value} {kvp.Key.TrimStart('_')}")
-                    .ToList();
-                
-                sb.AppendLine($"    public {razorInfo.ClassName}({string.Join(", ", modelParams)})");
+                sb.AppendLine("    protected CompositeDisposable Subscriptions { get; } = new();");
+                sb.AppendLine();
+            }
+
+            // Generate OnContextReady and OnContextReadyAsync for injected models
+            if (razorInfo.InjectedProperties.Any())
+            {
+                sb.AppendLine("    protected override void OnContextReady()");
                 sb.AppendLine("    {");
-                
-                foreach (var field in razorInfo.ObservableModelFields)
+                foreach (var injectedProp in razorInfo.InjectedProperties)
                 {
-                    var paramName = field.TrimStart('_');
-                    sb.AppendLine($"        {field} = {paramName};");
+                    sb.AppendLine($"        {injectedProp}.ContextReady();");
                 }
-                
-                sb.AppendLine("        // Subscribe to model changes for component base model and other models from properties");
-                
+                sb.AppendLine("        base.OnContextReady();");
+                sb.AppendLine("    }");
+                sb.AppendLine("    ");
+
+                sb.AppendLine("    protected override async Task OnContextReadyAsync()");
+                sb.AppendLine("    {");
+                foreach (var injectedProp in razorInfo.InjectedProperties)
+                {
+                    sb.AppendLine($"        await {injectedProp}.ContextReadyAsync();");
+                }
+                sb.AppendLine("        await base.OnContextReadyAsync();");
+                sb.AppendLine("    }");
+                sb.AppendLine("    ");
+            }
+
+            // Generate OnInitialize method for subscription setup
+            if (razorInfo.FieldToPropertiesMap.Any())
+            {
+                sb.AppendLine("    protected override void OnInitialize()");
+                sb.AppendLine("    {");
+                sb.AppendLine("        // Subscribe to model changes for injected models");
+
                 foreach (var fieldProps in razorInfo.FieldToPropertiesMap)
                 {
                     var fieldName = fieldProps.Key;
@@ -151,7 +196,6 @@ public static class RazorCodeGenerator
 
                     var propertyList = new List<string>();
                     propertyList.AddRange(properties.Select(p => $"\"{p}\""));
-                    propertyList.Add($"{fieldName}.ModelID");
 
                     // Add observable collection properties from the model
                     if (razorInfo.FieldToTypeMap.TryGetValue(fieldName, out var fieldType))
@@ -168,13 +212,26 @@ public static class RazorCodeGenerator
 
                     var observedPropsArray = $"[{string.Join(", ", propertyList)}]";
 
-                    sb.AppendLine($"        {fieldName}.Observable.Where(p => p.Intersect({observedPropsArray}).Any())");
-                    sb.AppendLine("            .Subscribe(p =>");
+                    sb.AppendLine($"        Subscriptions.Add({fieldName}.Observable.Where(p => p.Intersect({observedPropsArray}).Any())");
+                    sb.AppendLine($"            .Chunk(TimeSpan.FromMilliseconds({updateFrequencyMs}))");
+                    sb.AppendLine("            .Subscribe(chunks =>");
                     sb.AppendLine("            {");
                     sb.AppendLine("                InvokeAsync(StateHasChanged);");
-                    sb.AppendLine("            });");
+                    sb.AppendLine("            }));");
                 }
-                
+
+                sb.AppendLine("    }");
+                sb.AppendLine("    ");
+            }
+
+            // Generate Dispose method
+            if (razorInfo.FieldToPropertiesMap.Any())
+            {
+                sb.AppendLine("    protected override void Dispose(bool disposing)");
+                sb.AppendLine("    {");
+                sb.AppendLine("        OnDispose();");
+                sb.AppendLine("        Subscriptions.Dispose();");
+                sb.AppendLine("        base.Dispose(disposing);");
                 sb.AppendLine("    }");
             }
         }

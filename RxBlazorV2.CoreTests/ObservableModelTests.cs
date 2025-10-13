@@ -85,29 +85,6 @@ public class ObservableModelTests
     }
 
     [Fact]
-    public void ManualStateChanged_WithNullPropertyName_UsesModelID()
-    {
-        // Arrange
-        var model = new TestObservableModel();
-        var notificationCount = 0;
-        string? lastPropertyName = null;
-
-        model.Observable.Subscribe(properties =>
-        {
-            notificationCount++;
-            lastPropertyName = properties.FirstOrDefault();
-            _output.WriteLine($"Notification {notificationCount}: {string.Join(", ", properties)}");
-        });
-
-        // Act
-        model.TriggerStateChanged((string)null!);
-
-        // Assert
-        Assert.Equal(1, notificationCount);
-        Assert.Equal(model.ModelID, lastPropertyName);
-    }
-
-    [Fact]
     public void ManualStateChanged_WithMultipleProperties_TriggersObservableWithAllProperties()
     {
         // Arrange

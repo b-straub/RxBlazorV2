@@ -1,0 +1,90 @@
+using R3;
+using RxBlazorV2.Interface;
+using RxBlazorV2.Model;
+
+namespace RxBlazorV2Sample.Samples.ModelPatterns;
+
+/// <summary>
+/// Shopping cart model - demonstrates ModelReference pattern.
+/// Uses ModelReference to ProductCatalogModel to automatically recalculate total when prices change.
+///
+/// Use ModelReference when:
+/// - Your model needs to REACT to changes in another model (side effects/business logic)
+/// - You need to perform calculations or updates based on referenced model changes
+/// - The relationship is at the model/business logic level
+/// </summary>
+[ObservableModelScope(ModelScope.Scoped)]
+[ObservableModelReference<ProductCatalogModel>]
+public partial class ShoppingCartModel : ObservableModel
+{
+    public partial int LaptopQuantity { get; set; } = 0;
+    public partial int MouseQuantity { get; set; } = 0;
+    public partial int KeyboardQuantity { get; set; } = 0;
+
+    // Total is calculated based on quantities and prices from ProductCatalogModel
+    public partial decimal Total { get; set; } = 0m;
+
+    private CompositeDisposable? _localSubscriptions;
+
+    protected override void OnContextReady()
+    {
+        // Subscribe to any property changes (quantities or prices) to recalculate total
+        // ProductCatalogModel.Observable is automatically merged thanks to ModelReference
+        _localSubscriptions = new CompositeDisposable();
+        _localSubscriptions.Add(Observable.Subscribe(props => RecalculateTotal()));
+
+        // Initial calculation
+        RecalculateTotal();
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _localSubscriptions?.Dispose();
+        }
+        base.Dispose(disposing);
+    }
+
+    // This method is called when quantities change OR when ProductCatalog prices change (via merged Observable)
+    private void RecalculateTotal()
+    {
+        Total = (LaptopQuantity * ProductCatalogModel.LaptopPrice) +
+                (MouseQuantity * ProductCatalogModel.MousePrice) +
+                (KeyboardQuantity * ProductCatalogModel.KeyboardPrice);
+    }
+
+    [ObservableCommand(nameof(AddLaptop))]
+    public partial IObservableCommand AddLaptopCommand { get; }
+
+    [ObservableCommand(nameof(AddMouse))]
+    public partial IObservableCommand AddMouseCommand { get; }
+
+    [ObservableCommand(nameof(AddKeyboard))]
+    public partial IObservableCommand AddKeyboardCommand { get; }
+
+    [ObservableCommand(nameof(ClearCart))]
+    public partial IObservableCommand ClearCartCommand { get; }
+
+    private void AddLaptop()
+    {
+        LaptopQuantity++;
+    }
+
+    private void AddMouse()
+    {
+        MouseQuantity++;
+    }
+
+    private void AddKeyboard()
+    {
+        KeyboardQuantity++;
+    }
+
+    private void ClearCart()
+    {
+        LaptopQuantity = 0;
+        MouseQuantity = 0;
+        KeyboardQuantity = 0;
+    }
+}

@@ -1,0 +1,152 @@
+@page "/samples/model-patterns"
+@using RxBlazorV2.Component
+@inherits ObservableComponent<ShoppingCartModel>
+@inject UserProfileModel UserProfile
+@inject ProductCatalogModel Catalog
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudText Typo="Typo.h3" GutterBottom="true">Model Patterns Demo</MudText>
+
+    <MudAlert Severity="Severity.Info" Class="mb-4">
+        <MudText Typo="Typo.body2">
+            This page demonstrates two patterns:
+            <br/>
+            <strong>1. ModelReference:</strong> ShoppingCartModel references ProductCatalogModel for automatic price updates
+            <br/>
+            <strong>2. Component Injection:</strong> This component injects UserProfile and Catalog for display only
+        </MudText>
+    </MudAlert>
+
+    <MudGrid>
+        <!-- User Profile Section -->
+        <MudItem xs="12" md="4">
+            <MudPaper Class="pa-4" Elevation="2">
+                <MudText Typo="Typo.h5" GutterBottom="true">User Profile</MudText>
+                <MudText Typo="Typo.body2"><strong>Name:</strong> @UserProfile.UserName</MudText>
+                <MudText Typo="Typo.body2"><strong>Email:</strong> @UserProfile.Email</MudText>
+                <MudText Typo="Typo.body2"><strong>Address:</strong> @UserProfile.ShippingAddress</MudText>
+                <MudText Typo="Typo.body2">
+                    <strong>Status:</strong>
+                    @if (UserProfile.IsPremiumMember)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success">Premium</MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default">Regular</MudChip>
+                    }
+                </MudText>
+                <MudButton OnClick="@UserProfile.TogglePremiumCommand.Execute" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="mt-2">
+                    Toggle Premium
+                </MudButton>
+                <MudText Typo="Typo.caption" Class="mt-2" Color="Color.Secondary">
+                    ℹ️ Injected via @@inject directive
+                </MudText>
+            </MudPaper>
+        </MudItem>
+
+        <!-- Product Catalog Section -->
+        <MudItem xs="12" md="8">
+            <MudPaper Class="pa-4" Elevation="2">
+                <MudText Typo="Typo.h5" GutterBottom="true">Product Catalog</MudText>
+                <MudTable Items="@GetProducts()" Dense="true" Hover="true">
+                    <HeaderContent>
+                        <MudTh>Product</MudTh>
+                        <MudTh>Price</MudTh>
+                        <MudTh>In Cart</MudTh>
+                        <MudTh>Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Product">@context.Name</MudTd>
+                        <MudTd DataLabel="Price">$@context.Price.ToString("F2")</MudTd>
+                        <MudTd DataLabel="In Cart">@context.Quantity</MudTd>
+                        <MudTd DataLabel="Actions">
+                            <MudButton OnClick="@context.AddCommand.Execute" Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary">
+                                Add to Cart
+                            </MudButton>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+                <MudButton OnClick="@Catalog.ApplyDiscountCommand.Execute" Variant="Variant.Filled" Color="Color.Secondary" Class="mt-2">
+                    Apply 10% Discount
+                </MudButton>
+                <MudText Typo="Typo.caption" Class="mt-2" Color="Color.Secondary">
+                    ℹ️ Injected via @@inject directive for display
+                </MudText>
+            </MudPaper>
+        </MudItem>
+
+        <!-- Shopping Cart Section (Base Model) -->
+        <MudItem xs="12">
+            <MudPaper Class="pa-4" Elevation="3">
+                <MudText Typo="Typo.h5" GutterBottom="true">Shopping Cart</MudText>
+                <MudText Typo="Typo.body1" Class="mb-2">
+                    <strong>Total Items:</strong> @(Model.LaptopQuantity + Model.MouseQuantity + Model.KeyboardQuantity)
+                </MudText>
+                <MudText Typo="Typo.h6" Color="Color.Success">
+                    <strong>Total: $@Model.Total.ToString("F2")</strong>
+                </MudText>
+
+                @if (UserProfile.IsPremiumMember && Model.Total > 0)
+                {
+                    <MudAlert Severity="Severity.Success" Dense="true" Class="mt-2">
+                        Premium members get free shipping!
+                    </MudAlert>
+                }
+
+                <MudButton OnClick="@Model.ClearCartCommand.Execute" Variant="Variant.Filled" Color="Color.Error" Class="mt-2">
+                    Clear Cart
+                </MudButton>
+
+                <MudText Typo="Typo.caption" Class="mt-2" Color="Color.Secondary">
+                    ℹ️ Base Model with ModelReference to ProductCatalog
+                    <br/>
+                    → Cart total auto-updates when prices change
+                </MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Pattern Explanation -->
+    <MudPaper Class="pa-4 mt-4" Elevation="2">
+        <MudText Typo="Typo.h5" GutterBottom="true">Pattern Explanation</MudText>
+
+        <MudText Typo="Typo.h6" Class="mt-3">ModelReference Pattern (ShoppingCartModel)</MudText>
+        <MudText Typo="Typo.body2">
+            <code>[ObservableModelReference&lt;ProductCatalogModel&gt;]</code>
+            <br/>
+            ✅ Use when your <strong>model</strong> needs to react to another model's changes
+            <br/>
+            ✅ Perfect for business logic and side effects (like recalculating totals)
+            <br/>
+            ✅ Observable streams are automatically merged - price changes trigger RecalculateTotal()
+        </MudText>
+
+        <MudText Typo="Typo.h6" Class="mt-3">Component Injection Pattern (This Page)</MudText>
+        <MudText Typo="Typo.body2">
+            <code>@@inject UserProfileModel UserProfile</code>
+            <br/>
+            ✅ Use when your <strong>component</strong> needs to display data from multiple models
+            <br/>
+            ✅ Perfect for UI composition - no business logic needed
+            <br/>
+            ✅ Automatic reactive updates when injected model properties change
+            <br/>
+            ✅ Generator creates subscriptions for all accessed properties
+        </MudText>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private List<ProductInfo> GetProducts()
+    {
+        return new List<ProductInfo>
+        {
+            new ProductInfo("Laptop", Catalog.LaptopPrice, Model.LaptopQuantity, Model.AddLaptopCommand),
+            new ProductInfo("Mouse", Catalog.MousePrice, Model.MouseQuantity, Model.AddMouseCommand),
+            new ProductInfo("Keyboard", Catalog.KeyboardPrice, Model.KeyboardQuantity, Model.AddKeyboardCommand)
+        };
+    }
+
+    private record ProductInfo(string Name, decimal Price, int Quantity, IObservableCommand AddCommand);
+}

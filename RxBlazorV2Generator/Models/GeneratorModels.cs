@@ -154,7 +154,8 @@ public class RazorCodeBehindInfo(
     Dictionary<string, List<string>>? fieldToPropertiesMap = null,
     bool hasDiagnosticIssue = false,
     Dictionary<string, List<string>>? codeBehindPropertyAccesses = null,
-    HashSet<string>? injectedProperties = null)
+    HashSet<string>? injectedProperties = null,
+    bool isObservableComponent = true)
 {
     public string Namespace => namespaceName;
     public string ClassName => className;
@@ -166,4 +167,5 @@ public class RazorCodeBehindInfo(
     public bool HasDiagnosticIssue => hasDiagnosticIssue;
     public Dictionary<string, List<string>> CodeBehindPropertyAccesses => codeBehindPropertyAccesses ?? new Dictionary<string, List<string>>();
     public HashSet<string> InjectedProperties => injectedProperties ?? new HashSet<string>();
+    public bool IsObservableComponent => isObservableComponent;
 }
