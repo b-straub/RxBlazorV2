@@ -19,13 +19,14 @@ public static class ConstructorTemplate
         Func<ObservableModelInfo, CommandPropertyInfo, IEnumerable<string>> getObservedProperties)
     {
         var hasObservableCollections = modelInfo.PartialProperties.Any(p => p.IsObservableCollection);
+        var hasPropertyTriggers = modelInfo.PartialProperties.Any(p => p.Triggers.Any());
 
         if (modelInfo.ModelReferences.Any() || modelInfo.DIFields.Any() || hasObservableCollections)
         {
             return GenerateConstructorWithDependencies(modelInfo, getObservedProperties, hasObservableCollections);
         }
 
-        if (modelInfo.CommandProperties.Any())
+        if (modelInfo.CommandProperties.Any() || hasPropertyTriggers)
         {
             return GenerateConstructorWithCommandsOnly(modelInfo, getObservedProperties, hasObservableCollections);
         }
@@ -106,6 +107,14 @@ public static class ConstructorTemplate
             sb.AppendLine(CommandTemplate.GenerateCommandTriggerSubscriptions(commandsWithTriggers, modelInfo));
         }
 
+        // Generate property trigger subscriptions (direct method calls, no backing fields)
+        var propertiesWithTriggers = modelInfo.PartialProperties.Where(p => p.Triggers.Any()).ToList();
+        if (propertiesWithTriggers.Any())
+        {
+            sb.AppendLine();
+            sb.AppendLine(TriggerTemplate.GenerateTriggerSubscriptions(propertiesWithTriggers));
+        }
+
         sb.AppendLine("    }");
 
         return sb.ToString().TrimEnd('\r', '\n');
@@ -143,6 +152,14 @@ public static class ConstructorTemplate
         {
             sb.AppendLine();
             sb.AppendLine(CommandTemplate.GenerateCommandTriggerSubscriptions(commandsWithTriggers, modelInfo));
+        }
+
+        // Generate property trigger subscriptions (direct method calls, no backing fields)
+        var propertiesWithTriggers = modelInfo.PartialProperties.Where(p => p.Triggers.Any()).ToList();
+        if (propertiesWithTriggers.Any())
+        {
+            sb.AppendLine();
+            sb.AppendLine(TriggerTemplate.GenerateTriggerSubscriptions(propertiesWithTriggers));
         }
 
         sb.AppendLine("    }");

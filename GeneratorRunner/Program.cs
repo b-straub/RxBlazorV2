@@ -9,13 +9,12 @@ namespace GeneratorRunner
             "../RxBlazorV2Sample/Models/CounterModel.cs",
             "../RxBlazorV2Sample/Models/SettingsModel.cs",
             "../RxBlazorV2Sample/Interfaces/ISettingsModel.cs",
-            "../RxBlazorV2Sample/Components/InjectOnlyCB.razor.cs",
         ];
 
         private static readonly string[] AdditionalTextPaths =
         [
             "../RxBlazorV2Sample/Components/InjectedOnly.razor",
-            "../RxBlazorV2Sample/Components/InjectOnlyCB.razor"
+            "../RxBlazorV2Sample/Components/InjectedOnlyCB.razor"
             //"../../WebAppBase/WebAppBase.Shared/Components/SyncManager.razor"
         ];
 

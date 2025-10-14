@@ -88,6 +88,16 @@ public static class AttributeExtensions
     }
 
     /// <summary>
+    /// Checks if an attribute is ObservableTrigger or ObservableTrigger&lt;T&gt;
+    /// </summary>
+    public static bool IsObservableTrigger(
+        this AttributeSyntax attribute,
+        SemanticModel semanticModel)
+    {
+        return attribute.IsAttributeOfType(semanticModel, "ObservableTriggerAttribute");
+    }
+
+    /// <summary>
     /// Checks if an AttributeData represents a specific attribute type.
     /// Use this for attributes retrieved via ISymbol.GetAttributes().
     /// </summary>

@@ -77,8 +77,9 @@ public class PartialPropertyInfo
     public bool HasRequiredModifier { get; }
     public bool HasInitAccessor { get; }
     public string Accessibility { get; }
+    public List<PropertyTriggerInfo> Triggers { get; }
 
-    public PartialPropertyInfo(string name, string type, bool isObservableCollection = false, bool isEquatable = false, string[]? batchIds = null, bool hasRequiredModifier = false, bool hasInitAccessor = false, string accessibility = "public")
+    public PartialPropertyInfo(string name, string type, bool isObservableCollection = false, bool isEquatable = false, string[]? batchIds = null, bool hasRequiredModifier = false, bool hasInitAccessor = false, string accessibility = "public", List<PropertyTriggerInfo>? triggers = null)
     {
         Name = name;
         Type = type;
@@ -88,6 +89,7 @@ public class PartialPropertyInfo
         HasRequiredModifier = hasRequiredModifier;
         HasInitAccessor = hasInitAccessor;
         Accessibility = accessibility;
+        Triggers = triggers ?? [];
     }
 }
 
@@ -118,6 +120,15 @@ public class CommandTriggerInfo(string triggerProperty, string? canTriggerMethod
     public string TriggerProperty { get; } = triggerProperty;
     public string? CanTriggerMethod { get; } = canTriggerMethod;
     public string? Parameter { get; } = parameter;
+}
+
+public class PropertyTriggerInfo(string executeMethod, string? canTriggerMethod = null, string? parameter = null, bool supportsCancellation = false)
+{
+    public string ExecuteMethod { get; } = executeMethod;
+    public string? CanTriggerMethod { get; } = canTriggerMethod;
+    public string? Parameter { get; } = parameter;
+    public bool SupportsCancellation { get; } = supportsCancellation;
+    public string PropertyName { get; set; } = "";
 }
 
 public class ModelReferenceInfo

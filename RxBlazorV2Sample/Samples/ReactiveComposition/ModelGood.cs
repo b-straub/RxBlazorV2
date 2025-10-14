@@ -1,36 +1,33 @@
+using MudBlazor;
 using RxBlazorV2.Interface;
 using RxBlazorV2.Model;
 
 namespace RxBlazorV2Sample.Samples.ReactiveComposition;
 
+[ObservableModelScope(ModelScope.Scoped)]
 public partial class ModelGood : ObservableModel
 {
-    public bool IsValid => ValidationService.IsValid();
+    [ObservableTrigger(nameof(ShowError), nameof(CanSendError))]
+    public partial string ErrorMessage { get; set; } = string.Empty;
     
-    //[ObservableTrigger(nameof(UpdateValidation))]
-    //[ObservableTrigger(nameof(UpdateValidationAsync), nameof(CanUpdateValidation))]
-    //[ObservableTrigger(nameof(UpdateValidation))]
-    public partial int Changer { get; set; }
     
-    [ObservableCommand(nameof(UpdateValidation))]
-    [ObservableCommandTrigger(nameof(Changer))]
-    protected partial IObservableCommand ChangerCommand { get; }
+    [ObservableCommand(nameof(ShowError), nameof(CanSendError))]
+    public partial IObservableCommand<string> ShowErrorMessage{ get; }
 
-    private void UpdateValidation()
+    private void ShowError()
     {
-        ValidationService.SetCallerScope(true);
+        Snackbar.Add(ErrorMessage);
     }
     
-    private async Task UpdateValidationAsync()
+    private void ShowError(string errorMessage)
     {
-        await Task.Delay(1000);
-        ValidationService.SetCallerScope(true);
-    }
-
-    private bool CanUpdateValidation()
-    {
-        return Changer > 1;
+        Snackbar.Add(errorMessage);
     }
     
-    public partial ModelGood(IValidationService validationService);
+    private bool CanSendError()
+    {
+        return ErrorMessage.Length > 3;
+    }
+    
+    public partial ModelGood(ISnackbar snackbar);
 }

@@ -1,6 +1,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Analyzers;
+using RxBlazorV2Generator.Extensions;
 using RxBlazorV2Generator.Generators;
 using RxBlazorV2Generator.Models;
 using System.Collections.Immutable;
@@ -95,6 +96,87 @@ public class RxBlazorGenerator : IIncrementalGenerator
                 }
 
                 return models.ToImmutableArray();
+            });
+
+        // Report RXBG020 (UnregisteredServiceWarning) and RXBG021 (DiServiceScopeViolationWarning) diagnostics
+        // NOTE: Following SSOT pattern - these diagnostics are reported ONLY by the generator, not the analyzer
+        context.RegisterSourceOutput(observableModelsWithCompilation,
+            (spc, combined) =>
+            {
+                var ((classNodes, compilation), services) = combined;
+
+                // Merge service info
+                var mergedServices = new ServiceInfoList();
+                foreach (var serviceList in services.Where(s => s != null))
+                {
+                    foreach (var service in serviceList!.Services)
+                    {
+                        mergedServices.AddService(service);
+                    }
+                }
+
+                // Analyze each class for DI diagnostics
+                foreach (var (classDecl, syntaxTree) in classNodes)
+                {
+                    var semanticModel = compilation.GetSemanticModel(syntaxTree);
+                    var classSymbol = semanticModel.GetDeclaredSymbol(classDecl) as INamedTypeSymbol;
+
+                    if (classSymbol is null || !classSymbol.InheritsFromObservableModel())
+                        continue;
+
+                    // Extract DI dependencies to check for unregistered services and scope violations
+                    var (modelReferences, diFields, unregisteredServices, diFieldsWithScope) = classDecl.ExtractPartialConstructorDependencies(semanticModel, mergedServices);
+
+                    // Report RXBG020 for unregistered services
+                    foreach (var (paramName, _, typeSymbol, location) in unregisteredServices)
+                    {
+                        if (location is not null && typeSymbol is not null)
+                        {
+                            var simpleTypeName = typeSymbol.Name;
+                            var isInterface = typeSymbol.TypeKind == TypeKind.Interface;
+                            var registrationExample = isInterface
+                                ? $"'services.AddScoped<{simpleTypeName}, YourImplementation>()'"
+                                : $"'services.AddScoped<{simpleTypeName}>()' or 'services.AddScoped<IYourInterface, {simpleTypeName}>()'";
+
+                            var properties = ImmutableDictionary.CreateRange(new[]
+                            {
+                                new KeyValuePair<string, string?>("TypeName", typeSymbol.ToDisplayString()),
+                                new KeyValuePair<string, string?>("ParameterName", paramName)
+                            });
+
+                            var diagnostic = Diagnostic.Create(
+                                Diagnostics.DiagnosticDescriptors.UnregisteredServiceWarning,
+                                location,
+                                properties,
+                                paramName,
+                                simpleTypeName,
+                                registrationExample);
+                            spc.ReportDiagnostic(diagnostic);
+                        }
+                    }
+
+                    // Report RXBG021 for DI scope violations
+                    var modelScope = classDecl.ExtractModelScopeFromClass(semanticModel);
+                    foreach (var (diField, serviceScope, location) in diFieldsWithScope)
+                    {
+                        if (serviceScope is not null && location is not null)
+                        {
+                            var violation = CheckScopeViolation(modelScope, serviceScope);
+                            if (violation is not null)
+                            {
+                                var diagnostic = Diagnostic.Create(
+                                    Diagnostics.DiagnosticDescriptors.DiServiceScopeViolationWarning,
+                                    location,
+                                    classSymbol.Name,
+                                    modelScope,
+                                    diField.FieldName,
+                                    diField.FieldType,
+                                    serviceScope);
+                                spc.ReportDiagnostic(diagnostic);
+                            }
+                        }
+                    }
+                }
             });
 
         // Generate code for observable models
@@ -257,5 +339,29 @@ public class RxBlazorGenerator : IIncrementalGenerator
                 ObservableModelCodeGenerator.GenerateAddObservableModelsExtension(spc, nonNullModels, config.RootNamespace);
                 ObservableModelCodeGenerator.GenerateAddGenericObservableModelsExtension(spc, nonNullModels, config.RootNamespace);
             });
+    }
+
+    /// <summary>
+    /// Checks if there's a DI scope violation between model scope and service scope.
+    /// Returns a message describing the violation, or null if no violation.
+    ///
+    /// DI Scoping Rules:
+    /// - Singleton can only inject Singleton
+    /// - Scoped can inject Singleton or Scoped
+    /// - Transient can inject anything
+    /// </summary>
+    private static string? CheckScopeViolation(string modelScope, string serviceScope)
+    {
+        if (modelScope == "Singleton" && serviceScope != "Singleton")
+        {
+            return $"Singleton services cannot depend on {serviceScope} services (captive dependency)";
+        }
+
+        if (modelScope == "Scoped" && serviceScope == "Transient")
+        {
+            return $"Scoped services should not depend on Transient services (may cause issues with disposal)";
+        }
+
+        return null;
     }
 }
