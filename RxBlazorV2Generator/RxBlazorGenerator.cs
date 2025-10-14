@@ -1,10 +1,12 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using RxBlazorV2Generator.Analysis;
 using RxBlazorV2Generator.Analyzers;
 using RxBlazorV2Generator.Extensions;
 using RxBlazorV2Generator.Generators;
 using RxBlazorV2Generator.Models;
 using System.Collections.Immutable;
+using System.Linq;
 
 namespace RxBlazorV2Generator;
 
@@ -63,8 +65,8 @@ public class RxBlazorGenerator : IIncrementalGenerator
             .Combine(context.CompilationProvider)
             .Combine(serviceClasses);
 
-        // Analyze observable models and collect ObservableModelInfo for use by other generators
-        var observableModelClasses = observableModelsWithCompilation
+        // Analyze observable models using ObservableModelRecord (single source of truth)
+        var observableModelRecords = observableModelsWithCompilation
             .Select(static (combined, _) =>
             {
                 var ((classNodes, compilation), services) = combined;
@@ -80,55 +82,40 @@ public class RxBlazorGenerator : IIncrementalGenerator
                 }
 
                 // Analyze each class with proper semantic model from compilation
-                var models = new List<ObservableModelInfo?>();
+                var records = new List<ObservableModelRecord?>();
                 foreach (var (classDecl, syntaxTree) in classNodes)
                 {
                     // Get semantic model for this specific syntax tree from the compilation
                     var semanticModel = compilation.GetSemanticModel(syntaxTree);
 
-                    var modelInfo = ObservableModelAnalyzer.GetObservableModelClassInfoFromCompilation(
+                    var record = ObservableModelRecord.Create(
                         classDecl,
                         semanticModel,
                         compilation,
                         mergedServices);
 
-                    models.Add(modelInfo);
+                    records.Add(record);
                 }
 
-                return models.ToImmutableArray();
+                return records.ToImmutableArray();
             });
 
-        // Report RXBG020 (UnregisteredServiceWarning) and RXBG021 (DiServiceScopeViolationWarning) diagnostics
-        // NOTE: Following SSOT pattern - these diagnostics are reported ONLY by the generator, not the analyzer
-        context.RegisterSourceOutput(observableModelsWithCompilation,
-            (spc, combined) =>
+        // Extract ObservableModelInfo for razor analysis (needed by razor analyzer)
+        var observableModelClasses = observableModelRecords
+            .Select(static (records, _) =>
             {
-                var ((classNodes, compilation), services) = combined;
+                return records.Select(r => r?.ModelInfo).ToImmutableArray();
+            });
 
-                // Merge service info
-                var mergedServices = new ServiceInfoList();
-                foreach (var serviceList in services.Where(s => s != null))
+        // Report generator-specific diagnostics (RXBG020, RXBG021)
+        // These are filtered to avoid duplicates from analyzer
+        context.RegisterSourceOutput(observableModelRecords,
+            (spc, records) =>
+            {
+                foreach (var record in records.Where(r => r != null))
                 {
-                    foreach (var service in serviceList!.Services)
-                    {
-                        mergedServices.AddService(service);
-                    }
-                }
-
-                // Analyze each class for DI diagnostics
-                foreach (var (classDecl, syntaxTree) in classNodes)
-                {
-                    var semanticModel = compilation.GetSemanticModel(syntaxTree);
-                    var classSymbol = semanticModel.GetDeclaredSymbol(classDecl) as INamedTypeSymbol;
-
-                    if (classSymbol is null || !classSymbol.InheritsFromObservableModel())
-                        continue;
-
-                    // Extract DI dependencies to check for unregistered services and scope violations
-                    var (modelReferences, diFields, unregisteredServices, diFieldsWithScope) = classDecl.ExtractPartialConstructorDependencies(semanticModel, mergedServices);
-
                     // Report RXBG020 for unregistered services
-                    foreach (var (paramName, _, typeSymbol, location) in unregisteredServices)
+                    foreach (var (paramName, _, typeSymbol, location) in record!.UnregisteredServices)
                     {
                         if (location is not null && typeSymbol is not null)
                         {
@@ -156,18 +143,18 @@ public class RxBlazorGenerator : IIncrementalGenerator
                     }
 
                     // Report RXBG021 for DI scope violations
-                    var modelScope = classDecl.ExtractModelScopeFromClass(semanticModel);
-                    foreach (var (diField, serviceScope, location) in diFieldsWithScope)
+                    foreach (var (diField, serviceScope, location) in record.DiFieldsWithScope)
                     {
                         if (serviceScope is not null && location is not null)
                         {
+                            var modelScope = record.ModelInfo.ModelScope;
                             var violation = CheckScopeViolation(modelScope, serviceScope);
                             if (violation is not null)
                             {
                                 var diagnostic = Diagnostic.Create(
                                     Diagnostics.DiagnosticDescriptors.DiServiceScopeViolationWarning,
                                     location,
-                                    classSymbol.Name,
+                                    record.ModelInfo.ClassName,
                                     modelScope,
                                     diField.FieldName,
                                     diField.FieldType,
@@ -180,150 +167,101 @@ public class RxBlazorGenerator : IIncrementalGenerator
             });
 
         // Generate code for observable models
-        context.RegisterSourceOutput(observableModelClasses,
-            static (spc, models) =>
+        context.RegisterSourceOutput(observableModelRecords,
+            static (spc, records) =>
             {
-                foreach (var modelInfo in models.Where(m => m != null))
+                foreach (var record in records.Where(r => r != null))
                 {
-                    ObservableModelCodeGenerator.GenerateObservableModelPartials(spc, modelInfo!);
+                    ObservableModelCodeGenerator.GenerateObservableModelPartials(spc, record!.ModelInfo);
                 }
             });
 
         // Register syntax provider for Razor code-behind files
-        // Store both the info and the context for later RXBG019 diagnostic checking
-        var razorCodeBehindClassesWithContext = context.SyntaxProvider
+        var razorCodeBehindClasses = context.SyntaxProvider
             .CreateSyntaxProvider(
                 predicate: static (s, _) => RazorAnalyzer.IsRazorCodeBehindClass(s),
-                transform: static (ctx, _) => (Info: RazorAnalyzer.GetRazorCodeBehindInfo(ctx), ClassDecl: (ClassDeclarationSyntax)ctx.Node, SemanticModel: ctx.SemanticModel))
-            .Where(static m => m.Info is not null);
-
-        // Extract just the info for compatibility with existing code
-        var razorCodeBehindClasses = razorCodeBehindClassesWithContext
-            .Select(static (item, _) => item.Info);
+                transform: static (ctx, _) => (ClassDecl: (ClassDeclarationSyntax)ctx.Node, SemanticModel: ctx.SemanticModel))
+            .Collect();
 
         // Register additional text provider for .razor files
         var razorFiles = context.AdditionalTextsProvider
             .Where(static file => file.Path.EndsWith(".razor"));
 
-        // Combine razor files with code-behind classes and observable models
-        var combinedRazorInfo = razorCodeBehindClasses
+        // Combine code-behind classes with razor files and observable models for complete analysis
+        var razorCodeBehindRecords = razorCodeBehindClasses
             .Combine(razorFiles.Collect())
             .Combine(observableModelClasses)
             .Select(static (combined, _) =>
             {
-                try
+                var ((codeBehindClasses, razorFilesList), models) = combined;
+                var records = new List<RazorCodeBehindRecord?>();
+
+                // Analyze existing code-behind classes
+                foreach (var (classDecl, semanticModel) in codeBehindClasses)
                 {
-                    return RazorAnalyzer.AnalyzeRazorWithAdditionalTexts(combined.Left.Left, combined.Left.Right, combined.Right);
-                }
-                catch (Exception)
-                {
-                    // Log error but don't throw - return null to skip this item
-                    return null;
-                }
-            });
+                    // Find matching razor file
+                    var className = classDecl.Identifier.ValueText;
+                    var razorFile = razorFilesList.FirstOrDefault(f =>
+                        System.IO.Path.GetFileNameWithoutExtension(f.Path) == className);
 
-        // Detect missing code-behind files for .razor files that use ObservableComponent
-        var missingCodeBehinds = razorFiles.Collect()
-            .Combine(razorCodeBehindClasses.Collect())
-            .Combine(observableModelClasses)
-            .SelectMany(static (combined, _) =>
-            {
-                var ((razorFilesList, codeBehindsList), models) = combined;
-                return RazorAnalyzer.DetectMissingCodeBehindFiles(razorFilesList, codeBehindsList, models);
-            });
+                    var record = RazorCodeBehindRecord.Create(
+                        classDecl,
+                        semanticModel,
+                        razorFile,
+                        models);
 
-        // Merge existing and missing code-behind infos
-        var allRazorCodeBehinds = combinedRazorInfo
-            .Collect()
-            .Combine(missingCodeBehinds.Collect())
-            .SelectMany(static (combined, _) =>
-            {
-                var (existing, missing) = combined;
-                var all = new List<RazorCodeBehindInfo?>();
-                all.AddRange(existing);
-                all.AddRange(missing);
-                return all;
-            });
-
-        // Report RXBG009 diagnostics for razor files with @inject ObservableModel but no ObservableComponent inheritance
-        context.RegisterSourceOutput(missingCodeBehinds.Collect().Combine(razorFiles.Collect()),
-            static (spc, combined) =>
-            {
-                var (codeBehindInfos, allRazorFiles) = combined;
-
-                foreach (var info in codeBehindInfos.Where(i => i != null && i.HasDiagnosticIssue))
-                {
-                    // Find the corresponding .razor file to get its location
-                    var razorFile = allRazorFiles.FirstOrDefault(f =>
-                        System.IO.Path.GetFileNameWithoutExtension(f.Path) == info!.ClassName);
-
-                    if (razorFile != null)
+                    if (record != null)
                     {
-                        var location = Location.Create(
-                            razorFile.Path,
-                            Microsoft.CodeAnalysis.Text.TextSpan.FromBounds(0, 0),
-                            new Microsoft.CodeAnalysis.Text.LinePositionSpan(
-                                new Microsoft.CodeAnalysis.Text.LinePosition(0, 0),
-                                new Microsoft.CodeAnalysis.Text.LinePosition(0, 0)));
+                        records.Add(record);
+                    }
+                }
 
-                        var diagnostic = Diagnostic.Create(
-                            Diagnostics.DiagnosticDescriptors.ComponentNotObservableWarning,
-                            location,
-                            info!.ClassName);
+                // Detect missing code-behind files for .razor files
+                var existingClassNames = new HashSet<string>(codeBehindClasses.Select(c => c.ClassDecl.Identifier.ValueText));
+                foreach (var razorFile in razorFilesList)
+                {
+                    var fileName = System.IO.Path.GetFileNameWithoutExtension(razorFile.Path);
+                    if (!existingClassNames.Contains(fileName))
+                    {
+                        var record = RazorCodeBehindRecord.CreateFromRazorFile(razorFile, models);
+                        if (record != null)
+                        {
+                            records.Add(record);
+                        }
+                    }
+                }
 
+                return records.ToImmutableArray();
+            });
+
+        // Report diagnostics for razor code-behinds (RXBG009, RXBG019)
+        context.RegisterSourceOutput(razorCodeBehindRecords,
+            static (spc, recordsArray) =>
+            {
+                foreach (var record in recordsArray.Where(r => r != null))
+                {
+                    foreach (var diagnostic in record!.Verify())
+                    {
                         spc.ReportDiagnostic(diagnostic);
                     }
                 }
             });
 
-        // Check for RXBG019: .razor file inheritance mismatch
-        var razorInheritanceChecks = razorCodeBehindClassesWithContext
-            .Combine(razorFiles.Collect())
-            .Select(static (combined, _) =>
+        // Extract RazorCodeBehindInfo for code generation
+        var allRazorCodeBehinds = razorCodeBehindRecords
+            .SelectMany(static (recordsArray, _) =>
             {
-                var (codeBehindContext, allRazorFiles) = combined;
-
-                // Find the corresponding .razor file
-                var razorFile = allRazorFiles.FirstOrDefault(f =>
-                    System.IO.Path.GetFileNameWithoutExtension(f.Path) == codeBehindContext.Info?.ClassName);
-
-                if (razorFile == null || codeBehindContext.Info == null)
-                {
-                    return (ClassDecl: codeBehindContext.ClassDecl, SemanticModel: codeBehindContext.SemanticModel, RazorFile: (AdditionalText?)null, ClassName: codeBehindContext.Info?.ClassName);
-                }
-
-                return (ClassDecl: codeBehindContext.ClassDecl, SemanticModel: codeBehindContext.SemanticModel, RazorFile: (AdditionalText?)razorFile, ClassName: codeBehindContext.Info.ClassName);
-            });
-
-        // Report RXBG019 diagnostics
-        context.RegisterSourceOutput(razorInheritanceChecks,
-            static (spc, checkInfo) =>
-            {
-                if (checkInfo.RazorFile != null && checkInfo.ClassDecl != null && checkInfo.SemanticModel != null)
-                {
-                    var (hasMatch, expectedInherits) = RazorAnalyzer.CheckRazorInheritanceMatch(
-                        checkInfo.ClassDecl,
-                        checkInfo.SemanticModel,
-                        checkInfo.RazorFile);
-
-                    if (!hasMatch && expectedInherits != null)
-                    {
-                        var diagnostic = Diagnostic.Create(
-                            Diagnostics.DiagnosticDescriptors.RazorInheritanceMismatchWarning,
-                            checkInfo.ClassDecl.Identifier.GetLocation(),
-                            checkInfo.ClassName,
-                            expectedInherits);
-
-                        spc.ReportDiagnostic(diagnostic);
-                    }
-                }
+                return recordsArray.Where(r => r != null).Select(r => r!.CodeBehindInfo).ToImmutableArray();
             });
 
         // Generate constructors for all Razor code-behind classes (both existing and missing)
         context.RegisterSourceOutput(allRazorCodeBehinds.Combine(msbuildProvider).Combine(observableModelClasses),
             static (spc, combined) =>
             {
-                var ((source, config), models) = combined;
+                RazorCodeBehindInfo? source = combined.Left.Left;
+                GeneratorConfig config = combined.Left.Right;
+                ImmutableArray<ObservableModelInfo?> models = combined.Right;
+
                 if (source != null)
                 {
                     RazorCodeGenerator.GenerateRazorConstructors(spc, source, models, config.UpdateFrequencyMs);
@@ -331,11 +269,11 @@ public class RxBlazorGenerator : IIncrementalGenerator
             });
 
         // Generate AddObservableModels extension method
-        context.RegisterSourceOutput(observableModelClasses.Combine(msbuildProvider),
+        context.RegisterSourceOutput(observableModelRecords.Combine(msbuildProvider),
             static (spc, combined) =>
             {
-                var (models, config) = combined;
-                var nonNullModels = models.Where(m => m != null).Select(x => x!).ToArray();
+                var (records, config) = combined;
+                var nonNullModels = records.Where(r => r != null).Select(r => r!.ModelInfo).ToArray();
                 ObservableModelCodeGenerator.GenerateAddObservableModelsExtension(spc, nonNullModels, config.RootNamespace);
                 ObservableModelCodeGenerator.GenerateAddGenericObservableModelsExtension(spc, nonNullModels, config.RootNamespace);
             });

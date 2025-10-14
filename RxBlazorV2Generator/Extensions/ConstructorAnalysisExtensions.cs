@@ -107,7 +107,7 @@ public static class ConstructorAnalysisExtensions
                 diFields.Add(diField);
 
                 // Check if this service is registered in DI - if not, track it for a warning
-                var isRegistered = parameterType.IsDIInjectableType(semanticModel, serviceClasses, null);
+                var isRegistered = parameterType.IsDIInjectableType(semanticModel, serviceClasses);
                 if (!isRegistered)
                 {
                     unregisteredServices.Add((parameterName, parameterTypeName, parameterType, parameter.Type?.GetLocation()));
