@@ -98,20 +98,10 @@ public class UnregisteredServiceCodeFixProvider : CodeFixProvider
                                 SyntaxFactory.IdentifierName("Justification")))
                 })));
 
-        // Get the indentation from the constructor (last whitespace trivia)
-        var leadingTrivia = constructorDeclaration.GetLeadingTrivia();
-        var indentation = leadingTrivia.LastOrDefault(t => t.IsKind(SyntaxKind.WhitespaceTrivia));
-
-        // Create attribute list with proper indentation and trailing newline
-        var attributeList = SyntaxFactory.AttributeList(
-            SyntaxFactory.SingletonSeparatedList(suppressMessageAttribute))
-            .WithLeadingTrivia(SyntaxFactory.TriviaList(indentation))
-            .WithTrailingTrivia(SyntaxFactory.CarriageReturnLineFeed);
-
-        // Add attribute to constructor with ONLY indentation (strip blank lines)
-        var newConstructor = constructorDeclaration
-            .WithAttributeLists(constructorDeclaration.AttributeLists.Add(attributeList))
-            .WithLeadingTrivia(SyntaxFactory.TriviaList(indentation));
+        // Use the SSOT helper method to add the attribute with proper trivia handling
+        var newConstructor = SyntaxHelpers.AddAttributePreservingTrivia(
+            constructorDeclaration,
+            suppressMessageAttribute);
 
         // Replace the constructor in the tree
         var newRoot = root.ReplaceNode(constructorDeclaration, newConstructor);

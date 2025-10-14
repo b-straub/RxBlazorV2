@@ -249,4 +249,64 @@ internal static class SyntaxHelpers
 
         return root;
     }
+
+    /// <summary>
+    /// Adds an attribute to a member (e.g., constructor, method, property, class) while preserving trivias correctly.
+    /// The attribute gets all the leading trivias from the visibility token (including blank lines),
+    /// and the member keeps only its indentation (last whitespace trivia).
+    /// This ensures proper formatting when adding attributes above members.
+    /// Pattern from DexieNET: place attributes before all leading trivias from the visibility/keyword token.
+    /// </summary>
+    /// <typeparam name="TMember">The type of member (must derive from MemberDeclarationSyntax)</typeparam>
+    /// <param name="member">The member to add the attribute to</param>
+    /// <param name="attribute">The attribute to add</param>
+    /// <returns>The new member with the attribute added and trivias properly preserved</returns>
+    public static TMember AddAttributePreservingTrivia<TMember>(
+        TMember member,
+        AttributeSyntax attribute) where TMember : MemberDeclarationSyntax
+    {
+        var memberLeadingTrivia = member.GetLeadingTrivia();
+
+        // Find the last whitespace trivia (indentation) before the member keyword/visibility
+        // Everything before and including this goes to the attribute
+        var lastWhitespaceIndex = -1;
+        for (int i = memberLeadingTrivia.Count - 1; i >= 0; i--)
+        {
+            if (memberLeadingTrivia[i].IsKind(SyntaxKind.WhitespaceTrivia))
+            {
+                lastWhitespaceIndex = i;
+                break;
+            }
+        }
+
+        // Split trivia: everything before and including last whitespace goes to attribute
+        // Only the last whitespace stays with the member
+        SyntaxTriviaList attributeLeadingTrivia;
+        SyntaxTriviaList newMemberLeadingTrivia;
+
+        if (lastWhitespaceIndex >= 0)
+        {
+            // Give all trivia (including blank lines and indentation) to the attribute
+            attributeLeadingTrivia = SyntaxFactory.TriviaList(memberLeadingTrivia.Take(lastWhitespaceIndex + 1));
+            // Member keeps only the indentation
+            newMemberLeadingTrivia = SyntaxFactory.TriviaList(memberLeadingTrivia[lastWhitespaceIndex]);
+        }
+        else
+        {
+            // No whitespace found, give all to attribute
+            attributeLeadingTrivia = memberLeadingTrivia;
+            newMemberLeadingTrivia = SyntaxFactory.TriviaList();
+        }
+
+        // Create attribute list with member's leading trivia and a trailing newline
+        var attributeList = SyntaxFactory.AttributeList(
+            SyntaxFactory.SingletonSeparatedList(attribute))
+            .WithLeadingTrivia(attributeLeadingTrivia)
+            .WithTrailingTrivia(SyntaxFactory.CarriageReturnLineFeed);
+
+        // Update member: add attribute list and update leading trivia to just indentation
+        return (TMember)member
+            .WithLeadingTrivia(newMemberLeadingTrivia)
+            .WithAttributeLists(member.AttributeLists.Add(attributeList));
+    }
 }

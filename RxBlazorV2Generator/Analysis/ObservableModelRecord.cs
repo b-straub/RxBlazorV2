@@ -64,6 +64,7 @@ public class ObservableModelRecord
             var usingStatements = classDecl.ExtractUsingStatements();
             var baseModelType = namedTypeSymbol.GetObservableModelBaseType();
             var baseModelTypeName = baseModelType?.ToDisplayString();
+            var constructorAccessibility = classDecl.GetConstructorAccessibility();
 
             // Add diagnostics from partial properties and command properties analysis
             diagnostics.AddRange(partialPropertyDiagnostics);
@@ -84,7 +85,8 @@ public class ObservableModelRecord
                 genericTypes,
                 typeConstrains,
                 usingStatements,
-                baseModelTypeName);
+                baseModelTypeName,
+                constructorAccessibility);
 
             // Build symbol map for model references
             var modelSymbolMap = new Dictionary<string, ITypeSymbol>();
@@ -133,7 +135,8 @@ public class ObservableModelRecord
                     genericTypes,
                     typeConstrains,
                     usingStatements,
-                    baseModelTypeName),
+                    baseModelTypeName,
+                    constructorAccessibility),
                 diagnostics);
 
             // Store unregistered services and DI scope info for generator diagnostic reporting

@@ -63,7 +63,7 @@ public static class ConstructorTemplate
         // Only use partial keyword if there are actual constructor parameters
         // Models with only observable collections/commands don't need partial constructors
         var partialKeyword = constructorParams.Any() ? "partial " : "";
-        sb.AppendLine($"    public {partialKeyword}{modelInfo.ClassName}({allParams}){baseCall}");
+        sb.AppendLine($"    {modelInfo.ConstructorAccessibility} {partialKeyword}{modelInfo.ClassName}({allParams}){baseCall}");
         sb.AppendLine("    {");
 
         // Assign referenced models
@@ -133,7 +133,7 @@ public static class ConstructorTemplate
         // The base class constructor will be called implicitly
         var baseCall = string.IsNullOrEmpty(modelInfo.BaseModelTypeName) ? " : base()" : "";
         // For parameterless constructors (only commands/collections), don't use partial keyword
-        sb.AppendLine($"    public {modelInfo.ClassName}(){baseCall}");
+        sb.AppendLine($"    {modelInfo.ConstructorAccessibility} {modelInfo.ClassName}(){baseCall}");
         sb.AppendLine("    {");
 
         // Initialize IObservableCollection properties

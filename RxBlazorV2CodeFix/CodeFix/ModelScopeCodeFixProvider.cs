@@ -91,11 +91,10 @@ public class ModelScopeCodeFixProvider : CodeFixProvider
                                     SyntaxFactory.IdentifierName("ModelScope"),
                                     SyntaxFactory.IdentifierName("Singleton"))))));
 
-            var newAttributeList = SyntaxFactory.AttributeList(
-                SyntaxFactory.SingletonSeparatedList(newAttribute));
-
-            var newClassDeclaration = classDeclaration.WithAttributeLists(
-                classDeclaration.AttributeLists.Add(newAttributeList));
+            // Use the SSOT helper method to add the attribute with proper trivia handling
+            var newClassDeclaration = SyntaxHelpers.AddAttributePreservingTrivia(
+                classDeclaration,
+                newAttribute);
 
             // Add using statement if needed
             var newRoot = AddUsingStatementIfNeeded(root, "RxBlazorV2.Model");

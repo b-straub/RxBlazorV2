@@ -189,6 +189,53 @@ public static class ConstructorAnalysisExtensions
     }
 
     /// <summary>
+    /// Extracts the accessibility modifier from a partial constructor declaration.
+    /// Returns "public", "protected", "private", "internal", "protected internal", or "private protected".
+    /// Defaults to "public" if no explicit accessibility modifier is found.
+    /// </summary>
+    public static string GetConstructorAccessibility(this ClassDeclarationSyntax classDecl)
+    {
+        var constructor = classDecl.GetPartialConstructor();
+        if (constructor is null)
+        {
+            return "public";
+        }
+
+        var modifiers = constructor.Modifiers;
+
+        // Check for compound modifiers first
+        if (modifiers.Any(SyntaxKind.ProtectedKeyword) && modifiers.Any(SyntaxKind.InternalKeyword))
+        {
+            return "protected internal";
+        }
+        if (modifiers.Any(SyntaxKind.PrivateKeyword) && modifiers.Any(SyntaxKind.ProtectedKeyword))
+        {
+            return "private protected";
+        }
+
+        // Check for single modifiers
+        if (modifiers.Any(SyntaxKind.PublicKeyword))
+        {
+            return "public";
+        }
+        if (modifiers.Any(SyntaxKind.ProtectedKeyword))
+        {
+            return "protected";
+        }
+        if (modifiers.Any(SyntaxKind.PrivateKeyword))
+        {
+            return "private";
+        }
+        if (modifiers.Any(SyntaxKind.InternalKeyword))
+        {
+            return "internal";
+        }
+
+        // Default to public if no accessibility modifier found
+        return "public";
+    }
+
+    /// <summary>
     /// Converts a camelCase or snake_case string to PascalCase.
     /// </summary>
     private static string ToPascalCase(string input)

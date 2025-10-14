@@ -5,11 +5,14 @@ using RxBlazorV2ExternalModel.Type;
 
 namespace RxBlazorV2ExternalModel.Models;
 
+//[ObservableComponent] -> generates TestModelComponent
+//[ObservableComponent("MyComponent"] -> generates MyComponent
 public partial class TestModel : ObservableModel
 {
     public const string CommonBatch = "common";
     public const string ListBatch = "list";
 
+    //[ObservableComponentTrigger] -> generates OnNotInBatchChanged
     public partial int NotInBatch { get; set; }
     
     [ObservableBatch(CommonBatch)]

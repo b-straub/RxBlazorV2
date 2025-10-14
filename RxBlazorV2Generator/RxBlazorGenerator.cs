@@ -143,24 +143,53 @@ public class RxBlazorGenerator : IIncrementalGenerator
                     }
 
                     // Report RXBG021 for DI scope violations
-                    foreach (var (diField, serviceScope, location) in record.DiFieldsWithScope)
+                    // First, calculate the minimum required scope for ALL violations in this class
+                    var violatingFields = record.DiFieldsWithScope
+                        .Where(tuple => tuple.serviceScope is not null && tuple.location is not null &&
+                                       CheckScopeViolation(record.ModelInfo.ModelScope, tuple.serviceScope!) is not null)
+                        .ToList();
+
+                    if (violatingFields.Any())
                     {
-                        if (serviceScope is not null && location is not null)
+                        var modelScope = record.ModelInfo.ModelScope;
+
+                        // Calculate minimum required scope based on all service scopes
+                        var hasTransient = violatingFields.Any(f => f.serviceScope == "Transient");
+                        var hasScoped = violatingFields.Any(f => f.serviceScope == "Scoped");
+
+                        string requiredScope;
+                        if (hasTransient)
                         {
-                            var modelScope = record.ModelInfo.ModelScope;
-                            var violation = CheckScopeViolation(modelScope, serviceScope);
-                            if (violation is not null)
+                            requiredScope = "Transient";
+                        }
+                        else if (hasScoped)
+                        {
+                            requiredScope = "Scoped";
+                        }
+                        else
+                        {
+                            requiredScope = "Singleton";
+                        }
+
+                        // Report diagnostic for each violating field, but include the overall required scope in properties
+                        foreach (var (diField, serviceScope, location) in violatingFields)
+                        {
+                            var properties = ImmutableDictionary.CreateRange(new[]
                             {
-                                var diagnostic = Diagnostic.Create(
-                                    Diagnostics.DiagnosticDescriptors.DiServiceScopeViolationWarning,
-                                    location,
-                                    record.ModelInfo.ClassName,
-                                    modelScope,
-                                    diField.FieldName,
-                                    diField.FieldType,
-                                    serviceScope);
-                                spc.ReportDiagnostic(diagnostic);
-                            }
+                                new KeyValuePair<string, string?>("RequiredScope", requiredScope),
+                                new KeyValuePair<string, string?>("ClassName", record.ModelInfo.ClassName)
+                            });
+
+                            var diagnostic = Diagnostic.Create(
+                                Diagnostics.DiagnosticDescriptors.DiServiceScopeViolationWarning,
+                                location,
+                                properties,
+                                record.ModelInfo.ClassName,
+                                modelScope,
+                                diField.FieldName,
+                                diField.FieldType,
+                                serviceScope);
+                            spc.ReportDiagnostic(diagnostic);
                         }
                     }
                 }

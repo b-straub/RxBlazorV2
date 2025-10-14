@@ -1,6 +1,8 @@
 using MudBlazor;
 using RxBlazorV2.Interface;
 using RxBlazorV2.Model;
+using RxBlazorV2Sample.Services;
+using System.Diagnostics.CodeAnalysis;
 
 namespace RxBlazorV2Sample.Samples.ReactiveComposition;
 
@@ -28,6 +30,8 @@ public partial class ModelGood : ObservableModel
     {
         return ErrorMessage.Length > 3;
     }
-    
-    public partial ModelGood(ISnackbar snackbar);
+
+
+    [SuppressMessage("RxBlazorGenerator", "RXBG020:Partial constructor parameter type may not be registered in DI", Justification = "ISnackbar registered externally")]
+    protected partial ModelGood(ISnackbar snackbar, LocationService locationService);
 }
