@@ -8,6 +8,7 @@ public record PersonRecord(string Name, int Age);
 
 public record struct PointStruct(double X, double Y);
 
+[ObservableComponent]
 [ObservableModelScope(ModelScope.Scoped)]
 public partial class ValueEqualityModel : SampleBaseModel
 {

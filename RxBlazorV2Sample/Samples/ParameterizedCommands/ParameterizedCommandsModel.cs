@@ -4,6 +4,7 @@ using RxBlazorV2Sample.Samples.Helpers;
 
 namespace RxBlazorV2Sample.Samples.ParameterizedCommands;
 
+[ObservableComponent]
 [ObservableModelScope(ModelScope.Scoped)]
 public partial class ParameterizedCommandsModel : SampleBaseModel
 {

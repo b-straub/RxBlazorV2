@@ -109,18 +109,25 @@ public class RxBlazorGenerator : IIncrementalGenerator
                 return records.Select(r => r?.ModelInfo).ToImmutableArray();
             });
 
-        // Report generator-specific diagnostics (RXBG020, RXBG021)
+        // Report generator-specific diagnostics (RXBG050, RXBG051)
         // These are filtered to avoid duplicates from analyzer
-        context.RegisterSourceOutput(observableModelRecords,
-            (spc, records) =>
+        context.RegisterSourceOutput(observableModelRecords.Combine(context.CompilationProvider),
+            (spc, combined) =>
             {
+                var (records, compilation) = combined;
                 foreach (var record in records.Where(r => r != null))
                 {
-                    // Report RXBG020 for unregistered services
+                    // Report RXBG050 for unregistered services (with suppression for well-known external services)
                     foreach (var (paramName, _, typeSymbol, location) in record!.UnregisteredServices)
                     {
                         if (location is not null && typeSymbol is not null)
                         {
+                            // Check if this is a well-known external service that should be suppressed
+                            if (Diagnostics.ExternalServiceHelper.ShouldSuppressUnregisteredServiceWarning(typeSymbol, compilation))
+                            {
+                                continue;
+                            }
+
                             var simpleTypeName = typeSymbol.Name;
                             var isInterface = typeSymbol.TypeKind == TypeKind.Interface;
                             var registrationExample = isInterface
@@ -244,6 +251,70 @@ public class RxBlazorGenerator : IIncrementalGenerator
                         genericPart);
 
                     spc.ReportDiagnostic(diagnostic);
+                }
+            });
+
+        // Check for shared model scoping violations (RXBG014)
+        // Count component usage in razor files for non-singleton models
+        var allRazorFiles = razorFiles.Collect();
+        context.RegisterSourceOutput(observableModelRecords.Combine(allRazorFiles),
+            static (spc, combined) =>
+            {
+                var (records, razorFilesList) = combined;
+
+                foreach (var record in records.Where(r => r != null && r!.ComponentInfo != null))
+                {
+                    if (record is null || record.ComponentInfo is null)
+                    {
+                        continue;
+                    }
+
+                    var modelScope = record.ModelInfo.ModelScope;
+
+                    // Only check non-singleton models
+                    if (modelScope == "Singleton")
+                    {
+                        continue;
+                    }
+
+                    var componentClassName = record.ComponentInfo.ComponentClassName;
+                    var usageLocations = new List<Location>();
+
+                    // Count usages across all razor files
+                    foreach (var razorFile in razorFilesList)
+                    {
+                        var content = razorFile.GetText();
+                        if (content is null)
+                        {
+                            continue;
+                        }
+
+                        var location = Analyzers.RazorComponentUsageDetector.DetectComponentUsage(
+                            razorFile,
+                            content,
+                            componentClassName);
+
+                        if (location is not null)
+                        {
+                            usageLocations.Add(location);
+                        }
+                    }
+
+                    // Report diagnostic if model is shared (used in multiple components)
+                    if (usageLocations.Count > 1)
+                    {
+                        // Report diagnostic at ALL usage locations so user sees error in every file
+                        foreach (var location in usageLocations)
+                        {
+                            var diagnostic = Diagnostic.Create(
+                                Diagnostics.DiagnosticDescriptors.SharedModelNotSingletonError,
+                                location,
+                                record.ModelInfo.FullyQualifiedName,
+                                modelScope);
+
+                            spc.ReportDiagnostic(diagnostic);
+                        }
+                    }
                 }
             });
 

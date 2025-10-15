@@ -6,10 +6,12 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace RxBlazorV2Sample.Samples.ReactiveComposition;
 
+[ObservableComponent]
 [ObservableModelScope(ModelScope.Scoped)]
 public partial class ModelGood : ObservableModel
 {
     [ObservableTrigger(nameof(ShowError), nameof(CanSendError))]
+    [ObservableComponentTrigger]
     public partial string ErrorMessage { get; set; } = string.Empty;
     
     
@@ -31,7 +33,5 @@ public partial class ModelGood : ObservableModel
         return ErrorMessage.Length > 3;
     }
 
-
-    [SuppressMessage("RxBlazorGenerator", "RXBG020:Partial constructor parameter type may not be registered in DI", Justification = "ISnackbar registered externally")]
-    protected partial ModelGood(ISnackbar snackbar, LocationService locationService);
+    public partial ModelGood(ISnackbar snackbar, LocationService locationService);
 }

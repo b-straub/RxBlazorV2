@@ -4,11 +4,12 @@ using RxBlazorV2Sample.Services;
 
 namespace RxBlazorV2Sample.Models;
 
+[ObservableComponent]
 [ObservableModelScope(ModelScope.Scoped)]
 public partial class WeatherModel : ObservableModel
 {
     // Declare partial constructor with dependencies
-    public partial WeatherModel(SettingsModel settings, HttpClient httpClient, OpenMeteoApiClient openMeteoClient);
+    public partial WeatherModel(SettingsModel settings, OpenMeteoApiClient openMeteoClient);
 
     public bool NotInComponentObservation => Settings.NotInComponentObservation;
     public partial bool IsDay { get; set; }

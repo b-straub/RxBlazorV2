@@ -1,10 +1,10 @@
 using R3;
-using RxBlazorV2.Component;
+using RxBlazorV2Sample.Components;
 using RxBlazorV2Sample.Models;
 
 namespace RxBlazorV2Sample.Pages
 {
-    public partial class TestEquatable : ObservableComponent<EquatableTestModel>
+    public partial class TestEquatable : EquatableTestModelComponent
     {
         private int _stateChangedCounter;
 

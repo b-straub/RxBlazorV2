@@ -4,6 +4,8 @@ using RxBlazorV2Sample.Samples.Helpers;
 
 namespace RxBlazorV2Sample.Samples.CrossComponentCommunication;
 
+[ObservableComponent]
+
 [ObservableModelScope(ModelScope.Singleton)]
 public partial class CrossComponentCommunicationModel : SampleBaseModel
 {

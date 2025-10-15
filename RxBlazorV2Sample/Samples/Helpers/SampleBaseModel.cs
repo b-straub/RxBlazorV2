@@ -3,6 +3,7 @@ using RxBlazorV2.Model;
 
 namespace RxBlazorV2Sample.Samples.Helpers;
 
+[ObservableModelScope(ModelScope.Singleton)]
 public abstract partial class SampleBaseModel : ObservableModel
 {
     public abstract string Usage { get; }

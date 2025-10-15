@@ -31,7 +31,8 @@ public static class PropertyTemplate
     }
 
     /// <summary>
-    /// Generates protected properties for referenced models.
+    /// Generates public properties for referenced models.
+    /// Changed from protected to public to allow component access.
     /// </summary>
     /// <param name="modelReferences">Collection of model references.</param>
     /// <returns>Generated properties code.</returns>
@@ -40,13 +41,14 @@ public static class PropertyTemplate
         var sb = new StringBuilder();
         foreach (var modelRef in modelReferences)
         {
-            sb.AppendLine($"    protected {modelRef.ReferencedModelTypeName} {modelRef.PropertyName} {{ get; }}");
+            sb.AppendLine($"    public {modelRef.ReferencedModelTypeName} {modelRef.PropertyName} {{ get; }}");
         }
         return sb.ToString().TrimEnd('\r', '\n');
     }
 
     /// <summary>
-    /// Generates protected properties for DI injected services.
+    /// Generates public properties for DI injected services.
+    /// Changed from protected to public to allow component access.
     /// </summary>
     /// <param name="diFields">Collection of DI fields.</param>
     /// <returns>Generated properties code.</returns>
@@ -55,7 +57,7 @@ public static class PropertyTemplate
         var sb = new StringBuilder();
         foreach (var diField in diFields)
         {
-            sb.AppendLine($"    protected {diField.FieldType} {diField.FieldName} {{ get; }}");
+            sb.AppendLine($"    public {diField.FieldType} {diField.FieldName} {{ get; }}");
         }
         return sb.ToString().TrimEnd('\r', '\n');
     }

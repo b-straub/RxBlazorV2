@@ -15,6 +15,7 @@ public class BasicCommandsTests
     public void IncrementCommand_ShouldIncrementCounter()
     {
         // Act
+        _model.Counter = 0;
         _model.IncrementCommand.Execute();
 
         // Assert
@@ -26,6 +27,7 @@ public class BasicCommandsTests
     public async Task IncrementAsyncCommand_ShouldIncrementCounter()
     {
         // Act
+        _model.Counter = 0;
         await _model.IncrementAsyncCommand.ExecuteAsync();
 
         // Assert

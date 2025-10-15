@@ -12,6 +12,7 @@ public partial class GenericModelsBaseModel<T, TP> : ObservableModel where T : c
     public required partial ObservableList<TP> Values { get; init; }
 }
 
+[ObservableComponent]
 [ObservableModelScope(ModelScope.Scoped)]
 public partial class GenericModelsModel<T, TP> : ObservableModel where T : class where TP : struct
 {

@@ -194,6 +194,7 @@ public class DiServiceScopeViolationCodeFixTests
                 public partial string Name { get; set; }
             }
 
+            [ObservableModelScope(ModelScope.Singleton)]
             public partial class ConsumerModel : ObservableModel
             {
                 public partial ConsumerModel({|{{DiagnosticDescriptors.DiServiceScopeViolationError.Id}}:ServiceModel|} serviceModel);
@@ -247,6 +248,7 @@ public class DiServiceScopeViolationCodeFixTests
                 public partial string Name { get; set; }
             }
 
+            [ObservableModelScope(ModelScope.Singleton)]
             public partial class ConsumerModel : ObservableModel
             {
                 public partial ConsumerModel({|{{DiagnosticDescriptors.DiServiceScopeViolationError.Id}}:ServiceModel|} serviceModel);

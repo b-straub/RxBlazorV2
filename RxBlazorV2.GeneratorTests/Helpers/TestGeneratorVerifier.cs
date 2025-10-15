@@ -32,7 +32,7 @@ internal static class RxBlazorGeneratorVerifier
         );
         test.ExpectedDiagnostics.AddRange(expected);
         test.TestState.ReferenceAssemblies = TestShared.ReferenceAssemblies();
-        test.TestState.AdditionalReferences.Add(typeof(RxBlazorV2.Model.ObservableModel).Assembly);
+        test.TestState.AdditionalReferences.Add(typeof(Model.ObservableModel).Assembly);
 
         return test.RunAsync();
     }
@@ -66,7 +66,7 @@ internal static class ComponentGeneratorVerifier
 
         var test = new RxBlazorGeneratorTest { TestCode = source };
         test.TestState.Sources.Add(("GlobalUsings.cs", SourceText.From(TestShared.GlobalUsing, Encoding.UTF8)));
-
+        
         // Add the expected model generation output
         test.TestState.GeneratedSources.Add((typeof(RxBlazorGenerator), $"Test.{modelFileName}.g.cs",
             SourceText.From(generatedModel.NormalizeGeneratedCode(), Encoding.UTF8)));
@@ -87,7 +87,70 @@ internal static class ComponentGeneratorVerifier
 
         test.ExpectedDiagnostics.AddRange(expected);
         test.TestState.ReferenceAssemblies = TestShared.ReferenceAssemblies();
-        test.TestState.AdditionalReferences.Add(typeof(RxBlazorV2.Model.ObservableModel).Assembly);
+        test.TestState.AdditionalReferences.Add(typeof(Model.ObservableModel).Assembly);
+
+        return test.RunAsync();
+    }
+}
+
+/// <summary>
+/// Verifier for Razor file diagnostics
+/// Supports testing diagnostics that require Razor files (like DirectObservableComponentInheritanceError and SharedModelNotSingletonError)
+/// </summary>
+internal static class RazorFileGeneratorVerifier
+{
+    public static Task VerifyRazorDiagnosticsAsync(
+        string source,
+        Dictionary<string, string> razorFiles,
+        string? generatedModel = null,
+        string? generatedComponent = null,
+        string? modelName = null,
+        string? componentClassName = null,
+        string constrains = "",
+        string modelScope = "Scoped",
+        params DiagnosticResult[] expected)
+    {
+        var test = new RxBlazorGeneratorTest { TestCode = source };
+        test.TestState.Sources.Add(("GlobalUsings.cs", SourceText.From(TestShared.GlobalUsing, Encoding.UTF8)));
+
+        // Add Razor files as AdditionalFiles
+        foreach (var (fileName, content) in razorFiles)
+        {
+            test.TestState.AdditionalFiles.Add((fileName, SourceText.From(content, Encoding.UTF8)));
+        }
+
+        // Add expected generated sources if provided
+        // Order matters: Model -> Component -> Service Extensions
+        if (generatedModel is not null && modelName is not null)
+        {
+            var genericSplit = modelName.IndexOf('<');
+            var modelFileName = genericSplit > 0 ? modelName[..genericSplit] : modelName;
+
+            test.TestState.GeneratedSources.Add((typeof(RxBlazorGenerator), $"Test.{modelFileName}.g.cs",
+                SourceText.From(generatedModel.NormalizeGeneratedCode(), Encoding.UTF8)));
+        }
+
+        // Add component file before service extensions
+        if (generatedComponent is not null && componentClassName is not null)
+        {
+            test.TestState.GeneratedSources.Add((typeof(RxBlazorGenerator), $"Components.{componentClassName}.g.cs",
+                SourceText.From(generatedComponent.NormalizeGeneratedCode(), Encoding.UTF8)));
+        }
+
+        // Add service extension files last
+        if (generatedModel is not null && modelName is not null)
+        {
+            test.TestState.GeneratedSources.Add((typeof(RxBlazorGenerator), "ObservableModelsServiceCollectionExtension.g.cs",
+                    SourceText.From(RxBlazorGeneratorTest.ObservableModelsServiceExtension(modelName, constrains, modelScope), Encoding.UTF8))
+            );
+            test.TestState.GeneratedSources.Add((typeof(RxBlazorGenerator), "GenericModelsServiceCollectionExtension.g.cs",
+                    SourceText.From(RxBlazorGeneratorTest.GenricModelsServiceExtension(modelName, constrains), Encoding.UTF8))
+            );
+        }
+
+        test.ExpectedDiagnostics.AddRange(expected);
+        test.TestState.ReferenceAssemblies = TestShared.ReferenceAssemblies();
+        test.TestState.AdditionalReferences.Add(typeof(Model.ObservableModel).Assembly);
 
         return test.RunAsync();
     }
@@ -102,8 +165,16 @@ internal class RxBlazorGeneratorTest : CSharpSourceGeneratorTest<RxBlazorGenerat
     }
 
 
-    public static string ObservableModelsServiceExtension(string modelName, string constrains)
+    public static string ObservableModelsServiceExtension(string modelName, string constrains, string modelScope = "Scoped")
     {
+        var registrationMethod = modelScope switch
+        {
+            "Scoped" => "AddScoped",
+            "Singleton" => "AddSingleton",
+            "Transient" => "AddTransient",
+            _ => "AddScoped"
+        };
+
         var serviceExtension = $$"""
 
         using Microsoft.Extensions.DependencyInjection;
@@ -116,12 +187,12 @@ internal class RxBlazorGeneratorTest : CSharpSourceGeneratorTest<RxBlazorGenerat
         {
             public static IServiceCollection Initialize(IServiceCollection services)
             {
-                services.AddSingleton<{{modelName}}>();
+                services.{{registrationMethod}}<{{modelName}}>();
                 return services;
             }
         }
         """;
-        
+
         serviceExtension = serviceExtension.TrimStart();
         serviceExtension = serviceExtension.Replace("\r\n", Environment.NewLine);
         serviceExtension += Environment.NewLine;

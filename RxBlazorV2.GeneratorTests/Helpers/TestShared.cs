@@ -32,7 +32,8 @@ internal static class TestShared
                 new PackageIdentity("Microsoft.AspNetCore.Components", "10.0.0-rc.1.25451.107"),
                 new PackageIdentity("R3", "1.3.0"),
                 new PackageIdentity("ObservableCollections.R3", "3.3.4"),
-                new PackageIdentity("JetBrains.Annotations", "2025.2.2")
+                new PackageIdentity("JetBrains.Annotations", "2025.2.2"),
+                new PackageIdentity("MudBlazor", "8.13.0")
             ]);
     }
 }

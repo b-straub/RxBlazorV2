@@ -1,3 +1,8 @@
-@inherits ObservableComponent<RxBlazorV2Sample.Models.CounterModel>
-
 <MudAlert Severity="Severity.Info" Class="mt-4 mb-4">Current count 2: @Model.Counter2</MudAlert>
+
+@code
+{
+    [Parameter]
+    [EditorRequired]
+    public CounterModel Model { get; set; }
+}

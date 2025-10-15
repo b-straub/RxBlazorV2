@@ -8,6 +8,9 @@ public class TestClass
 {
 }
 
+[ObservableComponent]
+
+[ObservableModelScope(ModelScope.Singleton)]
 public partial class EquatableTestModel : ObservableModel
 {
     public static readonly TestClass Test1 = new TestClass();

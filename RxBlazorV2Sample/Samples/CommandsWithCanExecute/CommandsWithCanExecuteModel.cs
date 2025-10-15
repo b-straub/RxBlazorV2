@@ -4,7 +4,9 @@ using RxBlazorV2Sample.Samples.Helpers;
 
 namespace RxBlazorV2Sample.Samples.CommandsWithCanExecute;
 
-[ObservableModelScope(ModelScope.Scoped)]
+[ObservableComponent]
+
+[ObservableModelScope(ModelScope.Singleton)]
 public partial class CommandsWithCanExecuteModel : SampleBaseModel
 {
     public override string Usage => "Commands can be enabled/disabled based on model state using CanExecute";

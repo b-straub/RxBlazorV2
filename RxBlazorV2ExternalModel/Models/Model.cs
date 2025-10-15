@@ -6,8 +6,9 @@ using RxBlazorV2ExternalModel.Type;
 
 namespace RxBlazorV2ExternalModel.Models;
 
-[ObservableComponent] // Generates ExternalModelComponent by default (TestModelComponent)
-public partial class TestModel1 : ObservableModel
+[ObservableModelScope(ModelScope.Singleton)]
+[ObservableComponent]
+public partial class TestModel : ObservableModel
 {
     public const string CommonBatch = "common";
     public const string ListBatch = "list";
@@ -49,10 +50,4 @@ public partial class TestModel1 : ObservableModel
     {
         return TestList.Count > 0;
     }
-}
-
-[ObservableComponent("TestModelCustomNamedComponent")]
-public partial class TestModel : ObservableModel
-{
-    public partial int Counter { get; set; }
 }

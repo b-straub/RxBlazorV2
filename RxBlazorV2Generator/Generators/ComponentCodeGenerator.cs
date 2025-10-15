@@ -32,9 +32,30 @@ public static class ComponentCodeGenerator
             sb.AppendLine($"namespace {componentInfo.ComponentNamespace};");
             sb.AppendLine();
 
-            // Component class declaration
-            sb.AppendLine($"public partial class {componentInfo.ComponentClassName} : ObservableComponent<{componentInfo.ModelTypeName}>");
+            // Component class declaration with generic types and constraints
+            var genericPart = string.IsNullOrEmpty(componentInfo.GenericTypes) ? string.Empty : componentInfo.GenericTypes;
+            var modelTypeWithGenerics = string.IsNullOrEmpty(componentInfo.GenericTypes)
+                ? componentInfo.ModelTypeName
+                : $"{componentInfo.ModelTypeName}{componentInfo.GenericTypes}";
+
+            var constraintsPart = string.IsNullOrEmpty(componentInfo.TypeConstrains) ? string.Empty : $" {componentInfo.TypeConstrains}";
+
+            sb.AppendLine($"public partial class {componentInfo.ComponentClassName}{genericPart} : ObservableComponent<{modelTypeWithGenerics}>{constraintsPart}");
             sb.AppendLine("{");
+
+            // Generate shortcut properties for model references (ObservableModels)
+            if (componentInfo.ModelReferences.Any())
+            {
+                GenerateModelReferenceShortcuts(sb, componentInfo.ModelReferences);
+                sb.AppendLine();
+            }
+
+            // Generate shortcut properties for DI services
+            if (componentInfo.DIFields.Any())
+            {
+                GenerateDIFieldShortcuts(sb, componentInfo.DIFields);
+                sb.AppendLine();
+            }
 
             // Generate InitializeGeneratedCode method
             GenerateInitializeGeneratedCode(sb, componentInfo, updateFrequencyMs);
@@ -98,14 +119,15 @@ public static class ComponentCodeGenerator
             }
         }
 
-        // Generate subscriptions for component triggers
+        // Generate subscriptions for component triggers with chunking
         foreach (var trigger in componentInfo.ComponentTriggers)
         {
             sb.AppendLine("        ");
             if (trigger.HookType == TriggerHookType.Sync)
             {
                 sb.AppendLine($"        Subscriptions.Add(Model.Observable.Where(p => p.Intersect([\"{trigger.PropertyName}\"]).Any())");
-                sb.AppendLine("            .Subscribe(_ =>");
+                sb.AppendLine($"            .Chunk(TimeSpan.FromMilliseconds({updateFrequencyMs}))");
+                sb.AppendLine("            .Subscribe(chunks =>");
                 sb.AppendLine("            {");
                 sb.AppendLine($"                {trigger.HookMethodName}();");
                 sb.AppendLine("            }));");
@@ -113,7 +135,8 @@ public static class ComponentCodeGenerator
             else if (trigger.HookType == TriggerHookType.Async)
             {
                 sb.AppendLine($"        Subscriptions.Add(Model.Observable.Where(p => p.Intersect([\"{trigger.PropertyName}\"]).Any())");
-                sb.AppendLine("            .SubscribeAwait(async (_,ct) =>");
+                sb.AppendLine($"            .Chunk(TimeSpan.FromMilliseconds({updateFrequencyMs}))");
+                sb.AppendLine("            .SubscribeAwait(async (chunks, ct) =>");
                 sb.AppendLine("            {");
                 sb.AppendLine($"                await {trigger.HookMethodName}(ct);");
                 sb.AppendLine("            }));");
@@ -156,6 +179,22 @@ public static class ComponentCodeGenerator
             {
                 sb.AppendLine("    ");
             }
+        }
+    }
+
+    private static void GenerateModelReferenceShortcuts(StringBuilder sb, List<ModelReferenceInfo> modelReferences)
+    {
+        foreach (var modelRef in modelReferences)
+        {
+            sb.AppendLine($"    protected {modelRef.ReferencedModelTypeName} {modelRef.PropertyName} => Model.{modelRef.PropertyName};");
+        }
+    }
+
+    private static void GenerateDIFieldShortcuts(StringBuilder sb, List<DIFieldInfo> diFields)
+    {
+        foreach (var diField in diFields)
+        {
+            sb.AppendLine($"    protected {diField.FieldType} {diField.FieldName} => Model.{diField.FieldName};");
         }
     }
 }

@@ -1,19 +1,12 @@
-using Microsoft.AspNetCore.Components;
 using MudBlazor;
 using RxBlazorV2Sample.Components;
-using RxBlazorV2Sample.Interfaces;
-
-namespace RxBlazorV2Sample.Components;
 
 // Extend the generated WeatherComponent with custom view logic
-public partial class WeatherComponent
-{
-    [Inject]
-    public required ISettingsModel Settings { get; init; }
-    
-    protected bool NotInComponentObservation => Model.NotInComponentObservation;
+namespace RxBlazorV2Sample.Pages;
 
-    protected override async Task OnInitializedAsync()
+public partial class Weather : WeatherModelComponent
+{
+    protected override async Task OnContextReadyAsync()
     {
         // Load initial weather data
         await Model.LoadWeatherCommand.ExecuteAsync();

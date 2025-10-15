@@ -1,11 +1,10 @@
 ﻿@page "/weather"
-@using RxBlazorV2Sample.Components
-@inherits WeatherComponent
+@inherits WeatherModelComponent
 
 <PageTitle>Reactive Weather</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.Large">
-    @if (NotInComponentObservation)
+    @if (Model.NotInComponentObservation)
     {
         <MudText>@Model.IsDay</MudText>
     }
@@ -98,7 +97,7 @@
                         </MudButton>
 
                         <MudButton
-                            @onclick="RefreshAsync"
+                            @onclick=@(async () => await Model.RefreshCommand.ExecuteAsync())
                             Variant="Variant.Outlined"
                             Color="Color.Secondary"
                             StartIcon="@Icons.Material.Filled.Refresh">

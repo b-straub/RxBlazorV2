@@ -57,7 +57,7 @@ public class ObservableModelRecord
             var additionalDIFields = classDecl.ExtractDIFields(semanticModel, serviceClasses);
             diFields.AddRange(additionalDIFields);
 
-            var modelScope = classDecl.ExtractModelScopeFromClass(semanticModel);
+            var (modelScope, hasScopeAttribute) = classDecl.ExtractModelScopeWithAttributeCheck(semanticModel);
             var implementedInterfaces = namedTypeSymbol.ExtractObservableModelInterfaces();
             var genericTypes = namedTypeSymbol.ExtractObservableModelGenericTypes();
             var typeConstrains = classDecl.ExtractTypeConstrains();
@@ -69,6 +69,31 @@ public class ObservableModelRecord
             // Add diagnostics from partial properties and command properties analysis
             diagnostics.AddRange(partialPropertyDiagnostics);
             diagnostics.AddRange(commandPropertiesDiagnostics);
+
+            // Check for missing ObservableModelScope attribute (RXBG070)
+            if (!hasScopeAttribute)
+            {
+                var diagnostic = Diagnostic.Create(
+                    DiagnosticDescriptors.MissingObservableModelScopeWarning,
+                    classDecl.Identifier.GetLocation(),
+                    namedTypeSymbol.Name);
+                diagnostics.Add(diagnostic);
+            }
+
+            // Check for non-public partial constructor with parameters (RXBG071)
+            var partialConstructor = classDecl.GetPartialConstructor();
+            if (partialConstructor is not null && partialConstructor.ParameterList.Parameters.Count > 0)
+            {
+                if (constructorAccessibility != "public")
+                {
+                    var diagnostic = Diagnostic.Create(
+                        DiagnosticDescriptors.NonPublicPartialConstructorError,
+                        partialConstructor.Identifier.GetLocation(),
+                        namedTypeSymbol.Name,
+                        constructorAccessibility);
+                    diagnostics.Add(diagnostic);
+                }
+            }
 
             // Create model info
             var modelInfo = new ObservableModelInfo(
@@ -114,9 +139,8 @@ public class ObservableModelRecord
                 classDecl);
             diagnostics.AddRange(modelReferenceDiagnostics);
 
-            // Check for shared model scoping issues (RXBG007)
-            var sharedModelDiagnostics = AnalyzeSharedModelScoping(namedTypeSymbol, classDecl, compilation);
-            diagnostics.AddRange(sharedModelDiagnostics);
+            // NOTE: Shared model scoping (RXBG014) is now checked in generator post-step
+            // by counting component usage in razor files
 
             // Store unregistered services and DI scope violations for later diagnostic generation
             // These are stored as properties so the generator can report them (RXBG020, RXBG021)
@@ -144,7 +168,7 @@ public class ObservableModelRecord
             record.DiFieldsWithScope = diFieldsWithScope;
 
             // Extract component information if [ObservableComponent] attribute is present
-            record.ComponentInfo = ExtractComponentInfo(namedTypeSymbol, partialProperties);
+            record.ComponentInfo = ExtractComponentInfo(namedTypeSymbol, partialProperties, enhancedModelReferences, diFields);
 
             return record;
         }
@@ -165,7 +189,7 @@ public class ObservableModelRecord
     /// <summary>
     /// Returns all diagnostics for this model.
     /// This is the single source of truth for diagnostic logic.
-    /// Note: RXBG020 and RXBG021 are reported by the generator in a separate pass.
+    /// Note: RXBG020, RXBG021, and RXBG014 are reported by the generator in a separate pass.
     /// </summary>
     public List<Diagnostic> Verify()
     {
@@ -173,114 +197,13 @@ public class ObservableModelRecord
     }
 
     /// <summary>
-    /// Analyzes shared model scoping using compilation information.
-    /// Checks if a non-singleton model is shared across multiple components (RXBG007).
-    /// </summary>
-    private static List<Diagnostic> AnalyzeSharedModelScoping(
-        INamedTypeSymbol namedTypeSymbol,
-        ClassDeclarationSyntax classDecl,
-        Compilation compilation)
-    {
-        var diagnostics = new List<Diagnostic>();
-
-        try
-        {
-            // Get the model scope from attributes
-            var modelScope = "Singleton"; // Default scope
-            Location? attributeLocation = null;
-
-            foreach (var attribute in namedTypeSymbol.GetAttributes())
-            {
-                if (attribute.AttributeClass?.Name == "ObservableModelScopeAttribute")
-                {
-                    if (attribute.ConstructorArguments.Length > 0 &&
-                        attribute.ConstructorArguments[0].Value is int scopeValue)
-                    {
-                        modelScope = scopeValue switch
-                        {
-                            0 => "Singleton",
-                            1 => "Scoped",
-                            2 => "Transient",
-                            _ => "Singleton"
-                        };
-                    }
-                    attributeLocation = attribute.ApplicationSyntaxReference?.GetSyntax().GetLocation();
-                    break;
-                }
-            }
-
-            // Only check non-singleton models
-            if (modelScope != "Singleton")
-            {
-                // Count how many components use this model
-                var modelUsageCount = CountModelUsageInCompilation(namedTypeSymbol, compilation);
-
-                if (modelUsageCount > 1)
-                {
-                    var location = attributeLocation ?? classDecl.GetLocation();
-                    var diagnostic = Diagnostic.Create(
-                        DiagnosticDescriptors.SharedModelNotSingletonError,
-                        location,
-                        namedTypeSymbol.ToDisplayString(),
-                        modelScope);
-                    diagnostics.Add(diagnostic);
-                }
-            }
-        }
-        catch (Exception)
-        {
-            // Silently skip on error
-        }
-
-        return diagnostics;
-    }
-
-    /// <summary>
-    /// Counts how many components in the compilation use this model type.
-    /// </summary>
-    private static int CountModelUsageInCompilation(INamedTypeSymbol modelType, Compilation compilation)
-    {
-        var usageCount = 0;
-
-        var allTypes = compilation.GetSymbolsWithName(_ => true, SymbolFilter.Type)
-            .OfType<INamedTypeSymbol>()
-            .Where(type => GetObservableComponentBaseModelType(type) != null);
-
-        foreach (var componentType in allTypes)
-        {
-            var baseModelType = GetObservableComponentBaseModelType(componentType);
-            if (baseModelType != null && SymbolEqualityComparer.Default.Equals(baseModelType, modelType))
-            {
-                usageCount++;
-            }
-        }
-
-        return usageCount;
-    }
-
-    /// <summary>
-    /// Gets the model type from ObservableComponent&lt;T&gt; base class.
-    /// </summary>
-    private static INamedTypeSymbol? GetObservableComponentBaseModelType(INamedTypeSymbol classSymbol)
-    {
-        var baseType = classSymbol.BaseType;
-        while (baseType != null)
-        {
-            if (baseType.Name == "ObservableComponent" && baseType.TypeArguments.Length == 1)
-            {
-                return baseType.TypeArguments[0] as INamedTypeSymbol;
-            }
-            baseType = baseType.BaseType;
-        }
-        return null;
-    }
-
-    /// <summary>
     /// Extracts component information from [ObservableComponent] attribute if present.
     /// </summary>
     private static ComponentInfo? ExtractComponentInfo(
         INamedTypeSymbol namedTypeSymbol,
-        List<PartialPropertyInfo> partialProperties)
+        List<PartialPropertyInfo> partialProperties,
+        List<ModelReferenceInfo> modelReferences,
+        List<DIFieldInfo> diFields)
     {
         try
         {
@@ -396,13 +319,33 @@ public class ObservableModelRecord
                 batchSubscriptions["Model"] = modelProperties;
             }
 
+            // Get generic types and constraints from the model symbol
+            var genericTypes = namedTypeSymbol.ExtractObservableModelGenericTypes();
+            var typeConstrains = namedTypeSymbol.ContainingType?.DeclaringSyntaxReferences
+                .Select(r => r.GetSyntax())
+                .OfType<ClassDeclarationSyntax>()
+                .FirstOrDefault()
+                ?.ExtractTypeConstrains()
+                ?? namedTypeSymbol.DeclaringSyntaxReferences
+                .Select(r => r.GetSyntax())
+                .OfType<ClassDeclarationSyntax>()
+                .FirstOrDefault()
+                ?.ExtractTypeConstrains()
+                ?? string.Empty;
+
+            // Use the model references and DI fields passed from the parent context
+            // These will be used to generate shortcut properties in the component
             return new ComponentInfo(
                 componentClassName,
                 componentNamespace,
                 namedTypeSymbol.Name,
                 modelNamespace,
                 componentTriggers,
-                batchSubscriptions);
+                batchSubscriptions,
+                genericTypes,
+                typeConstrains,
+                modelReferences,
+                diFields);
         }
         catch (Exception)
         {

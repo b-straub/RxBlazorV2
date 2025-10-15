@@ -13,6 +13,7 @@ namespace RxBlazorV2Sample.Samples.ModelPatterns;
 /// - You need to perform calculations or updates based on referenced model changes
 /// - The relationship is at the model/business logic level
 /// </summary>
+[ObservableComponent]
 [ObservableModelScope(ModelScope.Scoped)]
 public partial class ShoppingCartModel : ObservableModel
 {

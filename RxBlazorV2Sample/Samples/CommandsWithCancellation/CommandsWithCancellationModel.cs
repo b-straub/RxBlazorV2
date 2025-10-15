@@ -4,7 +4,9 @@ using RxBlazorV2Sample.Samples.Helpers;
 
 namespace RxBlazorV2Sample.Samples.CommandsWithCancellation;
 
-[ObservableModelScope(ModelScope.Scoped)]
+[ObservableComponent]
+
+[ObservableModelScope(ModelScope.Singleton)]
 public partial class CommandsWithCancellationModel : SampleBaseModel
 {
     public override string Usage => "Long-running async commands can be cancelled using CancellationToken";

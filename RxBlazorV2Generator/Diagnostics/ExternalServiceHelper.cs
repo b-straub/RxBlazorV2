@@ -1,79 +1,24 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Diagnostics;
-using System.Collections.Immutable;
+using System;
+using System.Linq;
 
 namespace RxBlazorV2Generator.Diagnostics;
 
 /// <summary>
-/// Suppresses RXBG020 (unregistered service warning) for services from external libraries
-/// when those libraries provide service registration extension methods that are called.
+/// Helper for determining if unregistered service warnings should be suppressed
+/// for services from external libraries that provide DI registration extension methods.
 ///
 /// Example: ISnackbar from MudBlazor → checks if AddMudServices() is called
 /// </summary>
-[DiagnosticAnalyzer(LanguageNames.CSharp)]
-public class ExternalServiceSuppressor : DiagnosticSuppressor
+public static class ExternalServiceHelper
 {
-    private static readonly string SuppressedDiagnosticId = DiagnosticDescriptors.UnregisteredServiceWarning.Id;
-
-    private static readonly SuppressionDescriptor ExternalServiceSuppression = new(
-        id: "RXBGSP001",
-        suppressedDiagnosticId: SuppressedDiagnosticId,
-        justification: "Service type is from an external library that provides DI extension methods (e.g., AddMudServices), and those methods are called in the code.");
-
-    public override ImmutableArray<SuppressionDescriptor> SupportedSuppressions { get; } =
-        ImmutableArray.Create(ExternalServiceSuppression);
-
-    public override void ReportSuppressions(SuppressionAnalysisContext context)
-    {
-        foreach (var diagnostic in context.ReportedDiagnostics)
-        {
-            if (diagnostic.Id != SuppressedDiagnosticId)
-            {
-                continue;
-            }
-
-            // Get the location and semantic model
-            var syntaxTree = diagnostic.Location.SourceTree;
-            if (syntaxTree is null)
-            {
-                continue;
-            }
-
-            var compilation = context.GetSemanticModel(syntaxTree).Compilation;
-
-            // Extract type information from diagnostic properties
-            if (!diagnostic.Properties.TryGetValue("TypeName", out var typeName) ||
-                string.IsNullOrEmpty(typeName))
-            {
-                continue;
-            }
-
-            // Explicit null check for flow analysis (should never be null after above check)
-            if (typeName is null)
-            {
-                throw new InvalidOperationException($"TypeName property was unexpectedly null for diagnostic {diagnostic.Id}");
-            }
-
-            var typeSymbol = compilation.GetTypeByMetadataName(typeName);
-            if (typeSymbol is null)
-            {
-                continue;
-            }
-
-            // Check if type is from an external assembly AND has likely service registration
-            if (IsExternalLibraryTypeWithRegistration(typeSymbol, compilation))
-            {
-                context.ReportSuppression(Suppression.Create(ExternalServiceSuppression, diagnostic));
-            }
-        }
-    }
-
     /// <summary>
-    /// Determines if a type is from an external library AND that library's service registration
-    /// extension methods are likely called in the code.
+    /// Determines if an unregistered service warning should be suppressed because the type
+    /// is from an external library AND that library's service registration extension methods
+    /// are likely called in the code.
     /// </summary>
-    private static bool IsExternalLibraryTypeWithRegistration(ITypeSymbol typeSymbol, Compilation compilation)
+    public static bool ShouldSuppressUnregisteredServiceWarning(ITypeSymbol typeSymbol, Compilation compilation)
     {
         var containingAssembly = typeSymbol.ContainingAssembly;
         if (containingAssembly is null)
@@ -202,48 +147,6 @@ public class ExternalServiceSuppressor : DiagnosticSuppressor
         }
 
         return null;
-    }
-
-    /// <summary>
-    /// Determines if a type is from an external library (not the user's project).
-    /// </summary>
-    private static bool IsExternalLibraryType(ITypeSymbol typeSymbol, Compilation compilation)
-    {
-        var containingAssembly = typeSymbol.ContainingAssembly;
-        if (containingAssembly is null)
-        {
-            return false;
-        }
-
-        // Get the assembly name
-        var assemblyName = containingAssembly.Name;
-
-        // Check if it's from a well-known external library
-        if (IsWellKnownExternalLibrary(assemblyName))
-        {
-            return true;
-        }
-
-        // Check if the assembly is different from the compilation assembly
-        // and not from the RxBlazorV2 project itself
-        var compilationAssemblyName = compilation.AssemblyName;
-        if (assemblyName != compilationAssemblyName &&
-            !assemblyName.StartsWith("RxBlazorV2"))
-        {
-            // It's from a different assembly - likely external
-            // But exclude common test/generated assemblies
-            if (assemblyName.Contains("Test") ||
-                assemblyName.Contains("Generated") ||
-                assemblyName == "mscorlib" ||
-                assemblyName == "System.Private.CoreLib")
-            {
-                return false;
-            }
-
-            return true;
-        }
-
-        return false;
     }
 
     /// <summary>

@@ -4,6 +4,7 @@ using RxBlazorV2Sample.Samples.Helpers;
 
 namespace RxBlazorV2Sample.Samples.ModelReferences;
 
+[ObservableComponent]
 [ObservableModelScope(ModelScope.Scoped)]
 public partial class ModelReferencesModel : SampleBaseModel
 {

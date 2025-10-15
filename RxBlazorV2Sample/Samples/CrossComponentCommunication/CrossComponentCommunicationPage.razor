@@ -1,6 +1,6 @@
 @page "/samples/cross-component-communication"
 @using RxBlazorV2Sample.Samples.Helpers
-@inherits ObservableComponent<CrossComponentCommunicationModel>
+@inherits CrossComponentCommunicationModelComponent
 
 <PageTitle>Cross Component Communication</PageTitle>
 
@@ -22,15 +22,15 @@
 
     <MudGrid>
         <MudItem xs="12" md="4">
-            <CrossComponentCommunicationComponent1 />
+            <CrossComponentCommunicationComponent1 Model="Model"/>
         </MudItem>
 
         <MudItem xs="12" md="4">
-            <CrossComponentCommunicationComponent2 />
+            <CrossComponentCommunicationComponent2 Model="Model"/>
         </MudItem>
 
         <MudItem xs="12" md="4">
-            <CrossComponentCommunicationComponent3 />
+            <CrossComponentCommunicationComponent3 Model="Model"/>
         </MudItem>
     </MudGrid>
 

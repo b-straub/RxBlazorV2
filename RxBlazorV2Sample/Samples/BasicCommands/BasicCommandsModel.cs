@@ -4,7 +4,9 @@ using RxBlazorV2Sample.Samples.Helpers;
 
 namespace RxBlazorV2Sample.Samples.BasicCommands;
 
-[ObservableModelScope(ModelScope.Scoped)]
+[ObservableComponent]
+
+[ObservableModelScope(ModelScope.Singleton)]
 public partial class BasicCommandsModel : SampleBaseModel
 { 
     public override string Usage => "Click a button to execute a command";

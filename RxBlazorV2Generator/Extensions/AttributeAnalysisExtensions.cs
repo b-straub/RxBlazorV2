@@ -161,7 +161,7 @@ public static class AttributeAnalysisExtensions
 
     public static string ExtractModelScopeFromClass(this ClassDeclarationSyntax classDecl, SemanticModel semanticModel)
     {
-        var modelScope = "Singleton"; // Default scope
+        var modelScope = "Scoped"; // Default scope
 
         foreach (var attributeList in classDecl.AttributeLists)
         {
@@ -180,5 +180,30 @@ public static class AttributeAnalysisExtensions
         }
 
         return modelScope;
+    }
+
+    public static (string scope, bool hasAttribute) ExtractModelScopeWithAttributeCheck(this ClassDeclarationSyntax classDecl, SemanticModel semanticModel)
+    {
+        var modelScope = "Scoped"; // Default scope
+        var hasAttribute = false;
+
+        foreach (var attributeList in classDecl.AttributeLists)
+        {
+            foreach (var attribute in attributeList.Attributes)
+            {
+                if (attribute.IsObservableModelScope(semanticModel))
+                {
+                    hasAttribute = true;
+                    // Extract the scope parameter
+                    var extractedScope = attribute.ExtractModelScope(semanticModel);
+                    if (!string.IsNullOrEmpty(extractedScope))
+                    {
+                        modelScope = extractedScope;
+                    }
+                }
+            }
+        }
+
+        return (modelScope, hasAttribute);
     }
 }

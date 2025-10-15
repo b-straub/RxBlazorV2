@@ -35,7 +35,7 @@ namespace RxBlazorV2.Model;
 /// </remarks>
 
 #pragma warning disable CS9113
-[AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
+[AttributeUsage(AttributeTargets.Class)]
 public class ObservableComponentAttribute(string? componentName = null)
     : Attribute
 {

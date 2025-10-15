@@ -28,7 +28,6 @@ public enum ModelScope
     /// <summary>
     /// Single instance shared across the entire application lifetime.
     /// Required when multiple ObservableComponent&lt;T&gt; instances use the same model.
-    /// This is the default scope when no attribute is specified.
     /// </summary>
     /// <remarks>
     /// Use for:
@@ -44,6 +43,7 @@ public enum ModelScope
     /// <summary>
     /// Single instance per scope (typically per HTTP request in server scenarios, or per component tree in client scenarios).
     /// Can only be used when the model is consumed by a single component.
+    /// This is the default scope when no attribute is specified.
     /// </summary>
     /// <remarks>
     /// Use for:
@@ -74,7 +74,7 @@ public enum ModelScope
 
 /// <summary>
 /// Specifies the dependency injection lifetime scope for an ObservableModel class.
-/// Defaults to Singleton if not specified.
+/// Defaults to Scoped if not specified.
 /// </summary>
 /// <param name="scope">
 /// The lifetime scope for this model (Singleton, Scoped, or Transient).
@@ -84,7 +84,7 @@ public enum ModelScope
 /// <para>See <see href="https://github.com/b-straub/RxBlazorV2/blob/master/Diagnostics/Help/RXBG010.md">RXBG010</see> for scope requirements and troubleshooting.</para>
 /// </remarks>
 #pragma warning disable CS9113
-[AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
+[AttributeUsage(AttributeTargets.Class)]
 public class ObservableModelScopeAttribute(ModelScope scope) : Attribute
 {
     /// <summary>

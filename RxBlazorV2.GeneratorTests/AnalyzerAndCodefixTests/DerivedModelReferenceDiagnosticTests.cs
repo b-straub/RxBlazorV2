@@ -56,6 +56,7 @@ public class DerivedModelReferenceDiagnosticTests
 
         namespace Test
         {
+            [ObservableModelScope(ModelScope.Singleton)]
             public abstract partial class BaseModel : ObservableModel
             {
                 public abstract string Usage { get; }
@@ -93,6 +94,7 @@ public class DerivedModelReferenceDiagnosticTests
 
         namespace Test
         {
+            [ObservableModelScope(ModelScope.Singleton)]
             public abstract partial class BaseModel : ObservableModel
             {
                 public abstract string Usage { get; }
@@ -125,6 +127,7 @@ public class DerivedModelReferenceDiagnosticTests
 
         namespace Test
         {
+            [ObservableModelScope(ModelScope.Singleton)]
             public abstract partial class BaseModel : ObservableModel
             {
                 public abstract string Usage { get; }
@@ -201,6 +204,7 @@ public class DerivedModelReferenceDiagnosticTests
 
         namespace Test
         {
+            [ObservableModelScope(ModelScope.Singleton)]
             public abstract partial class BaseModel : ObservableModel
             {
                 public partial ObservableList<string> LogEntries { get; init; } = new();
@@ -244,6 +248,7 @@ public class DerivedModelReferenceDiagnosticTests
 
         namespace Test
         {
+            [ObservableModelScope(ModelScope.Singleton)]
             public abstract partial class BaseModel : ObservableModel
             {
                 public partial ObservableList<string> LogEntries { get; init; } = new();
@@ -282,6 +287,7 @@ public class DerivedModelReferenceDiagnosticTests
 
         namespace Test
         {
+            [ObservableModelScope(ModelScope.Singleton)]
             public abstract partial class BaseModel : ObservableModel
             {
                 public partial ObservableList<string> LogEntries { get; init; } = new();
@@ -325,11 +331,13 @@ public class DerivedModelReferenceDiagnosticTests
 
         namespace Test
         {
+            [ObservableModelScope(ModelScope.Singleton)]
             public abstract partial class BaseModel : ObservableModel
             {
                 public partial int BaseValue { get; set; }
             }
 
+            [ObservableModelScope(ModelScope.Singleton)]
             public abstract partial class MiddleModel : BaseModel
             {
                 public partial int MiddleValue { get; set; }

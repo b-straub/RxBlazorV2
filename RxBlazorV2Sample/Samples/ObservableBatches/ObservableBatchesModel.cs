@@ -4,6 +4,7 @@ using RxBlazorV2Sample.Samples.Helpers;
 
 namespace RxBlazorV2Sample.Samples.ObservableBatches;
 
+[ObservableComponent]
 [ObservableModelScope(ModelScope.Scoped)]
 public partial class ObservableBatchesModel : SampleBaseModel
 {

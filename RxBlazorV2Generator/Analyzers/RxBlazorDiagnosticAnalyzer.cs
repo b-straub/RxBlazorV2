@@ -20,16 +20,18 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
         DiagnosticDescriptors.CircularModelReferenceError,
         DiagnosticDescriptors.InvalidModelReferenceTargetError,
         DiagnosticDescriptors.UnusedModelReferenceError,
-        DiagnosticDescriptors.SharedModelNotSingletonError,
         DiagnosticDescriptors.TriggerTypeArgumentsMismatchError,
         DiagnosticDescriptors.CircularTriggerReferenceError,
         DiagnosticDescriptors.GenericArityMismatchError,
         DiagnosticDescriptors.TypeConstraintMismatchError,
         DiagnosticDescriptors.InvalidOpenGenericReferenceError,
         DiagnosticDescriptors.InvalidInitPropertyError,
-        DiagnosticDescriptors.DerivedModelReferenceError
-        // NOTE: RXBG020 (UnregisteredServiceWarning), RXBG021 (DiServiceScopeViolationError),
-        // and RXBG022 (DirectObservableComponentInheritanceError) are reported by generator, not analyzer
+        DiagnosticDescriptors.DerivedModelReferenceError,
+        DiagnosticDescriptors.MissingObservableModelScopeWarning,
+        DiagnosticDescriptors.NonPublicPartialConstructorError
+        // NOTE: RXBG050 (UnregisteredServiceWarning), RXBG051 (DiServiceScopeViolationError),
+        // RXBG060 (DirectObservableComponentInheritanceError), and RXBG014 (SharedModelNotSingletonError)
+        // are reported by generator, not analyzer
     ];
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>

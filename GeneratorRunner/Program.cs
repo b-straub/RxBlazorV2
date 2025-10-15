@@ -6,16 +6,15 @@ namespace GeneratorRunner
     {
         private static readonly string[] SourcePaths =
         [
-            "../RxBlazorV2Sample/Models/CounterModel.cs",
+            "../RxBlazorV2Sample/Models/WeatherModel.cs",
             "../RxBlazorV2Sample/Models/SettingsModel.cs",
-            "../RxBlazorV2Sample/Interfaces/ISettingsModel.cs",
+            "../RxBlazorV2Sample/Services/OpenMeteoApiClient.cs",
+            "../RxBlazorV2Sample/Pages/Weather.razor.cs",
         ];
 
         private static readonly string[] AdditionalTextPaths =
         [
-            "../RxBlazorV2Sample/Components/InjectedOnly.razor",
-            "../RxBlazorV2Sample/Components/InjectedOnlyCB.razor"
-            //"../../WebAppBase/WebAppBase.Shared/Components/SyncManager.razor"
+            "../RxBlazorV2Sample/Pages/Weather.razor",
         ];
 
         public static void Main(string[] _)

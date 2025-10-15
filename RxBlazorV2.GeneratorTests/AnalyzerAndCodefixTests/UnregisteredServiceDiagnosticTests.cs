@@ -46,6 +46,40 @@ public class UnregisteredServiceDiagnosticTests
     }
 
     [Fact]
+    public async Task WellKnownExternalService_NoErrorsExpected()
+    {
+        // lang=csharp
+        var test = """
+                   using MudBlazor;
+                   using MudBlazor.Services;
+                   using Microsoft.Extensions.DependencyInjection;
+                   using RxBlazorV2.Model;
+                   using RxBlazorV2.Interface;
+    
+                   namespace Test
+                   {
+                        public static class ServiceRegistration
+                        {
+                            public static void ConfigureServices(IServiceCollection services)
+                            {
+                               // Register Mud service
+                               services.AddMudServices();
+                            }
+                       }
+                   
+                       [ObservableModelScope(ModelScope.Scoped)]
+                       public partial class ServiceModel : ObservableModel
+                       {
+                           public partial string Name { get; set; }
+                           
+                           public partial ServiceModel(ISnackbar snackbar);
+                       }
+                   }
+                   """;
+        await AnalyzerVerifier.VerifyAnalyzerAsync(test);
+    }
+    
+    [Fact]
     public async Task UnregisteredServiceInterface_DiagnosticExpected()
     {
         // lang=csharp

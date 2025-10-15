@@ -14,6 +14,7 @@ public class SearchResult
     public bool Cancelled { get; set; }
 }
 
+[ObservableComponent]
 [ObservableModelScope(ModelScope.Scoped)]
 public partial class CommandTriggersModel : SampleBaseModel
 {

@@ -69,7 +69,7 @@ internal class CodeFixTest<TAnalyzer, TCodeFix> : CSharpCodeFixTest<TAnalyzer, T
         {
             var project = solution.GetProject(projectId)!;
             // external references
-            project = project.AddMetadataReference(MetadataReference.CreateFromFile(typeof(RxBlazorV2.Model.ObservableModel).Assembly.Location));
+            project = project.AddMetadataReference(MetadataReference.CreateFromFile(typeof(Model.ObservableModel).Assembly.Location));
             // parse options
             project = project.WithParseOptions(new CSharpParseOptions(
                 languageVersion: LanguageVersion.Preview,
@@ -80,7 +80,10 @@ internal class CodeFixTest<TAnalyzer, TCodeFix> : CSharpCodeFixTest<TAnalyzer, T
                 .WithSpecificDiagnosticOptions(project.CompilationOptions.SpecificDiagnosticOptions
                     .Add(DiagnosticDescriptors.SharedModelNotSingletonError.Id, ReportDiagnostic.Error) // SharedModelNotSingletonError
                     .Add(DiagnosticDescriptors.TriggerTypeArgumentsMismatchError.Id, ReportDiagnostic.Error) // TriggerTypeArgumentsMismatchError
-                    .Add(DiagnosticDescriptors.CircularModelReferenceError.Id, ReportDiagnostic.Error))); // CircularTriggerReferenceError
+                    .Add(DiagnosticDescriptors.CircularModelReferenceError.Id, ReportDiagnostic.Error) // CircularTriggerReferenceError
+                    .Add("CS0104", ReportDiagnostic.Suppress) // Suppress ambiguous reference errors in generated code
+                    .Add("CS0111", ReportDiagnostic.Suppress) // Suppress duplicate member errors in generated code
+                    .Add("CS9275", ReportDiagnostic.Suppress))); // Suppress partial member missing implementation errors (generator provides implementation)
             
             return project.Solution;
         });

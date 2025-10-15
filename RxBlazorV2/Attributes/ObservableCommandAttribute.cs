@@ -17,7 +17,7 @@ namespace RxBlazorV2.Model;
 /// <para>The generator automatically detects property usage in methods to set up reactive change notifications.</para>
 /// </remarks>
 #pragma warning disable CS9113
-[AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
+[AttributeUsage(AttributeTargets.Property)]
 public class ObservableCommandAttribute(string executionMethodName, string? canExecuteMethodName = null)
     : Attribute
 {

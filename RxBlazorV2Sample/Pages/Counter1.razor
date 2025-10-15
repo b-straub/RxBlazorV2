@@ -1,6 +1,5 @@
 ﻿@page "/counter1"
-@using RxBlazorV2Sample.Components
-@inherits ObservableComponent<RxBlazorV2Sample.Models.CounterModel>
+@inherits CounterModelComponent
 
 <PageTitle>Counter</PageTitle>
 
@@ -8,8 +7,7 @@
 
 <MudAlert Severity="Severity.Info" Class="mt-4 mb-4">Current count 1: @Model.Counter1</MudAlert>
 <MudStack>
-    <Counter2Display/>
-    <InjectedOnly/>
-    <InjectedOnlyCb/>
-    <ButtonFor1And2/>
+    <Counter2Display Model="Model"/>
+    <InjectedOnly Model="Model"/>
+    <ButtonFor1And2 Model="Model"/>
 </MudStack>

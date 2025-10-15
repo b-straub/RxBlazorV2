@@ -209,4 +209,30 @@ public static class DiagnosticDescriptors
         isEnabledByDefault: true,
         description: "Direct inheritance from ObservableComponent or ObservableComponent<TModel> in razor files is not supported. Use the [ObservableComponent] attribute on the model to generate a component class (defaults to {ModelName}Component), then inherit from that generated class in your razor file.",
         helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG060.md");
+
+    // ============================================================================
+    // RXBG070-RXBG079: Attributes
+    // ============================================================================
+
+    public static readonly DiagnosticDescriptor MissingObservableModelScopeWarning = new(
+        id: "RXBG070",
+        title: "ObservableModel is missing ObservableModelScope attribute",
+        messageFormat: "ObservableModel '{0}' is missing the [ObservableModelScope] attribute. While the default scope is Scoped, it is recommended to explicitly specify the scope for clarity. Add [ObservableModelScope(ModelScope.Scoped)], [ObservableModelScope(ModelScope.Singleton)], or [ObservableModelScope(ModelScope.Transient)].",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "ObservableModel classes should explicitly declare their dependency injection scope using the [ObservableModelScope] attribute. This makes the DI lifetime explicit and prevents confusion. The default scope when the attribute is missing is Scoped.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG070.md",
+        customTags: ["Add [ObservableModelScope(ModelScope.Scoped)]", "Add [ObservableModelScope(ModelScope.Singleton)]", "Add [ObservableModelScope(ModelScope.Transient)]"]);
+
+    public static readonly DiagnosticDescriptor NonPublicPartialConstructorError = new(
+        id: "RXBG071",
+        title: "Partial constructor with DI parameters must be public",
+        messageFormat: "Partial constructor in ObservableModel '{0}' is '{1}' but must be 'public'. Dependency injection can only resolve constructors that are public. Change the constructor accessibility to 'public'.",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Partial constructors with parameters in ObservableModel classes must be public because dependency injection containers can only resolve dependencies through public constructors. Protected, private, or internal constructors cannot be used for DI.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG071.md",
+        customTags: ["Change constructor to public"]);
 }
