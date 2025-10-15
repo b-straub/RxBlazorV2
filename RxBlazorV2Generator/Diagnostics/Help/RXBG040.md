@@ -1,4 +1,4 @@
-# RXBG016: Invalid Init Accessor on Partial Property
+# RXBG040: Invalid Init Accessor on Partial Property
 
 ## Description
 

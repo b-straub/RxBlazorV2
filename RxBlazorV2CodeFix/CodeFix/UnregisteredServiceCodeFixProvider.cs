@@ -86,7 +86,7 @@ public class UnregisteredServiceCodeFixProvider : CodeFixProvider
                     SyntaxFactory.AttributeArgument(
                         SyntaxFactory.LiteralExpression(
                             SyntaxKind.StringLiteralExpression,
-                            SyntaxFactory.Literal("RXBG020:Partial constructor parameter type may not be registered in DI"))),
+                            SyntaxFactory.Literal($"{DiagnosticDescriptors.UnregisteredServiceWarning.Id}:Partial constructor parameter type may not be registered in DI"))),
 
                     // Justification named argument
                     SyntaxFactory.AttributeArgument(

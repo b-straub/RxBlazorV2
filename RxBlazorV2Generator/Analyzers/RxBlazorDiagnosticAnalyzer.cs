@@ -15,14 +15,11 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
     public static readonly DiagnosticDescriptor[] AllDiagnostics =
     [
         DiagnosticDescriptors.ObservableModelAnalysisError,
-        DiagnosticDescriptors.RazorAnalysisError,
         DiagnosticDescriptors.CodeGenerationError,
         DiagnosticDescriptors.MethodAnalysisWarning,
-        DiagnosticDescriptors.RazorFileReadError,
         DiagnosticDescriptors.CircularModelReferenceError,
         DiagnosticDescriptors.InvalidModelReferenceTargetError,
         DiagnosticDescriptors.UnusedModelReferenceError,
-        DiagnosticDescriptors.ComponentNotObservableWarning,
         DiagnosticDescriptors.SharedModelNotSingletonError,
         DiagnosticDescriptors.TriggerTypeArgumentsMismatchError,
         DiagnosticDescriptors.CircularTriggerReferenceError,
@@ -30,9 +27,9 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
         DiagnosticDescriptors.TypeConstraintMismatchError,
         DiagnosticDescriptors.InvalidOpenGenericReferenceError,
         DiagnosticDescriptors.InvalidInitPropertyError,
-        DiagnosticDescriptors.DerivedModelReferenceError,
-        DiagnosticDescriptors.RazorInheritanceMismatchWarning
-        // NOTE: RXBG020 (UnregisteredServiceWarning) and RXBG021 (DiServiceScopeViolationWarning) are reported by generator, not analyzer
+        DiagnosticDescriptors.DerivedModelReferenceError
+        // NOTE: RXBG020 (UnregisteredServiceWarning), RXBG021 (DiServiceScopeViolationError),
+        // and RXBG022 (DirectObservableComponentInheritanceError) are reported by generator, not analyzer
     ];
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
@@ -43,7 +40,6 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
         context.EnableConcurrentExecution();
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.RegisterSyntaxNodeAction(AnalyzeObservableModelClass, SyntaxKind.ClassDeclaration);
-        context.RegisterSyntaxNodeAction(AnalyzeRazorCodeBehindClass, SyntaxKind.ClassDeclaration);
     }
 
     private static void AnalyzeObservableModelClass(SyntaxNodeAnalysisContext context)
@@ -85,19 +81,6 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
 
             context.ReportDiagnostic(diagnostic);
         }
-    }
-
-    private static void AnalyzeRazorCodeBehindClass(SyntaxNodeAnalysisContext context)
-    {
-        var classDecl = (ClassDeclarationSyntax)context.Node;
-
-        // Only analyze classes that might be Razor code-behind classes
-        if (!RazorAnalyzer.IsRazorCodeBehindClass(classDecl, context.SemanticModel))
-            return;
-
-        // NOTE: Razor diagnostics (RXBG009, RXBG019) are reported by generator, not analyzer
-        // This matches the pattern used for RXBG020 and RXBG021 which are generator-only
-        // The analyzer doesn't have access to .razor files (AdditionalText) needed for complete analysis
     }
 
 }

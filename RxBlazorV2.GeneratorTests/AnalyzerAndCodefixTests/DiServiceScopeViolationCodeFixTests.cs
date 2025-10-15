@@ -35,7 +35,7 @@ public class DiServiceScopeViolationCodeFixTests
             [ObservableModelScope(ModelScope.Singleton)]
             public partial class ConsumerModel : ObservableModel
             {
-                public partial ConsumerModel({|{{DiagnosticDescriptors.DiServiceScopeViolationWarning.Id}}:ServiceModel|} serviceModel);
+                public partial ConsumerModel({|{{DiagnosticDescriptors.DiServiceScopeViolationError.Id}}:ServiceModel|} serviceModel);
 
                 public string GetName() => ServiceModel.Name;
             }
@@ -89,7 +89,7 @@ public class DiServiceScopeViolationCodeFixTests
             [ObservableModelScope(ModelScope.Singleton)]
             public partial class ConsumerModel : ObservableModel
             {
-                public partial ConsumerModel({|{{DiagnosticDescriptors.DiServiceScopeViolationWarning.Id}}:ServiceModel|} serviceModel);
+                public partial ConsumerModel({|{{DiagnosticDescriptors.DiServiceScopeViolationError.Id}}:ServiceModel|} serviceModel);
 
                 public string GetName() => ServiceModel.Name;
             }
@@ -143,7 +143,7 @@ public class DiServiceScopeViolationCodeFixTests
             [ObservableModelScope(ModelScope.Scoped)]
             public partial class ConsumerModel : ObservableModel
             {
-                public partial ConsumerModel({|{{DiagnosticDescriptors.DiServiceScopeViolationWarning.Id}}:ServiceModel|} serviceModel);
+                public partial ConsumerModel({|{{DiagnosticDescriptors.DiServiceScopeViolationError.Id}}:ServiceModel|} serviceModel);
 
                 public string GetName() => ServiceModel.Name;
             }
@@ -196,7 +196,7 @@ public class DiServiceScopeViolationCodeFixTests
 
             public partial class ConsumerModel : ObservableModel
             {
-                public partial ConsumerModel({|{{DiagnosticDescriptors.DiServiceScopeViolationWarning.Id}}:ServiceModel|} serviceModel);
+                public partial ConsumerModel({|{{DiagnosticDescriptors.DiServiceScopeViolationError.Id}}:ServiceModel|} serviceModel);
 
                 public string GetName() => ServiceModel.Name;
             }
@@ -249,7 +249,7 @@ public class DiServiceScopeViolationCodeFixTests
 
             public partial class ConsumerModel : ObservableModel
             {
-                public partial ConsumerModel({|{{DiagnosticDescriptors.DiServiceScopeViolationWarning.Id}}:ServiceModel|} serviceModel);
+                public partial ConsumerModel({|{{DiagnosticDescriptors.DiServiceScopeViolationError.Id}}:ServiceModel|} serviceModel);
 
                 public string GetName() => ServiceModel.Name;
             }
@@ -319,8 +319,8 @@ public class DiServiceScopeViolationCodeFixTests
             {
                 public partial ConsumerModel(
                     SingletonModel singletonModel,
-                    {|{{DiagnosticDescriptors.DiServiceScopeViolationWarning.Id}}:ScopedModel|} scopedModel,
-                    {|{{DiagnosticDescriptors.DiServiceScopeViolationWarning.Id}}:TransientModel|} transientModel);
+                    {|{{DiagnosticDescriptors.DiServiceScopeViolationError.Id}}:ScopedModel|} scopedModel,
+                    {|{{DiagnosticDescriptors.DiServiceScopeViolationError.Id}}:TransientModel|} transientModel);
 
                 public string GetInfo() => SingletonModel.Name + ScopedModel.IsEnabled + TransientModel.Count;
             }
@@ -399,7 +399,7 @@ public class DiServiceScopeViolationCodeFixTests
             {
                 public partial ConsumerModel(
                     SingletonModel singletonModel,
-                    {|{{DiagnosticDescriptors.DiServiceScopeViolationWarning.Id}}:ScopedModel|} scopedModel);
+                    {|{{DiagnosticDescriptors.DiServiceScopeViolationError.Id}}:ScopedModel|} scopedModel);
 
                 public string GetInfo() => SingletonModel.Name + ScopedModel.IsEnabled;
             }

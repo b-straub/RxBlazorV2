@@ -3,6 +3,7 @@ using RxBlazorV2.Model;
 
 namespace RxBlazorV2Sample.Models;
 
+[ObservableComponent]
 [ObservableModelScope(ModelScope.Singleton)]
 public partial class CounterModel : ObservableModel
 {

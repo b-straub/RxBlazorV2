@@ -1,152 +1,152 @@
-# RXBG020: Partial Constructor Parameter Type May Not Be Registered in DI
+# RXBG020: Generic Type Arity Mismatch
 
 ## Description
 
-This informational diagnostic is reported when a partial constructor parameter type cannot be detected as registered in the dependency injection container. This is a soft warning that helps identify potential DI configuration issues, but it may also appear for services that are correctly registered through means not detectable by static analysis.
+This diagnostic is reported when an open generic type is referenced with a different number of type parameters than the referencing class. For proper type parameter substitution, the number of type parameters (arity) must match.
 
 ## Cause
 
-This warning occurs when:
-- A partial constructor parameter is declared on an `ObservableModel`
-- The parameter type is not detected in the DI registration analysis
-- Static analysis cannot find an `AddSingleton`, `AddScoped`, or `AddTransient` call for this type
-
-Note: This does NOT necessarily mean the service is actually unregistered. It may be registered through:
-- Interface-based registrations where the implementation type differs
-- Factory methods
-- Extension methods from third-party libraries
-- Runtime or conditional registrations
+This error occurs when:
+- A generic model references another generic model using open generic syntax (`typeof(Model<>)`)
+- The referenced type has a different number of type parameters
+- For example: A model with 1 type parameter references a model with 2 type parameters
 
 ## How to Fix
 
-### If the service is actually unregistered:
+Use one of the available code fixes:
+- **Adjust type parameters to match referenced type** - Adjusts the class's type parameters
+- **Remove reference** - Removes the incompatible reference
 
-Register the service in your DI configuration:
-
-```csharp
-// In Program.cs or Startup.cs
-builder.Services.AddSingleton<IValidationService, ValidationService>();
-// or
-builder.Services.AddScoped<MyService>();
-// or
-builder.Services.AddTransient<TemporaryService>();
-```
-
-### If the service is already registered:
-
-This warning can be safely ignored if:
-- The service is registered via an interface (`AddSingleton<IService, Implementation>()`)
-- The service is registered by a third-party extension method
-- The service is conditionally registered at runtime
+Or manually:
+- Ensure both classes have the same number of type parameters
+- Use closed generic syntax if you don't need type parameter substitution
 
 ## Examples
 
-### Example 1: Unregistered Service (Actual Issue)
+### Example 1: Single to Double Arity Mismatch
 
 ```csharp
-// ❌ WRONG - IValidationService not registered in DI
-public partial class ValidationModel : ObservableModel
+// ❌ WRONG - GenericModel has 1 type parameter, ConsumerModel has 2
+[ObservableModelScope(ModelScope.Singleton)]
+public partial class GenericModel<T> : ObservableModel where T : class
 {
-    public bool IsValid => ValidationService.IsValid();
-
-    // Warning: IValidationService may not be registered
-    public partial ValidationModel(IValidationService validationService);
+    public partial T Item { get; set; }
 }
 
-// No DI registration for IValidationService found in Program.cs
-```
-
-**Fix:**
-
-```csharp
-// ✅ CORRECT - Register the service
-// In Program.cs:
-builder.Services.AddSingleton<IValidationService, ValidationService>();
-
-// Now the warning should disappear
-public partial class ValidationModel : ObservableModel
+[ObservableModelReference(typeof(GenericModel<>))]  // Error: Arity mismatch
+[ObservableModelScope(ModelScope.Scoped)]
+public partial class ConsumerModel<T, P> : ObservableModel
+    where T : class
+    where P : struct
 {
-    public bool IsValid => ValidationService.IsValid();
-
-    public partial ValidationModel(IValidationService validationService);
+    public partial int Value { get; set; }
 }
 ```
 
-### Example 2: Interface Registration (False Positive - Safe to Ignore)
+### Example 2: Fix by Matching Arity
 
 ```csharp
-// In Program.cs:
-builder.Services.AddSingleton<IValidationService, ValidationService>();
-//                              ^interface        ^implementation
-
-// Warning appears because static analysis searches for
-// "ValidationService" but finds "IValidationService" registration instead
-public partial class ValidationModel : ObservableModel
+// ✅ CORRECT - Both have 1 type parameter
+[ObservableModelScope(ModelScope.Singleton)]
+public partial class GenericModel<T> : ObservableModel where T : class
 {
-    // Warning: ValidationService may not be registered
-    // This is safe to ignore - it's registered via interface
-    public partial ValidationModel(ValidationService validationService);
+    public partial T Item { get; set; }
+}
+
+[ObservableModelReference(typeof(GenericModel<>))]
+[ObservableModelScope(ModelScope.Scoped)]
+public partial class ConsumerModel<T> : ObservableModel where T : class
+{
+    public partial int Value { get; set; }
+
+    public T GetProp()
+    {
+        return GenericModel.Item;
+    }
 }
 ```
 
-**Better approach:**
+### Example 3: Double to Single Arity Mismatch
 
 ```csharp
-// ✅ BEST PRACTICE - Use interface in constructor
-public partial class ValidationModel : ObservableModel
+// ❌ WRONG - GenericModel has 2 type parameters, ConsumerModel has 1
+[ObservableModelScope(ModelScope.Singleton)]
+public partial class GenericModel<T, P> : ObservableModel
+    where T : class
+    where P : struct
 {
-    // No warning - IValidationService is detected
-    public partial ValidationModel(IValidationService validationService);
+    public partial T Item1 { get; set; }
+    public partial P Item2 { get; set; }
+}
+
+[ObservableModelReference(typeof(GenericModel<,>))]  // Error: Arity mismatch
+[ObservableModelScope(ModelScope.Scoped)]
+public partial class ConsumerModel<T> : ObservableModel where T : class
+{
+    public partial int Value { get; set; }
 }
 ```
 
-### Example 3: Third-Party Extension Method (Safe to Ignore)
+### Example 4: Fix with Same Arity
 
 ```csharp
-// In Program.cs:
-builder.Services.AddMudServices();  // Registers MudBlazor services
-
-// This warning can be safely ignored - MudBlazor services
-// are registered by AddMudServices() extension method
-public partial class MyModel : ObservableModel
+// ✅ CORRECT - Both have 2 type parameters
+[ObservableModelScope(ModelScope.Singleton)]
+public partial class GenericModel<T, P> : ObservableModel
+    where T : class
+    where P : struct
 {
-    // Warning: IDialogService may not be registered
-    // Safe to ignore - registered by MudBlazor
-    public partial MyModel(IDialogService dialogService);
+    public partial T Item1 { get; set; }
+    public partial P Item2 { get; set; }
+}
+
+[ObservableModelReference(typeof(GenericModel<,>))]
+[ObservableModelScope(ModelScope.Scoped)]
+public partial class ConsumerModel<T, P> : ObservableModel
+    where T : class
+    where P : struct
+{
+    public partial int Value { get; set; }
+
+    public T GetItem1() => GenericModel.Item1;
+    public P GetItem2() => GenericModel.Item2;
 }
 ```
 
-### Example 4: Multiple Dependencies
+### Example 5: Using Closed Generic (Alternative)
 
 ```csharp
-// In Program.cs:
-builder.Services.AddSingleton<IUserService, UserService>();
-// Note: ILogger is registered by default ASP.NET Core infrastructure
-
-public partial class UserModel : ObservableModel
+// ✅ CORRECT - Using closed generic type (specific type arguments)
+[ObservableModelScope(ModelScope.Singleton)]
+public partial class GenericModel<T> : ObservableModel where T : class
 {
-    // No warning for IUserService - detected
-    // Warning for ILogger - registered by framework, safe to ignore
-    public partial UserModel(IUserService userService, ILogger<UserModel> logger);
+    public partial T Item { get; set; }
+}
+
+[ObservableModelReference(typeof(GenericModel<string>))]  // Closed generic
+[ObservableModelScope(ModelScope.Scoped)]
+public partial class ConsumerModel<T, P> : ObservableModel
+    where T : class
+    where P : struct
+{
+    public partial int Value { get; set; }
 }
 ```
 
 ## Why This Matters
 
-This diagnostic helps catch configuration issues early:
-- **Prevents runtime errors**: Missing DI registrations cause exceptions when the model is instantiated
-- **Improves maintainability**: Helps ensure all dependencies are properly configured
-- **Documentation**: Serves as a reminder of what needs to be registered
+Type parameter arity matching ensures:
+- Proper type parameter substitution during code generation
+- Type safety throughout the application
+- Correct property access in generated code
+- Predictable generic type behavior
 
-However, being informational level means:
-- **Build succeeds**: Your code will still compile
-- **No blocking**: You can deploy code with this warning
-- **Trust your testing**: If your app runs correctly, the service is likely registered
+## Code Fixes Available
 
-## Severity
-
-**Info** - This is an informational warning that won't block compilation. It's a hint that you should verify your DI configuration.
+- **Adjust type parameters to match referenced type**: Updates the class's type parameters
+- **Remove reference**: Removes the incompatible reference
 
 ## Related Diagnostics
 
-- RXBG021: DI service scope violation
+- RXBG051: Type constraint mismatch
+- RXBG022: Invalid open generic reference

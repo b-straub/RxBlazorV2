@@ -1,18 +1,19 @@
 using ObservableCollections;
+using RxBlazorV2.Attributes;
 using RxBlazorV2.Interface;
 using RxBlazorV2.Model;
 using RxBlazorV2ExternalModel.Type;
 
 namespace RxBlazorV2ExternalModel.Models;
 
-//[ObservableComponent] -> generates TestModelComponent
-//[ObservableComponent("MyComponent"] -> generates MyComponent
-public partial class TestModel : ObservableModel
+[ObservableComponent] // Generates ExternalModelComponent by default (TestModelComponent)
+public partial class TestModel1 : ObservableModel
 {
     public const string CommonBatch = "common";
     public const string ListBatch = "list";
 
-    //[ObservableComponentTrigger] -> generates OnNotInBatchChanged
+    [ObservableComponentTrigger] // generates OnNotInBatchChanged only
+    [ObservableComponentTriggerAsync] // generates OnNotInBatchChangedAsync only
     public partial int NotInBatch { get; set; }
     
     [ObservableBatch(CommonBatch)]
@@ -48,4 +49,10 @@ public partial class TestModel : ObservableModel
     {
         return TestList.Count > 0;
     }
+}
+
+[ObservableComponent("TestModelCustomNamedComponent")]
+public partial class TestModel : ObservableModel
+{
+    public partial int Counter { get; set; }
 }

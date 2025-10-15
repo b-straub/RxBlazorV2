@@ -1,11 +1,13 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Components;
+using R3;
 using RxBlazorV2.Model;
 
 namespace RxBlazorV2.Component;
 
 public abstract class ObservableComponent : OwningComponentBase, IAsyncDisposable
 {
+    protected CompositeDisposable Subscriptions { get; } = new();
     protected override void OnAfterRender(bool firstRender)
     {
         base.OnAfterRender(firstRender);
@@ -26,9 +28,14 @@ public abstract class ObservableComponent : OwningComponentBase, IAsyncDisposabl
         }
     }
 
-    protected abstract void InitializeGeneratedCode();
+    protected virtual void InitializeGeneratedCode()
+    {
+    }
 
-    protected abstract Task InitializeGeneratedCodeAsync();
+    protected virtual Task InitializeGeneratedCodeAsync()
+    {
+        return Task.CompletedTask;
+    }
     
     protected virtual void OnContextReady()
     {
@@ -51,11 +58,14 @@ public abstract class ObservableComponent : OwningComponentBase, IAsyncDisposabl
     public async ValueTask DisposeAsync()
     {
         await OnDisposeAsync();
+        Subscriptions.Dispose();
     }
 }
 
 public abstract class ObservableComponent<T> : OwningComponentBase<T>, IAsyncDisposable where T : ObservableModel
 {
+    protected CompositeDisposable Subscriptions { get; } = new();
+
     public T Model => Service;
     
     protected override void OnAfterRender(bool firstRender)
@@ -80,9 +90,14 @@ public abstract class ObservableComponent<T> : OwningComponentBase<T>, IAsyncDis
         }
     }
     
-    protected abstract void InitializeGeneratedCode();
+    protected virtual void InitializeGeneratedCode()
+    {
+    }
 
-    protected abstract Task InitializeGeneratedCodeAsync();
+    protected virtual Task InitializeGeneratedCodeAsync()
+    {
+        return Task.CompletedTask;
+    }
     
     protected virtual void OnContextReady()
     {
@@ -105,6 +120,7 @@ public abstract class ObservableComponent<T> : OwningComponentBase<T>, IAsyncDis
     public async ValueTask DisposeAsync()
     {
         await OnDisposeAsync();
+        Subscriptions.Dispose();
     }
 }
 

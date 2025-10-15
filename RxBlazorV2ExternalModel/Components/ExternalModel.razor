@@ -1,17 +1,7 @@
-@inherits RxBlazorV2ExternalModel.Components.ExternalModelComponent
+@using RxBlazorV2ExternalModel.Components
+@inherits TestModel1Component
 
 <div>Model.InBatch.ToString()</div>
 
 @code {
-
-    protected override void OnNotInBatchChanged()
-    {
-        Console.WriteLine("OnNotInBatchChanged");
-    }
-
-    protected override async Task OnNotInBatchChangedAsync(CancellationToken ct)
-    {
-        await Task.Delay(500, ct);
-        Console.WriteLine("OnNotInBatchChanged");
-    }
 }

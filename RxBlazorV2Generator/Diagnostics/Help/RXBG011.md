@@ -1,91 +1,81 @@
-# RXBG011: Command Trigger Type Arguments Mismatch
+# RXBG011: Invalid Model Reference Target
 
 ## Description
 
-This diagnostic is reported when an `ObservableCommandTrigger` attribute has generic type arguments that don't match the command's generic type arguments. Type arguments must match exactly for proper type safety.
+This diagnostic is reported when an `ObservableModelReference` attribute references a class that does not inherit from `ObservableModel`.
 
 ## Cause
 
 This error occurs when:
-- A parametrized command uses `IObservableCommand<T>` or `IObservableCommandAsync<T>`
-- The trigger attribute uses `ObservableCommandTrigger<TParam>` with a different type parameter
-- The type arguments don't match between command and trigger
+- The referenced type is a regular class that doesn't inherit from `ObservableModel`
+- The referenced type is missing the `: ObservableModel` inheritance
 
 ## How to Fix
 
-Use the available code fix:
-- **Fix trigger type arguments** - Updates the trigger's type parameters to match the command
-
-Or manually:
-- Ensure the trigger's generic type matches the command's type parameter exactly
-- For non-generic commands, don't use generic trigger syntax
+Use one of the available code fixes:
+1. **Remove the invalid ObservableModelReference attribute** - Removes the attribute referencing the invalid type
+2. **Make class inherit from ObservableModel** - Adds `ObservableModel` inheritance and makes the class `partial`
 
 ## Examples
 
-### Example 1: Type Mismatch
+### Example 1: Invalid Reference
 
 ```csharp
-// ❌ WRONG - Command uses string but trigger uses int
-[ObservableModelScope(ModelScope.Singleton)]
-public partial class TestModel : ObservableModel
+// ❌ WRONG - InvalidModel doesn't inherit from ObservableModel
+public class InvalidModel
 {
-    public partial string Name { get; set; } = "";
+    public string Name { get; set; }
+}
 
-    [ObservableCommand(nameof(ExecuteMethodWithParam))]
-    [ObservableCommandTrigger<int>(nameof(Name), 3)]  // Error: Should be <string>
-    public partial IObservableCommand<string> TestCommand { get; }
-
-    private void ExecuteMethodWithParam(string parameter)
-    {
-        Console.WriteLine($"Executed with Name: {Name}, Parameter: {parameter}");
-    }
+[ObservableModelReference<InvalidModel>]  // Error: InvalidModel is not an ObservableModel
+[ObservableModelScope(ModelScope.Scoped)]
+public partial class TestClass : ObservableModel
+{
+    public partial int Value { get; set; }
 }
 ```
 
-### Example 2: Fix by Matching Types
+### Example 2: Fix by Removing Attribute
 
 ```csharp
-// ✅ CORRECT - Trigger type matches command type
-[ObservableModelScope(ModelScope.Singleton)]
-public partial class TestModel : ObservableModel
+// ✅ CORRECT - Removed invalid reference
+public class InvalidModel
 {
-    public partial string Name { get; set; } = "";
+    public string Name { get; set; }
+}
 
-    [ObservableCommand(nameof(ExecuteMethodWithParam))]
-    [ObservableCommandTrigger<string>(nameof(Name), "NewTest")]
-    public partial IObservableCommand<string> TestCommand { get; }
-
-    private void ExecuteMethodWithParam(string parameter)
-    {
-        Console.WriteLine($"Executed with Name: {Name}, Parameter: {parameter}");
-    }
+[ObservableModelScope(ModelScope.Scoped)]
+public partial class TestClass : ObservableModel
+{
+    public partial int Value { get; set; }
 }
 ```
 
-### Example 3: Non-Generic Command
+### Example 3: Fix by Making Class Observable
 
 ```csharp
-// ✅ CORRECT - Non-generic command with non-generic trigger
-[ObservableModelScope(ModelScope.Singleton)]
-public partial class TestModel : ObservableModel
+// ✅ CORRECT - Made InvalidModel inherit from ObservableModel
+public partial class ValidModel : ObservableModel
 {
-    public partial string Name { get; set; } = "";
+    public string Name { get; set; }
+}
 
-    [ObservableCommand(nameof(ExecuteMethod))]
-    [ObservableCommandTrigger(nameof(Name))]  // No type parameter
-    public partial IObservableCommand TestCommand { get; }
+[ObservableModelReference<ValidModel>]
+[ObservableModelScope(ModelScope.Scoped)]
+public partial class TestClass : ObservableModel
+{
+    public partial int Value { get; set; }
 
-    private void ExecuteMethod()
-    {
-        Console.WriteLine($"Executed with Name: {Name}");
-    }
+    public string GetName() => ValidModel.Name;
 }
 ```
 
 ## Code Fixes Available
 
-- **Fix trigger type arguments to match command**: Updates the trigger's generic type parameter
+- **Remove ObservableModelReference attribute**: Removes the invalid attribute
+- **Make class inherit from ObservableModel**: Adds inheritance and makes the class partial
 
 ## Related Diagnostics
 
-- RXBG012: Circular trigger reference
+- RXBG051: Circular model reference
+- RXBG031: Unused model reference

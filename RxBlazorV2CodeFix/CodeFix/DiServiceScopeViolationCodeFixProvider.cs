@@ -21,7 +21,7 @@ namespace RxBlazorV2CodeFix.CodeFix;
 public class DiServiceScopeViolationCodeFixProvider : CodeFixProvider
 {
     public sealed override ImmutableArray<string> FixableDiagnosticIds =>
-        ImmutableArray.Create(DiagnosticDescriptors.DiServiceScopeViolationWarning.Id);
+        ImmutableArray.Create(DiagnosticDescriptors.DiServiceScopeViolationError.Id);
 
     public sealed override FixAllProvider GetFixAllProvider() => WellKnownFixAllProviders.BatchFixer;
 

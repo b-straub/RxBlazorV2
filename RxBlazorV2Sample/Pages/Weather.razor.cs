@@ -1,25 +1,25 @@
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
-using RxBlazorV2.Component;
+using RxBlazorV2Sample.Components;
 using RxBlazorV2Sample.Interfaces;
-using WeatherModel = RxBlazorV2Sample.Models.WeatherModel;
 
-namespace RxBlazorV2Sample.Pages;
+namespace RxBlazorV2Sample.Components;
 
-public partial class Weather : ObservableComponent<WeatherModel>
+// Extend the generated WeatherComponent with custom view logic
+public partial class WeatherComponent
 {
     [Inject]
     public required ISettingsModel Settings { get; init; }
     
-    private bool NotInComponentObservation => Model.NotInComponentObservation;
-    
+    protected bool NotInComponentObservation => Model.NotInComponentObservation;
+
     protected override async Task OnInitializedAsync()
     {
         // Load initial weather data
         await Model.LoadWeatherCommand.ExecuteAsync();
     }
 
-    private async Task RefreshAsync()
+    protected async Task RefreshAsync()
     {
         if (Model.RefreshCommand.Executing)
         {
@@ -30,7 +30,8 @@ public partial class Weather : ObservableComponent<WeatherModel>
             await Model.RefreshCommand.ExecuteAsync();
         }
     }
-    private Color GetTemperatureColor(int temperatureC)
+
+    protected Color GetTemperatureColor(int temperatureC)
     {
         return temperatureC switch
         {
@@ -41,8 +42,8 @@ public partial class Weather : ObservableComponent<WeatherModel>
             _ => Color.Error       // Hot - Red
         };
     }
-    
-    private string GetWeatherIcon(string? summary)
+
+    protected string GetWeatherIcon(string? summary)
     {
         return summary?.ToLower() switch
         {

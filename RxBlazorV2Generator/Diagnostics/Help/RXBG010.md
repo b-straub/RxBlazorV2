@@ -1,111 +1,103 @@
-# RXBG010: ObservableModel Used By Multiple Components Must Have Singleton Scope
+# RXBG010: Circular Model Reference Detected
 
 ## Description
 
-This diagnostic is reported when an `ObservableModel` is used by multiple `ObservableComponent` instances but is not registered with `Singleton` scope. This can cause data inconsistency issues as each component instance would get its own model instance instead of sharing the same state.
+This diagnostic is reported when a circular reference is detected between `ObservableModel` classes. Circular references can cause infinite loops during initialization and are not allowed.
 
 ## Cause
 
-This error occurs when:
-- Multiple different `ObservableComponent` classes use the same model
-- The model has `Scoped` or `Transient` scope
-- The model needs to maintain shared state across components
+Circular references occur when:
+- Model A references Model B, and Model B references Model A
+- A model references itself
+- A chain of references forms a cycle (A → B → C → A)
 
 ## How to Fix
 
-Use the available code fix:
-- **Change scope to Singleton** - Updates the `ObservableModelScope` attribute to `Singleton`
-
-Or manually:
-- Change the scope to `ModelScope.Singleton`
-- Remove the scope attribute entirely (Singleton is the default)
+Use one of the available code fixes:
+1. **Remove this circular model reference** - Removes only the attribute at the current location
+2. **Remove all circular model references** - Removes all attributes involved in the circular reference
 
 ## Examples
 
-### Example 1: Invalid Scoped Model
+### Example 1: Simple Circular Reference
 
 ```csharp
-// ❌ WRONG - Scoped model used by multiple components
-[ObservableModelScope(ModelScope.Scoped)]  // Error: Should be Singleton
-public partial class TestModel : ObservableModel
-{
-    public partial string Name { get; set; }
-}
-
-public partial class TestComponent1 : ObservableComponent<TestModel>
-{
-}
-
-public partial class TestComponent2 : ObservableComponent<TestModel>
-{
-}
-```
-
-### Example 2: Fix by Using Singleton
-
-```csharp
-// ✅ CORRECT - Singleton model shared by multiple components
+// ❌ WRONG - Circular reference
 [ObservableModelScope(ModelScope.Singleton)]
-public partial class TestModel : ObservableModel
-{
-    public partial string Name { get; set; }
-}
-
-public partial class TestComponent1 : ObservableComponent<TestModel>
+[ObservableModelReference(typeof(ModelB))]  // Error: Circular reference
+public partial class ModelA : ObservableModel
 {
 }
 
-public partial class TestComponent2 : ObservableComponent<TestModel>
+[ObservableModelScope(ModelScope.Singleton)]
+[ObservableModelReference(typeof(ModelA))]  // Error: Circular reference
+public partial class ModelB : ObservableModel
 {
+}
+
+// ✅ CORRECT - Remove one reference to break the cycle
+[ObservableModelScope(ModelScope.Singleton)]
+public partial class ModelA : ObservableModel
+{
+}
+
+[ObservableModelScope(ModelScope.Singleton)]
+[ObservableModelReference<ModelA>]
+public partial class ModelB : ObservableModel
+{
+    public int GetValue() => ModelA.SomeProperty;
 }
 ```
 
-### Example 3: Default Scope (Singleton)
+### Example 2: Self-Reference
 
 ```csharp
-// ✅ CORRECT - No scope attribute defaults to Singleton
-public partial class TestModel : ObservableModel
-{
-    public partial string Name { get; set; }
-}
-
-public partial class TestComponent1 : ObservableComponent<TestModel>
+// ❌ WRONG - Model references itself
+[ObservableModelScope(ModelScope.Singleton)]
+[ObservableModelReference(typeof(ModelA))]  // Error: Self-reference
+public partial class ModelA : ObservableModel
 {
 }
 
-public partial class TestComponent2 : ObservableComponent<TestModel>
+// ✅ CORRECT - Remove self-reference
+[ObservableModelScope(ModelScope.Singleton)]
+public partial class ModelA : ObservableModel
 {
 }
 ```
 
-### Example 4: Single Component with Scoped
+### Example 3: Valid Chain (No Cycle)
 
 ```csharp
-// ✅ CORRECT - Scoped is OK when used by only one component type
-[ObservableModelScope(ModelScope.Scoped)]
-public partial class TestModel : ObservableModel
+// ✅ CORRECT - No circular reference
+[ObservableModelScope(ModelScope.Singleton)]
+[ObservableModelReference<ModelB>]
+public partial class ModelA : ObservableModel
 {
-    public partial string Name { get; set; }
+    public int GetProp() => ModelB.Prop;
 }
 
-public partial class TestComponent : ObservableComponent<TestModel>
+[ObservableModelScope(ModelScope.Singleton)]
+[ObservableModelReference<ModelC>]
+public partial class ModelB : ObservableModel
 {
+    public partial int Prop { get; set; }
+    public int GetProp() => ModelC.Prop;
+}
+
+[ObservableModelScope(ModelScope.Singleton)]
+public partial class ModelC : ObservableModel
+{
+    public partial int Prop { get; set; }
 }
 ```
-
-## Why This Matters
-
-When multiple components share a model:
-- **Singleton**: All components see the same data and state (correct for shared state)
-- **Scoped**: Each component gets its own instance within the same scope (can cause inconsistency)
-- **Transient**: Each component gets a new instance every time (causes data duplication)
-
-For shared application state (like user settings, navigation state, etc.), you need Singleton scope.
 
 ## Code Fixes Available
 
-- **Change scope to Singleton**: Updates the `ObservableModelScope` attribute
+- **Remove this circular model reference**: Removes the current attribute
+- **Remove all circular model references**: Removes all attributes in the circular chain
 
 ## Related Diagnostics
 
-- RXBG009: Component inheritance error
+- RXBG030: Invalid model reference target
+- RXBG031: Unused model reference

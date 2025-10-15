@@ -1,3 +1,4 @@
+using Microsoft;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Analysis;
@@ -5,6 +6,7 @@ using RxBlazorV2Generator.Analyzers;
 using RxBlazorV2Generator.Extensions;
 using RxBlazorV2Generator.Generators;
 using RxBlazorV2Generator.Models;
+using System;
 using System.Collections.Immutable;
 using System.Linq;
 
@@ -181,7 +183,7 @@ public class RxBlazorGenerator : IIncrementalGenerator
                             });
 
                             var diagnostic = Diagnostic.Create(
-                                Diagnostics.DiagnosticDescriptors.DiServiceScopeViolationWarning,
+                                Diagnostics.DiagnosticDescriptors.DiServiceScopeViolationError,
                                 location,
                                 properties,
                                 record.ModelInfo.ClassName,
@@ -205,95 +207,43 @@ public class RxBlazorGenerator : IIncrementalGenerator
                 }
             });
 
-        // Register syntax provider for Razor code-behind files
-        var razorCodeBehindClasses = context.SyntaxProvider
-            .CreateSyntaxProvider(
-                predicate: static (s, _) => RazorAnalyzer.IsRazorCodeBehindClass(s),
-                transform: static (ctx, _) => (ClassDecl: (ClassDeclarationSyntax)ctx.Node, SemanticModel: ctx.SemanticModel))
-            .Collect();
-
-        // Register additional text provider for .razor files
-        var razorFiles = context.AdditionalTextsProvider
-            .Where(static file => file.Path.EndsWith(".razor"));
-
-        // Combine code-behind classes with razor files and observable models for complete analysis
-        var razorCodeBehindRecords = razorCodeBehindClasses
-            .Combine(razorFiles.Collect())
-            .Combine(observableModelClasses)
-            .Select(static (combined, _) =>
-            {
-                var ((codeBehindClasses, razorFilesList), models) = combined;
-                var records = new List<RazorCodeBehindRecord?>();
-
-                // Analyze existing code-behind classes
-                foreach (var (classDecl, semanticModel) in codeBehindClasses)
-                {
-                    // Find matching razor file
-                    var className = classDecl.Identifier.ValueText;
-                    var razorFile = razorFilesList.FirstOrDefault(f =>
-                        System.IO.Path.GetFileNameWithoutExtension(f.Path) == className);
-
-                    var record = RazorCodeBehindRecord.Create(
-                        classDecl,
-                        semanticModel,
-                        razorFile,
-                        models);
-
-                    if (record != null)
-                    {
-                        records.Add(record);
-                    }
-                }
-
-                // Detect missing code-behind files for .razor files
-                var existingClassNames = new HashSet<string>(codeBehindClasses.Select(c => c.ClassDecl.Identifier.ValueText));
-                foreach (var razorFile in razorFilesList)
-                {
-                    var fileName = System.IO.Path.GetFileNameWithoutExtension(razorFile.Path);
-                    if (!existingClassNames.Contains(fileName))
-                    {
-                        var record = RazorCodeBehindRecord.CreateFromRazorFile(razorFile, models);
-                        if (record != null)
-                        {
-                            records.Add(record);
-                        }
-                    }
-                }
-
-                return records.ToImmutableArray();
-            });
-
-        // Report diagnostics for razor code-behinds (RXBG009, RXBG019)
-        context.RegisterSourceOutput(razorCodeBehindRecords,
-            static (spc, recordsArray) =>
-            {
-                foreach (var record in recordsArray.Where(r => r != null))
-                {
-                    foreach (var diagnostic in record!.Verify())
-                    {
-                        spc.ReportDiagnostic(diagnostic);
-                    }
-                }
-            });
-
-        // Extract RazorCodeBehindInfo for code generation
-        var allRazorCodeBehinds = razorCodeBehindRecords
-            .SelectMany(static (recordsArray, _) =>
-            {
-                return recordsArray.Where(r => r != null).Select(r => r!.CodeBehindInfo).ToImmutableArray();
-            });
-
-        // Generate constructors for all Razor code-behind classes (both existing and missing)
-        context.RegisterSourceOutput(allRazorCodeBehinds.Combine(msbuildProvider).Combine(observableModelClasses),
+        // Generate components for models with [ObservableComponent] attribute
+        context.RegisterSourceOutput(observableModelRecords.Combine(msbuildProvider),
             static (spc, combined) =>
             {
-                RazorCodeBehindInfo? source = combined.Left.Left;
-                GeneratorConfig config = combined.Left.Right;
-                ImmutableArray<ObservableModelInfo?> models = combined.Right;
-
-                if (source != null)
+                var (records, config) = combined;
+                foreach (var record in records.Where(r => r != null && r!.ComponentInfo != null))
                 {
-                    RazorCodeGenerator.GenerateRazorConstructors(spc, source, models, config.UpdateFrequencyMs);
+                    ComponentCodeGenerator.GenerateComponent(spc, record!.ComponentInfo!, config.UpdateFrequencyMs);
+                }
+            });
+
+        // Detect and report direct @inherits ObservableComponent usage in razor files
+        var razorFiles = context.AdditionalTextsProvider
+            .Where(static file => file.Path.EndsWith(".razor", StringComparison.OrdinalIgnoreCase));
+
+        context.RegisterSourceOutput(razorFiles,
+            static (spc, razorFile) =>
+            {
+                var content = razorFile.GetText();
+                if (content is null)
+                {
+                    return;
+                }
+
+                var detection = Analyzers.RazorInheritanceDetector.DetectDirectInheritance(razorFile, content);
+                if (detection.HasValue)
+                {
+                    var (componentName, genericPart) = detection.Value;
+                    var location = Analyzers.RazorInheritanceDetector.CreateRazorFileLocation(razorFile, content);
+
+                    var diagnostic = Diagnostic.Create(
+                        Diagnostics.DiagnosticDescriptors.DirectObservableComponentInheritanceError,
+                        location,
+                        componentName,
+                        genericPart);
+
+                    spc.ReportDiagnostic(diagnostic);
                 }
             });
 

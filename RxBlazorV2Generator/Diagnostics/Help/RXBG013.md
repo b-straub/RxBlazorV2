@@ -1,152 +1,148 @@
-# RXBG013: Generic Type Arity Mismatch
+# RXBG013: Cannot Reference Derived ObservableModel
 
 ## Description
 
-This diagnostic is reported when an open generic type is referenced with a different number of type parameters than the referencing class. For proper type parameter substitution, the number of type parameters (arity) must match.
+This diagnostic is reported when an `ObservableModelReference` attribute references a derived ObservableModel (a model that inherits from another ObservableModel class).
 
 ## Cause
 
 This error occurs when:
-- A generic model references another generic model using open generic syntax (`typeof(Model<>)`)
-- The referenced type has a different number of type parameters
-- For example: A model with 1 type parameter references a model with 2 type parameters
+- The referenced model inherits from another ObservableModel class (not directly from `ObservableModel`)
+- Derived models are excluded from dependency injection registration and cannot be resolved
+- The generator filters out derived models from DI because they inherit observability from their base class
+
+## Why This Is Restricted
+
+Derived ObservableModels are not registered in DI because:
+1. **Inheritance provides observability**: The derived class IS the base class through inheritance, so all property changes flow through the base model's Observable infrastructure
+2. **No DI registration**: Only concrete, non-derived models are registered in the service collection
+3. **Use base or composition**: Reference the base model instead, or refactor to use composition over inheritance
 
 ## How to Fix
 
-Use one of the available code fixes:
-- **Adjust type parameters to match referenced type** - Adjusts the class's type parameters
-- **Remove reference** - Removes the incompatible reference
-
-Or manually:
-- Ensure both classes have the same number of type parameters
-- Use closed generic syntax if you don't need type parameter substitution
+Use one of the available solutions:
+1. **Remove the ObservableModelReference attribute** (available code fix) - Removes the invalid attribute
+2. **Reference the base model instead** - Change the reference to point to the base ObservableModel
+3. **Refactor to composition** - Instead of using inheritance, create a separate model and use composition
 
 ## Examples
 
-### Example 1: Single to Double Arity Mismatch
+### Example 1: Invalid Reference to Derived Model
 
 ```csharp
-// ❌ WRONG - GenericModel has 1 type parameter, ConsumerModel has 2
-[ObservableModelScope(ModelScope.Singleton)]
-public partial class GenericModel<T> : ObservableModel where T : class
+// ❌ WRONG - BasicCommandsModel is a derived ObservableModel
+public abstract partial class SampleBaseModel : ObservableModel
 {
-    public partial T Item { get; set; }
+    public abstract string Usage { get; }
+    public partial ObservableList<LogEntry> LogEntries { get; init; } = new();
 }
 
-[ObservableModelReference(typeof(GenericModel<>))]  // Error: Arity mismatch
+public partial class BasicCommandsModel : SampleBaseModel
+{
+    public override string Usage => "Basic commands example";
+    public partial int Counter { get; set; }
+}
+
+[ObservableModelReference<BasicCommandsModel>]  // Error: BasicCommandsModel is derived
 [ObservableModelScope(ModelScope.Scoped)]
-public partial class ConsumerModel<T, P> : ObservableModel
-    where T : class
-    where P : struct
-{
-    public partial int Value { get; set; }
-}
-```
-
-### Example 2: Fix by Matching Arity
-
-```csharp
-// ✅ CORRECT - Both have 1 type parameter
-[ObservableModelScope(ModelScope.Singleton)]
-public partial class GenericModel<T> : ObservableModel where T : class
-{
-    public partial T Item { get; set; }
-}
-
-[ObservableModelReference(typeof(GenericModel<>))]
-[ObservableModelScope(ModelScope.Scoped)]
-public partial class ConsumerModel<T> : ObservableModel where T : class
+public partial class ParentModel : ObservableModel
 {
     public partial int Value { get; set; }
 
-    public T GetProp()
-    {
-        return GenericModel.Item;
-    }
+    public int GetCounter() => BasicCommandsModel.Counter;
 }
 ```
 
-### Example 3: Double to Single Arity Mismatch
+### Example 2: Fix by Removing Attribute
 
 ```csharp
-// ❌ WRONG - GenericModel has 2 type parameters, ConsumerModel has 1
-[ObservableModelScope(ModelScope.Singleton)]
-public partial class GenericModel<T, P> : ObservableModel
-    where T : class
-    where P : struct
+// ✅ CORRECT - Removed invalid derived model reference
+public abstract partial class SampleBaseModel : ObservableModel
 {
-    public partial T Item1 { get; set; }
-    public partial P Item2 { get; set; }
+    public abstract string Usage { get; }
+    public partial ObservableList<LogEntry> LogEntries { get; init; } = new();
 }
 
-[ObservableModelReference(typeof(GenericModel<,>))]  // Error: Arity mismatch
+public partial class BasicCommandsModel : SampleBaseModel
+{
+    public override string Usage => "Basic commands example";
+    public partial int Counter { get; set; }
+}
+
 [ObservableModelScope(ModelScope.Scoped)]
-public partial class ConsumerModel<T> : ObservableModel where T : class
+public partial class ParentModel : ObservableModel
 {
     public partial int Value { get; set; }
+    // Don't reference derived model
 }
 ```
 
-### Example 4: Fix with Same Arity
+### Example 3: Fix by Referencing Base Model
 
 ```csharp
-// ✅ CORRECT - Both have 2 type parameters
-[ObservableModelScope(ModelScope.Singleton)]
-public partial class GenericModel<T, P> : ObservableModel
-    where T : class
-    where P : struct
+// ✅ CORRECT - Reference the base model instead
+public abstract partial class SampleBaseModel : ObservableModel
 {
-    public partial T Item1 { get; set; }
-    public partial P Item2 { get; set; }
+    public abstract string Usage { get; }
+    public partial ObservableList<LogEntry> LogEntries { get; init; } = new();
 }
 
-[ObservableModelReference(typeof(GenericModel<,>))]
+public partial class BasicCommandsModel : SampleBaseModel
+{
+    public override string Usage => "Basic commands example";
+    public partial int Counter { get; set; }
+}
+
+[ObservableModelReference<SampleBaseModel>]  // Reference base model instead
 [ObservableModelScope(ModelScope.Scoped)]
-public partial class ConsumerModel<T, P> : ObservableModel
-    where T : class
-    where P : struct
+public partial class ParentModel : ObservableModel
 {
     public partial int Value { get; set; }
 
-    public T GetItem1() => GenericModel.Item1;
-    public P GetItem2() => GenericModel.Item2;
+    public ObservableList<LogEntry> GetLogs() => SampleBaseModel.LogEntries;
 }
 ```
 
-### Example 5: Using Closed Generic (Alternative)
+### Example 4: Fix by Using Composition
 
 ```csharp
-// ✅ CORRECT - Using closed generic type (specific type arguments)
-[ObservableModelScope(ModelScope.Singleton)]
-public partial class GenericModel<T> : ObservableModel where T : class
+// ✅ CORRECT - Use composition instead of inheritance
+public partial class LoggingModel : ObservableModel
 {
-    public partial T Item { get; set; }
+    public partial ObservableList<LogEntry> LogEntries { get; init; } = new();
 }
 
-[ObservableModelReference(typeof(GenericModel<string>))]  // Closed generic
+public partial class BasicCommandsModel : ObservableModel
+{
+    public partial string Usage { get; set; } = "Basic commands example";
+    public partial int Counter { get; set; }
+}
+
+[ObservableModelReference<BasicCommandsModel>]  // Now valid - not a derived model
 [ObservableModelScope(ModelScope.Scoped)]
-public partial class ConsumerModel<T, P> : ObservableModel
-    where T : class
-    where P : struct
+public partial class ParentModel : ObservableModel
 {
     public partial int Value { get; set; }
+
+    public int GetCounter() => BasicCommandsModel.Counter;
 }
 ```
-
-## Why This Matters
-
-Type parameter arity matching ensures:
-- Proper type parameter substitution during code generation
-- Type safety throughout the application
-- Correct property access in generated code
-- Predictable generic type behavior
 
 ## Code Fixes Available
 
-- **Adjust type parameters to match referenced type**: Updates the class's type parameters
-- **Remove reference**: Removes the incompatible reference
+- **Remove ObservableModelReference attribute**: Removes the invalid attribute referencing the derived model
+
+## Design Considerations
+
+When designing your ObservableModel hierarchy:
+
+1. **Prefer composition over inheritance** for models that need to be referenced
+2. **Use inheritance for shared base functionality** but don't reference derived classes
+3. **Reference only the base model** if you need properties from a derived model's hierarchy
+4. **Consider extracting shared properties** into a separate composable model
 
 ## Related Diagnostics
 
-- RXBG014: Type constraint mismatch
-- RXBG015: Invalid open generic reference
+- RXBG030: Invalid model reference target
+- RXBG031: Unused model reference
+- RXBG051: Circular model reference

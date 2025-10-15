@@ -1,173 +1,111 @@
-# RXBG014: Type Constraint Mismatch
+# RXBG014: ObservableModel Used By Multiple Components Must Have Singleton Scope
 
 ## Description
 
-This diagnostic is reported when type parameters in a referenced generic type have constraints that are incompatible with the corresponding type parameters in the referencing class. For proper type substitution and safety, constraints must be compatible.
+This diagnostic is reported when an `ObservableModel` is used by multiple `ObservableComponent` instances but is not registered with `Singleton` scope. This can cause data inconsistency issues as each component instance would get its own model instance instead of sharing the same state.
 
 ## Cause
 
 This error occurs when:
-- A generic model references another generic model using open generic syntax
-- The type parameters have different or incompatible constraints
-- For example: referenced type requires `class` but referencing type has `struct`
+- Multiple different `ObservableComponent` classes use the same model
+- The model has `Scoped` or `Transient` scope
+- The model needs to maintain shared state across components
 
 ## How to Fix
 
-Use one of the available code fixes:
-- **Adjust type parameters to match referenced type** - Updates constraints to match
-- **Remove reference** - Removes the incompatible reference
+Use the available code fix:
+- **Change scope to Singleton** - Updates the `ObservableModelScope` attribute to `Singleton`
 
 Or manually:
-- Ensure type parameter constraints match between referenced and referencing types
-- Make constraints compatible (same or more restrictive)
+- Change the scope to `ModelScope.Singleton`
+- Remove the scope attribute entirely (Singleton is the default)
 
 ## Examples
 
-### Example 1: Class vs Struct Constraint
+### Example 1: Invalid Scoped Model
 
 ```csharp
-// ❌ WRONG - GenericModel requires class, ConsumerModel has struct
-[ObservableModelScope(ModelScope.Singleton)]
-public partial class GenericModel<T> : ObservableModel where T : class
+// ❌ WRONG - Scoped model used by multiple components
+[ObservableModelScope(ModelScope.Scoped)]  // Error: Should be Singleton
+public partial class TestModel : ObservableModel
 {
-    public partial T Item { get; set; }
+    public partial string Name { get; set; }
 }
 
-[ObservableModelReference(typeof(GenericModel<>))]  // Error: Constraint mismatch
-[ObservableModelScope(ModelScope.Scoped)]
-public partial class ConsumerModel<T> : ObservableModel where T : struct
+public partial class TestComponent1 : ObservableComponent<TestModel>
 {
-    public partial int Value { get; set; }
+}
+
+public partial class TestComponent2 : ObservableComponent<TestModel>
+{
 }
 ```
 
-### Example 2: Fix by Matching Constraints
+### Example 2: Fix by Using Singleton
 
 ```csharp
-// ✅ CORRECT - Both use class constraint
+// ✅ CORRECT - Singleton model shared by multiple components
 [ObservableModelScope(ModelScope.Singleton)]
-public partial class GenericModel<T> : ObservableModel where T : class
+public partial class TestModel : ObservableModel
 {
-    public partial T Item { get; set; }
+    public partial string Name { get; set; }
 }
 
-[ObservableModelReference(typeof(GenericModel<>))]
-[ObservableModelScope(ModelScope.Scoped)]
-public partial class ConsumerModel<T> : ObservableModel where T : class
+public partial class TestComponent1 : ObservableComponent<TestModel>
 {
-    public partial int Value { get; set; }
+}
 
-    public T GetProp()
-    {
-        return GenericModel.Item;
-    }
+public partial class TestComponent2 : ObservableComponent<TestModel>
+{
 }
 ```
 
-### Example 3: Interface Constraint Mismatch
+### Example 3: Default Scope (Singleton)
 
 ```csharp
-// ❌ WRONG - Different interface constraints
-[ObservableModelScope(ModelScope.Singleton)]
-public partial class GenericModel<T> : ObservableModel where T : IDisposable
+// ✅ CORRECT - No scope attribute defaults to Singleton
+public partial class TestModel : ObservableModel
 {
-    public partial T Item { get; set; }
+    public partial string Name { get; set; }
 }
 
-[ObservableModelReference(typeof(GenericModel<>))]  // Error: Constraint mismatch
-[ObservableModelScope(ModelScope.Scoped)]
-public partial class ConsumerModel<T> : ObservableModel where T : class
+public partial class TestComponent1 : ObservableComponent<TestModel>
 {
-    public partial int Value { get; set; }
+}
+
+public partial class TestComponent2 : ObservableComponent<TestModel>
+{
 }
 ```
 
-### Example 4: Fix by Matching Interface Constraint
+### Example 4: Single Component with Scoped
 
 ```csharp
-// ✅ CORRECT - Both use IDisposable constraint
-[ObservableModelScope(ModelScope.Singleton)]
-public partial class GenericModel<T> : ObservableModel where T : IDisposable
+// ✅ CORRECT - Scoped is OK when used by only one component type
+[ObservableModelScope(ModelScope.Scoped)]
+public partial class TestModel : ObservableModel
 {
-    public partial T Item { get; set; }
+    public partial string Name { get; set; }
 }
 
-[ObservableModelReference(typeof(GenericModel<>))]
-[ObservableModelScope(ModelScope.Scoped)]
-public partial class ConsumerModel<T> : ObservableModel where T : IDisposable
+public partial class TestComponent : ObservableComponent<TestModel>
 {
-    public partial int Value { get; set; }
-
-    public T GetItem() => GenericModel.Item;
 }
 ```
-
-### Example 5: More Restrictive Constraints
-
-```csharp
-// ❌ WRONG - ConsumerModel has more restrictive constraints
-// Note: More restrictive constraints are not currently supported
-[ObservableModelScope(ModelScope.Singleton)]
-public partial class GenericModel<T> : ObservableModel where T : class
-{
-    public partial T Item { get; set; }
-}
-
-[ObservableModelReference(typeof(GenericModel<>))]  // Error: More restrictive
-[ObservableModelScope(ModelScope.Scoped)]
-public partial class ConsumerModel<T> : ObservableModel
-    where T : class, IDisposable
-{
-    public partial int Value { get; set; }
-}
-```
-
-### Example 6: Valid Same Constraints
-
-```csharp
-// ✅ CORRECT - Identical constraints
-[ObservableModelScope(ModelScope.Singleton)]
-public partial class GenericModel<T> : ObservableModel where T : class
-{
-    public partial T Item { get; set; }
-}
-
-[ObservableModelReference(typeof(GenericModel<>))]
-[ObservableModelScope(ModelScope.Scoped)]
-public partial class ConsumerModel<T> : ObservableModel where T : class
-{
-    public partial int Value { get; set; }
-
-    public T GetProp()
-    {
-        return GenericModel.Item;
-    }
-}
-```
-
-## Common Constraint Types
-
-- `where T : class` - Reference type constraint
-- `where T : struct` - Value type constraint
-- `where T : new()` - Constructor constraint
-- `where T : BaseClass` - Base class constraint
-- `where T : IInterface` - Interface constraint
-- `where T : class, IInterface` - Multiple constraints
 
 ## Why This Matters
 
-Matching type constraints ensures:
-- Type safety during compilation
-- Correct type parameter substitution
-- Valid property access in generated code
-- Predictable generic behavior
+When multiple components share a model:
+- **Singleton**: All components see the same data and state (correct for shared state)
+- **Scoped**: Each component gets its own instance within the same scope (can cause inconsistency)
+- **Transient**: Each component gets a new instance every time (causes data duplication)
+
+For shared application state (like user settings, navigation state, etc.), you need Singleton scope.
 
 ## Code Fixes Available
 
-- **Adjust type parameters to match referenced type**: Updates constraints
-- **Remove reference**: Removes the incompatible reference
+- **Change scope to Singleton**: Updates the `ObservableModelScope` attribute
 
 ## Related Diagnostics
 
-- RXBG013: Generic arity mismatch
-- RXBG015: Invalid open generic reference
+- RXBG009: Component inheritance error

@@ -220,7 +220,7 @@ public class DiScopeViolationDiagnosticTests
             public partial class ConsumerModel : ObservableModel
             {
                 // Singleton injecting Scoped - VIOLATION (captive dependency)
-                public partial ConsumerModel({|{{DiagnosticDescriptors.DiServiceScopeViolationWarning.Id}}:ServiceModel|} serviceModel);
+                public partial ConsumerModel({|{{DiagnosticDescriptors.DiServiceScopeViolationError.Id}}:ServiceModel|} serviceModel);
 
                 public string GetName() => ServiceModel.Name;
             }
@@ -250,7 +250,7 @@ public class DiScopeViolationDiagnosticTests
             public partial class ConsumerModel : ObservableModel
             {
                 // Singleton injecting Transient - VIOLATION (captive dependency)
-                public partial ConsumerModel({|{{DiagnosticDescriptors.DiServiceScopeViolationWarning.Id}}:ServiceModel|} serviceModel);
+                public partial ConsumerModel({|{{DiagnosticDescriptors.DiServiceScopeViolationError.Id}}:ServiceModel|} serviceModel);
 
                 public string GetName() => ServiceModel.Name;
             }
@@ -280,7 +280,7 @@ public class DiScopeViolationDiagnosticTests
             public partial class ConsumerModel : ObservableModel
             {
                 // Scoped injecting Transient - VIOLATION (disposal issues)
-                public partial ConsumerModel({|{{DiagnosticDescriptors.DiServiceScopeViolationWarning.Id}}:ServiceModel|} serviceModel);
+                public partial ConsumerModel({|{{DiagnosticDescriptors.DiServiceScopeViolationError.Id}}:ServiceModel|} serviceModel);
 
                 public string GetName() => ServiceModel.Name;
             }
@@ -324,8 +324,8 @@ public class DiScopeViolationDiagnosticTests
                 // Mixed: SingletonModel OK, ScopedModel and TransientModel are violations
                 public partial ConsumerModel(
                     SingletonModel singletonModel,
-                    {|{{DiagnosticDescriptors.DiServiceScopeViolationWarning.Id}}:ScopedModel|} scopedModel,
-                    {|{{DiagnosticDescriptors.DiServiceScopeViolationWarning.Id}}:TransientModel|} transientModel);
+                    {|{{DiagnosticDescriptors.DiServiceScopeViolationError.Id}}:ScopedModel|} scopedModel,
+                    {|{{DiagnosticDescriptors.DiServiceScopeViolationError.Id}}:TransientModel|} transientModel);
 
                 // Use properties to avoid RXBG008
                 public string GetInfo() => SingletonModel.Name + ScopedModel.IsEnabled + TransientModel.Count;
@@ -371,7 +371,7 @@ public class DiScopeViolationDiagnosticTests
                 public partial ConsumerModel(
                     SingletonModel singletonModel,
                     ScopedModel scopedModel,
-                    {|{{DiagnosticDescriptors.DiServiceScopeViolationWarning.Id}}:TransientModel|} transientModel);
+                    {|{{DiagnosticDescriptors.DiServiceScopeViolationError.Id}}:TransientModel|} transientModel);
 
                 // Use properties to avoid RXBG008
                 public string GetInfo() => SingletonModel.Name + ScopedModel.IsEnabled + TransientModel.Count;

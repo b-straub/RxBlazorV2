@@ -1,34 +1,44 @@
-# RXBG002: Razor Component Analysis Error
+# RXBG002: Method Analysis Warning
 
 ## Description
 
-This diagnostic is reported when the source generator encounters an error while analyzing a Razor component that uses observable models. This is typically an internal error during the Razor file analysis phase.
+This warning is reported when the source generator encounters an issue while analyzing a method for property usage. This typically occurs during analysis of command methods or other methods that may use observable properties.
 
 ## Cause
 
-This error occurs when:
-- The generator cannot properly analyze a Razor component's structure
-- There are issues reading or parsing Razor component files
-- Observable model references in components cannot be resolved
+This warning occurs when:
+- The generator cannot fully analyze property usage in a method
+- Method body contains patterns that are difficult to analyze
+- Property access detection encounters edge cases
 
 ## How to Fix
 
-1. Verify that your Razor component files are properly structured
-2. Ensure `ObservableComponent<T>` inheritance is correct
-3. Check that all model references are valid and accessible
-4. If the error persists, it may indicate a bug in the generator - please report it with the error message details
+This is a warning and usually does not prevent code generation. However, you can:
+1. Simplify complex method logic if possible
+2. Ensure property access patterns are straightforward
+3. Review the specific warning message for details
 
 ## Example
 
 ```csharp
-// Razor component code-behind
-public partial class MyComponent : ObservableComponent<MyModel>
+[ObservableModelScope(ModelScope.Singleton)]
+public partial class MyModel : ObservableModel
 {
-    // Ensure proper structure and model references
+    public partial string Name { get; set; }
+
+    [ObservableCommand(nameof(Execute))]
+    public partial IObservableCommand MyCommand { get; }
+
+    // If this method has complex property access patterns,
+    // it might generate a warning
+    private void Execute()
+    {
+        // Complex logic here
+        var x = Name;
+    }
 }
 ```
 
 ## Related Diagnostics
 
-- RXBG001: Observable model analysis error
-- RXBG009: Component inheritance error
+- RXBG031: Circular trigger reference error

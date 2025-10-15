@@ -38,7 +38,7 @@ public class UnregisteredServiceCodeFixTests
         """;
 
         // lang=csharp
-        var fixedCode = """
+        var fixedCode = $$"""
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
@@ -54,7 +54,7 @@ public class UnregisteredServiceCodeFixTests
             [ObservableModelScope(ModelScope.Singleton)]
             public partial class MyModel : ObservableModel
             {
-                [SuppressMessage("RxBlazorGenerator", "RXBG020:Partial constructor parameter type may not be registered in DI", Justification = "IValidationService registered externally")]
+                [SuppressMessage("RxBlazorGenerator", "{{DiagnosticDescriptors.UnregisteredServiceWarning.Id}}:Partial constructor parameter type may not be registered in DI", Justification = "IValidationService registered externally")]
                 public partial MyModel(IValidationService validationService);
 
                 public bool CheckValid() => ValidationService.IsValid();
@@ -97,7 +97,7 @@ public class UnregisteredServiceCodeFixTests
         """;
 
         // lang=csharp
-        var fixedCode = """
+        var fixedCode = $$"""
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
@@ -116,7 +116,7 @@ public class UnregisteredServiceCodeFixTests
             [ObservableModelScope(ModelScope.Singleton)]
             public partial class AppModel : ObservableModel
             {
-                [SuppressMessage("RxBlazorGenerator", "RXBG020:Partial constructor parameter type may not be registered in DI", Justification = "ILogger registered externally")]
+                [SuppressMessage("RxBlazorGenerator", "{{DiagnosticDescriptors.UnregisteredServiceWarning.Id}}:Partial constructor parameter type may not be registered in DI", Justification = "ILogger registered externally")]
                 public partial AppModel(
                     ServiceModel serviceModel,
                     ILogger logger);
@@ -156,7 +156,7 @@ public class UnregisteredServiceCodeFixTests
         """;
 
         // lang=csharp
-        var fixedCode = """
+        var fixedCode = $$"""
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
@@ -172,7 +172,7 @@ public class UnregisteredServiceCodeFixTests
             [ObservableModelScope(ModelScope.Scoped)]
             public partial class NotificationModel : ObservableModel
             {
-                [SuppressMessage("RxBlazorGenerator", "RXBG020:Partial constructor parameter type may not be registered in DI", Justification = "EmailService registered externally")]
+                [SuppressMessage("RxBlazorGenerator", "{{DiagnosticDescriptors.UnregisteredServiceWarning.Id}}:Partial constructor parameter type may not be registered in DI", Justification = "EmailService registered externally")]
                 public partial NotificationModel(EmailService emailService);
 
                 public void Notify() => EmailService.SendEmail("test@example.com");

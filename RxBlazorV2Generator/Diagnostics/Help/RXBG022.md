@@ -1,4 +1,4 @@
-# RXBG015: Invalid Open Generic Type Reference
+# RXBG022: Invalid Open Generic Type Reference
 
 ## Description
 
@@ -173,5 +173,5 @@ Without these, the generator cannot properly substitute type parameters during c
 
 ## Related Diagnostics
 
-- RXBG013: Generic arity mismatch
-- RXBG014: Type constraint mismatch
+- RXBG050: Generic arity mismatch
+- RXBG051: Type constraint mismatch

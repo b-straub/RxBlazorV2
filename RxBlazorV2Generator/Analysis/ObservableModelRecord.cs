@@ -143,6 +143,9 @@ public class ObservableModelRecord
             record.UnregisteredServices = unregisteredServices;
             record.DiFieldsWithScope = diFieldsWithScope;
 
+            // Extract component information if [ObservableComponent] attribute is present
+            record.ComponentInfo = ExtractComponentInfo(namedTypeSymbol, partialProperties);
+
             return record;
         }
         catch (Exception)
@@ -155,6 +158,9 @@ public class ObservableModelRecord
     // Properties for generator-specific diagnostics (RXBG020, RXBG021)
     public List<(string paramName, string paramType, ITypeSymbol? typeSymbol, Location? location)> UnregisteredServices { get; private set; } = [];
     public List<(DIFieldInfo diField, string? serviceScope, Location? location)> DiFieldsWithScope { get; private set; } = [];
+
+    // Component information for component generation
+    public ComponentInfo? ComponentInfo { get; private set; }
 
     /// <summary>
     /// Returns all diagnostics for this model.
@@ -267,5 +273,140 @@ public class ObservableModelRecord
             baseType = baseType.BaseType;
         }
         return null;
+    }
+
+    /// <summary>
+    /// Extracts component information from [ObservableComponent] attribute if present.
+    /// </summary>
+    private static ComponentInfo? ExtractComponentInfo(
+        INamedTypeSymbol namedTypeSymbol,
+        List<PartialPropertyInfo> partialProperties)
+    {
+        try
+        {
+            // Check for [ObservableComponent] attribute
+            AttributeData? componentAttribute = null;
+            foreach (var attribute in namedTypeSymbol.GetAttributes())
+            {
+                if (attribute.AttributeClass?.Name == "ObservableComponentAttribute")
+                {
+                    componentAttribute = attribute;
+                    break;
+                }
+            }
+
+            if (componentAttribute is null)
+            {
+                return null;
+            }
+
+            // Get component name from attribute parameter or default to {ModelName}Component
+            string? customComponentName = null;
+            if (componentAttribute.ConstructorArguments.Length > 0 &&
+                componentAttribute.ConstructorArguments[0].Value is string componentName &&
+                !string.IsNullOrWhiteSpace(componentName))
+            {
+                customComponentName = componentName;
+            }
+
+            var componentClassName = customComponentName ?? $"{namedTypeSymbol.Name}Component";
+
+            // Determine component namespace (Components subfolder of model namespace)
+            var modelNamespace = namedTypeSymbol.ContainingNamespace.ToDisplayString();
+            var componentNamespace = $"{modelNamespace.Split('.')[0]}.Components";
+
+            // Extract component triggers from properties
+            var componentTriggers = new List<ComponentTriggerInfo>();
+            foreach (var property in partialProperties)
+            {
+                // Check if property has trigger attributes
+                var propertySymbol = namedTypeSymbol.GetMembers(property.Name)
+                    .OfType<IPropertySymbol>()
+                    .FirstOrDefault();
+
+                if (propertySymbol is not null)
+                {
+                    bool hasSyncTrigger = false;
+                    bool hasAsyncTrigger = false;
+                    string? syncHookName = null;
+                    string? asyncHookName = null;
+
+                    foreach (var attribute in propertySymbol.GetAttributes())
+                    {
+                        if (attribute.AttributeClass?.Name == "ObservableComponentTriggerAttribute")
+                        {
+                            hasSyncTrigger = true;
+                            if (attribute.ConstructorArguments.Length > 0 &&
+                                attribute.ConstructorArguments[0].Value is string hookName &&
+                                !string.IsNullOrWhiteSpace(hookName))
+                            {
+                                syncHookName = hookName;
+                            }
+                        }
+                        else if (attribute.AttributeClass?.Name == "ObservableComponentTriggerAsyncAttribute")
+                        {
+                            hasAsyncTrigger = true;
+                            if (attribute.ConstructorArguments.Length > 0 &&
+                                attribute.ConstructorArguments[0].Value is string hookName &&
+                                !string.IsNullOrWhiteSpace(hookName))
+                            {
+                                asyncHookName = hookName;
+                            }
+                        }
+                    }
+
+                    // Create trigger based on which attributes are present
+                    if (hasSyncTrigger && hasAsyncTrigger)
+                    {
+                        // Both attributes present - create separate triggers
+                        componentTriggers.Add(new ComponentTriggerInfo(property.Name, TriggerHookType.Sync, syncHookName));
+                        componentTriggers.Add(new ComponentTriggerInfo(property.Name, TriggerHookType.Async, asyncHookName));
+                    }
+                    else if (hasSyncTrigger)
+                    {
+                        componentTriggers.Add(new ComponentTriggerInfo(property.Name, TriggerHookType.Sync, syncHookName));
+                    }
+                    else if (hasAsyncTrigger)
+                    {
+                        componentTriggers.Add(new ComponentTriggerInfo(property.Name, TriggerHookType.Async, asyncHookName));
+                    }
+                }
+            }
+
+            // Build batch subscriptions map
+            var batchSubscriptions = new Dictionary<string, List<string>>();
+            var modelProperties = new List<string>();
+
+            foreach (var property in partialProperties)
+            {
+                if (property.BatchIds is not null && property.BatchIds.Length > 0)
+                {
+                    // Property has batches - add to Model subscriptions
+                    modelProperties.Add(property.Name);
+                }
+                else
+                {
+                    // Property has no batch - also subscribe to changes
+                    modelProperties.Add(property.Name);
+                }
+            }
+
+            if (modelProperties.Any())
+            {
+                batchSubscriptions["Model"] = modelProperties;
+            }
+
+            return new ComponentInfo(
+                componentClassName,
+                componentNamespace,
+                namedTypeSymbol.Name,
+                modelNamespace,
+                componentTriggers,
+                batchSubscriptions);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 }

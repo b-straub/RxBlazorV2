@@ -168,27 +168,44 @@ public class DIFieldInfo
     }
 }
 
-public class RazorCodeBehindInfo(
-    string namespaceName,
-    string className,
-    List<string> observableModelFields,
-    List<string> usedProperties,
-    Dictionary<string, string>? fieldToTypeMap = null,
-    Dictionary<string, List<string>>? fieldToPropertiesMap = null,
-    bool hasDiagnosticIssue = false,
-    Dictionary<string, List<string>>? codeBehindPropertyAccesses = null,
-    HashSet<string>? injectedProperties = null,
-    bool isObservableComponent = true)
+public class ComponentInfo
 {
-    public string Namespace => namespaceName;
-    public string ClassName => className;
+    public string ComponentClassName { get; }
+    public string ComponentNamespace { get; }
+    public string ModelTypeName { get; }
+    public string ModelNamespace { get; }
+    public List<ComponentTriggerInfo> ComponentTriggers { get; }
+    public Dictionary<string, List<string>> BatchSubscriptions { get; }
+    public bool HasSubscriptions { get; }
 
-    public List<string> ObservableModelFields => observableModelFields;
-    public List<string> UsedProperties => usedProperties;
-    public Dictionary<string, string> FieldToTypeMap => fieldToTypeMap ?? new Dictionary<string, string>();
-    public Dictionary<string, List<string>> FieldToPropertiesMap => fieldToPropertiesMap ?? new Dictionary<string, List<string>>();
-    public bool HasDiagnosticIssue => hasDiagnosticIssue;
-    public Dictionary<string, List<string>> CodeBehindPropertyAccesses => codeBehindPropertyAccesses ?? new Dictionary<string, List<string>>();
-    public HashSet<string> InjectedProperties => injectedProperties ?? new HashSet<string>();
-    public bool IsObservableComponent => isObservableComponent;
+    public ComponentInfo(
+        string componentClassName,
+        string componentNamespace,
+        string modelTypeName,
+        string modelNamespace,
+        List<ComponentTriggerInfo>? componentTriggers = null,
+        Dictionary<string, List<string>>? batchSubscriptions = null)
+    {
+        ComponentClassName = componentClassName;
+        ComponentNamespace = componentNamespace;
+        ModelTypeName = modelTypeName;
+        ModelNamespace = modelNamespace;
+        ComponentTriggers = componentTriggers ?? [];
+        BatchSubscriptions = batchSubscriptions ?? new Dictionary<string, List<string>>();
+        HasSubscriptions = ComponentTriggers.Any() || BatchSubscriptions.Any();
+    }
+}
+
+public enum TriggerHookType
+{
+    Sync,
+    Async,
+    Both
+}
+
+public class ComponentTriggerInfo(string propertyName, TriggerHookType hookType, string? hookMethodName = null)
+{
+    public string PropertyName { get; } = propertyName;
+    public TriggerHookType HookType { get; } = hookType;
+    public string HookMethodName { get; } = hookMethodName ?? (hookType == TriggerHookType.Async ? $"On{propertyName}ChangedAsync" : $"On{propertyName}Changed");
 }

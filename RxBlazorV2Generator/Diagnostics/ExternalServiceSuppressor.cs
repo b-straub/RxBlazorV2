@@ -14,7 +14,7 @@ namespace RxBlazorV2Generator.Diagnostics;
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class ExternalServiceSuppressor : DiagnosticSuppressor
 {
-    private const string SuppressedDiagnosticId = "RXBG020";
+    private static readonly string SuppressedDiagnosticId = DiagnosticDescriptors.UnregisteredServiceWarning.Id;
 
     private static readonly SuppressionDescriptor ExternalServiceSuppression = new(
         id: "RXBGSP001",
