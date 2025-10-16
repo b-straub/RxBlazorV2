@@ -7,10 +7,7 @@ public static class TypeSymbolExtensions
 {
     public static bool IsObservableModelClass(this ClassDeclarationSyntax classDecl)
     {
-        // Only check partial classes with base types
-        if (!classDecl.Modifiers.Any(Microsoft.CodeAnalysis.CSharp.SyntaxKind.PartialKeyword))
-            return false;
-
+        // Only check classes with base types
         if (classDecl.BaseList?.Types.Any() != true)
             return false;
 

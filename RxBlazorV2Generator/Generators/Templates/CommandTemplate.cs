@@ -132,8 +132,13 @@ public static class CommandTemplate
     {
         // Convert IObservableCommand -> ObservableCommand
         // Convert IObservableCommandAsync -> ObservableCommandAsync
+        // Convert IObservableCommandR -> ObservableCommandR
+        // Convert IObservableCommandRAsync -> ObservableCommandRAsync
         // Preserve generic parameters if present
-        return interfaceType.Replace("IObservableCommand", "ObservableCommand");
+        return interfaceType.Replace("IObservableCommandRAsync", "ObservableCommandRAsync")
+            .Replace("IObservableCommandR", "ObservableCommandR")
+            .Replace("IObservableCommandAsync", "ObservableCommandAsync")
+            .Replace("IObservableCommand", "ObservableCommand");
     }
 
     /// <summary>
@@ -142,6 +147,31 @@ public static class CommandTemplate
     private static string GetFactoryCall(CommandPropertyInfo command, string observedPropsArray)
     {
         // Determine factory type based on command property type and method signature
+        // IObservableCommandRAsync<T> or IObservableCommandRAsync<T1, T2>
+        if (command.Type.Contains("IObservableCommandRAsync<"))
+        {
+            var genericType = ExtractGenericType(command.Type);
+            if (command.SupportsCancellation)
+            {
+                // Use cancelable factory for methods with CancellationToken
+                if (command.CanExecuteMethod is not null)
+                {
+                    return $"new ObservableCommandRAsyncCancelableFactory<{genericType}>(this, {observedPropsArray}, {command.ExecuteMethod}, {command.CanExecuteMethod})";
+                }
+
+                return $"new ObservableCommandRAsyncCancelableFactory<{genericType}>(this, {observedPropsArray}, {command.ExecuteMethod})";
+            }
+
+            // Use regular async factory for methods without CancellationToken
+            if (command.CanExecuteMethod is not null)
+            {
+                return $"new ObservableCommandRAsyncFactory<{genericType}>(this, {observedPropsArray}, {command.ExecuteMethod}, {command.CanExecuteMethod})";
+            }
+
+            return $"new ObservableCommandRAsyncFactory<{genericType}>(this, {observedPropsArray}, {command.ExecuteMethod})";
+        }
+
+        // IObservableCommandAsync<T>
         if (command.Type.Contains("IObservableCommandAsync<"))
         {
             var genericType = ExtractGenericType(command.Type);
@@ -165,6 +195,7 @@ public static class CommandTemplate
             return $"new ObservableCommandAsyncFactory<{genericType}>(this, {observedPropsArray}, {command.ExecuteMethod})";
         }
 
+        // IObservableCommandAsync (no parameters)
         if (command.Type.Contains("IObservableCommandAsync"))
         {
             if (command.SupportsCancellation)
@@ -187,6 +218,19 @@ public static class CommandTemplate
             return $"new ObservableCommandAsyncFactory(this, {observedPropsArray}, {command.ExecuteMethod})";
         }
 
+        // IObservableCommandR<T> or IObservableCommandR<T1, T2>
+        if (command.Type.Contains("IObservableCommandR<"))
+        {
+            var genericType = ExtractGenericType(command.Type);
+            if (command.CanExecuteMethod is not null)
+            {
+                return $"new ObservableCommandRFactory<{genericType}>(this, {observedPropsArray}, {command.ExecuteMethod}, {command.CanExecuteMethod})";
+            }
+
+            return $"new ObservableCommandRFactory<{genericType}>(this, {observedPropsArray}, {command.ExecuteMethod})";
+        }
+
+        // IObservableCommand<T>
         if (command.Type.Contains("IObservableCommand<"))
         {
             var genericType = ExtractGenericType(command.Type);
@@ -198,7 +242,7 @@ public static class CommandTemplate
             return $"new ObservableCommandFactory<{genericType}>(this, {observedPropsArray}, {command.ExecuteMethod})";
         }
 
-        // IObservableCommand
+        // IObservableCommand (no parameters, no return value)
         if (command.CanExecuteMethod is not null)
         {
             return $"new ObservableCommandFactory(this, {observedPropsArray}, {command.ExecuteMethod}, {command.CanExecuteMethod})";
@@ -213,7 +257,8 @@ public static class CommandTemplate
     private static string GetTriggerCall(CommandPropertyInfo command, string backingField, string? parameter = null)
     {
         // Determine trigger call based on method signature
-        if (command.Type.Contains("IObservableCommandAsync"))
+        // Async commands (includes IObservableCommandAsync and IObservableCommandRAsync)
+        if (command.Type.Contains("IObservableCommandAsync") || command.Type.Contains("IObservableCommandRAsync"))
         {
             // Use SubscribeAwait for async commands
             if (parameter is not null)
@@ -224,7 +269,7 @@ public static class CommandTemplate
             return $"            .SubscribeAwait(async (_, ct) => await {backingField}.ExecuteAsync(ct), AwaitOperation.Switch));";
         }
 
-        // Use Subscribe for sync commands
+        // Sync commands (includes IObservableCommand and IObservableCommandR)
         if (parameter is not null)
         {
             return $"            .Subscribe(_ => {backingField}.Execute({parameter})));";

@@ -5,7 +5,8 @@ using RxBlazorV2Sample.Interfaces;
 
 namespace RxBlazorV2Sample.Models;
 
-[ObservableModelScope(ModelScope.Singleton)]
+[ObservableComponent]
+[ObservableModelScope(ModelScope.Scoped)]
 public partial class SettingsModel : ObservableModel, ISettingsModel
 {
     public partial string TemperatureUnit { get; set; } = "Celsius";

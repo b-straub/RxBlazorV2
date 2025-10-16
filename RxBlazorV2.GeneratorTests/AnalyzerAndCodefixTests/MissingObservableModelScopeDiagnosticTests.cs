@@ -122,7 +122,7 @@ public class MissingObservableModelScopeDiagnosticTests
             .WithLocation(1)
             .WithArguments("Model2");
 
-        await AnalyzerVerifier.VerifyAnalyzerAsync(test, expected1, expected2);
+        await AnalyzerVerifier.VerifyAnalyzerAsync(test, [expected1, expected2]);
     }
 
     [Fact]

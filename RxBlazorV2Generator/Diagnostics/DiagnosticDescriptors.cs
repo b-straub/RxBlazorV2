@@ -38,6 +38,20 @@ public static class DiagnosticDescriptors
         description: "A warning occurred while analyzing a method for property usage.",
         helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG003.md");
 
+    /// <summary>
+    /// Generic generator error that wraps analyzer diagnostics for compilation output.
+    /// Reports the original diagnostic's title and ID to help user find the issue.
+    /// This prevents duplicate code fixes in IDE while ensuring build fails with clear message.
+    /// </summary>
+    public static readonly DiagnosticDescriptor GeneratorDiagnosticError = new(
+        id: "RXBG004",
+        title: "Source generator encountered diagnostic errors",
+        messageFormat: "Source generator failed: {0} ({1}). Check IDE/analyzer output for details.",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "The source generator encountered diagnostic errors during code generation. The diagnostic title and ID are included in the message. The compiler shows the location. Check the IDE analyzer output or previous build messages for detailed error information and available code fixes.");
+
     // ============================================================================
     // RXBG010-RXBG019: Model Structure & References
     // ============================================================================
@@ -157,6 +171,26 @@ public static class DiagnosticDescriptors
         description: "ObservableCommandTrigger cannot listen to a property that the command's execution method modifies, as this creates an infinite loop.",
         helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG031.md");
 
+    public static readonly DiagnosticDescriptor CommandMethodReturnsValueError = new(
+        id: "RXBG032",
+        title: "Command execute method should not return a value",
+        messageFormat: "Command '{0}' is declared as '{1}' which does not support return values, but its execute method '{2}' returns '{3}'. Change the command property type to 'IObservableCommandR<{3}>' or 'IObservableCommandRAsync<{3}>' to support return values, or change the execute method to return void/Task.",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "IObservableCommand and IObservableCommandAsync do not support return values. Use IObservableCommandR or IObservableCommandRAsync if you need to return a value from the execute method.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG032.md");
+
+    public static readonly DiagnosticDescriptor CommandMethodMissingReturnValueError = new(
+        id: "RXBG033",
+        title: "Command execute method must return a value",
+        messageFormat: "Command '{0}' is declared as '{1}' which expects a return value of type '{2}', but its execute method '{3}' returns '{4}'. Change the execute method to return '{2}' or 'Task<{2}>', or change the command property type to 'IObservableCommand' or 'IObservableCommandAsync' if no return value is needed.",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "IObservableCommandR and IObservableCommandRAsync require execute methods that return the specified type. The return type of the execute method must match the generic type parameter.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG033.md");
+
     // ============================================================================
     // RXBG040-RXBG049: Properties
     // ============================================================================
@@ -235,4 +269,15 @@ public static class DiagnosticDescriptors
         description: "Partial constructors with parameters in ObservableModel classes must be public because dependency injection containers can only resolve dependencies through public constructors. Protected, private, or internal constructors cannot be used for DI.",
         helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG071.md",
         customTags: ["Change constructor to public"]);
+
+    public static readonly DiagnosticDescriptor ObservableEntityMissingPartialModifierError = new(
+        id: "RXBG072",
+        title: "Observable entity must be declared as partial",
+        messageFormat: "{0} '{1}' {2} but is not declared as 'partial'. The source generator cannot generate code for non-partial members. Add the 'partial' modifier to the {3} declaration.",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Observable entities such as classes inheriting from ObservableModel or properties implementing IObservableCommand must be declared as partial to allow the source generator to generate the required implementation code. This error causes subsequent compiler errors about missing implementations, which will be resolved once the partial modifier is added.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG072.md",
+        customTags: ["Add 'partial' modifier"]);
 }

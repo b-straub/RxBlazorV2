@@ -25,12 +25,29 @@ internal static class CSharpAnalyzerVerifier<TAnalyzer>
     public static DiagnosticResult Diagnostic(DiagnosticDescriptor descriptor)
         => new(descriptor);
 
-    public static Task VerifyAnalyzerAsync(string source, params DiagnosticResult[] expected)
+    public static Task VerifyAnalyzerAsync(string source)
+        => VerifyAnalyzerAsync(source, []);
+    
+    public static Task VerifyAnalyzerAsync(string source, DiagnosticResult expected)
+        => VerifyAnalyzerAsync(source, [expected]);
+    
+    public static Task VerifyAnalyzerAsync(string source, DiagnosticResult expected, params string[] skippedDiagnosticIds)
+        => VerifyAnalyzerAsync(source, [expected], skippedDiagnosticIds);
+
+    public static Task VerifyAnalyzerAsync(string source, DiagnosticResult[] expected, params string[] skippedDiagnosticIds)
     {
-        var test = new AnalyzerTest<TAnalyzer> { TestCode = source };
+        var skippedDiagnosticIdsMerged = skippedDiagnosticIds.Append(DiagnosticDescriptors.GeneratorDiagnosticError.Id);
+        
+        var test = new AnalyzerTest<TAnalyzer>
+        {
+            TestCode = source,
+            SkippedDiagnosticIds = skippedDiagnosticIdsMerged.ToArray()
+        };
+        
         test.TestState.Sources.Add(("GlobalUsings.cs", SourceText.From(TestShared.GlobalUsing, Encoding.UTF8)));
         test.TestBehaviors |= TestBehaviors.SkipGeneratedSourcesCheck;
         test.ExpectedDiagnostics.AddRange(expected);
+        test.DisabledDiagnostics.Add(DiagnosticDescriptors.GeneratorDiagnosticError.Id);
         return test.RunAsync();
     }
 }
@@ -38,6 +55,8 @@ internal static class CSharpAnalyzerVerifier<TAnalyzer>
 internal class AnalyzerTest<TAnalyzer> : CSharpAnalyzerTest<TAnalyzer, DefaultVerifier>
     where TAnalyzer : DiagnosticAnalyzer, new()
 {
+    public string[] SkippedDiagnosticIds { get; init; } = [];
+    
     public AnalyzerTest()
     {
         ReferenceAssemblies = TestShared.ReferenceAssemblies();
@@ -52,16 +71,6 @@ internal class AnalyzerTest<TAnalyzer> : CSharpAnalyzerTest<TAnalyzer, DefaultVe
                 languageVersion: LanguageVersion.Preview,
                 preprocessorSymbols: ["DEBUG"]));
             
-            // Add compilation options for proper analyzer/generator behavior
-            project = project.WithCompilationOptions(project.CompilationOptions!
-                .WithSpecificDiagnosticOptions(project.CompilationOptions.SpecificDiagnosticOptions
-                    .Add(DiagnosticDescriptors.SharedModelNotSingletonError.Id, ReportDiagnostic.Error) // SharedModelNotSingletonError
-                    .Add(DiagnosticDescriptors.TriggerTypeArgumentsMismatchError.Id, ReportDiagnostic.Error) // TriggerTypeArgumentsMismatchError
-                    .Add(DiagnosticDescriptors.CircularModelReferenceError.Id, ReportDiagnostic.Error) // CircularModelReferenceError
-                    .Add("CS0104", ReportDiagnostic.Suppress) // Suppress ambiguous reference errors in generated code
-                    .Add("CS0111", ReportDiagnostic.Suppress) // Suppress duplicate member errors in generated code
-                    .Add("CS9275", ReportDiagnostic.Suppress))); // Suppress partial member missing implementation errors (generator provides implementation)
-            
             return project.Solution;
         });
     }
@@ -69,5 +78,10 @@ internal class AnalyzerTest<TAnalyzer> : CSharpAnalyzerTest<TAnalyzer, DefaultVe
     protected override IEnumerable<Type> GetSourceGenerators()
     {
         return [typeof(RxBlazorGenerator)];
+    }
+    
+    protected override bool IsCompilerDiagnosticIncluded(Diagnostic diagnostic, CompilerDiagnostics compilerDiagnostics)
+    {
+        return !SkippedDiagnosticIds.Contains(diagnostic.Id) && base.IsCompilerDiagnosticIncluded(diagnostic, compilerDiagnostics);
     }
 }

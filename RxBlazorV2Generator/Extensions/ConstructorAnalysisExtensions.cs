@@ -189,20 +189,11 @@ public static class ConstructorAnalysisExtensions
     }
 
     /// <summary>
-    /// Extracts the accessibility modifier from a partial constructor declaration.
+    /// Extracts the accessibility modifier from a syntax token list.
     /// Returns "public", "protected", "private", "internal", "protected internal", or "private protected".
-    /// Defaults to "public" if no explicit accessibility modifier is found.
     /// </summary>
-    public static string GetConstructorAccessibility(this ClassDeclarationSyntax classDecl)
+    private static string ExtractAccessibilityFromModifiers(SyntaxTokenList modifiers)
     {
-        var constructor = classDecl.GetPartialConstructor();
-        if (constructor is null)
-        {
-            return "public";
-        }
-
-        var modifiers = constructor.Modifiers;
-
         // Check for compound modifiers first
         if (modifiers.Any(SyntaxKind.ProtectedKeyword) && modifiers.Any(SyntaxKind.InternalKeyword))
         {
@@ -231,8 +222,35 @@ public static class ConstructorAnalysisExtensions
             return "internal";
         }
 
-        // Default to public if no accessibility modifier found
-        return "public";
+        return string.Empty;
+    }
+
+    /// <summary>
+    /// Extracts the accessibility modifier from a class declaration.
+    /// Returns "public", "protected", "private", "internal", "protected internal", or "private protected".
+    /// Defaults to "internal" if no explicit accessibility modifier is found (C# default for top-level classes).
+    /// </summary>
+    public static string GetClassAccessibility(this ClassDeclarationSyntax classDecl)
+    {
+        var accessibility = ExtractAccessibilityFromModifiers(classDecl.Modifiers);
+        return string.IsNullOrEmpty(accessibility) ? "internal" : accessibility;
+    }
+
+    /// <summary>
+    /// Extracts the accessibility modifier from a partial constructor declaration.
+    /// Returns "public", "protected", "private", "internal", "protected internal", or "private protected".
+    /// Defaults to "public" if no explicit accessibility modifier is found.
+    /// </summary>
+    public static string GetConstructorAccessibility(this ClassDeclarationSyntax classDecl)
+    {
+        var constructor = classDecl.GetPartialConstructor();
+        if (constructor is null)
+        {
+            return "public";
+        }
+
+        var accessibility = ExtractAccessibilityFromModifiers(constructor.Modifiers);
+        return string.IsNullOrEmpty(accessibility) ? "public" : accessibility;
     }
 
     /// <summary>

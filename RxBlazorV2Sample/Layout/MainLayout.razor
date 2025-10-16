@@ -1,4 +1,4 @@
-﻿@inherits ObservableLayoutComponentBase
+﻿@inherits LayoutComponentBase
 
 <MudThemeProvider Theme="@Settings.CurrentTheme" IsDarkMode="@Settings.IsDay" />
 <MudDialogProvider />
@@ -11,7 +11,6 @@
         <MudSpacer />
         <MudText Typo="Typo.h6">RxBlazorV2 Sample</MudText>
         <MudSpacer />
-        <MudIconButton Icon=@(Settings.IsDay ? Icons.Material.Filled.DarkMode : Icons.Material.Filled.LightMode) Color="Color.Inherit" OnClick="@Settings.ToggleThemeCommand.Execute" />
         <MudIconButton Icon="@Icons.Material.Filled.Info" Color="Color.Inherit" Href="https://learn.microsoft.com/aspnet/core/" Target="_blank" />
     </MudAppBar>
     <MudDrawer @bind-Open="@_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
@@ -23,3 +22,16 @@
         </MudContainer>
     </MudMainContent>
 </MudLayout>
+
+@code
+{
+    [Inject]
+    public required SettingsModel Settings { get; init; }
+    
+    private bool _drawerOpen = true;
+    
+    private void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+}

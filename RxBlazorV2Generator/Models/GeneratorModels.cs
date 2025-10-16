@@ -45,12 +45,14 @@ public class ObservableModelInfo
 
     public string ConstructorAccessibility { get; }
 
+    public string ClassAccessibility { get; }
+
     public ObservableModelInfo(string namespaceName, string className, string fullyQualifiedName,
         List<PartialPropertyInfo> partialProperties, List<CommandPropertyInfo> commandProperties,
         Dictionary<string, MethodDeclarationSyntax> methods, List<ModelReferenceInfo> modelReferences,
         string modelScope = "Singleton", List<DIFieldInfo>? diFields = null, List<string>? implementedInterfaces = null,
         string? genericTypes = null, string? typeConstrains = null, List<string>? usingStatements = null,
-        string? baseModelTypeName = null, string constructorAccessibility = "public")
+        string? baseModelTypeName = null, string constructorAccessibility = "public", string classAccessibility = "public")
     {
         Namespace = namespaceName;
         ClassName = className;
@@ -67,6 +69,7 @@ public class ObservableModelInfo
         UsingStatements = usingStatements ?? [];
         BaseModelTypeName = baseModelTypeName;
         ConstructorAccessibility = constructorAccessibility;
+        ClassAccessibility = classAccessibility;
     }
 }
 

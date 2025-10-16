@@ -1,0 +1,72 @@
+@page "/samples/basic-commandsReturn"
+@using RxBlazorV2Sample.Samples.Helpers
+@inherits BasicCommandsRModelComponent
+
+<PageTitle>Basic Commands</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium">
+    <MudText Typo="Typo.h3" GutterBottom="true">Basic Commands</MudText>
+    <MudText Typo="Typo.body1" Class="mb-4">
+        Demonstrates basic synchronous and asynchronous commands without parameters.
+    </MudText>
+
+    <MudCard>
+        <MudCardContent>
+            <MudStack Spacing="4">
+                <MudAlert Severity="Severity.Info">
+                    Counter: @Model.Counter
+                </MudAlert>
+                @if (_counterReturn is not null)
+                {
+                    <MudAlert Severity="Severity.Info">
+                        Counter return: @_counterReturn
+                    </MudAlert>
+                }
+
+                <UsageWithLogging Usage=@Model.Usage LogEntries=@Model.LogEntries/>
+               
+                <MudStack Row="true" Spacing="2">
+                    <MudButton
+                        Variant="Variant.Filled"
+                        Color="Color.Primary"
+                        OnClick="@(() => _counterReturn = Model.IncrementCommand.Execute())"
+                        StartIcon="@Icons.Material.Filled.Add">
+                        Increment (Sync)
+                    </MudButton>
+
+                    <MudButton
+                        Variant="Variant.Filled"
+                        Color="Color.Secondary"
+                        Disabled="@Model.IncrementAsyncCommand.Executing"
+                        OnClick="@(async () =>  _counterReturn = await Model.IncrementAsyncCommand.ExecuteAsync())"
+                        StartIcon="@Icons.Material.Filled.Add">
+                        @(Model.IncrementAsyncCommand.Executing ? "Executing..." : "Increment (Async)")
+                    </MudButton>
+                </MudStack>
+            </MudStack>
+        </MudCardContent>
+    </MudCard>
+
+    <MudPaper Class="pa-4 mt-4">
+        <MudText Typo="Typo.h6" GutterBottom="true">Key Concepts</MudText>
+        <MudList T="string">
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                <strong>IObservableCommand</strong> - for synchronous operations
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                <strong>IObservableCommandAsync</strong> - for asynchronous operations
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                Commands are declared as partial properties with [ObservableCommand] attribute
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                The generator creates the implementation linking to private methods
+            </MudListItem>
+        </MudList>
+    </MudPaper>
+</MudContainer>
+
+@code
+{
+    private int? _counterReturn;
+}

@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using RxBlazorV2Generator.Analysis;
 using RxBlazorV2Generator.Diagnostics;
+using RxBlazorV2Generator.Extensions;
 using RxBlazorV2Generator.Models;
 using System.Collections.Immutable;
 
@@ -22,13 +23,16 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
         DiagnosticDescriptors.UnusedModelReferenceError,
         DiagnosticDescriptors.TriggerTypeArgumentsMismatchError,
         DiagnosticDescriptors.CircularTriggerReferenceError,
+        DiagnosticDescriptors.CommandMethodReturnsValueError,
+        DiagnosticDescriptors.CommandMethodMissingReturnValueError,
         DiagnosticDescriptors.GenericArityMismatchError,
         DiagnosticDescriptors.TypeConstraintMismatchError,
         DiagnosticDescriptors.InvalidOpenGenericReferenceError,
         DiagnosticDescriptors.InvalidInitPropertyError,
         DiagnosticDescriptors.DerivedModelReferenceError,
         DiagnosticDescriptors.MissingObservableModelScopeWarning,
-        DiagnosticDescriptors.NonPublicPartialConstructorError
+        DiagnosticDescriptors.NonPublicPartialConstructorError,
+        DiagnosticDescriptors.ObservableEntityMissingPartialModifierError
         // NOTE: RXBG050 (UnregisteredServiceWarning), RXBG051 (DiServiceScopeViolationError),
         // RXBG060 (DirectObservableComponentInheritanceError), and RXBG014 (SharedModelNotSingletonError)
         // are reported by generator, not analyzer
@@ -48,12 +52,20 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
     {
         var classDecl = (ClassDeclarationSyntax)context.Node;
 
-        // Only analyze classes that might be ObservableModel classes
-        if (!ObservableModelAnalyzer.IsObservableModelClass(classDecl))
+        // Early filter: must have base types
+        if (classDecl.BaseList?.Types.Any() != true)
             return;
 
         try
         {
+            var classSymbol = context.SemanticModel.GetDeclaredSymbol(classDecl);
+            if (classSymbol is not INamedTypeSymbol namedTypeSymbol)
+                return;
+
+            // Check if this is an ObservableModel class
+            if (!namedTypeSymbol.InheritsFromObservableModel())
+                return;
+
             // Create ObservableModelRecord - single source of truth for analysis
             // Note: Passing null for serviceClasses is acceptable for analyzer -
             // it will report RXBG020 for unregistered services as expected

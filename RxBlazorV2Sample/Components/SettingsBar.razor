@@ -1,0 +1,4 @@
+@inherits SettingsModelComponent
+
+<MudText>Test</MudText>
+<MudIconButton Icon=@(Model.IsDay ? Icons.Material.Filled.DarkMode : Icons.Material.Filled.LightMode) Color="Color.Inherit" OnClick="@(() => Model.ToggleThemeCommand.Execute())" />

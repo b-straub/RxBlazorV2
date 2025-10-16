@@ -327,7 +327,7 @@ public class DiScopeViolationDiagnosticTests
                     {|{{DiagnosticDescriptors.DiServiceScopeViolationError.Id}}:ScopedModel|} scopedModel,
                     {|{{DiagnosticDescriptors.DiServiceScopeViolationError.Id}}:TransientModel|} transientModel);
 
-                // Use properties to avoid RXBG008
+                // Use properties to avoid DiServiceScopeViolationError
                 public string GetInfo() => SingletonModel.Name + ScopedModel.IsEnabled + TransientModel.Count;
             }
         }
@@ -373,7 +373,7 @@ public class DiScopeViolationDiagnosticTests
                     ScopedModel scopedModel,
                     {|{{DiagnosticDescriptors.DiServiceScopeViolationError.Id}}:TransientModel|} transientModel);
 
-                // Use properties to avoid RXBG008
+                // Use properties to avoid DiServiceScopeViolationError
                 public string GetInfo() => SingletonModel.Name + ScopedModel.IsEnabled + TransientModel.Count;
             }
         }

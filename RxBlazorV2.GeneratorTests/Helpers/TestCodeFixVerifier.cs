@@ -23,13 +23,22 @@ internal static class CSharpCodeFixVerifier<TAnalyzer, TCodeFix>
 
     public static DiagnosticResult Diagnostic(DiagnosticDescriptor descriptor)
         => new(descriptor);
+    
+    public static Task VerifyAnalyzerAsync(string source)
+        => VerifyAnalyzerAsync(source, []);
 
-    public static Task VerifyAnalyzerAsync(string source, params DiagnosticResult[] expected)
+    public static Task VerifyAnalyzerAsync(string source, DiagnosticResult[] expected, params string[] skippedDiagnosticIds)
     {
-        var test = new CodeFixTest<TAnalyzer, TCodeFix> { TestCode = source };
+        var test = new CodeFixTest<TAnalyzer, TCodeFix>
+        {
+            TestCode = source,
+            SkippedDiagnosticIds = skippedDiagnosticIds
+        };
+        
         test.TestState.Sources.Add(("GlobalUsings.cs", SourceText.From(TestShared.GlobalUsing, Encoding.UTF8)));
         test.TestBehaviors |= TestBehaviors.SkipGeneratedSourcesCheck;
         test.ExpectedDiagnostics.AddRange(expected);
+        test.DisabledDiagnostics.Add(DiagnosticDescriptors.GeneratorDiagnosticError.Id);
         return test.RunAsync();
     }
 
@@ -38,14 +47,15 @@ internal static class CSharpCodeFixVerifier<TAnalyzer, TCodeFix>
 
     public static Task VerifyCodeFixAsync(string source, DiagnosticResult expected, string fixedSource, int? codeActionIndex = null)
         => VerifyCodeFixAsync(source, [expected], fixedSource, codeActionIndex);
-
-    public static Task VerifyCodeFixAsync(string source, DiagnosticResult[] expected, string fixedSource, int? codeActionIndex = null)
+    
+    public static Task VerifyCodeFixAsync(string source, DiagnosticResult[] expected, string fixedSource, int? codeActionIndex = null, params string[] skippedDiagnosticIds)
     {
         var test = new CodeFixTest<TAnalyzer, TCodeFix>
         {
             TestCode = source,
             FixedCode = fixedSource,
             CodeActionIndex = codeActionIndex,
+            SkippedDiagnosticIds = skippedDiagnosticIds,
             CodeFixTestBehaviors = codeActionIndex is not null ? CodeFixTestBehaviors.SkipFixAllCheck : CodeFixTestBehaviors.None
         };
         
@@ -53,6 +63,8 @@ internal static class CSharpCodeFixVerifier<TAnalyzer, TCodeFix>
         test.FixedState.Sources.Add(("GlobalUsings.cs", SourceText.From(TestShared.GlobalUsing, Encoding.UTF8)));
         test.TestBehaviors |= TestBehaviors.SkipGeneratedSourcesCheck;
         test.ExpectedDiagnostics.AddRange(expected);
+        test.DisabledDiagnostics.Add(DiagnosticDescriptors.GeneratorDiagnosticError.Id);
+        
         return test.RunAsync();
     }
 }
@@ -61,10 +73,12 @@ internal class CodeFixTest<TAnalyzer, TCodeFix> : CSharpCodeFixTest<TAnalyzer, T
     where TAnalyzer : DiagnosticAnalyzer, new()
     where TCodeFix : CodeFixProvider, new()
 {
+    public string[] SkippedDiagnosticIds { get; init; } = [];
+    
     public CodeFixTest()
     {
         ReferenceAssemblies = TestShared.ReferenceAssemblies();
-
+          
         SolutionTransforms.Add((solution, projectId) =>
         {
             var project = solution.GetProject(projectId)!;
@@ -75,16 +89,6 @@ internal class CodeFixTest<TAnalyzer, TCodeFix> : CSharpCodeFixTest<TAnalyzer, T
                 languageVersion: LanguageVersion.Preview,
                 preprocessorSymbols: ["DEBUG"]));
             
-            // Add compilation options for proper analyzer/generator behavior
-            project = project.WithCompilationOptions(project.CompilationOptions!
-                .WithSpecificDiagnosticOptions(project.CompilationOptions.SpecificDiagnosticOptions
-                    .Add(DiagnosticDescriptors.SharedModelNotSingletonError.Id, ReportDiagnostic.Error) // SharedModelNotSingletonError
-                    .Add(DiagnosticDescriptors.TriggerTypeArgumentsMismatchError.Id, ReportDiagnostic.Error) // TriggerTypeArgumentsMismatchError
-                    .Add(DiagnosticDescriptors.CircularModelReferenceError.Id, ReportDiagnostic.Error) // CircularTriggerReferenceError
-                    .Add("CS0104", ReportDiagnostic.Suppress) // Suppress ambiguous reference errors in generated code
-                    .Add("CS0111", ReportDiagnostic.Suppress) // Suppress duplicate member errors in generated code
-                    .Add("CS9275", ReportDiagnostic.Suppress))); // Suppress partial member missing implementation errors (generator provides implementation)
-            
             return project.Solution;
         });
     }
@@ -92,5 +96,10 @@ internal class CodeFixTest<TAnalyzer, TCodeFix> : CSharpCodeFixTest<TAnalyzer, T
     protected override IEnumerable<Type> GetSourceGenerators()
     {
         return [typeof(RxBlazorGenerator)];
+    }
+
+    protected override bool IsCompilerDiagnosticIncluded(Diagnostic diagnostic, CompilerDiagnostics compilerDiagnostics)
+    {
+        return !SkippedDiagnosticIds.Contains(diagnostic.Id) && base.IsCompilerDiagnosticIncluded(diagnostic, compilerDiagnostics);
     }
 }

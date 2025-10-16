@@ -55,6 +55,22 @@ public static class AttributeAnalysisExtensions
 
             if (commandAttr != null)
             {
+                // Check if command property is missing 'partial' modifier (RXBG072)
+                var isPartial = member.Modifiers.Any(m => m.IsKind(Microsoft.CodeAnalysis.CSharp.SyntaxKind.PartialKeyword));
+                if (!isPartial)
+                {
+                    var diagnostic = Diagnostic.Create(
+                        DiagnosticDescriptors.ObservableEntityMissingPartialModifierError,
+                        member.Identifier.GetLocation(),
+                        "Property",
+                        member.Identifier.ValueText,
+                        "implements IObservableCommand",
+                        "property");
+                    diagnostics.Add(diagnostic);
+                    // NOTE: Skip code generation for non-partial command properties
+                    continue;
+                }
+
                 var executeMethodArg = commandAttr.ArgumentList?.Arguments.FirstOrDefault()?.Expression.ToString();
                 var canExecuteMethodArg = commandAttr.ArgumentList?.Arguments.Skip(1).FirstOrDefault()?.Expression.ToString();
 
@@ -66,6 +82,70 @@ public static class AttributeAnalysisExtensions
                 var supportsCancellation = executeMethod is not null &&
                                            methods.TryGetValue(executeMethod, out var executeMethodSyntax) &&
                                            executeMethodSyntax.HasCancellationTokenParameter(semanticModel!);
+
+                // Validate return value matches command type
+                if (executeMethod is not null &&
+                    methods.TryGetValue(executeMethod, out var methodDecl) &&
+                    semanticModel is not null &&
+                    member.Type is not null)
+                {
+                    var methodSymbol = semanticModel.GetDeclaredSymbol(methodDecl) as IMethodSymbol;
+                    var commandTypeString = member.Type.ToString();
+                    var commandTypeLocation = member.Type.GetLocation();
+
+                    if (methodSymbol is not null)
+                    {
+                        var returnType = methodSymbol.ReturnType;
+                        var isAsync = returnType.Name == "Task";
+                        var actualReturnType = isAsync && returnType is INamedTypeSymbol namedReturnType && namedReturnType.TypeArguments.Length > 0
+                            ? namedReturnType.TypeArguments[0]
+                            : returnType;
+
+                        var hasReturnValue = !returnType.SpecialType.Equals(SpecialType.System_Void) &&
+                                            !(isAsync && returnType is INamedTypeSymbol taskType && taskType.TypeArguments.Length == 0);
+
+                        var commandExpectsReturn = commandTypeString.Contains("IObservableCommandR");
+                        var commandProhibitsReturn = !commandExpectsReturn;
+
+                        // RXBG032: IObservableCommand/IObservableCommandAsync should not have return values
+                        if (commandProhibitsReturn && hasReturnValue)
+                        {
+                            var actualReturnTypeName = actualReturnType.ToDisplayString();
+                            var diagnostic = Diagnostic.Create(
+                                DiagnosticDescriptors.CommandMethodReturnsValueError,
+                                commandTypeLocation,
+                                member.Identifier.ValueText,
+                                commandTypeString,
+                                executeMethod,
+                                actualReturnTypeName);
+                            diagnostics.Add(diagnostic);
+                            // NOTE: Skip code generation - diagnostic is reported by analyzer
+                            continue;
+                        }
+
+                        // RXBG033: IObservableCommandR/IObservableCommandRAsync must have return values
+                        if (commandExpectsReturn && !hasReturnValue)
+                        {
+                            // Extract expected return type from command type
+                            var expectedReturnType = commandTypeString.Contains("<") ?
+                                commandTypeString.Substring(commandTypeString.LastIndexOf('<') + 1).TrimEnd('>') :
+                                "unknown";
+
+                            var actualReturnTypeName = isAsync ? "Task" : "void";
+                            var diagnostic = Diagnostic.Create(
+                                DiagnosticDescriptors.CommandMethodMissingReturnValueError,
+                                commandTypeLocation,
+                                member.Identifier.ValueText,
+                                commandTypeString,
+                                expectedReturnType,
+                                executeMethod,
+                                actualReturnTypeName);
+                            diagnostics.Add(diagnostic);
+                            // NOTE: Skip code generation - diagnostic is reported by analyzer
+                            continue;
+                        }
+                    }
+                }
 
                 // Extract trigger attributes
                 var triggerAttrs = attributes.Where(a =>

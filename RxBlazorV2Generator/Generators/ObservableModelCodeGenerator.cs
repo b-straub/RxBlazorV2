@@ -57,7 +57,7 @@ public static class ObservableModelCodeGenerator
             sb.AppendLine();
             sb.AppendLine($"namespace {modelInfo.Namespace};");
             sb.AppendLine();
-            sb.AppendLine($"public partial class {modelInfo.ClassName}{modelInfo.GenericTypes}");
+            sb.AppendLine($"{modelInfo.ClassAccessibility} partial class {modelInfo.ClassName}{modelInfo.GenericTypes}");
             sb.AppendLine("{");
 
             // Generate ModelID property implementation

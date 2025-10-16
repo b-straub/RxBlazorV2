@@ -16,10 +16,17 @@ public class ObservableModelRecord
     public ObservableModelInfo ModelInfo { get; }
     private readonly List<Diagnostic> _diagnostics;
 
-    private ObservableModelRecord(ObservableModelInfo modelInfo, List<Diagnostic> diagnostics)
+    /// <summary>
+    /// Indicates whether code should be generated for this model.
+    /// False when the model has fatal errors (e.g., missing partial modifier).
+    /// </summary>
+    public bool ShouldGenerateCode { get; private set; }
+
+    private ObservableModelRecord(ObservableModelInfo modelInfo, List<Diagnostic> diagnostics, bool shouldGenerateCode = true)
     {
         ModelInfo = modelInfo;
         _diagnostics = diagnostics;
+        ShouldGenerateCode = shouldGenerateCode;
     }
 
     /// <summary>
@@ -44,6 +51,44 @@ public class ObservableModelRecord
                 return null;
 
             var diagnostics = new List<Diagnostic>();
+            var shouldGenerateCode = true;
+
+            // Check if class is missing 'partial' modifier (RXBG072)
+            var isPartial = classDecl.Modifiers.Any(m => m.IsKind(Microsoft.CodeAnalysis.CSharp.SyntaxKind.PartialKeyword));
+            if (!isPartial)
+            {
+                var diagnostic = Diagnostic.Create(
+                    DiagnosticDescriptors.ObservableEntityMissingPartialModifierError,
+                    classDecl.Identifier.GetLocation(),
+                    "Class",
+                    namedTypeSymbol.Name,
+                    "inherits from ObservableModel",
+                    "class");
+                diagnostics.Add(diagnostic);
+
+                // NOTE: For non-partial classes, skip all further analysis and create minimal record
+                // This prevents cascading diagnostics for properties/commands when the class itself is broken
+                var minimalModelInfo = new ObservableModelInfo(
+                    namedTypeSymbol.ContainingNamespace.ToDisplayString(),
+                    namedTypeSymbol.Name,
+                    namedTypeSymbol.ToDisplayString(),
+                    [],  // No partial properties
+                    [],  // No command properties
+                    [],  // No methods
+                    [],  // No model references
+                    "Singleton",  // Default scope
+                    [],  // No DI fields
+                    [],  // No interfaces
+                    string.Empty,  // No generic types
+                    string.Empty,  // No type constraints
+                    [],  // No using statements
+                    null,  // No base model
+                    "public",  // Default accessibility
+                    "public"   // Default class accessibility
+                );
+
+                return new ObservableModelRecord(minimalModelInfo, diagnostics, shouldGenerateCode: false);
+            }
 
             // Extract all components using extension methods
             var methods = classDecl.CollectMethods();
@@ -65,6 +110,7 @@ public class ObservableModelRecord
             var baseModelType = namedTypeSymbol.GetObservableModelBaseType();
             var baseModelTypeName = baseModelType?.ToDisplayString();
             var constructorAccessibility = classDecl.GetConstructorAccessibility();
+            var classAccessibility = classDecl.GetClassAccessibility();
 
             // Add diagnostics from partial properties and command properties analysis
             diagnostics.AddRange(partialPropertyDiagnostics);
@@ -111,7 +157,8 @@ public class ObservableModelRecord
                 typeConstrains,
                 usingStatements,
                 baseModelTypeName,
-                constructorAccessibility);
+                constructorAccessibility,
+                classAccessibility);
 
             // Build symbol map for model references
             var modelSymbolMap = new Dictionary<string, ITypeSymbol>();
@@ -160,8 +207,10 @@ public class ObservableModelRecord
                     typeConstrains,
                     usingStatements,
                     baseModelTypeName,
-                    constructorAccessibility),
-                diagnostics);
+                    constructorAccessibility,
+                    classAccessibility),
+                diagnostics,
+                shouldGenerateCode);
 
             // Store unregistered services and DI scope info for generator diagnostic reporting
             record.UnregisteredServices = unregisteredServices;

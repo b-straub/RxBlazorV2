@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Analysis;
 using RxBlazorV2Generator.Analyzers;
+using RxBlazorV2Generator.Diagnostics;
 using RxBlazorV2Generator.Extensions;
 using RxBlazorV2Generator.Generators;
 using RxBlazorV2Generator.Models;
@@ -101,22 +102,42 @@ public class RxBlazorGenerator : IIncrementalGenerator
 
                 return records.ToImmutableArray();
             });
-
-        // Extract ObservableModelInfo for razor analysis (needed by razor analyzer)
-        var observableModelClasses = observableModelRecords
-            .Select(static (records, _) =>
-            {
-                return records.Select(r => r?.ModelInfo).ToImmutableArray();
-            });
-
-        // Report generator-specific diagnostics (RXBG050, RXBG051)
-        // These are filtered to avoid duplicates from analyzer
+        
+        // Report diagnostics from records during compilation
+        // Strategy: Skip analyzer-handled diagnostics (to avoid duplicate code fixes in IDE)
+        // but wrap them in RXBG004 generic error for build output (ensures build fails with clear message)
         context.RegisterSourceOutput(observableModelRecords.Combine(context.CompilationProvider),
             (spc, combined) =>
             {
                 var (records, compilation) = combined;
                 foreach (var record in records.Where(r => r != null))
                 {
+                    // Report diagnostics from record (SSOT)
+                    foreach (var diagnostic in record!.Verify())
+                    {
+                        // Check if this diagnostic is handled by the analyzer
+                        if (RxBlazorDiagnosticAnalyzer.AllDiagnostics.Any(d => d.Id == diagnostic.Id))
+                        {
+                            // Skip reporting the original diagnostic (analyzer handles it in IDE)
+                            // But report a generic generator error for build (with diagnostic title and ID)
+                            if (diagnostic.Severity == DiagnosticSeverity.Error)
+                            {
+                                var wrappedDiagnostic = Diagnostic.Create(
+                                    DiagnosticDescriptors.GeneratorDiagnosticError,
+                                    diagnostic.Location,
+                                    diagnostic.Descriptor.Title,
+                                    diagnostic.Id);
+
+                                spc.ReportDiagnostic(wrappedDiagnostic);
+                            }
+                        }
+                        else
+                        {
+                            // Not handled by analyzer, report directly
+                            spc.ReportDiagnostic(diagnostic);
+                        }
+                    }
+
                     // Report RXBG050 for unregistered services (with suppression for well-known external services)
                     foreach (var (paramName, _, typeSymbol, location) in record!.UnregisteredServices)
                     {
@@ -208,7 +229,7 @@ public class RxBlazorGenerator : IIncrementalGenerator
         context.RegisterSourceOutput(observableModelRecords,
             static (spc, records) =>
             {
-                foreach (var record in records.Where(r => r != null))
+                foreach (var record in records.Where(r => r != null && r!.ShouldGenerateCode))
                 {
                     ObservableModelCodeGenerator.GenerateObservableModelPartials(spc, record!.ModelInfo);
                 }
@@ -219,7 +240,7 @@ public class RxBlazorGenerator : IIncrementalGenerator
             static (spc, combined) =>
             {
                 var (records, config) = combined;
-                foreach (var record in records.Where(r => r != null && r!.ComponentInfo != null))
+                foreach (var record in records.Where(r => r != null && r!.ShouldGenerateCode && r.ComponentInfo != null))
                 {
                     ComponentCodeGenerator.GenerateComponent(spc, record!.ComponentInfo!, config.UpdateFrequencyMs);
                 }
@@ -262,7 +283,7 @@ public class RxBlazorGenerator : IIncrementalGenerator
             {
                 var (records, razorFilesList) = combined;
 
-                foreach (var record in records.Where(r => r != null && r!.ComponentInfo != null))
+                foreach (var record in records.Where(r => r != null && r!.ShouldGenerateCode && r.ComponentInfo != null))
                 {
                     if (record is null || record.ComponentInfo is null)
                     {
@@ -323,9 +344,9 @@ public class RxBlazorGenerator : IIncrementalGenerator
             static (spc, combined) =>
             {
                 var (records, config) = combined;
-                var nonNullModels = records.Where(r => r != null).Select(r => r!.ModelInfo).ToArray();
-                ObservableModelCodeGenerator.GenerateAddObservableModelsExtension(spc, nonNullModels, config.RootNamespace);
-                ObservableModelCodeGenerator.GenerateAddGenericObservableModelsExtension(spc, nonNullModels, config.RootNamespace);
+                var validModels = records.Where(r => r != null && r!.ShouldGenerateCode).Select(r => r!.ModelInfo).ToArray();
+                ObservableModelCodeGenerator.GenerateAddObservableModelsExtension(spc, validModels, config.RootNamespace);
+                ObservableModelCodeGenerator.GenerateAddGenericObservableModelsExtension(spc, validModels, config.RootNamespace);
             });
     }
 
