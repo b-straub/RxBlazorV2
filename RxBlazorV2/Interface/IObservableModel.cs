@@ -32,4 +32,6 @@ public interface IObservableModel : IDisposable
     /// </summary>
     /// <returns>A task representing the asynchronous initialization operation.</returns>
     Task ContextReadyAsync();
+    
+    CompositeDisposable Subscriptions { get; }
 }

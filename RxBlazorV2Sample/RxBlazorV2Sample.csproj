@@ -20,6 +20,7 @@
     <ItemGroup>
         <ProjectReference Include="..\RxBlazorV2ExternalModel\RxBlazorV2ExternalModel.csproj"/>
         <ProjectReference Include="..\RxBlazorV2\RxBlazorV2.csproj"/>
+        <ProjectReference Include="..\RxBlazorVSSampleComponents\RxBlazorVSSampleComponents.csproj" />
     </ItemGroup>
 
     <ItemGroup>
@@ -28,6 +29,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <Folder Include="Interfaces\" />
         <Folder Include="Services\"/>
     </ItemGroup>
 

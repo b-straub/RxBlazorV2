@@ -188,7 +188,7 @@ public static class ConstructorTemplate
                 }
 
                 sb.AppendLine($"        {prop.Name} = new();");
-                sb.AppendLine($"        _subscriptions.Add({prop.Name}.ObserveChanged()");
+                sb.AppendLine($"        Subscriptions.Add({prop.Name}.ObserveChanged()");
                 sb.AppendLine($"            .Subscribe(_ => StateHasChanged(\"{prop.Name}\"{batchIdsParam})));");
                 if (prop != observableCollectionProperties.Last())
                 {
@@ -211,7 +211,7 @@ public static class ConstructorTemplate
         foreach (var modelRef in modelInfo.ModelReferences)
         {
             var observedProps = $"[\"{string.Join("\", \"", modelRef.UsedProperties)}\"]";
-            sb.AppendLine($"        _subscriptions.Add({modelRef.PropertyName}.Observable.Select(props => props.Intersect({observedProps})).Where(props => props.Any())");
+            sb.AppendLine($"        Subscriptions.Add({modelRef.PropertyName}.Observable.Select(props => props.Intersect({observedProps})).Where(props => props.Any())");
             sb.AppendLine("            .Subscribe(props => StateHasChanged(props.ToArray())));");
         }
 

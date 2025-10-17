@@ -1,7 +1,7 @@
-using RxBlazorV2.Interface;
 using MudBlazor;
+using RxBlazorV2.Interface;
 
-namespace RxBlazorV2Sample.Interfaces;
+namespace RxBlazorVSSampleComponents.Settings;
 
 /// <summary>
 /// Interface for testing SettingsModel functionality.

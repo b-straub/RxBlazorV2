@@ -95,7 +95,7 @@ public static class CommandTemplate
                 if (string.IsNullOrEmpty(sourceModel))
                 {
                     // Local property trigger
-                    sb.AppendLine($"        _subscriptions.Add(Observable.Where(p => p.Intersect({triggerProps}).Any())");
+                    sb.AppendLine($"        Subscriptions.Add(Observable.Where(p => p.Intersect({triggerProps}).Any())");
                     if (!string.IsNullOrEmpty(combinedCondition))
                     {
                         sb.AppendLine($"            .Where(_ => {combinedCondition})");
@@ -105,7 +105,7 @@ public static class CommandTemplate
                 else
                 {
                     // Referenced model property trigger
-                    sb.AppendLine($"        _subscriptions.Add({sourceModel}.Observable.Where(p => p.Intersect({triggerProps}).Any())");
+                    sb.AppendLine($"        Subscriptions.Add({sourceModel}.Observable.Where(p => p.Intersect({triggerProps}).Any())");
                     if (!string.IsNullOrEmpty(combinedCondition))
                     {
                         sb.AppendLine($"            .Where(_ => {combinedCondition})");

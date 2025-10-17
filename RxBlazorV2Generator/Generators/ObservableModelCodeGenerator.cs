@@ -64,10 +64,6 @@ public static class ObservableModelCodeGenerator
             sb.AppendLine(PropertyTemplate.GenerateModelIDProperty(modelInfo.FullyQualifiedName));
             sb.AppendLine();
 
-            // Generate Subscriptions property implementation
-            sb.AppendLine(PropertyTemplate.GenerateSubscriptionsProperty());
-            sb.AppendLine();
-
             // Generate protected properties for referenced models
             if (modelInfo.ModelReferences.Any())
             {

@@ -1,0 +1,3 @@
+@inherits RxBlazorVSSampleComponents.Components.SettingsModelComponent
+
+<MudIconButton Icon=@(Model.IsDay ? Icons.Material.Filled.DarkMode : Icons.Material.Filled.LightMode) Color="Color.Inherit" OnClick="@(() => Model.ToggleThemeCommand.Execute())" />

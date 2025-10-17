@@ -16,7 +16,7 @@ public abstract class ObservableModel : IObservableModel
     private readonly HashSet<string> _suspendedBatchIds = new();
 
     public Observable<string[]> Observable { get; }
-    protected abstract IDisposable Subscriptions { get; }
+    public CompositeDisposable Subscriptions { get; }
     protected internal Subject<string[]> PropertyChangedSubject { get; } = new();
 
     protected ObservableModel()
@@ -24,6 +24,8 @@ public abstract class ObservableModel : IObservableModel
         Observable = PropertyChangedSubject
             .Publish()
             .RefCount();
+
+        Subscriptions = new CompositeDisposable();
     }
 
     public void ContextReady()

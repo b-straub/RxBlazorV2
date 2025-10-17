@@ -19,18 +19,6 @@ public static class PropertyTemplate
     }
 
     /// <summary>
-    /// Generates the Subscriptions property implementation.
-    /// </summary>
-    /// <returns>Generated property code.</returns>
-    public static string GenerateSubscriptionsProperty()
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine("    private readonly CompositeDisposable _subscriptions = new();");
-        sb.Append("    protected override IDisposable Subscriptions => _subscriptions;");
-        return sb.ToString();
-    }
-
-    /// <summary>
     /// Generates public properties for referenced models.
     /// Changed from protected to public to allow component access.
     /// </summary>

@@ -1,15 +1,16 @@
 using MudBlazor;
 using RxBlazorV2.Interface;
 using RxBlazorV2.Model;
-using RxBlazorV2Sample.Interfaces;
 
-namespace RxBlazorV2Sample.Models;
+namespace RxBlazorVSSampleComponents.Settings;
 
 [ObservableComponent]
-[ObservableModelScope(ModelScope.Scoped)]
+[ObservableModelScope(ModelScope.Singleton)]
 public partial class SettingsModel : ObservableModel, ISettingsModel
 {
     public partial string TemperatureUnit { get; set; } = "Celsius";
+    
+    [ObservableComponentTrigger]
     public partial bool IsDay { get; set; } = false;
     public partial bool AutoRefresh { get; set; } = true;
     public partial int RefreshInterval { get; set; } = 5;

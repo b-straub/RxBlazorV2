@@ -34,7 +34,7 @@ public static class TriggerTemplate
                 var propertyNameArray = $"[\"{prop.Name}\"]";
 
                 // Generate the subscription
-                sb.AppendLine($"        _subscriptions.Add(Observable.Where(p => p.Intersect({propertyNameArray}).Any())");
+                sb.AppendLine($"        Subscriptions.Add(Observable.Where(p => p.Intersect({propertyNameArray}).Any())");
 
                 // Add canTrigger condition if present
                 if (!string.IsNullOrEmpty(trigger.CanTriggerMethod))
