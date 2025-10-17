@@ -40,9 +40,6 @@ public class GeneratorTests
         {
             public override string ModelID => "Test.TestModel";
 
-            private readonly CompositeDisposable _subscriptions = new();
-            protected override IDisposable Subscriptions => _subscriptions;
-
             public partial int Test
             {
                 get => field;

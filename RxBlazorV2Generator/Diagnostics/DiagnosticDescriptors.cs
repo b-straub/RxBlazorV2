@@ -244,6 +244,16 @@ public static class DiagnosticDescriptors
         description: "Direct inheritance from ObservableComponent or ObservableComponent<TModel> in razor files is not supported. Use the [ObservableComponent] attribute on the model to generate a component class (defaults to {ModelName}Component), then inherit from that generated class in your razor file.",
         helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG060.md");
 
+    public static readonly DiagnosticDescriptor SameAssemblyComponentCompositionError = new(
+        id: "RXBG061",
+        title: "Generated component used without @page directive",
+        messageFormat: "Razor file '{0}' inherits from generated component '{1}' without @page directive. Generated components in the same assembly cannot be used for component composition due to compilation order (see Razor warning RZ10012). Either add @page to make this a routable page, or move the model to a separate assembly for component composition.",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Source-generated components cannot be used as child components within the same assembly. The Razor compiler processes components before source generators run. Solution: Add @page directive or move model to separate assembly.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG061.md");
+
     // ============================================================================
     // RXBG070-RXBG079: Attributes
     // ============================================================================

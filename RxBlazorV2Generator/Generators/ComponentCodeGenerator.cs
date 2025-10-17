@@ -59,11 +59,11 @@ public static class ComponentCodeGenerator
 
             // Generate InitializeGeneratedCode method
             GenerateInitializeGeneratedCode(sb, componentInfo, updateFrequencyMs);
-            sb.AppendLine("    ");
+            sb.AppendLine();
 
             // Generate InitializeGeneratedCodeAsync method
             GenerateInitializeGeneratedCodeAsync(sb, componentInfo);
-            sb.AppendLine("    ");
+            sb.AppendLine();
 
             // Generate hook methods for properties with [ObservableComponentTrigger]
             if (componentInfo.ComponentTriggers.Any())
@@ -122,7 +122,7 @@ public static class ComponentCodeGenerator
         // Generate subscriptions for component triggers with chunking
         foreach (var trigger in componentInfo.ComponentTriggers)
         {
-            sb.AppendLine("        ");
+            sb.AppendLine();
             if (trigger.HookType == TriggerHookType.Sync)
             {
                 sb.AppendLine($"        Subscriptions.Add(Model.Observable.Where(p => p.Intersect([\"{trigger.PropertyName}\"]).Any())");
@@ -177,7 +177,7 @@ public static class ComponentCodeGenerator
             // Add spacing between different properties
             if (trigger != triggers.Last())
             {
-                sb.AppendLine("    ");
+                sb.AppendLine();
             }
         }
     }

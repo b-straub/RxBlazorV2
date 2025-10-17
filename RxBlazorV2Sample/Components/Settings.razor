@@ -1,3 +1,11 @@
-@inherits RxBlazorVSSampleComponents.Components.SettingsModelComponent
+@inherits RxBlazorVSSampleComponents.Settings.SettingsModelComponent
 
 <MudIconButton Icon=@(Model.IsDay ? Icons.Material.Filled.DarkMode : Icons.Material.Filled.LightMode) Color="Color.Inherit" OnClick="@(() => Model.ToggleThemeCommand.Execute())" />
+
+@code
+{
+    protected override void OnIsDayChanged()
+    {
+        Console.WriteLine($"IsDay has changed to: {Model.IsDay}");
+    }
+}

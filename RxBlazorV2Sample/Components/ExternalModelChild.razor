@@ -1,8 +1,6 @@
-@using RxBlazorV2ExternalModel.Type
-@using R3;
 @using RxBlazorV2ExternalModel.Models
-@using RxBlazorV2ExternalModel.Components
-@inherits ExternalModel
+@using RxBlazorV2ExternalModel.Type
+@inherits RxBlazorV2ExternalModel.Models.TestModelComponent
 
 <MudStack Row="true" AlignItems="AlignItems.Center">
     <MudSwitch @bind-Value="_suspend" Color="Color.Primary" Label="Suspend"/>
@@ -109,10 +107,8 @@
         Model.ClearList.Execute();
     }
 
-    protected override void OnContextReady()
+    protected override void OnTestListChanged()
     {
-        Subscriptions.Add(Model.Observable
-            .Subscribe(_ => { _listChanges++; }));
-        base.OnContextReady();
+        _listChanges++;
     }
 }

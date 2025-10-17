@@ -33,4 +33,9 @@
         <Folder Include="Services\"/>
     </ItemGroup>
 
+    <ItemGroup>
+      <_ContentIncludedByDefault Remove="Problems\DirectInclusionProblemBad.razor" />
+      <_ContentIncludedByDefault Remove="Problems\DirectInclusionProblemGood.razor" />
+    </ItemGroup>
+
 </Project>

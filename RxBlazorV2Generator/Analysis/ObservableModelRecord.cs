@@ -283,9 +283,9 @@ public class ObservableModelRecord
 
             var componentClassName = customComponentName ?? $"{namedTypeSymbol.Name}Component";
 
-            // Determine component namespace (Components subfolder of model namespace)
+            // Component uses same namespace as the model
             var modelNamespace = namedTypeSymbol.ContainingNamespace.ToDisplayString();
-            var componentNamespace = $"{modelNamespace.Split('.')[0]}.Components";
+            var componentNamespace = modelNamespace;
 
             // Extract component triggers from properties
             var componentTriggers = new List<ComponentTriggerInfo>();

@@ -41,9 +41,6 @@ public class GenericModelGeneratorTests
         {
             public override string ModelID => "Test.GenericModel<T>";
 
-            private readonly CompositeDisposable _subscriptions = new();
-            protected override IDisposable Subscriptions => _subscriptions;
-
             public partial T Item
             {
                 get => field;
@@ -99,9 +96,6 @@ public class GenericModelGeneratorTests
         public partial class GenericModel<T, P>
         {
             public override string ModelID => "Test.GenericModel<T, P>";
-
-            private readonly CompositeDisposable _subscriptions = new();
-            protected override IDisposable Subscriptions => _subscriptions;
 
             public partial T Item1
             {
@@ -174,9 +168,6 @@ public class GenericModelGeneratorTests
         {
             public override string ModelID => "Test.GenericModel<T>";
 
-            private readonly CompositeDisposable _subscriptions = new();
-            protected override IDisposable Subscriptions => _subscriptions;
-
 
             private ObservableCommand<T> _testCommand;
 
@@ -238,9 +229,6 @@ namespace Test;
 public partial class ConsumerModel<T, P> where T : class where P : struct
 {
     public override string ModelID => ""Test.ConsumerModel<T, P>"";
-
-    private readonly CompositeDisposable _subscriptions = new();
-    protected override IDisposable Subscriptions => _subscriptions;
 
     protected GenericModel<T> GenericModel { get; private set; }
 

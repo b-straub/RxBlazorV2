@@ -72,9 +72,8 @@ internal static class ComponentGeneratorVerifier
             SourceText.From(generatedModel.NormalizeGeneratedCode(), Encoding.UTF8)));
 
         // Add the expected component generation output
-        // Component namespace is always {RootNamespace}.Components, so for "Test" it becomes "Test.Components"
-        // Relative namespace is "Components"
-        test.TestState.GeneratedSources.Add((typeof(RxBlazorGenerator), $"Components.{componentClassName}.g.cs",
+        // Component namespace is same as model namespace
+        test.TestState.GeneratedSources.Add((typeof(RxBlazorGenerator), $"Test.{componentClassName}.g.cs",
             SourceText.From(generatedComponent.NormalizeGeneratedCode(), Encoding.UTF8)));
 
         // Add service extension files
@@ -133,7 +132,7 @@ internal static class RazorFileGeneratorVerifier
         // Add component file before service extensions
         if (generatedComponent is not null && componentClassName is not null)
         {
-            test.TestState.GeneratedSources.Add((typeof(RxBlazorGenerator), $"Components.{componentClassName}.g.cs",
+            test.TestState.GeneratedSources.Add((typeof(RxBlazorGenerator), $"Test.{componentClassName}.g.cs",
                 SourceText.From(generatedComponent.NormalizeGeneratedCode(), Encoding.UTF8)));
         }
 

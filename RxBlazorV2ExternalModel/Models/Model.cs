@@ -20,6 +20,7 @@ public partial class TestModel : ObservableModel
     [ObservableBatch(CommonBatch)]
     public partial int InBatch { get; set; }
 
+    [ObservableComponentTrigger]
     [ObservableBatch(ListBatch)]
     [ObservableBatch(CommonBatch)]
     public partial ObservableList<ListType> TestList { get; set; }

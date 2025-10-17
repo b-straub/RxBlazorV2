@@ -47,9 +47,6 @@ public class ComponentTriggerGeneratorTests
         {
             public override string ModelID => "Test.TestModel";
 
-            private readonly CompositeDisposable _subscriptions = new();
-            protected override IDisposable Subscriptions => _subscriptions;
-
             public partial int Counter
             {
                 get => field;
@@ -78,9 +75,8 @@ public class ComponentTriggerGeneratorTests
         using System.Threading.Tasks;
         using Microsoft.Extensions.DependencyInjection;
         using RxBlazorV2.Component;
-        using Test;
 
-        namespace Test.Components;
+        namespace Test;
 
         public partial class TestModelComponent : ObservableComponent<TestModel>
         {
@@ -94,12 +90,12 @@ public class ComponentTriggerGeneratorTests
                         InvokeAsync(StateHasChanged);
                     }));
             }
-            
+
             protected override Task InitializeGeneratedCodeAsync()
             {
                 return Task.CompletedTask;
             }
-            
+
         }
         
         """;
@@ -146,9 +142,6 @@ public class ComponentTriggerGeneratorTests
         {
             public override string ModelID => "Test.TestModel";
 
-            private readonly CompositeDisposable _subscriptions = new();
-            protected override IDisposable Subscriptions => _subscriptions;
-
             public partial int Counter
             {
                 get => field;
@@ -177,9 +170,8 @@ public class ComponentTriggerGeneratorTests
         using System.Threading.Tasks;
         using Microsoft.Extensions.DependencyInjection;
         using RxBlazorV2.Component;
-        using Test;
 
-        namespace Test.Components;
+        namespace Test;
 
         public partial class TestModelCustomNamedComponent : ObservableComponent<TestModel>
         {
@@ -193,12 +185,12 @@ public class ComponentTriggerGeneratorTests
                         InvokeAsync(StateHasChanged);
                     }));
             }
-            
+
             protected override Task InitializeGeneratedCodeAsync()
             {
                 return Task.CompletedTask;
             }
-            
+
         }
         
         """;
@@ -246,9 +238,6 @@ public class ComponentTriggerGeneratorTests
         {
             public override string ModelID => "Test.TestModel";
 
-            private readonly CompositeDisposable _subscriptions = new();
-            protected override IDisposable Subscriptions => _subscriptions;
-
             public partial int Counter
             {
                 get => field;
@@ -277,9 +266,8 @@ public class ComponentTriggerGeneratorTests
         using System.Threading.Tasks;
         using Microsoft.Extensions.DependencyInjection;
         using RxBlazorV2.Component;
-        using Test;
 
-        namespace Test.Components;
+        namespace Test;
 
         public partial class TestModelComponent : ObservableComponent<TestModel>
         {
@@ -292,7 +280,7 @@ public class ComponentTriggerGeneratorTests
                     {
                         InvokeAsync(StateHasChanged);
                     }));
-                
+
                 Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Counter"]).Any())
                     .Chunk(TimeSpan.FromMilliseconds(100))
                     .Subscribe(chunks =>
@@ -300,12 +288,12 @@ public class ComponentTriggerGeneratorTests
                         OnCounterChanged();
                     }));
             }
-            
+
             protected override Task InitializeGeneratedCodeAsync()
             {
                 return Task.CompletedTask;
             }
-            
+
             protected virtual void OnCounterChanged()
             {
             }
@@ -356,9 +344,6 @@ public class ComponentTriggerGeneratorTests
         {
             public override string ModelID => "Test.TestModel";
 
-            private readonly CompositeDisposable _subscriptions = new();
-            protected override IDisposable Subscriptions => _subscriptions;
-
             public partial int Counter
             {
                 get => field;
@@ -387,9 +372,8 @@ public class ComponentTriggerGeneratorTests
         using System.Threading.Tasks;
         using Microsoft.Extensions.DependencyInjection;
         using RxBlazorV2.Component;
-        using Test;
 
-        namespace Test.Components;
+        namespace Test;
 
         public partial class TestModelComponent : ObservableComponent<TestModel>
         {
@@ -402,7 +386,7 @@ public class ComponentTriggerGeneratorTests
                     {
                         InvokeAsync(StateHasChanged);
                     }));
-                
+
                 Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Counter"]).Any())
                     .Chunk(TimeSpan.FromMilliseconds(100))
                     .SubscribeAwait(async (chunks, ct) =>
@@ -410,12 +394,12 @@ public class ComponentTriggerGeneratorTests
                         await OnCounterChangedAsync(ct);
                     }));
             }
-            
+
             protected override Task InitializeGeneratedCodeAsync()
             {
                 return Task.CompletedTask;
             }
-            
+
             protected virtual Task OnCounterChangedAsync(CancellationToken ct)
             {
                 return Task.CompletedTask;
@@ -468,9 +452,6 @@ public class ComponentTriggerGeneratorTests
         {
             public override string ModelID => "Test.TestModel";
 
-            private readonly CompositeDisposable _subscriptions = new();
-            protected override IDisposable Subscriptions => _subscriptions;
-
             public partial int Counter
             {
                 get => field;
@@ -499,9 +480,8 @@ public class ComponentTriggerGeneratorTests
         using System.Threading.Tasks;
         using Microsoft.Extensions.DependencyInjection;
         using RxBlazorV2.Component;
-        using Test;
 
-        namespace Test.Components;
+        namespace Test;
 
         public partial class TestModelComponent : ObservableComponent<TestModel>
         {
@@ -514,14 +494,14 @@ public class ComponentTriggerGeneratorTests
                     {
                         InvokeAsync(StateHasChanged);
                     }));
-                
+
                 Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Counter"]).Any())
                     .Chunk(TimeSpan.FromMilliseconds(100))
                     .Subscribe(chunks =>
                     {
                         OnCounterChanged();
                     }));
-                
+
                 Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Counter"]).Any())
                     .Chunk(TimeSpan.FromMilliseconds(100))
                     .SubscribeAwait(async (chunks, ct) =>
@@ -529,16 +509,16 @@ public class ComponentTriggerGeneratorTests
                         await OnCounterChangedAsync(ct);
                     }));
             }
-            
+
             protected override Task InitializeGeneratedCodeAsync()
             {
                 return Task.CompletedTask;
             }
-            
+
             protected virtual void OnCounterChanged()
             {
             }
-            
+
             protected virtual Task OnCounterChangedAsync(CancellationToken ct)
             {
                 return Task.CompletedTask;
@@ -591,9 +571,6 @@ public class ComponentTriggerGeneratorTests
         {
             public override string ModelID => "Test.TestModel";
 
-            private readonly CompositeDisposable _subscriptions = new();
-            protected override IDisposable Subscriptions => _subscriptions;
-
             public partial int Counter
             {
                 get => field;
@@ -622,9 +599,8 @@ public class ComponentTriggerGeneratorTests
         using System.Threading.Tasks;
         using Microsoft.Extensions.DependencyInjection;
         using RxBlazorV2.Component;
-        using Test;
 
-        namespace Test.Components;
+        namespace Test;
 
         public partial class TestModelComponent : ObservableComponent<TestModel>
         {
@@ -637,14 +613,14 @@ public class ComponentTriggerGeneratorTests
                     {
                         InvokeAsync(StateHasChanged);
                     }));
-                
+
                 Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Counter"]).Any())
                     .Chunk(TimeSpan.FromMilliseconds(100))
                     .Subscribe(chunks =>
                     {
                         HandleCounterUpdate();
                     }));
-                
+
                 Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Counter"]).Any())
                     .Chunk(TimeSpan.FromMilliseconds(100))
                     .SubscribeAwait(async (chunks, ct) =>
@@ -652,16 +628,16 @@ public class ComponentTriggerGeneratorTests
                         await HandleCounterUpdateAsync(ct);
                     }));
             }
-            
+
             protected override Task InitializeGeneratedCodeAsync()
             {
                 return Task.CompletedTask;
             }
-            
+
             protected virtual void HandleCounterUpdate()
             {
             }
-            
+
             protected virtual Task HandleCounterUpdateAsync(CancellationToken ct)
             {
                 return Task.CompletedTask;
@@ -717,9 +693,6 @@ public class ComponentTriggerGeneratorTests
         public partial class TestModel
         {
             public override string ModelID => "Test.TestModel";
-
-            private readonly CompositeDisposable _subscriptions = new();
-            protected override IDisposable Subscriptions => _subscriptions;
 
             public partial int Counter
             {
@@ -777,9 +750,8 @@ public class ComponentTriggerGeneratorTests
         using System.Threading.Tasks;
         using Microsoft.Extensions.DependencyInjection;
         using RxBlazorV2.Component;
-        using Test;
 
-        namespace Test.Components;
+        namespace Test;
 
         public partial class TestModelComponent : ObservableComponent<TestModel>
         {
@@ -792,14 +764,14 @@ public class ComponentTriggerGeneratorTests
                     {
                         InvokeAsync(StateHasChanged);
                     }));
-                
+
                 Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Counter"]).Any())
                     .Chunk(TimeSpan.FromMilliseconds(100))
                     .Subscribe(chunks =>
                     {
                         OnCounterChanged();
                     }));
-                
+
                 Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Name"]).Any())
                     .Chunk(TimeSpan.FromMilliseconds(100))
                     .SubscribeAwait(async (chunks, ct) =>
@@ -807,16 +779,16 @@ public class ComponentTriggerGeneratorTests
                         await OnNameChangedAsync(ct);
                     }));
             }
-            
+
             protected override Task InitializeGeneratedCodeAsync()
             {
                 return Task.CompletedTask;
             }
-            
+
             protected virtual void OnCounterChanged()
             {
             }
-            
+
             protected virtual Task OnNameChangedAsync(CancellationToken ct)
             {
                 return Task.CompletedTask;

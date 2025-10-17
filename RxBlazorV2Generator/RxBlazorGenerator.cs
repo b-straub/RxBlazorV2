@@ -339,6 +339,49 @@ public class RxBlazorGenerator : IIncrementalGenerator
                 }
             });
 
+        // Check for same-assembly component usage without @page (RXBG061)
+        context.RegisterSourceOutput(observableModelRecords.Combine(allRazorFiles),
+            static (spc, combined) =>
+            {
+                var (records, razorFilesList) = combined;
+
+                // Only check components we're generating (same-assembly by definition)
+                foreach (var record in records.Where(r => r is not null && r!.ComponentInfo is not null))
+                {
+                    if (record is null || record.ComponentInfo is null)
+                    {
+                        continue;
+                    }
+
+                    var componentClassName = record.ComponentInfo.ComponentClassName;
+
+                    foreach (var razorFile in razorFilesList)
+                    {
+                        var content = razorFile.GetText();
+                        if (content is null)
+                        {
+                            continue;
+                        }
+
+                        var detection = Analyzers.RazorInheritanceDetector.DetectComponentInheritanceWithoutPage(
+                            razorFile,
+                            content,
+                            componentClassName);
+
+                        if (detection.HasValue && !detection.Value.hasPage)
+                        {
+                            var fileName = System.IO.Path.GetFileName(razorFile.Path);
+                            var diagnostic = Diagnostic.Create(
+                                Diagnostics.DiagnosticDescriptors.SameAssemblyComponentCompositionError,
+                                detection.Value.location,
+                                fileName,
+                                componentClassName);
+                            spc.ReportDiagnostic(diagnostic);
+                        }
+                    }
+                }
+            });
+
         // Generate AddObservableModels extension method
         context.RegisterSourceOutput(observableModelRecords.Combine(msbuildProvider),
             static (spc, combined) =>
