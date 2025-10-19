@@ -12,7 +12,10 @@ This error occurs when:
 - A `.razor` file uses `@inherits GeneratedComponent` (e.g., `@inherits MyModelComponent`)
 - The razor file does NOT have a `@page` directive
 - The component class is source-generated in the same assembly
+- The component is NOT the default layout (specified in `<RouteView ... DefaultLayout="@typeof(ComponentName)" />`)
 - You're attempting to use the component for composition rather than as a page
+
+**Note:** The default layout component (e.g., `MainLayout`) is automatically excluded from this diagnostic because it's a top-level component by definition, even without a `@page` directive.
 
 ## Why This Limitation Exists
 
@@ -52,7 +55,41 @@ For components that need to be used as child components in composition:
 
 ## Examples
 
-### Example 1: Problem - Child Component in Same Assembly (Won't Work)
+### Example 1: Default Layout - Allowed Without @page
+
+```csharp
+// MyProject/Models/SettingsModel.cs
+[ObservableModelScope(ModelScope.Singleton)]
+[ObservableComponent("SettingsModelComponent")]
+public partial class SettingsModel : ObservableModel
+{
+    public partial bool IsDarkMode { get; set; }
+}
+
+// Generated: MyProject/Models/SettingsModelComponent.cs
+```
+
+```razor
+@* MyProject/App.razor *@
+<Router AppAssembly="@typeof(App).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+    </Found>
+</Router>
+```
+
+```razor
+@* MyProject/Layout/MainLayout.razor *@
+@inherits SettingsModelComponent  @* ✅ No RXBG061 - MainLayout is the default layout *@
+
+<MudThemeProvider IsDarkMode="@Model.IsDarkMode" />
+<MudDrawer>...</MudDrawer>
+<main>@Body</main>
+```
+
+The default layout component is excluded from RXBG061 because it's a top-level component by definition.
+
+### Example 2: Problem - Child Component in Same Assembly (Won't Work)
 
 ```csharp
 // MyProject/Models/WidgetModel.cs
@@ -76,14 +113,14 @@ public partial class WidgetModel : ObservableModel
 
 ```razor
 @* MyProject/Components/Widget.razor *@
-@inherits WidgetModelComponent  @* ❌ RXBG061 error - no @page directive *@
+@inherits WidgetModelComponent  @* ❌ RXBG061 error - no @page directive, not default layout *@
 
 <div class="widget">
     <h3>@Model.Title</h3>
 </div>
 ```
 
-### Example 2: Solution 1 - Use as Page
+### Example 3: Solution 1 - Use as Page
 
 ```razor
 @* MyProject/Pages/Widget.razor *@
@@ -97,7 +134,7 @@ public partial class WidgetModel : ObservableModel
 
 Now the component works as a routable page.
 
-### Example 3: Solution 2 - Separate Assembly for Composition
+### Example 4: Solution 2 - Separate Assembly for Composition
 
 **Step 1: Create separate assembly**
 ```bash
@@ -145,7 +182,7 @@ public partial class WidgetModel : ObservableModel
 <Widget />  @* ✅ Works! Component from separate assembly *@
 ```
 
-### Example 4: Architectural Best Practice
+### Example 5: Architectural Best Practice
 
 **Project Structure:**
 ```

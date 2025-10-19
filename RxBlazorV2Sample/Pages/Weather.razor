@@ -6,7 +6,7 @@
 <MudContainer MaxWidth="MaxWidth.Large">
     @if (Model.NotInComponentObservation)
     {
-        <MudText>@Model.IsDay</MudText>
+        <MudText>@Model.Settings.IsDay</MudText>
     }
     
     <MudGrid>
@@ -42,26 +42,26 @@
 
                         <MudDivider/>
 
-                        <MudButton @onclick="() => Settings.ToggleUnitCommand.Execute()"
+                        <MudButton @onclick="() => Model.Settings.ToggleUnitCommand.Execute()"
                                    Variant="Variant.Outlined"
                                    StartIcon="@Icons.Material.Filled.Thermostat">
-                            Unit: @Settings.TemperatureUnit
+                            Unit: @Model.Settings.TemperatureUnit
                         </MudButton>
 
-                        <MudSwitch @bind-Value="Settings.AutoRefresh"
+                        <MudSwitch @bind-Value="Model.Settings.AutoRefresh"
                                    Label="Auto Refresh"
                                    Color="Color.Success"/>
 
-                        <MudSlider @bind-Value="Settings.RefreshInterval"
+                        <MudSlider @bind-Value="Model.Settings.RefreshInterval"
                                    Min="1" Max="30" Step="1"
-                                   Disabled="!Settings.AutoRefresh">
-                            Refresh: @Settings.RefreshInterval min
+                                   Disabled="!Model.Settings.AutoRefresh">
+                            Refresh: @Model.Settings.RefreshInterval min
                         </MudSlider>
 
-                        <MudButton @onclick="() => Settings.ToggleThemeCommand.Execute()"
+                        <MudButton @onclick="() => Model.Settings.ToggleThemeCommand.Execute()"
                                    Variant="Variant.Text"
-                                   StartIcon="@(Settings.IsDay ? Icons.Material.Filled.DarkMode : Icons.Material.Filled.LightMode)">
-                            @(Settings.IsDay ? "Night" : "Day")
+                                   StartIcon="@(Model.Settings.IsDay ? Icons.Material.Filled.DarkMode : Icons.Material.Filled.LightMode)">
+                            @(Model.Settings.IsDay ? "Night" : "Day")
                         </MudButton>
                     </MudStack>
                 </MudCardContent>
@@ -152,7 +152,7 @@
                                     <MudText Typo="Typo.body2">@context.Date.ToString("ddd, MMM dd")</MudText>
                                 </MudTd>
                                 <MudTd DataLabel="Temperature">
-                                    @if (Settings.TemperatureUnit == "Celsius")
+                                    @if (Model.Settings.TemperatureUnit == "Celsius")
                                     {
                                         <MudChip T="string" Color="GetTemperatureColor(context.TemperatureC)"
                                                  Size="Size.Small">
@@ -178,13 +178,13 @@
                         </MudTable>
 
                         <!-- Auto-refresh indicator -->
-                        @if (Settings.AutoRefresh && Model.Forecasts.Any())
+                        @if (Model.Settings.AutoRefresh && Model.Forecasts.Any())
                         {
                             <MudAlert Severity="Severity.Info" Variant="Variant.Text" Class="mt-4">
                                 <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.AutoMode"/>
                                     <MudText Typo="Typo.caption">
-                                        Auto-refreshing every @Settings.RefreshInterval minutes
+                                        Auto-refreshing every @Model.Settings.RefreshInterval minutes
                                     </MudText>
                                 </MudStack>
                             </MudAlert>

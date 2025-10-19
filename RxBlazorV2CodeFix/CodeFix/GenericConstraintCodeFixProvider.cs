@@ -14,8 +14,8 @@ using System.Threading.Tasks;
 namespace RxBlazorV2CodeFix.CodeFix;
 
 /// <summary>
-/// Code fix provider for generic constraint diagnostics (RXBG013, RXBG014, RXBG015).
-/// Removes invalid model reference attributes when generic type constraints are not satisfied.
+/// Code fix provider for generic constraint diagnostics (RXBG020, RXBG021, RXBG022).
+/// Adjusts type parameters or removes invalid references when generic type constraints are not satisfied.
 /// </summary>
 [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(GenericConstraintCodeFixProvider)), Shared]
 public class GenericConstraintCodeFixProvider : CodeFixProvider

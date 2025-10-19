@@ -35,4 +35,15 @@ public partial class TestObservableComponentWithTracking : ObservableComponent<T
         OnDisposeAsyncCallCount++;
         return base.OnDisposeAsync();
     }
+
+    /// <summary>
+    /// Filter includes properties used in TestObservableComponentWithTracking.razor.
+    /// </summary>
+    protected override string[] Filter()
+    {
+        return [
+            "Model.Counter",
+            "Model.Name"
+        ];
+    }
 }

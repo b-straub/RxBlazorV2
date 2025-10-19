@@ -144,7 +144,7 @@ public class RxBlazorGenerator : IIncrementalGenerator
                         if (location is not null && typeSymbol is not null)
                         {
                             // Check if this is a well-known external service that should be suppressed
-                            if (Diagnostics.ExternalServiceHelper.ShouldSuppressUnregisteredServiceWarning(typeSymbol, compilation))
+                            if (ExternalServiceHelper.ShouldSuppressUnregisteredServiceWarning(typeSymbol, compilation))
                             {
                                 continue;
                             }
@@ -162,7 +162,7 @@ public class RxBlazorGenerator : IIncrementalGenerator
                             });
 
                             var diagnostic = Diagnostic.Create(
-                                Diagnostics.DiagnosticDescriptors.UnregisteredServiceWarning,
+                                DiagnosticDescriptors.UnregisteredServiceWarning,
                                 location,
                                 properties,
                                 paramName,
@@ -211,7 +211,7 @@ public class RxBlazorGenerator : IIncrementalGenerator
                             });
 
                             var diagnostic = Diagnostic.Create(
-                                Diagnostics.DiagnosticDescriptors.DiServiceScopeViolationError,
+                                DiagnosticDescriptors.DiServiceScopeViolationError,
                                 location,
                                 properties,
                                 record.ModelInfo.ClassName,
@@ -259,14 +259,14 @@ public class RxBlazorGenerator : IIncrementalGenerator
                     return;
                 }
 
-                var detection = Analyzers.RazorInheritanceDetector.DetectDirectInheritance(razorFile, content);
+                var detection = RazorInheritanceDetector.DetectDirectInheritance(razorFile, content);
                 if (detection.HasValue)
                 {
                     var (componentName, genericPart) = detection.Value;
-                    var location = Analyzers.RazorInheritanceDetector.CreateRazorFileLocation(razorFile, content);
+                    var location = RazorInheritanceDetector.CreateRazorFileLocation(razorFile, content);
 
                     var diagnostic = Diagnostic.Create(
-                        Diagnostics.DiagnosticDescriptors.DirectObservableComponentInheritanceError,
+                        DiagnosticDescriptors.DirectObservableComponentInheritanceError,
                         location,
                         componentName,
                         genericPart);
@@ -278,7 +278,8 @@ public class RxBlazorGenerator : IIncrementalGenerator
         // Check for shared model scoping violations (RXBG014)
         // Count component usage in razor files for non-singleton models
         var allRazorFiles = razorFiles.Collect();
-        context.RegisterSourceOutput(observableModelRecords.Combine(allRazorFiles),
+        context.RegisterSourceOutput(observableModelRecords
+                .Combine(allRazorFiles),
             static (spc, combined) =>
             {
                 var (records, razorFilesList) = combined;
@@ -310,7 +311,7 @@ public class RxBlazorGenerator : IIncrementalGenerator
                             continue;
                         }
 
-                        var location = Analyzers.RazorComponentUsageDetector.DetectComponentUsage(
+                        var location = RazorComponentUsageDetector.DetectComponentUsage(
                             razorFile,
                             content,
                             componentClassName);
@@ -328,7 +329,7 @@ public class RxBlazorGenerator : IIncrementalGenerator
                         foreach (var location in usageLocations)
                         {
                             var diagnostic = Diagnostic.Create(
-                                Diagnostics.DiagnosticDescriptors.SharedModelNotSingletonError,
+                                DiagnosticDescriptors.SharedModelNotSingletonError,
                                 location,
                                 record.ModelInfo.FullyQualifiedName,
                                 modelScope);
@@ -344,6 +345,10 @@ public class RxBlazorGenerator : IIncrementalGenerator
             static (spc, combined) =>
             {
                 var (records, razorFilesList) = combined;
+
+                // Detect the default layout component (e.g., MainLayout from RouteView)
+                // This component is a top-level component by definition and should not trigger RXBG061
+                var defaultLayoutComponent = RazorInheritanceDetector.DetectDefaultLayoutComponent(razorFilesList);
 
                 // Only check components we're generating (same-assembly by definition)
                 foreach (var record in records.Where(r => r is not null && r!.ComponentInfo is not null))
@@ -363,22 +368,78 @@ public class RxBlazorGenerator : IIncrementalGenerator
                             continue;
                         }
 
-                        var detection = Analyzers.RazorInheritanceDetector.DetectComponentInheritanceWithoutPage(
+                        var detection = RazorInheritanceDetector.DetectComponentInheritanceWithoutPage(
                             razorFile,
                             content,
                             componentClassName);
 
                         if (detection.HasValue && !detection.Value.hasPage)
                         {
-                            var fileName = System.IO.Path.GetFileName(razorFile.Path);
+                            // Get the Razor file name without extension (e.g., "MainLayout" from "MainLayout.razor")
+                            var razorFileName = Path.GetFileNameWithoutExtension(razorFile.Path);
+
+                            // Skip the default layout component - it's a top-level component by definition
+                            if (!string.IsNullOrEmpty(defaultLayoutComponent) && razorFileName == defaultLayoutComponent)
+                            {
+                                continue;
+                            }
+
+                            var fileName = Path.GetFileName(razorFile.Path);
                             var diagnostic = Diagnostic.Create(
-                                Diagnostics.DiagnosticDescriptors.SameAssemblyComponentCompositionError,
+                                DiagnosticDescriptors.SameAssemblyComponentCompositionError,
                                 detection.Value.location,
                                 fileName,
                                 componentClassName);
                             spc.ReportDiagnostic(diagnostic);
                         }
                     }
+                }
+            });
+
+        // Generate code-behind for components that inherit from ObservableComponents
+        // Uses simple regex-based property detection that works across assembly boundaries
+        // Combine with component records to pass namespace information for proper using directives
+        context.RegisterSourceOutput(allRazorFiles.Combine(observableModelRecords).Combine(context.CompilationProvider),
+            static (spc, combined) =>
+            {
+                var (files, compilation) = combined;
+                var (razorFilesList, records) = files;
+
+                // Get component candidates from referenced assemblies
+                var componentCandidates = compilation
+                    .SourceModule
+                    .ReferencedAssemblySymbols
+                    .Select(s => (s, s.Modules.SelectMany(m => m.ReferencedAssemblies).Select(r => r.Name)))
+                    .Where(t => t.Item2.Contains("RxBlazorV2"))
+                    .Select(t => ((IEnumerable<string>)t.s.NamespaceNames, t.s.TypeNames.Where(n => !n.StartsWith("<"))));
+
+                // Build map of component class names to their namespaces (same-assembly components)
+                var componentNamespaces = new Dictionary<string, string>();
+                foreach (var record in records.Where(r => r is not null && r!.ComponentInfo is not null))
+                {
+                    if (record?.ComponentInfo is not null)
+                    {
+                        var componentName = record.ComponentInfo.ComponentClassName;
+                        var componentNamespace = record.ComponentInfo.ComponentNamespace;
+                        componentNamespaces[componentName] = componentNamespace;
+                    }
+                }
+
+                foreach (var razorFile in razorFilesList)
+                {
+                    var content = razorFile.GetText();
+                    if (content is null)
+                    {
+                        continue;
+                    }
+
+                    // Generate Filter() method for components inheriting from ObservableComponents
+                    RazorCodeBehindGenerator.GenerateComponentFilterCodeBehind(
+                        spc,
+                        razorFile,
+                        content,
+                        componentNamespaces,
+                        componentCandidates);
                 }
             });
 

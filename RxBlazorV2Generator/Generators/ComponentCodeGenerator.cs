@@ -43,20 +43,6 @@ public static class ComponentCodeGenerator
             sb.AppendLine($"public partial class {componentInfo.ComponentClassName}{genericPart} : ObservableComponent<{modelTypeWithGenerics}>{constraintsPart}");
             sb.AppendLine("{");
 
-            // Generate shortcut properties for model references (ObservableModels)
-            if (componentInfo.ModelReferences.Any())
-            {
-                GenerateModelReferenceShortcuts(sb, componentInfo.ModelReferences);
-                sb.AppendLine();
-            }
-
-            // Generate shortcut properties for DI services
-            if (componentInfo.DIFields.Any())
-            {
-                GenerateDIFieldShortcuts(sb, componentInfo.DIFields);
-                sb.AppendLine();
-            }
-
             // Generate InitializeGeneratedCode method
             GenerateInitializeGeneratedCode(sb, componentInfo, updateFrequencyMs);
             sb.AppendLine();
@@ -98,34 +84,41 @@ public static class ComponentCodeGenerator
         sb.AppendLine("    protected override void InitializeGeneratedCode()");
         sb.AppendLine("    {");
 
-        // Generate subscriptions for batched properties
-        if (componentInfo.BatchSubscriptions.Any())
-        {
-            sb.AppendLine("        // Subscribe to model changes for component base model and other models from properties");
-
-            foreach (var kvp in componentInfo.BatchSubscriptions)
-            {
-                var fieldName = kvp.Key;
-                var properties = kvp.Value;
-                var propertyList = properties.Select(p => $"\"{p}\"").ToList();
-                var observedPropsArray = $"[{string.Join(", ", propertyList)}]";
-
-                sb.AppendLine($"        Subscriptions.Add({fieldName}.Observable.Where(p => p.Intersect({observedPropsArray}).Any())");
-                sb.AppendLine($"            .Chunk(TimeSpan.FromMilliseconds({updateFrequencyMs}))");
-                sb.AppendLine("            .Subscribe(chunks =>");
-                sb.AppendLine("            {");
-                sb.AppendLine("                InvokeAsync(StateHasChanged);");
-                sb.AppendLine("            }));");
-            }
-        }
+        // Generate subscription for model changes with filtering support
+        sb.AppendLine("        // Subscribe to model changes - respects Filter() method");
+        sb.AppendLine("        var filter = Filter();");
+        sb.AppendLine("        if (filter.Length == 0)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            // No filter - observe all property changes");
+        sb.AppendLine("            Subscriptions.Add(Model.Observable");
+        sb.AppendLine($"                .Chunk(TimeSpan.FromMilliseconds({updateFrequencyMs}))");
+        sb.AppendLine("                .Subscribe(chunks =>");
+        sb.AppendLine("                {");
+        sb.AppendLine("                    InvokeAsync(StateHasChanged);");
+        sb.AppendLine("                }));");
+        sb.AppendLine("        }");
+        sb.AppendLine("        else");
+        sb.AppendLine("        {");
+        sb.AppendLine("            // Filter active - observe only filtered properties");
+        sb.AppendLine("            Subscriptions.Add(Model.Observable");
+        sb.AppendLine("                .Where(changedProps => changedProps.Intersect(filter).Any())");
+        sb.AppendLine($"                .Chunk(TimeSpan.FromMilliseconds({updateFrequencyMs}))");
+        sb.AppendLine("                .Subscribe(chunks =>");
+        sb.AppendLine("                {");
+        sb.AppendLine("                    InvokeAsync(StateHasChanged);");
+        sb.AppendLine("                }));");
+        sb.AppendLine("        }");
 
         // Generate subscriptions for component triggers with chunking
         foreach (var trigger in componentInfo.ComponentTriggers)
         {
             sb.AppendLine();
+            // Use qualified property name: ModelTypeName.PropertyName
+            var qualifiedPropertyName = $"{componentInfo.ModelTypeName}.{trigger.PropertyName}";
+
             if (trigger.HookType == TriggerHookType.Sync)
             {
-                sb.AppendLine($"        Subscriptions.Add(Model.Observable.Where(p => p.Intersect([\"{trigger.PropertyName}\"]).Any())");
+                sb.AppendLine($"        Subscriptions.Add(Model.Observable.Where(p => p.Intersect([\"{qualifiedPropertyName}\"]).Any())");
                 sb.AppendLine($"            .Chunk(TimeSpan.FromMilliseconds({updateFrequencyMs}))");
                 sb.AppendLine("            .Subscribe(chunks =>");
                 sb.AppendLine("            {");
@@ -134,7 +127,7 @@ public static class ComponentCodeGenerator
             }
             else if (trigger.HookType == TriggerHookType.Async)
             {
-                sb.AppendLine($"        Subscriptions.Add(Model.Observable.Where(p => p.Intersect([\"{trigger.PropertyName}\"]).Any())");
+                sb.AppendLine($"        Subscriptions.Add(Model.Observable.Where(p => p.Intersect([\"{qualifiedPropertyName}\"]).Any())");
                 sb.AppendLine($"            .Chunk(TimeSpan.FromMilliseconds({updateFrequencyMs}))");
                 sb.AppendLine("            .SubscribeAwait(async (chunks, ct) =>");
                 sb.AppendLine("            {");
@@ -182,19 +175,4 @@ public static class ComponentCodeGenerator
         }
     }
 
-    private static void GenerateModelReferenceShortcuts(StringBuilder sb, List<ModelReferenceInfo> modelReferences)
-    {
-        foreach (var modelRef in modelReferences)
-        {
-            sb.AppendLine($"    protected {modelRef.ReferencedModelTypeName} {modelRef.PropertyName} => Model.{modelRef.PropertyName};");
-        }
-    }
-
-    private static void GenerateDIFieldShortcuts(StringBuilder sb, List<DIFieldInfo> diFields)
-    {
-        foreach (var diField in diFields)
-        {
-            sb.AppendLine($"    protected {diField.FieldType} {diField.FieldName} => Model.{diField.FieldName};");
-        }
-    }
 }

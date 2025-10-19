@@ -31,7 +31,7 @@ public class ObservableModelTests
 
         // Assert
         Assert.Equal(1, notificationCount);
-        Assert.Equal(nameof(model.Counter), lastPropertyName);
+        Assert.Equal($"Model.{nameof(model.Counter)}", lastPropertyName);
     }
 
     [Fact]
@@ -56,9 +56,9 @@ public class ObservableModelTests
 
         // Assert
         Assert.Equal(3, notificationCount);
-        Assert.Equal(nameof(model.Counter), notifications[0][0]);
-        Assert.Equal(nameof(model.Name), notifications[1][0]);
-        Assert.Equal(nameof(model.Counter), notifications[2][0]);
+        Assert.Equal($"Model.{nameof(model.Counter)}", notifications[0][0]);
+        Assert.Equal($"Model.{nameof(model.Name)}", notifications[1][0]);
+        Assert.Equal($"Model.{nameof(model.Counter)}", notifications[2][0]);
     }
 
     [Fact]
@@ -100,14 +100,14 @@ public class ObservableModelTests
         });
 
         // Act
-        model.TriggerStateChanged([nameof(model.Counter), nameof(model.Name)]);
+        model.TriggerStateChanged([$"Model.{nameof(model.Counter)}", $"Model.{nameof(model.Name)}"]);
 
         // Assert
         Assert.Equal(1, notificationCount);
         Assert.NotNull(lastProperties);
         Assert.Equal(2, lastProperties.Length);
-        Assert.Contains(nameof(model.Counter), lastProperties);
-        Assert.Contains(nameof(model.Name), lastProperties);
+        Assert.Contains($"Model.{nameof(model.Counter)}", lastProperties);
+        Assert.Contains($"Model.{nameof(model.Name)}", lastProperties);
     }
 
     [Fact]

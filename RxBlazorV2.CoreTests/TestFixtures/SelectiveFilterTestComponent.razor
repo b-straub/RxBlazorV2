@@ -1,0 +1,10 @@
+@inherits RxBlazorV2.Component.ObservableComponent<TestObservableModel>
+
+<div id="selective-filter-component">
+    Counter: @Model.Counter
+</div>
+
+@code {
+    // Only uses Model.Counter, NOT Model.Name
+    // Generated Filter() should only include "Model.Counter"
+}

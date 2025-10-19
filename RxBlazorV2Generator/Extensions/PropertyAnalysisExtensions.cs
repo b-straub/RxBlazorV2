@@ -39,7 +39,7 @@ public static class PropertyAnalysisExtensions
                 if (hasInitAccessor && !isObservableCollection)
                 {
                     var diagnostic = Diagnostic.Create(
-                        RxBlazorV2Generator.Diagnostics.DiagnosticDescriptors.InvalidInitPropertyError,
+                        Diagnostics.DiagnosticDescriptors.InvalidInitPropertyError,
                         member.Identifier.GetLocation(),
                         member.Identifier.ValueText,
                         member.Type!.ToString());
@@ -66,7 +66,7 @@ public static class PropertyAnalysisExtensions
 
                     // Check for generic trigger (with parameter)
                     var triggerTypeArguments = triggerAttr.ChildNodes()
-                        .Where(t => t.IsKind(Microsoft.CodeAnalysis.CSharp.SyntaxKind.GenericName))
+                        .Where(t => t.IsKind(SyntaxKind.GenericName))
                         .SelectMany(t => ((GenericNameSyntax)t).TypeArgumentList.Arguments)
                         .Select(a => a.ToString()).ToArray();
 
@@ -105,7 +105,7 @@ public static class PropertyAnalysisExtensions
                             if (modifiedProperties.Contains(member.Identifier.ValueText))
                             {
                                 var diagnostic = Diagnostic.Create(
-                                    RxBlazorV2Generator.Diagnostics.DiagnosticDescriptors.CircularTriggerReferenceError,
+                                    Diagnostics.DiagnosticDescriptors.CircularTriggerReferenceError,
                                     triggerAttr.GetLocation(),
                                     member.Identifier.ValueText, // Property name
                                     member.Identifier.ValueText, // Trigger property (same as property for ObservableTrigger)
@@ -359,7 +359,8 @@ public static class PropertyAnalysisExtensions
             }
         }
 
-        return observedProps.ToList();
+        // Prefix all properties with "Model." for component context
+        return observedProps.Select(p => $"Model.{p}").ToList();
     }
 
     public static List<string> AnalyzePropertyModifications(this MethodDeclarationSyntax method, SemanticModel semanticModel)

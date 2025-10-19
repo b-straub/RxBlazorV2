@@ -79,9 +79,11 @@ public static class ObservableModelCodeGenerator
             }
 
             // Generate partial property implementations with field keyword
+            // Uses fully qualified property names (ClassName.PropertyName) for disambiguation
             if (modelInfo.PartialProperties.Any())
             {
-                sb.Append(PropertyTemplate.GeneratePartialProperties(modelInfo.PartialProperties));
+                var classNameWithGenerics = modelInfo.ClassName + modelInfo.GenericTypes;
+                sb.Append(PropertyTemplate.GeneratePartialProperties(modelInfo.PartialProperties, classNameWithGenerics));
             }
 
             // Generate backing fields for command properties

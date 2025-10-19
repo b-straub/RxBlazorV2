@@ -1,7 +1,6 @@
 using RxBlazorV2.Interface;
 using RxBlazorV2.Model;
 using RxBlazorV2Sample.Services;
-using RxBlazorVSSampleComponents.Settings;
 
 namespace RxBlazorV2Sample.Models;
 
@@ -13,7 +12,6 @@ public partial class WeatherModel : ObservableModel
     public partial WeatherModel(SettingsModel settings, OpenMeteoApiClient openMeteoClient);
 
     public bool NotInComponentObservation => Settings.NotInComponentObservation;
-    public partial bool IsDay { get; set; }
     public partial bool IsLoading { get; set; }
     public partial string? ErrorMessage { get; set; }
     public partial WeatherForecast[]? Forecasts { get; set; }

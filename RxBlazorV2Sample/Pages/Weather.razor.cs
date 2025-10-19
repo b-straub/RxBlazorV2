@@ -12,7 +12,6 @@ public partial class Weather : WeatherModelComponent
         // Load initial weather data
         await Model.LoadWeatherCommand.ExecuteAsync();
     }
-
     protected async Task RefreshAsync()
     {
         if (Model.RefreshCommand.Executing)

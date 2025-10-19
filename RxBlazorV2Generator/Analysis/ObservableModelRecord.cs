@@ -345,29 +345,6 @@ public class ObservableModelRecord
                 }
             }
 
-            // Build batch subscriptions map
-            var batchSubscriptions = new Dictionary<string, List<string>>();
-            var modelProperties = new List<string>();
-
-            foreach (var property in partialProperties)
-            {
-                if (property.BatchIds is not null && property.BatchIds.Length > 0)
-                {
-                    // Property has batches - add to Model subscriptions
-                    modelProperties.Add(property.Name);
-                }
-                else
-                {
-                    // Property has no batch - also subscribe to changes
-                    modelProperties.Add(property.Name);
-                }
-            }
-
-            if (modelProperties.Any())
-            {
-                batchSubscriptions["Model"] = modelProperties;
-            }
-
             // Get generic types and constraints from the model symbol
             var genericTypes = namedTypeSymbol.ExtractObservableModelGenericTypes();
             var typeConstrains = namedTypeSymbol.ContainingType?.DeclaringSyntaxReferences
@@ -390,7 +367,6 @@ public class ObservableModelRecord
                 namedTypeSymbol.Name,
                 modelNamespace,
                 componentTriggers,
-                batchSubscriptions,
                 genericTypes,
                 typeConstrains,
                 modelReferences,

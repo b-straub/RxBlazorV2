@@ -132,12 +132,12 @@ public class ObservableModelIntegrationTests
         // Assert
         Assert.Equal(3, notifications.Count);
         // First two are immediate
-        Assert.Equal(nameof(model.Counter), notifications[0][0]);
-        Assert.Equal(nameof(model.Name), notifications[1][0]);
+        Assert.Equal($"Model.{nameof(model.Counter)}", notifications[0][0]);
+        Assert.Equal($"Model.{nameof(model.Name)}", notifications[1][0]);
         // Last notification is batched properties
         Assert.Equal(2, notifications[2].Length);
-        Assert.Contains(nameof(model.BatchProperty1), notifications[2]);
-        Assert.Contains(nameof(model.BatchProperty2), notifications[2]);
+        Assert.Contains($"Model.{nameof(model.BatchProperty1)}", notifications[2]);
+        Assert.Contains($"Model.{nameof(model.BatchProperty2)}", notifications[2]);
     }
 
     [Fact]
@@ -204,22 +204,22 @@ public class ObservableModelIntegrationTests
 
         // First notification: Counter = 1
         Assert.Single(allNotifications[0]);
-        Assert.Equal(nameof(model.Counter), allNotifications[0][0]);
+        Assert.Equal($"Model.{nameof(model.Counter)}", allNotifications[0][0]);
 
         // Second notification: Batch from first suspension
         Assert.Equal(2, allNotifications[1].Length);
 
         // Third notification: Name = "Second"
         Assert.Single(allNotifications[2]);
-        Assert.Equal(nameof(model.Name), allNotifications[2][0]);
+        Assert.Equal($"Model.{nameof(model.Name)}", allNotifications[2][0]);
 
         // Fourth notification: Counter = 4 (immediate during batch1 suspension)
         Assert.Single(allNotifications[3]);
-        Assert.Equal(nameof(model.Counter), allNotifications[3][0]);
+        Assert.Equal($"Model.{nameof(model.Counter)}", allNotifications[3][0]);
 
         // Fifth notification: BatchProperty1 at end of suspension
         Assert.Single(allNotifications[4]);
-        Assert.Equal(nameof(model.BatchProperty1), allNotifications[4][0]);
+        Assert.Equal($"Model.{nameof(model.BatchProperty1)}", allNotifications[4][0]);
     }
 
     [Fact]

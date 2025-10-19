@@ -1,73 +1,23 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Components;
 using R3;
+using RxBlazorV2.Interface;
 using RxBlazorV2.Model;
 
 namespace RxBlazorV2.Component;
 
-public abstract class ObservableComponent : OwningComponentBase, IAsyncDisposable
-{
-    protected CompositeDisposable Subscriptions { get; } = new();
-    protected override void OnAfterRender(bool firstRender)
-    {
-        base.OnAfterRender(firstRender);
-        if (firstRender)
-        {
-            InitializeGeneratedCode();
-            OnContextReady();
-        }
-    }
-    
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        await base.OnAfterRenderAsync(firstRender);
-        if (firstRender)
-        {
-            await InitializeGeneratedCodeAsync();
-            await OnContextReadyAsync();
-        }
-    }
-
-    protected virtual void InitializeGeneratedCode()
-    {
-    }
-
-    protected virtual Task InitializeGeneratedCodeAsync()
-    {
-        return Task.CompletedTask;
-    }
-    
-    protected virtual void OnContextReady()
-    {
-    }
-    
-    protected virtual Task OnContextReadyAsync()
-    {
-        return Task.CompletedTask;
-    }
-    
-    protected virtual void OnDispose()
-    {
-    }
-    
-    protected virtual ValueTask OnDisposeAsync()
-    {
-        return ValueTask.CompletedTask;
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        await OnDisposeAsync();
-        Subscriptions.Dispose();
-    }
-}
-
-public abstract class ObservableComponent<T> : OwningComponentBase<T>, IAsyncDisposable where T : ObservableModel
+public abstract class ObservableComponent<TModel> : OwningComponentBase<TModel> where TModel : ObservableModel
 {
     protected CompositeDisposable Subscriptions { get; } = new();
 
-    public T Model => Service;
+    public TModel Model => Service;
     
+    /// <summary>
+    /// Gets the content to be rendered inside the component
+    /// </summary>
+    [Parameter]
+    public RenderFragment? Body { get; set; }
+
     protected override void OnAfterRender(bool firstRender)
     {
         base.OnAfterRender(firstRender);
@@ -99,6 +49,11 @@ public abstract class ObservableComponent<T> : OwningComponentBase<T>, IAsyncDis
         return Task.CompletedTask;
     }
     
+    protected virtual string[] Filter()
+    {
+        return [];    
+    }
+    
     protected virtual void OnContextReady()
     {
     }
@@ -111,15 +66,25 @@ public abstract class ObservableComponent<T> : OwningComponentBase<T>, IAsyncDis
     protected virtual void OnDispose()
     {
     }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            OnDispose();
+            Subscriptions.Dispose();
+        }
+        base.Dispose(disposing);
+    }
     
     protected virtual ValueTask OnDisposeAsync()
     {
         return ValueTask.CompletedTask;
     }
 
-    public async ValueTask DisposeAsync()
+    protected override async ValueTask DisposeAsyncCore()
     {
         await OnDisposeAsync();
-        Subscriptions.Dispose();
+        await base.DisposeAsyncCore();
     }
 }

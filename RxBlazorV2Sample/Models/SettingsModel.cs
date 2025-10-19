@@ -2,7 +2,7 @@ using MudBlazor;
 using RxBlazorV2.Interface;
 using RxBlazorV2.Model;
 
-namespace RxBlazorVSSampleComponents.Settings;
+namespace RxBlazorV2Sample.Models;
 
 [ObservableComponent]
 [ObservableModelScope(ModelScope.Singleton)]

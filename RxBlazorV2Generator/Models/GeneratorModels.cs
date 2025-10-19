@@ -178,8 +178,6 @@ public class ComponentInfo
     public string ModelTypeName { get; }
     public string ModelNamespace { get; }
     public List<ComponentTriggerInfo> ComponentTriggers { get; }
-    public Dictionary<string, List<string>> BatchSubscriptions { get; }
-    public bool HasSubscriptions { get; }
     public string GenericTypes { get; }
     public string TypeConstrains { get; }
     public List<ModelReferenceInfo> ModelReferences { get; }
@@ -191,7 +189,6 @@ public class ComponentInfo
         string modelTypeName,
         string modelNamespace,
         List<ComponentTriggerInfo>? componentTriggers = null,
-        Dictionary<string, List<string>>? batchSubscriptions = null,
         string? genericTypes = null,
         string? typeConstrains = null,
         List<ModelReferenceInfo>? modelReferences = null,
@@ -202,8 +199,6 @@ public class ComponentInfo
         ModelTypeName = modelTypeName;
         ModelNamespace = modelNamespace;
         ComponentTriggers = componentTriggers ?? [];
-        BatchSubscriptions = batchSubscriptions ?? new Dictionary<string, List<string>>();
-        HasSubscriptions = ComponentTriggers.Any() || BatchSubscriptions.Any();
         GenericTypes = genericTypes ?? string.Empty;
         TypeConstrains = typeConstrains ?? string.Empty;
         ModelReferences = modelReferences ?? [];

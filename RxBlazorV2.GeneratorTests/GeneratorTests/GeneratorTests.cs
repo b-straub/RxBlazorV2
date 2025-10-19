@@ -49,7 +49,7 @@ public class GeneratorTests
                     if (field != value)
                     {
                         field = value;
-                        StateHasChanged(nameof(Test));
+                        StateHasChanged("Model.Test");
                     }
                 }
             }

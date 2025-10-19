@@ -1,6 +1,9 @@
 using Microsoft.CodeAnalysis.Testing;
+using Microsoft.CodeAnalysis.Text;
 using RxBlazorV2.GeneratorTests.Helpers;
+using RxBlazorV2Generator;
 using RxBlazorV2Generator.Diagnostics;
+using System.Text;
 
 namespace RxBlazorV2.GeneratorTests.GeneratorTests;
 
@@ -10,6 +13,56 @@ namespace RxBlazorV2.GeneratorTests.GeneratorTests;
 /// </summary>
 public class RazorFileDiagnosticsTests
 {
+    /// <summary>
+    /// Helper method to generate expected Filter() code-behind content.
+    /// Filter properties should use "Model." prefix (e.g., "Model.Name", "Model.Settings.IsDay").
+    /// </summary>
+    private static string GenerateFilterCodeBehind(string componentName, string baseClass, string namespaceName, string[] filterProperties, string[]? usingDirectives = null)
+    {
+        var sb = new StringBuilder();
+
+        // Add using directives
+        if (usingDirectives != null && usingDirectives.Length > 0)
+        {
+            foreach (var usingDirective in usingDirectives.OrderBy(u => u))
+            {
+                sb.AppendLine($"using {usingDirective};");
+            }
+            sb.AppendLine();
+        }
+
+        sb.AppendLine($"namespace {namespaceName};");
+        sb.AppendLine();
+        sb.AppendLine($"public partial class {componentName} : {baseClass}");
+        sb.AppendLine("{");
+        sb.AppendLine("    /// <summary>");
+        sb.AppendLine("    /// Auto-generated filter method for ObservableComponent property filtering.");
+        sb.AppendLine("    /// Only properties used in this component trigger re-renders.");
+        sb.AppendLine("    /// Property names match the qualified names emitted by Observable streams (ClassName.PropertyName).");
+        sb.AppendLine("    /// </summary>");
+        sb.AppendLine("    protected override string[] Filter()");
+        sb.AppendLine("    {");
+
+        if (filterProperties != null && filterProperties.Length > 0)
+        {
+            sb.AppendLine("        return [");
+            for (int i = 0; i < filterProperties.Length; i++)
+            {
+                var comma = i < filterProperties.Length - 1 ? "," : "";
+                sb.AppendLine($"            \"{filterProperties[i]}\"{comma}");
+            }
+            sb.AppendLine("        ];");
+        }
+        else
+        {
+            sb.AppendLine("        return [];");
+        }
+
+        sb.AppendLine("    }");
+        sb.AppendLine("}");
+
+        return sb.ToString();
+    }
     [Fact]
     public async Task DirectInheritanceFromObservableComponent_ReportsError()
     {
@@ -55,7 +108,7 @@ public class RazorFileDiagnosticsTests
                     if (field != value)
                     {
                         field = value;
-                        StateHasChanged(nameof(Name));
+                        StateHasChanged("Model.Name");
                     }
                 }
             }
@@ -132,7 +185,7 @@ public class RazorFileDiagnosticsTests
                     if (field != value)
                     {
                         field = value;
-                        StateHasChanged(nameof(Name));
+                        StateHasChanged("Model.Name");
                     }
                 }
             }
@@ -211,7 +264,7 @@ public class RazorFileDiagnosticsTests
                     if (field != value)
                     {
                         field = value;
-                        StateHasChanged(nameof(Name));
+                        StateHasChanged("Model.Name");
                     }
                 }
             }
@@ -236,13 +289,29 @@ public class RazorFileDiagnosticsTests
         {
             protected override void InitializeGeneratedCode()
             {
-                // Subscribe to model changes for component base model and other models from properties
-                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Name"]).Any())
-                    .Chunk(TimeSpan.FromMilliseconds(100))
-                    .Subscribe(chunks =>
-                    {
-                        InvokeAsync(StateHasChanged);
-                    }));
+                // Subscribe to model changes - respects Filter() method
+                var filter = Filter();
+                if (filter.Length == 0)
+                {
+                    // No filter - observe all property changes
+                    Subscriptions.Add(Model.Observable
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
+                else
+                {
+                    // Filter active - observe only filtered properties
+                    Subscriptions.Add(Model.Observable
+                        .Where(changedProps => changedProps.Intersect(filter).Any())
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
             }
 
             protected override Task InitializeGeneratedCodeAsync()
@@ -266,13 +335,24 @@ public class RazorFileDiagnosticsTests
             """
         };
 
+        // Expected code-behind generation
+        var additionalGeneratedSources = new Dictionary<string, string>
+        {
+            ["Weather.g.cs"] = GenerateFilterCodeBehind(
+                "Weather",
+                "TestModelComponent",
+                "Pages",
+                new[] { "Model.Name" }, new[] { "Test" })
+        };
+
         await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
             source,
             razorFiles,
             generatedModel,
             generatedComponent,
             "TestModel",
-            "TestModelComponent");
+            "TestModelComponent",
+            additionalGeneratedSources: additionalGeneratedSources);
     }
 
     [Fact]
@@ -324,7 +404,7 @@ public class RazorFileDiagnosticsTests
                     if (field != value)
                     {
                         field = value;
-                        StateHasChanged(nameof(Name));
+                        StateHasChanged("Model.Name");
                     }
                 }
             }
@@ -349,13 +429,29 @@ public class RazorFileDiagnosticsTests
         {
             protected override void InitializeGeneratedCode()
             {
-                // Subscribe to model changes for component base model and other models from properties
-                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Name"]).Any())
-                    .Chunk(TimeSpan.FromMilliseconds(100))
-                    .Subscribe(chunks =>
-                    {
-                        InvokeAsync(StateHasChanged);
-                    }));
+                // Subscribe to model changes - respects Filter() method
+                var filter = Filter();
+                if (filter.Length == 0)
+                {
+                    // No filter - observe all property changes
+                    Subscriptions.Add(Model.Observable
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
+                else
+                {
+                    // Filter active - observe only filtered properties
+                    Subscriptions.Add(Model.Observable
+                        .Where(changedProps => changedProps.Intersect(filter).Any())
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
             }
 
             protected override Task InitializeGeneratedCodeAsync()
@@ -396,6 +492,21 @@ public class RazorFileDiagnosticsTests
                 .WithArguments("Test.TestModel", "Scoped")
         };
 
+        // Expected code-behind generation (alphabetical order by component name to match generator output)
+        var additionalGeneratedSources = new Dictionary<string, string>
+        {
+            ["Counter.g.cs"] = GenerateFilterCodeBehind(
+                "Counter",
+                "TestModelComponent",
+                "Pages",
+                new[] { "Model.Name" }, new[] { "Test" }),
+            ["Weather.g.cs"] = GenerateFilterCodeBehind(
+                "Weather",
+                "TestModelComponent",
+                "Pages",
+                new[] { "Model.Name" }, new[] { "Test" })
+        };
+
         await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
             source,
             razorFiles,
@@ -404,6 +515,7 @@ public class RazorFileDiagnosticsTests
             "TestModel",
             "TestModelComponent",
             modelScope: "Scoped",
+            additionalGeneratedSources: additionalGeneratedSources,
             expected: expected);
     }
 
@@ -456,7 +568,7 @@ public class RazorFileDiagnosticsTests
                     if (field != value)
                     {
                         field = value;
-                        StateHasChanged(nameof(Count));
+                        StateHasChanged("Model.Count");
                     }
                 }
             }
@@ -481,13 +593,29 @@ public class RazorFileDiagnosticsTests
         {
             protected override void InitializeGeneratedCode()
             {
-                // Subscribe to model changes for component base model and other models from properties
-                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Count"]).Any())
-                    .Chunk(TimeSpan.FromMilliseconds(100))
-                    .Subscribe(chunks =>
-                    {
-                        InvokeAsync(StateHasChanged);
-                    }));
+                // Subscribe to model changes - respects Filter() method
+                var filter = Filter();
+                if (filter.Length == 0)
+                {
+                    // No filter - observe all property changes
+                    Subscriptions.Add(Model.Observable
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
+                else
+                {
+                    // Filter active - observe only filtered properties
+                    Subscriptions.Add(Model.Observable
+                        .Where(changedProps => changedProps.Intersect(filter).Any())
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
             }
 
             protected override Task InitializeGeneratedCodeAsync()
@@ -538,6 +666,26 @@ public class RazorFileDiagnosticsTests
                 .WithArguments("Test.TestModel", "Transient")
         };
 
+        // Expected code-behind generation
+        var additionalGeneratedSources = new Dictionary<string, string>
+        {
+            ["Page1.g.cs"] = GenerateFilterCodeBehind(
+                "Page1",
+                "TestModelComponent",
+                "Pages",
+                new[] { "Model.Count" }, new[] { "Test" }),
+            ["Page2.g.cs"] = GenerateFilterCodeBehind(
+                "Page2",
+                "TestModelComponent",
+                "Pages",
+                new[] { "Model.Count" }, new[] { "Test" }),
+            ["Page3.g.cs"] = GenerateFilterCodeBehind(
+                "Page3",
+                "TestModelComponent",
+                "Pages",
+                new[] { "Model.Count" }, new[] { "Test" })
+        };
+
         await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
             source,
             razorFiles,
@@ -546,6 +694,7 @@ public class RazorFileDiagnosticsTests
             "TestModel",
             "TestModelComponent",
             modelScope: "Transient",
+            additionalGeneratedSources: additionalGeneratedSources,
             expected: expected);
     }
 
@@ -598,7 +747,7 @@ public class RazorFileDiagnosticsTests
                     if (field != value)
                     {
                         field = value;
-                        StateHasChanged(nameof(Name));
+                        StateHasChanged("Model.Name");
                     }
                 }
             }
@@ -623,13 +772,29 @@ public class RazorFileDiagnosticsTests
         {
             protected override void InitializeGeneratedCode()
             {
-                // Subscribe to model changes for component base model and other models from properties
-                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Name"]).Any())
-                    .Chunk(TimeSpan.FromMilliseconds(100))
-                    .Subscribe(chunks =>
-                    {
-                        InvokeAsync(StateHasChanged);
-                    }));
+                // Subscribe to model changes - respects Filter() method
+                var filter = Filter();
+                if (filter.Length == 0)
+                {
+                    // No filter - observe all property changes
+                    Subscriptions.Add(Model.Observable
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
+                else
+                {
+                    // Filter active - observe only filtered properties
+                    Subscriptions.Add(Model.Observable
+                        .Where(changedProps => changedProps.Intersect(filter).Any())
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
             }
 
             protected override Task InitializeGeneratedCodeAsync()
@@ -660,6 +825,21 @@ public class RazorFileDiagnosticsTests
             """
         };
 
+        // Expected code-behind generation (alphabetical order to match generator output)
+        var additionalGeneratedSources = new Dictionary<string, string>
+        {
+            ["Counter.g.cs"] = GenerateFilterCodeBehind(
+                "Counter",
+                "TestModelComponent",
+                "Pages",
+                new[] { "Model.Name" }, new[] { "Test" }),
+            ["Weather.g.cs"] = GenerateFilterCodeBehind(
+                "Weather",
+                "TestModelComponent",
+                "Pages",
+                new[] { "Model.Name" }, new[] { "Test" })
+        };
+
         await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
             source,
             razorFiles,
@@ -667,7 +847,8 @@ public class RazorFileDiagnosticsTests
             generatedComponent,
             "TestModel",
             "TestModelComponent",
-            modelScope: "Singleton");
+            modelScope: "Singleton",
+            additionalGeneratedSources: additionalGeneratedSources);
     }
 
     [Fact]
@@ -719,7 +900,7 @@ public class RazorFileDiagnosticsTests
                     if (field != value)
                     {
                         field = value;
-                        StateHasChanged(nameof(Name));
+                        StateHasChanged("Model.Name");
                     }
                 }
             }
@@ -744,13 +925,29 @@ public class RazorFileDiagnosticsTests
         {
             protected override void InitializeGeneratedCode()
             {
-                // Subscribe to model changes for component base model and other models from properties
-                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Name"]).Any())
-                    .Chunk(TimeSpan.FromMilliseconds(100))
-                    .Subscribe(chunks =>
-                    {
-                        InvokeAsync(StateHasChanged);
-                    }));
+                // Subscribe to model changes - respects Filter() method
+                var filter = Filter();
+                if (filter.Length == 0)
+                {
+                    // No filter - observe all property changes
+                    Subscriptions.Add(Model.Observable
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
+                else
+                {
+                    // Filter active - observe only filtered properties
+                    Subscriptions.Add(Model.Observable
+                        .Where(changedProps => changedProps.Intersect(filter).Any())
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
             }
 
             protected override Task InitializeGeneratedCodeAsync()
@@ -774,6 +971,16 @@ public class RazorFileDiagnosticsTests
             """
         };
 
+        // Expected code-behind generation
+        var additionalGeneratedSources = new Dictionary<string, string>
+        {
+            ["Weather.g.cs"] = GenerateFilterCodeBehind(
+                "Weather",
+                "TestModelComponent",
+                "Pages",
+                new[] { "Model.Name" }, new[] { "Test" })
+        };
+
         await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
             source,
             razorFiles,
@@ -781,7 +988,8 @@ public class RazorFileDiagnosticsTests
             generatedComponent,
             "TestModel",
             "TestModelComponent",
-            modelScope: "Scoped");
+            modelScope: "Scoped",
+            additionalGeneratedSources: additionalGeneratedSources);
     }
 
     [Fact]
@@ -829,7 +1037,7 @@ public class RazorFileDiagnosticsTests
                     if (field != value)
                     {
                         field = value;
-                        StateHasChanged(nameof(Name));
+                        StateHasChanged("Model.Name");
                     }
                 }
             }
@@ -925,7 +1133,7 @@ public class RazorFileDiagnosticsTests
                     if (field != value)
                     {
                         field = value;
-                        StateHasChanged(nameof(Name));
+                        StateHasChanged("Model.Name");
                     }
                 }
             }
@@ -950,13 +1158,29 @@ public class RazorFileDiagnosticsTests
         {
             protected override void InitializeGeneratedCode()
             {
-                // Subscribe to model changes for component base model and other models from properties
-                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Name"]).Any())
-                    .Chunk(TimeSpan.FromMilliseconds(100))
-                    .Subscribe(chunks =>
-                    {
-                        InvokeAsync(StateHasChanged);
-                    }));
+                // Subscribe to model changes - respects Filter() method
+                var filter = Filter();
+                if (filter.Length == 0)
+                {
+                    // No filter - observe all property changes
+                    Subscriptions.Add(Model.Observable
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
+                else
+                {
+                    // Filter active - observe only filtered properties
+                    Subscriptions.Add(Model.Observable
+                        .Where(changedProps => changedProps.Intersect(filter).Any())
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
             }
 
             protected override Task InitializeGeneratedCodeAsync()
@@ -1025,6 +1249,21 @@ public class RazorFileDiagnosticsTests
                 .WithArguments("Test.TestModel", "Scoped")
         };
 
+        // Expected code-behind generation (alphabetical order to match generator output)
+        var additionalGeneratedSources = new Dictionary<string, string>
+        {
+            ["Counter.g.cs"] = GenerateFilterCodeBehind(
+                "Counter",
+                "TestModelComponent",
+                "Pages",
+                new[] { "Model.Name" }, new[] { "Test" }),
+            ["Weather.g.cs"] = GenerateFilterCodeBehind(
+                "Weather",
+                "TestModelComponent",
+                "Pages",
+                new[] { "Model.Name" }, new[] { "Test" })
+        };
+
         await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
             source,
             razorFiles,
@@ -1033,6 +1272,7 @@ public class RazorFileDiagnosticsTests
             "TestModel",
             "TestModelComponent",
             modelScope: "Scoped",
+            additionalGeneratedSources: additionalGeneratedSources,
             expected: expected);
     }
 
@@ -1084,7 +1324,7 @@ public class RazorFileDiagnosticsTests
                     if (field != value)
                     {
                         field = value;
-                        StateHasChanged(nameof(Name));
+                        StateHasChanged("Model.Name");
                     }
                 }
             }
@@ -1109,13 +1349,29 @@ public class RazorFileDiagnosticsTests
         {
             protected override void InitializeGeneratedCode()
             {
-                // Subscribe to model changes for component base model and other models from properties
-                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Name"]).Any())
-                    .Chunk(TimeSpan.FromMilliseconds(100))
-                    .Subscribe(chunks =>
-                    {
-                        InvokeAsync(StateHasChanged);
-                    }));
+                // Subscribe to model changes - respects Filter() method
+                var filter = Filter();
+                if (filter.Length == 0)
+                {
+                    // No filter - observe all property changes
+                    Subscriptions.Add(Model.Observable
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
+                else
+                {
+                    // Filter active - observe only filtered properties
+                    Subscriptions.Add(Model.Observable
+                        .Where(changedProps => changedProps.Intersect(filter).Any())
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
             }
 
             protected override Task InitializeGeneratedCodeAsync()
@@ -1139,13 +1395,24 @@ public class RazorFileDiagnosticsTests
             """
         };
 
+        // Expected code-behind generation
+        var additionalGeneratedSources = new Dictionary<string, string>
+        {
+            ["Weather.g.cs"] = GenerateFilterCodeBehind(
+                "Weather",
+                "TestModelComponent",
+                "Pages",
+                new[] { "Model.Name" }, new[] { "Test" })
+        };
+
         await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
             source,
             razorFiles,
             generatedModel,
             generatedComponent,
             "TestModel",
-            "TestModelComponent");
+            "TestModelComponent",
+            additionalGeneratedSources: additionalGeneratedSources);
     }
 
     [Fact]
@@ -1196,7 +1463,7 @@ public class RazorFileDiagnosticsTests
                     if (field != value)
                     {
                         field = value;
-                        StateHasChanged(nameof(Name));
+                        StateHasChanged("Model.Name");
                     }
                 }
             }
@@ -1221,13 +1488,29 @@ public class RazorFileDiagnosticsTests
         {
             protected override void InitializeGeneratedCode()
             {
-                // Subscribe to model changes for component base model and other models from properties
-                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Name"]).Any())
-                    .Chunk(TimeSpan.FromMilliseconds(100))
-                    .Subscribe(chunks =>
-                    {
-                        InvokeAsync(StateHasChanged);
-                    }));
+                // Subscribe to model changes - respects Filter() method
+                var filter = Filter();
+                if (filter.Length == 0)
+                {
+                    // No filter - observe all property changes
+                    Subscriptions.Add(Model.Observable
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
+                else
+                {
+                    // Filter active - observe only filtered properties
+                    Subscriptions.Add(Model.Observable
+                        .Where(changedProps => changedProps.Intersect(filter).Any())
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
             }
 
             protected override Task InitializeGeneratedCodeAsync()
@@ -1255,6 +1538,16 @@ public class RazorFileDiagnosticsTests
             .WithLocation(0)
             .WithArguments("Widget.razor", "TestModelComponent");
 
+        // Expected code-behind generation
+        var additionalGeneratedSources = new Dictionary<string, string>
+        {
+            ["Widget.g.cs"] = GenerateFilterCodeBehind(
+                "Widget",
+                "TestModelComponent",
+                "Components",
+                new[] { "Model.Name" }, new[] { "Test" })
+        };
+
         await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
             source,
             razorFiles,
@@ -1262,6 +1555,7 @@ public class RazorFileDiagnosticsTests
             generatedComponent,
             "TestModel",
             "TestModelComponent",
+            additionalGeneratedSources: additionalGeneratedSources,
             expected: expected);
     }
 
@@ -1314,7 +1608,7 @@ public class RazorFileDiagnosticsTests
                     if (field != value)
                     {
                         field = value;
-                        StateHasChanged(nameof(Name));
+                        StateHasChanged("Model.Name");
                     }
                 }
             }
@@ -1339,13 +1633,29 @@ public class RazorFileDiagnosticsTests
         {
             protected override void InitializeGeneratedCode()
             {
-                // Subscribe to model changes for component base model and other models from properties
-                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Name"]).Any())
-                    .Chunk(TimeSpan.FromMilliseconds(100))
-                    .Subscribe(chunks =>
-                    {
-                        InvokeAsync(StateHasChanged);
-                    }));
+                // Subscribe to model changes - respects Filter() method
+                var filter = Filter();
+                if (filter.Length == 0)
+                {
+                    // No filter - observe all property changes
+                    Subscriptions.Add(Model.Observable
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
+                else
+                {
+                    // Filter active - observe only filtered properties
+                    Subscriptions.Add(Model.Observable
+                        .Where(changedProps => changedProps.Intersect(filter).Any())
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
             }
 
             protected override Task InitializeGeneratedCodeAsync()
@@ -1396,6 +1706,26 @@ public class RazorFileDiagnosticsTests
                 .WithArguments("Footer.razor", "TestModelComponent")
         };
 
+        // Expected code-behind generation (alphabetical order to match generator output)
+        var additionalGeneratedSources = new Dictionary<string, string>
+        {
+            ["Footer.g.cs"] = GenerateFilterCodeBehind(
+                "Footer",
+                "TestModelComponent",
+                "Components",
+                new[] { "Model.Name" }, new[] { "Test" }),
+            ["Header.g.cs"] = GenerateFilterCodeBehind(
+                "Header",
+                "TestModelComponent",
+                "Components",
+                new[] { "Model.Name" }, new[] { "Test" }),
+            ["Widget.g.cs"] = GenerateFilterCodeBehind(
+                "Widget",
+                "TestModelComponent",
+                "Components",
+                new[] { "Model.Name" }, new[] { "Test" })
+        };
+
         await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
             source,
             razorFiles,
@@ -1404,6 +1734,7 @@ public class RazorFileDiagnosticsTests
             "TestModel",
             "TestModelComponent",
             modelScope: "Singleton",
+            additionalGeneratedSources: additionalGeneratedSources,
             expected: expected);
     }
 
@@ -1456,7 +1787,7 @@ public class RazorFileDiagnosticsTests
                     if (field != value)
                     {
                         field = value;
-                        StateHasChanged(nameof(Title));
+                        StateHasChanged("Model.Title");
                     }
                 }
             }
@@ -1481,13 +1812,29 @@ public class RazorFileDiagnosticsTests
         {
             protected override void InitializeGeneratedCode()
             {
-                // Subscribe to model changes for component base model and other models from properties
-                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Title"]).Any())
-                    .Chunk(TimeSpan.FromMilliseconds(100))
-                    .Subscribe(chunks =>
-                    {
-                        InvokeAsync(StateHasChanged);
-                    }));
+                // Subscribe to model changes - respects Filter() method
+                var filter = Filter();
+                if (filter.Length == 0)
+                {
+                    // No filter - observe all property changes
+                    Subscriptions.Add(Model.Observable
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
+                else
+                {
+                    // Filter active - observe only filtered properties
+                    Subscriptions.Add(Model.Observable
+                        .Where(changedProps => changedProps.Intersect(filter).Any())
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
             }
 
             protected override Task InitializeGeneratedCodeAsync()
@@ -1532,6 +1879,26 @@ public class RazorFileDiagnosticsTests
             .WithLocation(0)
             .WithArguments("Sidebar.razor", "TestModelComponent");
 
+        // Expected code-behind generation (alphabetical order to match generator output)
+        var additionalGeneratedSources = new Dictionary<string, string>
+        {
+            ["Dashboard.g.cs"] = GenerateFilterCodeBehind(
+                "Dashboard",
+                "TestModelComponent",
+                "Pages",
+                new[] { "Model.Title" }, new[] { "Test" }),
+            ["Settings.g.cs"] = GenerateFilterCodeBehind(
+                "Settings",
+                "TestModelComponent",
+                "Pages",
+                new[] { "Model.Title" }, new[] { "Test" }),
+            ["Sidebar.g.cs"] = GenerateFilterCodeBehind(
+                "Sidebar",
+                "TestModelComponent",
+                "Components",
+                new[] { "Model.Title" }, new[] { "Test" })
+        };
+
         await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
             source,
             razorFiles,
@@ -1540,6 +1907,149 @@ public class RazorFileDiagnosticsTests
             "TestModel",
             "TestModelComponent",
             modelScope: "Singleton",
+            additionalGeneratedSources: additionalGeneratedSources,
+            expected: expected);
+    }
+
+    [Fact]
+    public async Task FullyQualifiedGeneratedComponent_WithoutPageDirective_ReportsError()
+    {
+        // lang=csharp
+        const string source = """
+
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+        using RxBlazorV2.Attributes;
+
+        namespace Test
+        {
+            [ObservableComponent]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Data { get; set; }
+            }
+        }
+        """;
+
+        // lang=csharp
+        const string generatedModel = """
+
+        #nullable enable
+        using JetBrains.Annotations;
+        using Microsoft.Extensions.DependencyInjection;
+        using ObservableCollections;
+        using R3;
+        using RxBlazorV2.Attributes;
+        using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using System;
+
+        namespace Test;
+
+        public partial class TestModel
+        {
+            public override string ModelID => "Test.TestModel";
+
+            public partial string Data
+            {
+                get => field;
+                [UsedImplicitly]
+                set
+                {
+                    if (field != value)
+                    {
+                        field = value;
+                        StateHasChanged("Model.Data");
+                    }
+                }
+            }
+
+        }
+
+        """;
+
+        // lang=csharp
+        const string generatedComponent = """
+
+        using R3;
+        using ObservableCollections;
+        using System;
+        using System.Threading.Tasks;
+        using Microsoft.Extensions.DependencyInjection;
+        using RxBlazorV2.Component;
+
+        namespace Test;
+
+        public partial class TestModelComponent : ObservableComponent<TestModel>
+        {
+            protected override void InitializeGeneratedCode()
+            {
+                // Subscribe to model changes - respects Filter() method
+                var filter = Filter();
+                if (filter.Length == 0)
+                {
+                    // No filter - observe all property changes
+                    Subscriptions.Add(Model.Observable
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
+                else
+                {
+                    // Filter active - observe only filtered properties
+                    Subscriptions.Add(Model.Observable
+                        .Where(changedProps => changedProps.Intersect(filter).Any())
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
+            }
+
+            protected override Task InitializeGeneratedCodeAsync()
+            {
+                return Task.CompletedTask;
+            }
+
+        }
+
+        """;
+
+        // Razor file with fully-qualified component name without @page - SHOULD report RXBG061
+        var razorFiles = new Dictionary<string, string>
+        {
+            ["Components/Composed.razor"] = """
+            {|#0:@inherits Test.TestModelComponent|}
+
+            <div>Data: @Model.Data</div>
+            """
+        };
+
+        var expected = new DiagnosticResult(DiagnosticDescriptors.SameAssemblyComponentCompositionError)
+            .WithLocation(0)
+            .WithArguments("Composed.razor", "TestModelComponent");
+
+        // Expected code-behind generation - preserves fully-qualified name from razor file
+        var additionalGeneratedSources = new Dictionary<string, string>
+        {
+            ["Composed.g.cs"] = GenerateFilterCodeBehind(
+                "Composed",
+                "Test.TestModelComponent",  // Fully-qualified as used in razor file
+                "Components",
+                new[] { "Model.Data" }, new[] { "Test" })
+        };
+
+        await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
+            source,
+            razorFiles,
+            generatedModel,
+            generatedComponent,
+            "TestModel",
+            "TestModelComponent",
+            additionalGeneratedSources: additionalGeneratedSources,
             expected: expected);
     }
 
@@ -1591,7 +2101,7 @@ public class RazorFileDiagnosticsTests
                     if (field != value)
                     {
                         field = value;
-                        StateHasChanged(nameof(Data));
+                        StateHasChanged("Model.Data");
                     }
                 }
             }
@@ -1616,13 +2126,29 @@ public class RazorFileDiagnosticsTests
         {
             protected override void InitializeGeneratedCode()
             {
-                // Subscribe to model changes for component base model and other models from properties
-                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Data"]).Any())
-                    .Chunk(TimeSpan.FromMilliseconds(100))
-                    .Subscribe(chunks =>
-                    {
-                        InvokeAsync(StateHasChanged);
-                    }));
+                // Subscribe to model changes - respects Filter() method
+                var filter = Filter();
+                if (filter.Length == 0)
+                {
+                    // No filter - observe all property changes
+                    Subscriptions.Add(Model.Observable
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
+                else
+                {
+                    // Filter active - observe only filtered properties
+                    Subscriptions.Add(Model.Observable
+                        .Where(changedProps => changedProps.Intersect(filter).Any())
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
             }
 
             protected override Task InitializeGeneratedCodeAsync()
@@ -1650,6 +2176,17 @@ public class RazorFileDiagnosticsTests
             .WithLocation(0)
             .WithArguments("MyWidget.razor", "CustomComponent");
 
+        // Expected code-behind generation
+        // Note: Always uses "Model." prefix regardless of component name
+        var additionalGeneratedSources = new Dictionary<string, string>
+        {
+            ["MyWidget.g.cs"] = GenerateFilterCodeBehind(
+                "MyWidget",
+                "CustomComponent",
+                "Components",
+                new[] { "Model.Data" }, new[] { "Test" })
+        };
+
         await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
             source,
             razorFiles,
@@ -1657,6 +2194,8 @@ public class RazorFileDiagnosticsTests
             generatedComponent,
             "TestModel",
             "CustomComponent",
+            additionalGeneratedSources: additionalGeneratedSources,
             expected: expected);
     }
+
 }

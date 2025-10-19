@@ -1,0 +1,13 @@
+@inherits RxBlazorV2.Component.ObservableComponent<ParentModel>
+
+<div id="parent-model-component">
+    Counter1: @Model.GetCounterModel().Counter1
+    Counter2: @Model.GetCounterModel().Counter2
+    TotalCount: @Model.TotalCount
+</div>
+
+@code {
+    // Uses referenced model properties
+    // Filter should include "Model.CounterModel.Counter1", "Model.CounterModel.Counter2"
+    // Should NOT include "Model.CounterModel.Counter3" (not used)
+}

@@ -14,14 +14,16 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.CodeAnalysis.Common" Version="5.0.0-2.final" />
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0-2.final" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0-rc.1.25451.107" />
-		<PackageReference Include="Microsoft.Extensions.DependencyModel" Version="10.0.0-rc.1.25451.107" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0-rc.2.25502.107" />
+		<PackageReference Include="Microsoft.Extensions.DependencyModel" Version="10.0.0-rc.2.25502.107" />
 		<PackageReference Include="R3" Version="1.3.0" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\RxBlazorV2Generator\RxBlazorV2Generator.csproj" />
 		<ProjectReference Include="..\RxBlazorV2\RxBlazorV2.csproj" />
+		<ProjectReference Include="..\RxBlazorV2Sample\RxBlazorV2Sample.csproj" />
+		<ProjectReference Include="..\RxBlazorVSSampleComponents\RxBlazorVSSampleComponents.csproj" />
 	</ItemGroup>
 	
 </Project>

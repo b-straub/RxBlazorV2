@@ -1,0 +1,23 @@
+@inherits RxBlazorV2.Component.ObservableComponent<TestObservableModel>
+
+<div id="render-tracking-component">
+    Counter: @Model.Counter
+    Render Count: @RenderCount
+</div>
+
+@code {
+    // Tracks render count to verify filtering optimization
+    public int RenderCount { get; private set; } = 0;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+        if (!firstRender)
+        {
+            RenderCount++;
+        }
+    }
+
+    // Only uses Model.Counter
+    // Changing Model.Name should NOT trigger re-render
+}

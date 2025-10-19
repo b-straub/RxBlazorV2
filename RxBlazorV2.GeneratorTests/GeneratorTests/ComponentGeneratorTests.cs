@@ -56,7 +56,7 @@ public class ComponentTriggerGeneratorTests
                     if (field != value)
                     {
                         field = value;
-                        StateHasChanged(nameof(Counter));
+                        StateHasChanged("Model.Counter");
                     }
                 }
             }
@@ -82,13 +82,29 @@ public class ComponentTriggerGeneratorTests
         {
             protected override void InitializeGeneratedCode()
             {
-                // Subscribe to model changes for component base model and other models from properties
-                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Counter"]).Any())
-                    .Chunk(TimeSpan.FromMilliseconds(100))
-                    .Subscribe(chunks =>
-                    {
-                        InvokeAsync(StateHasChanged);
-                    }));
+                // Subscribe to model changes - respects Filter() method
+                var filter = Filter();
+                if (filter.Length == 0)
+                {
+                    // No filter - observe all property changes
+                    Subscriptions.Add(Model.Observable
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
+                else
+                {
+                    // Filter active - observe only filtered properties
+                    Subscriptions.Add(Model.Observable
+                        .Where(changedProps => changedProps.Intersect(filter).Any())
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
             }
 
             protected override Task InitializeGeneratedCodeAsync()
@@ -151,7 +167,7 @@ public class ComponentTriggerGeneratorTests
                     if (field != value)
                     {
                         field = value;
-                        StateHasChanged(nameof(Counter));
+                        StateHasChanged("Model.Counter");
                     }
                 }
             }
@@ -177,13 +193,29 @@ public class ComponentTriggerGeneratorTests
         {
             protected override void InitializeGeneratedCode()
             {
-                // Subscribe to model changes for component base model and other models from properties
-                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Counter"]).Any())
-                    .Chunk(TimeSpan.FromMilliseconds(100))
-                    .Subscribe(chunks =>
-                    {
-                        InvokeAsync(StateHasChanged);
-                    }));
+                // Subscribe to model changes - respects Filter() method
+                var filter = Filter();
+                if (filter.Length == 0)
+                {
+                    // No filter - observe all property changes
+                    Subscriptions.Add(Model.Observable
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
+                else
+                {
+                    // Filter active - observe only filtered properties
+                    Subscriptions.Add(Model.Observable
+                        .Where(changedProps => changedProps.Intersect(filter).Any())
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
             }
 
             protected override Task InitializeGeneratedCodeAsync()
@@ -247,7 +279,7 @@ public class ComponentTriggerGeneratorTests
                     if (field != value)
                     {
                         field = value;
-                        StateHasChanged(nameof(Counter));
+                        StateHasChanged("Model.Counter");
                     }
                 }
             }
@@ -273,15 +305,31 @@ public class ComponentTriggerGeneratorTests
         {
             protected override void InitializeGeneratedCode()
             {
-                // Subscribe to model changes for component base model and other models from properties
-                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Counter"]).Any())
-                    .Chunk(TimeSpan.FromMilliseconds(100))
-                    .Subscribe(chunks =>
-                    {
-                        InvokeAsync(StateHasChanged);
-                    }));
+                // Subscribe to model changes - respects Filter() method
+                var filter = Filter();
+                if (filter.Length == 0)
+                {
+                    // No filter - observe all property changes
+                    Subscriptions.Add(Model.Observable
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
+                else
+                {
+                    // Filter active - observe only filtered properties
+                    Subscriptions.Add(Model.Observable
+                        .Where(changedProps => changedProps.Intersect(filter).Any())
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
 
-                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Counter"]).Any())
+                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["TestModel.Counter"]).Any())
                     .Chunk(TimeSpan.FromMilliseconds(100))
                     .Subscribe(chunks =>
                     {
@@ -353,7 +401,7 @@ public class ComponentTriggerGeneratorTests
                     if (field != value)
                     {
                         field = value;
-                        StateHasChanged(nameof(Counter));
+                        StateHasChanged("Model.Counter");
                     }
                 }
             }
@@ -379,15 +427,31 @@ public class ComponentTriggerGeneratorTests
         {
             protected override void InitializeGeneratedCode()
             {
-                // Subscribe to model changes for component base model and other models from properties
-                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Counter"]).Any())
-                    .Chunk(TimeSpan.FromMilliseconds(100))
-                    .Subscribe(chunks =>
-                    {
-                        InvokeAsync(StateHasChanged);
-                    }));
+                // Subscribe to model changes - respects Filter() method
+                var filter = Filter();
+                if (filter.Length == 0)
+                {
+                    // No filter - observe all property changes
+                    Subscriptions.Add(Model.Observable
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
+                else
+                {
+                    // Filter active - observe only filtered properties
+                    Subscriptions.Add(Model.Observable
+                        .Where(changedProps => changedProps.Intersect(filter).Any())
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
 
-                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Counter"]).Any())
+                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["TestModel.Counter"]).Any())
                     .Chunk(TimeSpan.FromMilliseconds(100))
                     .SubscribeAwait(async (chunks, ct) =>
                     {
@@ -461,7 +525,7 @@ public class ComponentTriggerGeneratorTests
                     if (field != value)
                     {
                         field = value;
-                        StateHasChanged(nameof(Counter));
+                        StateHasChanged("Model.Counter");
                     }
                 }
             }
@@ -487,22 +551,38 @@ public class ComponentTriggerGeneratorTests
         {
             protected override void InitializeGeneratedCode()
             {
-                // Subscribe to model changes for component base model and other models from properties
-                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Counter"]).Any())
-                    .Chunk(TimeSpan.FromMilliseconds(100))
-                    .Subscribe(chunks =>
-                    {
-                        InvokeAsync(StateHasChanged);
-                    }));
+                // Subscribe to model changes - respects Filter() method
+                var filter = Filter();
+                if (filter.Length == 0)
+                {
+                    // No filter - observe all property changes
+                    Subscriptions.Add(Model.Observable
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
+                else
+                {
+                    // Filter active - observe only filtered properties
+                    Subscriptions.Add(Model.Observable
+                        .Where(changedProps => changedProps.Intersect(filter).Any())
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
 
-                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Counter"]).Any())
+                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["TestModel.Counter"]).Any())
                     .Chunk(TimeSpan.FromMilliseconds(100))
                     .Subscribe(chunks =>
                     {
                         OnCounterChanged();
                     }));
 
-                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Counter"]).Any())
+                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["TestModel.Counter"]).Any())
                     .Chunk(TimeSpan.FromMilliseconds(100))
                     .SubscribeAwait(async (chunks, ct) =>
                     {
@@ -580,7 +660,7 @@ public class ComponentTriggerGeneratorTests
                     if (field != value)
                     {
                         field = value;
-                        StateHasChanged(nameof(Counter));
+                        StateHasChanged("Model.Counter");
                     }
                 }
             }
@@ -606,22 +686,38 @@ public class ComponentTriggerGeneratorTests
         {
             protected override void InitializeGeneratedCode()
             {
-                // Subscribe to model changes for component base model and other models from properties
-                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Counter"]).Any())
-                    .Chunk(TimeSpan.FromMilliseconds(100))
-                    .Subscribe(chunks =>
-                    {
-                        InvokeAsync(StateHasChanged);
-                    }));
+                // Subscribe to model changes - respects Filter() method
+                var filter = Filter();
+                if (filter.Length == 0)
+                {
+                    // No filter - observe all property changes
+                    Subscriptions.Add(Model.Observable
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
+                else
+                {
+                    // Filter active - observe only filtered properties
+                    Subscriptions.Add(Model.Observable
+                        .Where(changedProps => changedProps.Intersect(filter).Any())
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
 
-                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Counter"]).Any())
+                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["TestModel.Counter"]).Any())
                     .Chunk(TimeSpan.FromMilliseconds(100))
                     .Subscribe(chunks =>
                     {
                         HandleCounterUpdate();
                     }));
 
-                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Counter"]).Any())
+                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["TestModel.Counter"]).Any())
                     .Chunk(TimeSpan.FromMilliseconds(100))
                     .SubscribeAwait(async (chunks, ct) =>
                     {
@@ -703,7 +799,7 @@ public class ComponentTriggerGeneratorTests
                     if (field != value)
                     {
                         field = value;
-                        StateHasChanged(nameof(Counter));
+                        StateHasChanged("Model.Counter");
                     }
                 }
             }
@@ -717,7 +813,7 @@ public class ComponentTriggerGeneratorTests
                     if (field != value)
                     {
                         field = value;
-                        StateHasChanged(nameof(Name));
+                        StateHasChanged("Model.Name");
                     }
                 }
             }
@@ -731,7 +827,7 @@ public class ComponentTriggerGeneratorTests
                     if (field != value)
                     {
                         field = value;
-                        StateHasChanged(nameof(IsActive));
+                        StateHasChanged("Model.IsActive");
                     }
                 }
             }
@@ -757,22 +853,38 @@ public class ComponentTriggerGeneratorTests
         {
             protected override void InitializeGeneratedCode()
             {
-                // Subscribe to model changes for component base model and other models from properties
-                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Counter", "Name", "IsActive"]).Any())
-                    .Chunk(TimeSpan.FromMilliseconds(100))
-                    .Subscribe(chunks =>
-                    {
-                        InvokeAsync(StateHasChanged);
-                    }));
+                // Subscribe to model changes - respects Filter() method
+                var filter = Filter();
+                if (filter.Length == 0)
+                {
+                    // No filter - observe all property changes
+                    Subscriptions.Add(Model.Observable
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
+                else
+                {
+                    // Filter active - observe only filtered properties
+                    Subscriptions.Add(Model.Observable
+                        .Where(changedProps => changedProps.Intersect(filter).Any())
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
 
-                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Counter"]).Any())
+                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["TestModel.Counter"]).Any())
                     .Chunk(TimeSpan.FromMilliseconds(100))
                     .Subscribe(chunks =>
                     {
                         OnCounterChanged();
                     }));
 
-                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Name"]).Any())
+                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["TestModel.Name"]).Any())
                     .Chunk(TimeSpan.FromMilliseconds(100))
                     .SubscribeAwait(async (chunks, ct) =>
                     {

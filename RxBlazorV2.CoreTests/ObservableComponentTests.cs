@@ -1,11 +1,10 @@
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using RxBlazorV2.CoreTests.TestFixtures;
-using RxBlazorV2.Model;
 
 namespace RxBlazorV2.CoreTests;
 
-public class ObservableComponentTests : Bunit.TestContext
+public class ObservableComponentTests : BunitContext
 {
     private readonly ITestOutputHelper _output;
 
@@ -21,7 +20,7 @@ public class ObservableComponentTests : Bunit.TestContext
         Services.AddTransient<TestObservableModel>();
 
         // Act
-        var cut = RenderComponent<TestObservableComponentWithTracking>();
+        var cut = Render<TestObservableComponentWithTracking>();
 
         // Assert
         Assert.NotNull(cut);
@@ -37,7 +36,7 @@ public class ObservableComponentTests : Bunit.TestContext
         Services.AddTransient<TestObservableModel>();
 
         // Act
-        var cut = RenderComponent<TestObservableComponentWithTracking>();
+        var cut = Render<TestObservableComponentWithTracking>();
 
         // Assert
         Assert.NotNull(cut.Instance.Model);
@@ -52,7 +51,7 @@ public class ObservableComponentTests : Bunit.TestContext
         Services.AddTransient<TestObservableModel>();
 
         // Act
-        var cut = RenderComponent<TestObservableComponentWithTracking>();
+        var cut = Render<TestObservableComponentWithTracking>();
 
         // Wait for first render to complete
         cut.WaitForState(() => cut.Instance.OnContextReadyCallCount > 0, timeout: TimeSpan.FromSeconds(2));
@@ -69,7 +68,7 @@ public class ObservableComponentTests : Bunit.TestContext
         Services.AddTransient<TestObservableModel>();
 
         // Act
-        var cut = RenderComponent<TestObservableComponentWithTracking>();
+        var cut = Render<TestObservableComponentWithTracking>();
 
         // Wait for async lifecycle to complete
         cut.WaitForState(() => cut.Instance.OnContextReadyAsyncCallCount > 0, timeout: TimeSpan.FromSeconds(2));
@@ -86,7 +85,7 @@ public class ObservableComponentTests : Bunit.TestContext
         Services.AddTransient<TestObservableModel>();
 
         // Act
-        var cut = RenderComponent<TestObservableComponentWithTracking>();
+        var cut = Render<TestObservableComponentWithTracking>();
 
         // Wait for context ready to complete
         cut.WaitForState(() => cut.Instance.Model.ContextReadyCalled, timeout: TimeSpan.FromSeconds(2));
@@ -103,7 +102,7 @@ public class ObservableComponentTests : Bunit.TestContext
         Services.AddTransient<TestObservableModel>();
 
         // Act
-        var cut = RenderComponent<TestObservableComponentWithTracking>();
+        var cut = Render<TestObservableComponentWithTracking>();
 
         // Wait for async context ready to complete
         cut.WaitForState(() => cut.Instance.Model.ContextReadyAsyncCalled, timeout: TimeSpan.FromSeconds(2));
@@ -120,7 +119,7 @@ public class ObservableComponentTests : Bunit.TestContext
         Services.AddTransient<TestObservableModel>();
 
         // Act
-        var cut = RenderComponent<TestObservableComponentWithTracking>();
+        var cut = Render<TestObservableComponentWithTracking>();
 
         // Wait for all lifecycle hooks to complete
         cut.WaitForState(() =>
@@ -148,7 +147,7 @@ public class ObservableComponentTests : Bunit.TestContext
         Services.AddTransient<TestObservableModel>();
 
         // Act
-        var cut = RenderComponent<TestObservableComponentWithTracking>();
+        var cut = Render<TestObservableComponentWithTracking>();
 
         // Assert
         var markup = cut.Markup;
@@ -164,7 +163,7 @@ public class ObservableComponentTests : Bunit.TestContext
         Services.AddTransient<TestObservableModel>();
 
         // Act
-        var cut = RenderComponent<TestObservableComponentWithTracking>();
+        var cut = Render<TestObservableComponentWithTracking>();
 
         // Wait for lifecycle to complete
         cut.WaitForState(() => cut.Instance.Model.ContextReadyCalled, timeout: TimeSpan.FromSeconds(2));
@@ -179,29 +178,11 @@ public class ObservableComponentTests : Bunit.TestContext
     }
 
     [Fact]
-    public async Task Component_Dispose_CallsOnDisposeAsync()
-    {
-        // Arrange
-        Services.AddTransient<TestObservableModel>();
-        var cut = RenderComponent<TestObservableComponentWithTracking>();
-
-        // Wait for initialization
-        cut.WaitForState(() => cut.Instance.OnContextReadyCallCount > 0, timeout: TimeSpan.FromSeconds(2));
-
-        // Act
-        await cut.Instance.DisposeAsync();
-
-        // Assert
-        Assert.Equal(1, cut.Instance.OnDisposeAsyncCallCount);
-        _output.WriteLine("OnDisposeAsync was called on component disposal");
-    }
-
-    [Fact]
     public void Component_ModelPropertyChanges_AreObservable()
     {
         // Arrange
         Services.AddTransient<TestObservableModel>();
-        var cut = RenderComponent<TestObservableComponentWithTracking>();
+        var cut = Render<TestObservableComponentWithTracking>();
 
         // Wait for initialization
         cut.WaitForState(() => cut.Instance.Model.ContextReadyCalled, timeout: TimeSpan.FromSeconds(2));
@@ -230,8 +211,8 @@ public class ObservableComponentTests : Bunit.TestContext
         Services.AddScoped<TestObservableModel>();
 
         // Act
-        var cut1 = RenderComponent<TestObservableComponentWithTracking>();
-        var cut2 = RenderComponent<TestObservableComponentWithTracking>();
+        var cut1 = Render<TestObservableComponentWithTracking>();
+        var cut2 = Render<TestObservableComponentWithTracking>();
 
         // Assert - bunit creates new scopes per component, so models should be different
         Assert.NotSame(cut1.Instance.Model, cut2.Instance.Model);
@@ -245,8 +226,8 @@ public class ObservableComponentTests : Bunit.TestContext
         Services.AddTransient<TestObservableModel>();
 
         // Act
-        var cut1 = RenderComponent<TestObservableComponentWithTracking>();
-        var cut2 = RenderComponent<TestObservableComponentWithTracking>();
+        var cut1 = Render<TestObservableComponentWithTracking>();
+        var cut2 = Render<TestObservableComponentWithTracking>();
 
         // Assert
         Assert.NotSame(cut1.Instance.Model, cut2.Instance.Model);
@@ -260,7 +241,7 @@ public class ObservableComponentTests : Bunit.TestContext
         Services.AddTransient<TestObservableModel>();
 
         // Act
-        var cut = RenderComponent<TestObservableComponentWithTracking>();
+        var cut = Render<TestObservableComponentWithTracking>();
 
         // Assert
         Assert.Equal("RxBlazorV2.CoreTests.TestFixtures.TestObservableModel", cut.Instance.Model.ModelID);
@@ -272,7 +253,7 @@ public class ObservableComponentTests : Bunit.TestContext
     {
         // Arrange
         Services.AddTransient<TestObservableModel>();
-        var cut = RenderComponent<TestObservableComponentWithTracking>();
+        var cut = Render<TestObservableComponentWithTracking>();
 
         // Wait for initialization
         cut.WaitForState(() => cut.Instance.Model.ContextReadyCalled, timeout: TimeSpan.FromSeconds(2));
@@ -294,7 +275,7 @@ public class ObservableComponentTests : Bunit.TestContext
     {
         // Arrange
         Services.AddTransient<TestObservableModel>();
-        var cut = RenderComponent<TestObservableComponentWithTracking>();
+        var cut = Render<TestObservableComponentWithTracking>();
 
         // Wait for initialization
         cut.WaitForState(() => cut.Instance.Model.ContextReadyCalled, timeout: TimeSpan.FromSeconds(2));

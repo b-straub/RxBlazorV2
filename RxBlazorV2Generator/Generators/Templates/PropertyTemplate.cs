@@ -52,16 +52,18 @@ public static class PropertyTemplate
 
     /// <summary>
     /// Generates partial property implementations with field keyword.
+    /// Uses "Model." prefix for property names in StateHasChanged calls (component context).
     /// </summary>
     /// <param name="partialProperties">Collection of partial properties.</param>
+    /// <param name="className">The class name (unused, kept for compatibility).</param>
     /// <returns>Generated properties code.</returns>
-    public static string GeneratePartialProperties(IEnumerable<PartialPropertyInfo> partialProperties)
+    public static string GeneratePartialProperties(IEnumerable<PartialPropertyInfo> partialProperties, string className)
     {
         var sb = new StringBuilder();
         var propertiesList = partialProperties.ToList();
         for (int i = 0; i < propertiesList.Count; i++)
         {
-            sb.AppendLine(GeneratePartialProperty(propertiesList[i]));
+            sb.AppendLine(GeneratePartialProperty(propertiesList[i], className));
             if (i < propertiesList.Count - 1)
             {
                 sb.AppendLine();
@@ -71,11 +73,12 @@ public static class PropertyTemplate
     }
 
     /// <summary>
-    /// Generates a single partial property implementation.
+    /// Generates a single partial property implementation with Model. prefix.
     /// </summary>
     /// <param name="prop">The property information.</param>
+    /// <param name="className">The class name (unused, kept for compatibility).</param>
     /// <returns>Generated property code.</returns>
-    private static string GeneratePartialProperty(PartialPropertyInfo prop)
+    private static string GeneratePartialProperty(PartialPropertyInfo prop, string className)
     {
         var sb = new StringBuilder();
         var batchIdsParam = "";
@@ -87,6 +90,9 @@ public static class PropertyTemplate
 
         // Handle required modifier
         var requiredModifier = prop.HasRequiredModifier ? "required " : "";
+
+        // Use Model. prefix for StateHasChanged (component context)
+        var qualifiedPropertyName = $"Model.{prop.Name}";
 
         sb.AppendLine($"    {prop.Accessibility} {requiredModifier}partial {prop.Type} {prop.Name}");
         sb.AppendLine("    {");
@@ -109,7 +115,7 @@ public static class PropertyTemplate
                 sb.AppendLine("        init");
                 sb.AppendLine("        {");
                 sb.AppendLine("            field = value;");
-                sb.AppendLine($"            StateHasChanged(nameof({prop.Name}){batchIdsParam});");
+                sb.AppendLine($"            StateHasChanged(\"{qualifiedPropertyName}\"{batchIdsParam});");
                 sb.AppendLine("        }");
             }
         }
@@ -124,13 +130,13 @@ public static class PropertyTemplate
                 sb.AppendLine("            if (field != value)");
                 sb.AppendLine("            {");
                 sb.AppendLine("                field = value;");
-                sb.AppendLine($"                StateHasChanged(nameof({prop.Name}){batchIdsParam});");
+                sb.AppendLine($"                StateHasChanged(\"{qualifiedPropertyName}\"{batchIdsParam});");
                 sb.AppendLine("            }");
             }
             else
             {
                 sb.AppendLine("            field = value;");
-                sb.AppendLine($"            StateHasChanged(nameof({prop.Name}){batchIdsParam});");
+                sb.AppendLine($"            StateHasChanged(\"{qualifiedPropertyName}\"{batchIdsParam});");
             }
 
             sb.AppendLine("        }");

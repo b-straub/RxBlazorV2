@@ -18,7 +18,6 @@ builder.Services.AddScoped<LocationService>();
 
 ObservableModels.Initialize(builder.Services);
 RxBlazorV2ExternalModel.ObservableModels.Initialize(builder.Services);
-RxBlazorVSSampleComponents.ObservableModels.Initialize(builder.Services);
 
 // Register generic models for samples
 ObservableModels.GenericModelsBaseModel<string, int>(builder.Services);

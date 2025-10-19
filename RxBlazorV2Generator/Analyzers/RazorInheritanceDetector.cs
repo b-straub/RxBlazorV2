@@ -33,7 +33,7 @@ public static class RazorInheritanceDetector
             }
 
             // Extract component name from file path (e.g., Pages/Weather.razor -> Weather)
-            var fileName = System.IO.Path.GetFileNameWithoutExtension(razorFile.Path);
+            var fileName = Path.GetFileNameWithoutExtension(razorFile.Path);
 
             // Extract generic part (e.g., "<WeatherModel>" or empty string)
             var inheritStatement = match.Value;
@@ -91,9 +91,12 @@ public static class RazorInheritanceDetector
             var text = content.ToString();
 
             // Create pattern to match @inherits {ComponentClassName}
-            // This matches the component name as a whole word (not part of another word)
+            // This matches both:
+            // - Unqualified: @inherits SettingsModelComponent
+            // - Fully-qualified: @inherits MyNamespace.SettingsModelComponent
+            // Pattern: @inherits followed by optional namespace parts, ending with the component class name
             var inheritsPattern = new Regex(
-                $@"@inherits\s+{Regex.Escape(componentClassName)}\b",
+                $@"@inherits\s+(?:[\w\.]+\.)?{Regex.Escape(componentClassName)}\b",
                 RegexOptions.Compiled | RegexOptions.Multiline);
 
             var match = inheritsPattern.Match(text);
@@ -127,5 +130,44 @@ public static class RazorInheritanceDetector
     {
         var pagePattern = new Regex(@"@page\s+""[^""]*""", RegexOptions.Compiled);
         return pagePattern.IsMatch(text);
+    }
+
+    /// <summary>
+    /// Detects the default layout component from RouteView definitions.
+    /// Searches for DefaultLayout="@typeof(ComponentName)" pattern in razor files.
+    /// Returns the component name if found, otherwise null.
+    /// </summary>
+    public static string? DetectDefaultLayoutComponent(IEnumerable<AdditionalText> razorFiles)
+    {
+        try
+        {
+            // Pattern matches: DefaultLayout="@typeof(ComponentName)"
+            var defaultLayoutPattern = new Regex(
+                @"DefaultLayout\s*=\s*""@typeof\(([^)]+)\)""",
+                RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+            foreach (var razorFile in razorFiles)
+            {
+                var content = razorFile.GetText();
+                if (content is null)
+                {
+                    continue;
+                }
+
+                var text = content.ToString();
+                var match = defaultLayoutPattern.Match(text);
+
+                if (match.Success)
+                {
+                    return match.Groups[1].Value.Trim();
+                }
+            }
+
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

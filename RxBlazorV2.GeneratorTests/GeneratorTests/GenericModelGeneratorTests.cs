@@ -48,7 +48,7 @@ public class GenericModelGeneratorTests
                 set
                 {
                     field = value;
-                    StateHasChanged(nameof(Item));
+                    StateHasChanged("Model.Item");
                 }
             }
 
@@ -104,7 +104,7 @@ public class GenericModelGeneratorTests
                 set
                 {
                     field = value;
-                    StateHasChanged(nameof(Item1));
+                    StateHasChanged("Model.Item1");
                 }
             }
 
@@ -115,7 +115,7 @@ public class GenericModelGeneratorTests
                 set
                 {
                     field = value;
-                    StateHasChanged(nameof(Item2));
+                    StateHasChanged("Model.Item2");
                 }
             }
 
@@ -238,7 +238,7 @@ public partial class ConsumerModel<T, P> where T : class where P : struct
         set
         {
             field = value;
-            StateHasChanged(nameof(Value));
+            StateHasChanged("ConsumerModel<T, P>.Value");
         }
     }
 

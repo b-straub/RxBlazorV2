@@ -1,0 +1,13 @@
+@inherits RxBlazorV2.Component.ObservableComponent<TestObservableModel>
+
+<div id="all-properties-component">
+    Counter: @Model.Counter
+    Name: @Model.Name
+    BatchProperty1: @Model.BatchProperty1
+    BatchProperty2: @Model.BatchProperty2
+</div>
+
+@code {
+    // Uses all model properties
+    // Generated Filter() should include all properties
+}

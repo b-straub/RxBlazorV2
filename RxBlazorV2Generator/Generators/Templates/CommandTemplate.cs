@@ -88,13 +88,17 @@ public static class CommandTemplate
             foreach (var trigger in cmd.Triggers)
             {
                 var (sourceModel, triggerProperty) = ParseTriggerProperty(trigger.TriggerProperty, modelInfo);
-                var triggerProps = $"[\"{triggerProperty}\"]";
+                // Use Model. prefix for all trigger properties
+                var qualifiedTriggerProp = string.IsNullOrEmpty(sourceModel)
+                    ? $"Model.{triggerProperty}"
+                    : $"Model.{sourceModel}.{triggerProperty}";
+                var triggerProps = $"[\"{qualifiedTriggerProp}\"]";
 
                 var combinedCondition = GetCombinedTriggerCondition(cmd, trigger);
 
                 if (string.IsNullOrEmpty(sourceModel))
                 {
-                    // Local property trigger
+                    // Local property trigger - listen to own Observable
                     sb.AppendLine($"        Subscriptions.Add(Observable.Where(p => p.Intersect({triggerProps}).Any())");
                     if (!string.IsNullOrEmpty(combinedCondition))
                     {
@@ -104,8 +108,11 @@ public static class CommandTemplate
                 }
                 else
                 {
-                    // Referenced model property trigger
-                    sb.AppendLine($"        Subscriptions.Add({sourceModel}.Observable.Where(p => p.Intersect({triggerProps}).Any())");
+                    // Referenced model property trigger - listen to referenced model's Observable
+                    // It emits "Model.X", we need to match "Model.{RefName}.X"
+                    var refTriggerProp = $"Model.{triggerProperty}";
+                    var refTriggerProps = $"[\"{refTriggerProp}\"]";
+                    sb.AppendLine($"        Subscriptions.Add({sourceModel}.Observable.Where(p => p.Intersect({refTriggerProps}).Any())");
                     if (!string.IsNullOrEmpty(combinedCondition))
                     {
                         sb.AppendLine($"            .Where(_ => {combinedCondition})");

@@ -107,6 +107,7 @@ internal static class RazorFileGeneratorVerifier
         string? componentClassName = null,
         string constrains = "",
         string modelScope = "Scoped",
+        Dictionary<string, string>? additionalGeneratedSources = null,
         params DiagnosticResult[] expected)
     {
         var test = new RxBlazorGeneratorTest { TestCode = source };
@@ -119,7 +120,7 @@ internal static class RazorFileGeneratorVerifier
         }
 
         // Add expected generated sources if provided
-        // Order matters: Model -> Component -> Service Extensions
+        // Order matters: Model -> Component -> Razor Code-Behind -> Service Extensions
         if (generatedModel is not null && modelName is not null)
         {
             var genericSplit = modelName.IndexOf('<');
@@ -134,6 +135,16 @@ internal static class RazorFileGeneratorVerifier
         {
             test.TestState.GeneratedSources.Add((typeof(RxBlazorGenerator), $"Test.{componentClassName}.g.cs",
                 SourceText.From(generatedComponent.NormalizeGeneratedCode(), Encoding.UTF8)));
+        }
+
+        // Add any additional generated sources (e.g., razor code-behind files) before service extensions
+        if (additionalGeneratedSources is not null)
+        {
+            foreach (var (fileName, content) in additionalGeneratedSources)
+            {
+                test.TestState.GeneratedSources.Add((typeof(RxBlazorGenerator), fileName,
+                    SourceText.From(content.NormalizeGeneratedCode(), Encoding.UTF8)));
+            }
         }
 
         // Add service extension files last

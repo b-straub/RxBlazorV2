@@ -37,8 +37,8 @@ public class ObservableModelSuspensionTests
         // Assert
         Assert.Equal(1, notificationCount);
         Assert.Equal(2, receivedProperties[0].Length);
-        Assert.Contains(nameof(model.Counter), receivedProperties[0]);
-        Assert.Contains(nameof(model.Name), receivedProperties[0]);
+        Assert.Contains($"Model.{nameof(model.Counter)}", receivedProperties[0]);
+        Assert.Contains($"Model.{nameof(model.Name)}", receivedProperties[0]);
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public class ObservableModelSuspensionTests
         // Assert
         Assert.Equal(1, notificationCount);
         Assert.Single(receivedProperties[0]);
-        Assert.Equal(nameof(model.Counter), receivedProperties[0][0]);
+        Assert.Equal($"Model.{nameof(model.Counter)}", receivedProperties[0][0]);
     }
 
     [Fact]
@@ -115,9 +115,9 @@ public class ObservableModelSuspensionTests
 
         // Assert - 3 notifications: Counter, Name (immediate), then BatchProperty1 (at end)
         Assert.Equal(3, notificationCount);
-        Assert.Equal(nameof(model.Counter), receivedProperties[0][0]);
-        Assert.Equal(nameof(model.Name), receivedProperties[1][0]);
-        Assert.Equal(nameof(model.BatchProperty1), receivedProperties[2][0]);
+        Assert.Equal($"Model.{nameof(model.Counter)}", receivedProperties[0][0]);
+        Assert.Equal($"Model.{nameof(model.Name)}", receivedProperties[1][0]);
+        Assert.Equal($"Model.{nameof(model.BatchProperty1)}", receivedProperties[2][0]);
     }
 
     [Fact]
@@ -145,10 +145,10 @@ public class ObservableModelSuspensionTests
 
         // Assert - 2 notifications: Counter (immediate), then batched properties at end
         Assert.Equal(2, notificationCount);
-        Assert.Equal(nameof(model.Counter), receivedProperties[0][0]);
+        Assert.Equal($"Model.{nameof(model.Counter)}", receivedProperties[0][0]);
         Assert.Equal(2, receivedProperties[1].Length);
-        Assert.Contains(nameof(model.BatchProperty1), receivedProperties[1]);
-        Assert.Contains(nameof(model.BatchProperty2), receivedProperties[1]);
+        Assert.Contains($"Model.{nameof(model.BatchProperty1)}", receivedProperties[1]);
+        Assert.Contains($"Model.{nameof(model.BatchProperty2)}", receivedProperties[1]);
     }
 
     [Fact]

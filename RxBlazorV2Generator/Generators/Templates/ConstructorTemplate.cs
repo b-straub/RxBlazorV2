@@ -189,7 +189,7 @@ public static class ConstructorTemplate
 
                 sb.AppendLine($"        {prop.Name} = new();");
                 sb.AppendLine($"        Subscriptions.Add({prop.Name}.ObserveChanged()");
-                sb.AppendLine($"            .Subscribe(_ => StateHasChanged(\"{prop.Name}\"{batchIdsParam})));");
+                sb.AppendLine($"            .Subscribe(_ => StateHasChanged(\"Model.{prop.Name}\"{batchIdsParam})));");
                 if (prop != observableCollectionProperties.Last())
                 {
                     sb.AppendLine();
@@ -202,17 +202,28 @@ public static class ConstructorTemplate
 
     /// <summary>
     /// Generates subscriptions for referenced model changes.
+    /// Transforms referenced model's "Model.X" emissions to "Model.{RefName}.X" for this model's context.
     /// </summary>
     private static string GenerateModelReferenceSubscriptions(ObservableModelInfo modelInfo)
     {
         var sb = new StringBuilder();
         sb.AppendLine("        // Subscribe to referenced model changes");
+        sb.AppendLine("        // Transform referenced model property names: Model.X -> Model.{RefName}.X");
 
         foreach (var modelRef in modelInfo.ModelReferences)
         {
-            var observedProps = $"[\"{string.Join("\", \"", modelRef.UsedProperties)}\"]";
-            sb.AppendLine($"        Subscriptions.Add({modelRef.PropertyName}.Observable.Select(props => props.Intersect({observedProps})).Where(props => props.Any())");
-            sb.AppendLine("            .Subscribe(props => StateHasChanged(props.ToArray())));");
+            // Filter for properties we care about (e.g., ["Model.IsDay", "Model.AutoRefresh"])
+            var filterProps = modelRef.UsedProperties.Select(p => $"Model.{p}").ToList();
+            var filterArray = $"[\"{string.Join("\", \"", filterProps)}\"]";
+            var filterArrayNewSyntax = $"new[] {{ \"{string.Join("\", \"", filterProps)}\" }}";
+
+            // Transform "Model.IsDay" -> "Model.Settings.IsDay"
+            var transformedPrefix = $"Model.{modelRef.PropertyName}.";
+
+            sb.AppendLine($"        Subscriptions.Add({modelRef.PropertyName}.Observable");
+            sb.AppendLine($"            .Where(props => props.Intersect({filterArray}).Any())");
+            sb.AppendLine($"            .Select(props => props.Where(p => {filterArrayNewSyntax}.Contains(p)).Select(p => p.Replace(\"Model.\", \"{transformedPrefix}\")).ToArray())");
+            sb.AppendLine("            .Subscribe(props => StateHasChanged(props)));");
         }
 
         return sb.ToString().TrimEnd('\r', '\n');

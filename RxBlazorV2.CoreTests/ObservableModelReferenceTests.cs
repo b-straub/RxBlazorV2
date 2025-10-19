@@ -61,7 +61,7 @@ public class ObservableModelReferenceTests
 
         // Assert
         Assert.Equal(1, notificationCount);
-        Assert.Contains("Counter1", receivedProperties[0]);
+        Assert.Contains("Model.CounterModel.Counter1", receivedProperties[0]);
     }
 
     [Fact]
@@ -85,7 +85,7 @@ public class ObservableModelReferenceTests
 
         // Assert
         Assert.Equal(1, notificationCount);
-        Assert.Contains("Counter2", receivedProperties[0]);
+        Assert.Contains("Model.CounterModel.Counter2", receivedProperties[0]);
     }
 
     [Fact]
@@ -135,9 +135,9 @@ public class ObservableModelReferenceTests
 
         // Assert - only Counter1 and Counter2 should trigger notifications
         Assert.Equal(2, notificationCount);
-        Assert.Contains("Counter1", allProperties);
-        Assert.Contains("Counter2", allProperties);
-        Assert.DoesNotContain("Counter3", allProperties);
+        Assert.Contains("Model.CounterModel.Counter1", allProperties);
+        Assert.Contains("Model.CounterModel.Counter2", allProperties);
+        Assert.DoesNotContain("Model.CounterModel.Counter3", allProperties);
         _output.WriteLine("Correctly filtered to Counter1 and Counter2 only");
     }
 
@@ -252,9 +252,9 @@ public class ObservableModelReferenceTests
         // Assert - should get 1 batched notification with Counter1 and Counter2
         Assert.Equal(1, notificationCount);
         Assert.Equal(2, receivedProperties[0].Length);
-        Assert.Contains("Counter1", receivedProperties[0]);
-        Assert.Contains("Counter2", receivedProperties[0]);
-        Assert.DoesNotContain("Counter3", receivedProperties[0]);
+        Assert.Contains("Model.CounterModel.Counter1", receivedProperties[0]);
+        Assert.Contains("Model.CounterModel.Counter2", receivedProperties[0]);
+        Assert.DoesNotContain("Model.CounterModel.Counter3", receivedProperties[0]);
     }
 
     [Fact]
@@ -293,15 +293,15 @@ public class ObservableModelReferenceTests
 
         using var subscription = parent.Observable.Subscribe(props =>
         {
-            if (props.Contains("Counter1"))
+            if (props.Contains("Model.CounterModel.Counter1"))
             {
                 counter1Changes++;
             }
-            if (props.Contains("Counter2"))
+            if (props.Contains("Model.CounterModel.Counter2"))
             {
                 counter2Changes++;
             }
-            if (props.Contains("Counter3"))
+            if (props.Contains("Model.CounterModel.Counter3"))
             {
                 counter3Changes++;
             }

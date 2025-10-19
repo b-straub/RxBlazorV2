@@ -46,13 +46,14 @@ namespace GeneratorTest.Helpers
                 .WithOptimizationLevel(OptimizationLevel.Debug)
                 .WithGeneralDiagnosticOption(ReportDiagnostic.Default);
 
-            var allReferences = DependencyContext.Default is null ? Enumerable.Empty<MetadataReference>() :
+            var allReferences = DependencyContext.Default is null ? new List<PortableExecutableReference>() :
                 DependencyContext.Default.CompileLibraries
                     .SelectMany(cl => cl.ResolveReferencePaths())
                     .Select(asm => MetadataReference.CreateFromFile(asm)).ToList();
-            
 
-            Compilation compilation = CSharpCompilation.Create("testgenerator", syntaxTrees, allReferences, compilationOptions);
+            var metaDataReferences = allReferences;
+            
+            Compilation compilation = CSharpCompilation.Create("testgenerator", syntaxTrees, metaDataReferences, compilationOptions);
             var parseOptions = syntaxTrees.FirstOrDefault()?.Options as CSharpParseOptions;
             RxBlazorGenerator? generator = new();
 
