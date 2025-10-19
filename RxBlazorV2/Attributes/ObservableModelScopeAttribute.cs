@@ -1,4 +1,6 @@
 #nullable enable
+using System.Diagnostics.CodeAnalysis;
+
 namespace RxBlazorV2.Model;
 
 /// <summary>
@@ -84,6 +86,7 @@ public enum ModelScope
 /// <para>See <see href="https://github.com/b-straub/RxBlazorV2/blob/master/Diagnostics/Help/RXBG010.md">RXBG010</see> for scope requirements and troubleshooting.</para>
 /// </remarks>
 #pragma warning disable CS9113
+[ExcludeFromCodeCoverage]
 [AttributeUsage(AttributeTargets.Class)]
 public class ObservableModelScopeAttribute(ModelScope scope) : Attribute
 {

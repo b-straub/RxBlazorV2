@@ -1,4 +1,6 @@
 #nullable enable
+using System.Diagnostics.CodeAnalysis;
+
 namespace RxBlazorV2.Model;
 
 /// <summary>
@@ -9,6 +11,7 @@ namespace RxBlazorV2.Model;
 /// A unique identifier for this batch group.
 /// </param>
 #pragma warning disable CS9113
+[ExcludeFromCodeCoverage]
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = true)]
 public class ObservableBatchAttribute(string batchId) : Attribute
 {

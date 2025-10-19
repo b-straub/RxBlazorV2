@@ -1522,7 +1522,8 @@ public class RazorFileDiagnosticsTests
 
         """;
 
-        // Razor file without @page directive - SHOULD report RXBG061
+        // Razor file without @page directive - SHOULD report RXBG061 when used
+        // Add a parent page that uses the Widget to trigger same-assembly composition
         var razorFiles = new Dictionary<string, string>
         {
             ["Components/Widget.razor"] = """
@@ -1531,6 +1532,12 @@ public class RazorFileDiagnosticsTests
             <div class="widget">
                 <h3>@Model.Name</h3>
             </div>
+            """,
+            ["Pages/HomePage.razor"] = """
+            @page "/home"
+
+            <h1>Home Page</h1>
+            <Widget />
             """
         };
 
@@ -1667,7 +1674,8 @@ public class RazorFileDiagnosticsTests
 
         """;
 
-        // Multiple razor files without @page directive - all should report RXBG061
+        // Multiple razor files without @page directive - all should report RXBG061 when used
+        // Add a parent page that uses all three components
         var razorFiles = new Dictionary<string, string>
         {
             ["Components/Widget.razor"] = """
@@ -1690,6 +1698,13 @@ public class RazorFileDiagnosticsTests
             <footer>
                 <p>@Model.Name</p>
             </footer>
+            """,
+            ["Pages/MainPage.razor"] = """
+            @page "/main"
+
+            <Header />
+            <Widget />
+            <Footer />
             """
         };
 
@@ -1856,6 +1871,7 @@ public class RazorFileDiagnosticsTests
 
             <h1>Dashboard</h1>
             <p>@Model.Title</p>
+            <Sidebar />
             """,
             // Page - should NOT report error
             ["Pages/Settings.razor"] = """
@@ -1865,7 +1881,7 @@ public class RazorFileDiagnosticsTests
             <h1>Settings</h1>
             <p>@Model.Title</p>
             """,
-            // Component - SHOULD report error
+            // Component - SHOULD report error when used in same assembly
             ["Components/Sidebar.razor"] = """
             {|#0:@inherits TestModelComponent|}
 
@@ -2018,13 +2034,18 @@ public class RazorFileDiagnosticsTests
 
         """;
 
-        // Razor file with fully-qualified component name without @page - SHOULD report RXBG061
+        // Razor file with fully-qualified component name without @page - SHOULD report RXBG061 when used
         var razorFiles = new Dictionary<string, string>
         {
             ["Components/Composed.razor"] = """
             {|#0:@inherits Test.TestModelComponent|}
 
             <div>Data: @Model.Data</div>
+            """,
+            ["Pages/TestPage.razor"] = """
+            @page "/test"
+
+            <Composed />
             """
         };
 
@@ -2160,7 +2181,7 @@ public class RazorFileDiagnosticsTests
 
         """;
 
-        // Razor file without @page using custom-named component - SHOULD report RXBG061
+        // Razor file without @page using custom-named component - SHOULD report RXBG061 when used
         var razorFiles = new Dictionary<string, string>
         {
             ["Components/MyWidget.razor"] = """
@@ -2169,6 +2190,11 @@ public class RazorFileDiagnosticsTests
             <div>
                 <p>@Model.Data</p>
             </div>
+            """,
+            ["Pages/ViewPage.razor"] = """
+            @page "/view"
+
+            <MyWidget />
             """
         };
 
@@ -2196,6 +2222,153 @@ public class RazorFileDiagnosticsTests
             "CustomComponent",
             additionalGeneratedSources: additionalGeneratedSources,
             expected: expected);
+    }
+
+    [Fact]
+    public async Task GeneratedComponentWithoutPageDirective_NotUsedInAssembly_NoError()
+    {
+        // This test validates the fix for: components defined in assembly A but not used/rendered
+        // in assembly A can be safely consumed from assembly B without triggering RXBG061.
+        // Real-world example: RxBlazorVSSampleComponents/ErrorManager/ErrorDisplay.razor
+
+        // lang=csharp
+        const string source = """
+
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+        using RxBlazorV2.Attributes;
+
+        namespace Test
+        {
+            [ObservableComponent]
+            public partial class ErrorModel : ObservableModel
+            {
+                public partial string Message { get; set; }
+            }
+        }
+        """;
+
+        // lang=csharp
+        const string generatedModel = """
+
+        #nullable enable
+        using JetBrains.Annotations;
+        using Microsoft.Extensions.DependencyInjection;
+        using ObservableCollections;
+        using R3;
+        using RxBlazorV2.Attributes;
+        using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using System;
+
+        namespace Test;
+
+        public partial class ErrorModel
+        {
+            public override string ModelID => "Test.ErrorModel";
+
+            public partial string Message
+            {
+                get => field;
+                [UsedImplicitly]
+                set
+                {
+                    if (field != value)
+                    {
+                        field = value;
+                        StateHasChanged("Model.Message");
+                    }
+                }
+            }
+
+        }
+
+        """;
+
+        // lang=csharp
+        const string generatedComponent = """
+
+        using R3;
+        using ObservableCollections;
+        using System;
+        using System.Threading.Tasks;
+        using Microsoft.Extensions.DependencyInjection;
+        using RxBlazorV2.Component;
+
+        namespace Test;
+
+        public partial class ErrorModelComponent : ObservableComponent<ErrorModel>
+        {
+            protected override void InitializeGeneratedCode()
+            {
+                // Subscribe to model changes - respects Filter() method
+                var filter = Filter();
+                if (filter.Length == 0)
+                {
+                    // No filter - observe all property changes
+                    Subscriptions.Add(Model.Observable
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
+                else
+                {
+                    // Filter active - observe only filtered properties
+                    Subscriptions.Add(Model.Observable
+                        .Where(changedProps => changedProps.Intersect(filter).Any())
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
+            }
+
+            protected override Task InitializeGeneratedCodeAsync()
+            {
+                return Task.CompletedTask;
+            }
+
+        }
+
+        """;
+
+        // Component without @page directive that is NOT used anywhere in the same assembly
+        // Should NOT report RXBG061 because it's safe to use from another assembly
+        var razorFiles = new Dictionary<string, string>
+        {
+            ["Components/ErrorDisplay.razor"] = """
+            @inherits ErrorModelComponent
+
+            <div class="error">
+                <p>Error: @Model.Message</p>
+            </div>
+            """
+            // Note: No other razor file uses <ErrorDisplay /> in this assembly
+            // This simulates the RxBlazorVSSampleComponents/ErrorManager scenario
+        };
+
+        // Expected: NO diagnostic because component is not used in same assembly
+        var additionalGeneratedSources = new Dictionary<string, string>
+        {
+            ["ErrorDisplay.g.cs"] = GenerateFilterCodeBehind(
+                "ErrorDisplay",
+                "ErrorModelComponent",
+                "Components",
+                new[] { "Model.Message" }, new[] { "Test" })
+        };
+
+        await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
+            source,
+            razorFiles,
+            generatedModel,
+            generatedComponent,
+            "ErrorModel",
+            "ErrorModelComponent",
+            additionalGeneratedSources: additionalGeneratedSources);
+            // No expected diagnostic - this is the key difference!
     }
 
 }

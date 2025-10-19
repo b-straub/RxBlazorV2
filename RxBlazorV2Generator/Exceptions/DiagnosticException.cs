@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.CodeAnalysis;
 
 namespace RxBlazorV2Generator.Exceptions;
@@ -7,6 +8,7 @@ namespace RxBlazorV2Generator.Exceptions;
 /// Exception that carries diagnostic information for source generator errors.
 /// This allows validation code to throw exceptions that are automatically converted to proper Roslyn diagnostics.
 /// </summary>
+[ExcludeFromCodeCoverage]
 public class DiagnosticException : Exception
 {
     /// <summary>

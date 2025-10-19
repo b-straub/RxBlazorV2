@@ -170,4 +170,53 @@ public static class RazorInheritanceDetector
             return null;
         }
     }
+
+    /// <summary>
+    /// Checks if a component (by its razor file name without extension) is used/rendered
+    /// in any other razor file in the same assembly.
+    /// Returns true if the component is used as a child component (e.g., &lt;ErrorDisplay /&gt;).
+    /// </summary>
+    public static bool IsComponentUsedInAssembly(
+        string componentRazorFileName,
+        IEnumerable<AdditionalText> allRazorFiles,
+        AdditionalText currentRazorFile)
+    {
+        try
+        {
+            // Pattern matches component usage: <ComponentName or <ComponentName> or <ComponentName ...
+            // This covers: <ErrorDisplay />, <ErrorDisplay>, <ErrorDisplay Param="..." />
+            var componentUsagePattern = new Regex(
+                $@"<{Regex.Escape(componentRazorFileName)}(?:\s|>|/>)",
+                RegexOptions.Compiled | RegexOptions.Multiline);
+
+            foreach (var razorFile in allRazorFiles)
+            {
+                // Skip the current file - we're looking for usage in OTHER files
+                if (razorFile.Path == currentRazorFile.Path)
+                {
+                    continue;
+                }
+
+                var content = razorFile.GetText();
+                if (content is null)
+                {
+                    continue;
+                }
+
+                var text = content.ToString();
+                if (componentUsagePattern.IsMatch(text))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        catch
+        {
+            // In case of any error, conservatively assume the component is used
+            // to avoid hiding potential same-assembly composition issues
+            return true;
+        }
+    }
 }

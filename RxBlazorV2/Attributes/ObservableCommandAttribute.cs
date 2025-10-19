@@ -1,4 +1,6 @@
 #nullable enable
+using System.Diagnostics.CodeAnalysis;
+
 namespace RxBlazorV2.Model;
 
 /// <summary>
@@ -17,6 +19,7 @@ namespace RxBlazorV2.Model;
 /// <para>The generator automatically detects property usage in methods to set up reactive change notifications.</para>
 /// </remarks>
 #pragma warning disable CS9113
+[ExcludeFromCodeCoverage]
 [AttributeUsage(AttributeTargets.Property)]
 public class ObservableCommandAttribute(string executionMethodName, string? canExecuteMethodName = null)
     : Attribute

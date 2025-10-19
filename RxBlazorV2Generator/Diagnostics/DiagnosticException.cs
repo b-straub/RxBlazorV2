@@ -1,12 +1,14 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 
 namespace RxBlazorV2Generator.Diagnostics;
 
 /// <summary>
 /// Wrapper class for diagnostic reporting with enhanced information
 /// </summary>
+[ExcludeFromCodeCoverage]
 public class GeneratorDiagnostic
 {
     public DiagnosticDescriptor Descriptor { get; }
@@ -60,6 +62,7 @@ public class GeneratorDiagnostic
 /// <summary>
 /// Exception wrapper for diagnostic errors
 /// </summary>
+[ExcludeFromCodeCoverage]
 public class DiagnosticException : Exception
 {
     public GeneratorDiagnostic Diagnostic { get; }
@@ -84,6 +87,7 @@ public class DiagnosticException : Exception
 /// <summary>
 /// Extension methods for diagnostic reporting
 /// </summary>
+[ExcludeFromCodeCoverage]
 public static class DiagnosticExtensions
 {
     public static void ReportDiagnostic(this SyntaxNodeAnalysisContext context, DiagnosticDescriptor descriptor, Location location, params object[] messageArgs)

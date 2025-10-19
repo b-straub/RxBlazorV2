@@ -1,4 +1,6 @@
 #nullable enable
+using System.Diagnostics.CodeAnalysis;
+
 namespace RxBlazorV2.Model;
 
 /// <summary>
@@ -32,6 +34,7 @@ namespace RxBlazorV2.Model;
 /// </remarks>
 
 #pragma warning disable CS9113
+[ExcludeFromCodeCoverage]
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = true)]
 public class ObservableTriggerAttribute(string executionMethodName, string? canTriggerMethodName = null)
     : Attribute

@@ -1,4 +1,6 @@
 #nullable enable
+using System.Diagnostics.CodeAnalysis;
+
 namespace RxBlazorV2.Model;
 
 /// <summary>
@@ -20,6 +22,7 @@ namespace RxBlazorV2.Model;
 /// <para>See <see href="https://github.com/b-straub/RxBlazorV2/blob/master/Diagnostics/Help/RXBG011.md">RXBG011</see> for type parameter requirements.</para>
 /// </remarks>
 #pragma warning disable CS9113
+[ExcludeFromCodeCoverage]
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = true)]
 public class ObservableCommandTriggerAttribute<T>(string triggerProperty, T parameter, string? canTriggerMethodName = null)
     : Attribute

@@ -1,0 +1,16 @@
+@using MudBlazor
+@inherits ErrorModelComponent
+
+<MudText>Error: @Model.Message</MudText>
+
+<MudButton @onclick="SetError" Variant="Variant.Filled" Color="Color.Primary">
+    SetError
+</MudButton>
+
+@code
+{
+    private void SetError()
+    {
+        Model.Message = "The error has occurred.";
+    }
+}

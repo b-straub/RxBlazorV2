@@ -384,6 +384,22 @@ public class RxBlazorGenerator : IIncrementalGenerator
                                 continue;
                             }
 
+                            // Check if this component is actually used (rendered as <ComponentName />)
+                            // anywhere else in the same assembly. If it's not used in the same assembly,
+                            // it's safe because it will be used from another assembly where all generated
+                            // code already exists (no compilation order issues).
+                            var isUsedInSameAssembly = RazorInheritanceDetector.IsComponentUsedInAssembly(
+                                razorFileName,
+                                razorFilesList,
+                                razorFile);
+
+                            if (!isUsedInSameAssembly)
+                            {
+                                // Component is defined but not used in this assembly - safe to skip
+                                // It will be used from another assembly where compilation order is not an issue
+                                continue;
+                            }
+
                             var fileName = Path.GetFileName(razorFile.Path);
                             var diagnostic = Diagnostic.Create(
                                 DiagnosticDescriptors.SameAssemblyComponentCompositionError,

@@ -246,12 +246,12 @@ public static class DiagnosticDescriptors
 
     public static readonly DiagnosticDescriptor SameAssemblyComponentCompositionError = new(
         id: "RXBG061",
-        title: "Generated component used without @page directive",
-        messageFormat: "Razor file '{0}' inherits from generated component '{1}' without @page directive. Generated components in the same assembly cannot be used for component composition due to compilation order (see Razor warning RZ10012). Either add @page to make this a routable page, or move the model to a separate assembly for component composition.",
+        title: "Generated component used for composition in same assembly without @page directive",
+        messageFormat: "Razor file '{0}' inherits from generated component '{1}' without @page directive and is rendered in the same assembly. Components that are both generated and rendered in the same assembly require @page due to compilation order (see Razor warning RZ10012). Solutions: (1) Add @page to make this a routable page, (2) Move the model to a separate assembly, or (3) Don't render this component in the same assembly (render it from another assembly instead).",
         category: "RxBlazorGenerator",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "Source-generated components cannot be used as child components within the same assembly. The Razor compiler processes components before source generators run. Solution: Add @page directive or move model to separate assembly.",
+        description: "When a source-generated component is rendered as a child component (e.g., <MyComponent />) within the same assembly where it's defined, the Razor compiler cannot find it because source generators run after Razor compilation. Solutions: (1) Add @page directive to make it a routable page instead of a child component, (2) Move the ObservableModel to a separate assembly so the component is pre-generated, or (3) Only render the component from a different assembly where the generated code already exists.",
         helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG061.md");
 
     // ============================================================================

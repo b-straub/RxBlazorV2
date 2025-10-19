@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace RxBlazorV2.Attributes;
 
 /// <summary>
@@ -17,6 +19,7 @@ namespace RxBlazorV2.Attributes;
 /// // Generates: protected virtual Task HandleStateChange(CancellationToken ct)
 /// </example>
 #pragma warning disable CS9113
+[ExcludeFromCodeCoverage]
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = true)]
 public class ObservableComponentTriggerAsyncAttribute(string? hookMethodName = null) : Attribute
 {

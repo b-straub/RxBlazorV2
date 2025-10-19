@@ -1,21 +1,23 @@
-# RXBG061: Generated Component Used Without @page Directive
+# RXBG061: Generated Component Used for Composition in Same Assembly Without @page Directive
 
 ## Description
 
-This diagnostic is reported when a Razor file inherits from a source-generated component without using the `@page` directive. Due to Roslyn compilation order, source-generated components are only available for direct inheritance with `@page` within the same assembly. For component composition (using components as child components), the model must be in a separate assembly.
+This diagnostic is reported when a Razor file inherits from a source-generated component without using the `@page` directive AND the component is rendered/used as a child component (e.g., `<MyComponent />`) elsewhere in the same assembly. Due to Roslyn compilation order, this creates a compilation error.
+
+**Key Point**: If the component is defined in assembly A but only rendered in assembly B, this diagnostic will NOT trigger because the generated code already exists when assembly B compiles.
 
 This limitation is a fundamental characteristic of Roslyn source generators and the Razor compiler interaction (also produces Razor warning RZ10012).
 
 ## Cause
 
-This error occurs when:
+This error occurs when ALL of these conditions are met:
 - A `.razor` file uses `@inherits GeneratedComponent` (e.g., `@inherits MyModelComponent`)
 - The razor file does NOT have a `@page` directive
 - The component class is source-generated in the same assembly
+- **The component IS rendered/used in the same assembly** (e.g., another razor file contains `<ComponentName />`)
 - The component is NOT the default layout (specified in `<RouteView ... DefaultLayout="@typeof(ComponentName)" />`)
-- You're attempting to use the component for composition rather than as a page
 
-**Note:** The default layout component (e.g., `MainLayout`) is automatically excluded from this diagnostic because it's a top-level component by definition, even without a `@page` directive.
+**Note:** If the component is defined but NOT used in the same assembly, this diagnostic will not trigger because you can safely render it from another assembly.
 
 ## Why This Limitation Exists
 
@@ -44,7 +46,40 @@ If this component should be a routable page, add the `@page` directive:
 
 This works because pages use direct inheritance and don't require the type to be available for composition.
 
-### Solution 2: Move to Separate Assembly (Component Composition)
+### Solution 2: Don't Render in Same Assembly (No Code Change Needed!)
+
+**If your component is only rendered from other assemblies, you don't need to do anything!** The diagnostic only triggers when the component is rendered in the same assembly where it's defined.
+
+**Example: ErrorManager Pattern**
+```csharp
+// Assembly A: MyApp.SharedComponents/Models/ErrorModel.cs
+[ObservableComponent]
+[ObservableModelScope(ModelScope.Scoped)]
+public partial class ErrorModel : ObservableModel
+{
+    public partial string Message { get; set; } = string.Empty;
+}
+```
+
+```razor
+@* Assembly A: MyApp.SharedComponents/Components/ErrorDisplay.razor *@
+@inherits ErrorModelComponent
+@* ✅ NO RXBG061 - Not used anywhere in Assembly A *@
+
+<div class="error">Error: @Model.Message</div>
+```
+
+```razor
+@* Assembly B: MyApp/Pages/SomePage.razor *@
+@page "/some-page"
+@* ✅ Works perfectly! ErrorDisplay is from pre-compiled Assembly A *@
+
+<ErrorDisplay />
+```
+
+This pattern is safe because when Assembly B compiles, Assembly A is already built and `ErrorModelComponent` exists.
+
+### Solution 3: Move to Separate Assembly (Component Composition)
 
 For components that need to be used as child components in composition:
 

@@ -1,4 +1,6 @@
 #nullable enable
+using System.Diagnostics.CodeAnalysis;
+
 namespace RxBlazorV2.Model;
 
 /// <summary>
@@ -35,6 +37,7 @@ namespace RxBlazorV2.Model;
 /// </remarks>
 
 #pragma warning disable CS9113
+[ExcludeFromCodeCoverage]
 [AttributeUsage(AttributeTargets.Class)]
 public class ObservableComponentAttribute(string? componentName = null)
     : Attribute
