@@ -85,7 +85,8 @@ public static class DiagnosticDescriptors
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         description: "Constructor parameters that are ObservableModels should only be used when the parent model actually uses properties from the referenced model.",
-        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG012.md");
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG012.md",
+        customTags: ["Remove unused constructor parameter"]);
 
     public static readonly DiagnosticDescriptor DerivedModelReferenceError = new(
         id: "RXBG013",
@@ -106,8 +107,7 @@ public static class DiagnosticDescriptors
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         description: "When an ObservableModel is used by multiple ObservableComponent instances, it must be registered as Singleton (default when no attribute is specified) to ensure data consistency across components.",
-        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG014.md",
-        customTags: [WellKnownDiagnosticTags.CompilationEnd]
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG014.md"
         );
 
     // ============================================================================
@@ -206,6 +206,17 @@ public static class DiagnosticDescriptors
         helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG040.md",
         customTags: ["Convert 'init' to 'set'"]);
 
+    public static readonly DiagnosticDescriptor UnusedObservableComponentTriggerWarning = new(
+        id: "RXBG041",
+        title: "ObservableComponentTrigger attribute has no effect",
+        messageFormat: "Property '{0}' in model '{1}' has [ObservableComponentTrigger] or [ObservableComponentTriggerAsync] attribute, but this model neither has [ObservableComponent] attribute nor is referenced by a model with [ObservableComponent(includeReferencedTriggers: true)]. The trigger attribute will be ignored and no hook methods will be generated. Either add [ObservableComponent] to this model, or have another model with [ObservableComponent] reference this model via partial constructor parameter.",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "ObservableComponentTrigger attributes only generate hook methods when the model has an ObservableComponent (generates hooks in its own component) or is referenced by another model with ObservableComponent(includeReferencedTriggers: true) (generates hooks in the referencing component). Without either condition, the trigger attributes have no effect.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG041.md",
+        customTags: ["Add [ObservableComponent] attribute", "Remove trigger attributes"]);
+
     // ============================================================================
     // RXBG050-RXBG059: Dependency Injection
     // ============================================================================
@@ -229,6 +240,17 @@ public static class DiagnosticDescriptors
         isEnabledByDefault: true,
         description: "Dependency injection scoping rules must be followed: Singleton services can only inject Singleton services. Scoped services can inject Singleton and Scoped services. Transient services can inject any scope. Violating these rules causes runtime DI container exceptions.",
         helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG051.md");
+
+    public static readonly DiagnosticDescriptor ReferencedModelDifferentAssemblyError = new(
+        id: "RXBG052",
+        title: "Referenced model with triggers must be in same assembly",
+        messageFormat: "ObservableModel '{0}' with [ObservableComponent(includeReferencedTriggers: true)] references model '{1}' from assembly '{2}', but the referenced model is not in the same assembly ('{3}'). Referenced models with [ObservableComponentTrigger] attributes must be in the same assembly to generate trigger hooks. Either move '{1}' to assembly '{3}', or set [ObservableComponent(includeReferencedTriggers: false)] to disable this feature.",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "When includeReferencedTriggers is enabled (default), the source generator needs to access referenced ObservableModel properties with [ObservableComponentTrigger] attributes to generate hook methods in the component. Due to how source generators work during compilation, referenced models must be in the same assembly. Models from different assemblies are already compiled and their trigger information is not available during source generation.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG052.md",
+        customTags: ["Remove cross-assembly model reference"]);
 
     // ============================================================================
     // RXBG060-RXBG069: Components

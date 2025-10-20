@@ -366,7 +366,7 @@ public static class PropertyAnalysisExtensions
     public static List<string> AnalyzePropertyModifications(this MethodDeclarationSyntax method, SemanticModel semanticModel)
     {
         var modifiedProperties = new HashSet<string>();
-        
+
         try
         {
             // Walk through the method body and find property assignments
@@ -377,7 +377,7 @@ public static class PropertyAnalysisExtensions
                 if (node is AssignmentExpressionSyntax assignment)
                 {
                     var leftSide = assignment.Left;
-                    
+
                     // Handle direct property assignment: MyProperty = value
                     if (leftSide is IdentifierNameSyntax identifier)
                     {
@@ -393,13 +393,15 @@ public static class PropertyAnalysisExtensions
                         var symbolInfo = semanticModel.GetSymbolInfo(memberAccess);
                         if (symbolInfo.Symbol is IPropertySymbol)
                         {
-                            modifiedProperties.Add(memberAccess.Name.Identifier.ValueText);
+                            // Check if this is a referenced model property (e.g., ModelReferencesShared.NotificationsEnabled)
+                            var qualifiedName = ExtractQualifiedPropertyName(memberAccess, semanticModel);
+                            modifiedProperties.Add(qualifiedName);
                         }
                     }
                 }
                 // Look for increment/decrement operations: MyProperty++, MyProperty--, ++MyProperty, --MyProperty
                 else if (node is PostfixUnaryExpressionSyntax postfixUnary &&
-                         (postfixUnary.IsKind(SyntaxKind.PostIncrementExpression) || 
+                         (postfixUnary.IsKind(SyntaxKind.PostIncrementExpression) ||
                           postfixUnary.IsKind(SyntaxKind.PostDecrementExpression)))
                 {
                     if (postfixUnary.Operand is IdentifierNameSyntax identifier)
@@ -415,12 +417,14 @@ public static class PropertyAnalysisExtensions
                         var symbolInfo = semanticModel.GetSymbolInfo(memberAccess);
                         if (symbolInfo.Symbol is IPropertySymbol)
                         {
-                            modifiedProperties.Add(memberAccess.Name.Identifier.ValueText);
+                            // Check if this is a referenced model property
+                            var qualifiedName = ExtractQualifiedPropertyName(memberAccess, semanticModel);
+                            modifiedProperties.Add(qualifiedName);
                         }
                     }
                 }
                 else if (node is PrefixUnaryExpressionSyntax prefixUnary &&
-                         (prefixUnary.IsKind(SyntaxKind.PreIncrementExpression) || 
+                         (prefixUnary.IsKind(SyntaxKind.PreIncrementExpression) ||
                           prefixUnary.IsKind(SyntaxKind.PreDecrementExpression)))
                 {
                     if (prefixUnary.Operand is IdentifierNameSyntax identifier)
@@ -436,7 +440,9 @@ public static class PropertyAnalysisExtensions
                         var symbolInfo = semanticModel.GetSymbolInfo(memberAccess);
                         if (symbolInfo.Symbol is IPropertySymbol)
                         {
-                            modifiedProperties.Add(memberAccess.Name.Identifier.ValueText);
+                            // Check if this is a referenced model property
+                            var qualifiedName = ExtractQualifiedPropertyName(memberAccess, semanticModel);
+                            modifiedProperties.Add(qualifiedName);
                         }
                     }
                 }
@@ -446,8 +452,34 @@ public static class PropertyAnalysisExtensions
         {
             // Return empty list on analysis error rather than throwing
         }
-        
+
         return modifiedProperties.ToList();
+    }
+
+    /// <summary>
+    /// Extracts the qualified property name from a member access expression.
+    /// For direct property access (this.MyProperty), returns just the property name.
+    /// For referenced model property access (Model.Property), returns "Model.Property".
+    /// </summary>
+    private static string ExtractQualifiedPropertyName(MemberAccessExpressionSyntax memberAccess, SemanticModel semanticModel)
+    {
+        var propertyName = memberAccess.Name.Identifier.ValueText;
+
+        // Check if the expression is accessing a property through another property/field
+        // e.g., ModelReferencesShared.NotificationsEnabled
+        if (memberAccess.Expression is IdentifierNameSyntax identifierExpression)
+        {
+            var expressionSymbol = semanticModel.GetSymbolInfo(identifierExpression).Symbol;
+
+            // If the left side is a property or field (not 'this'), return qualified name
+            if (expressionSymbol is IPropertySymbol or IFieldSymbol)
+            {
+                return $"{identifierExpression.Identifier.ValueText}.{propertyName}";
+            }
+        }
+
+        // For 'this.Property' or direct access, just return the property name
+        return propertyName;
     }
 
     public static bool IsObservableCollectionProperty(this PropertyDeclarationSyntax property, SemanticModel semanticModel)

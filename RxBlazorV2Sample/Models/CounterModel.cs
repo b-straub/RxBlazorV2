@@ -1,12 +1,14 @@
 using RxBlazorV2.Interface;
 using RxBlazorV2.Model;
+using RxBlazorVSSampleComponents.ErrorManager;
 
 namespace RxBlazorV2Sample.Models;
 
-[ObservableComponent]
+[ObservableComponent(false)]
 [ObservableModelScope(ModelScope.Singleton)]
 public partial class CounterModel : ObservableModel
 {
+    [ObservableTrigger("HighError")]
     public partial int Counter1 { get; set; }
     public partial int Counter2 { get; set; }
 
@@ -83,4 +85,14 @@ public partial class CounterModel : ObservableModel
     {
         return Counter2 > 2;
     }
+
+    private void HighError()
+    {
+        if (Counter1 > 5)
+        {
+            ErrorModel.Message = "Counter 1 is to high";
+        }
+    }
+
+    public partial CounterModel(ErrorModel errorModel, SettingsModel settings);
 }

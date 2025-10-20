@@ -2,22 +2,26 @@
 
 ## Description
 
-This diagnostic is reported when a model declares an `ObservableModelReference` but never actually uses any properties from the referenced model. This indicates unnecessary coupling and should be cleaned up.
+This diagnostic is reported when a model references another ObservableModel via a partial constructor parameter but never actually uses any properties from the referenced model. This indicates unnecessary coupling and should be cleaned up.
 
 ## Cause
 
 This error occurs when:
-- An `ObservableModelReference<T>` attribute is present
+- A partial constructor parameter of type `ObservableModel` is present
 - No properties from the referenced model are accessed in any methods or properties
 - The reference was added but is no longer needed
+- **Exception**: The reference counts as USED if both conditions are met:
+  - Parent model has `[ObservableComponent(includeReferencedTriggers: true)]` (default)
+  - Referenced model has properties with `[ObservableComponentTrigger]` or `[ObservableComponentTriggerAsync]`
 
 ## How to Fix
 
 Use the available code fix:
-- **Remove unused ObservableModelReference attribute** - Removes the unused attribute
+- **Remove constructor parameter** - Removes the unused parameter from the partial constructor
 
 Alternatively, if the reference is needed:
 - Add code that actually uses properties from the referenced model
+- Add `[ObservableComponentTrigger]` attributes to properties in the referenced model (if using `[ObservableComponent]`)
 
 ## Examples
 
@@ -33,19 +37,21 @@ public partial class CounterModel : ObservableModel
 }
 
 [ObservableModelScope(ModelScope.Transient)]
-[ObservableModelReference<CounterModel>]  // Error: Properties never used
 public partial class ParentModel : ObservableModel
 {
+    // Error: RXBG012 - counter parameter is never used
+    public partial ParentModel(CounterModel counter);
+
     public partial int Value { get; set; }
 
     public void DoSomething()
     {
-        Value = 42;  // Only uses own properties
+        Value = 42;  // Only uses own properties, never accesses Counter
     }
 }
 ```
 
-### Example 2: Fix by Removing Attribute
+### Example 2: Fix by Removing Parameter
 
 ```csharp
 // ✅ CORRECT - Removed unused reference
@@ -59,6 +65,8 @@ public partial class CounterModel : ObservableModel
 [ObservableModelScope(ModelScope.Transient)]
 public partial class ParentModel : ObservableModel
 {
+    // Constructor parameter removed
+
     public partial int Value { get; set; }
 
     public void DoSomething()
@@ -80,13 +88,14 @@ public partial class CounterModel : ObservableModel
 }
 
 [ObservableModelScope(ModelScope.Transient)]
-[ObservableModelReference<CounterModel>]
 public partial class ParentModel : ObservableModel
 {
+    public partial ParentModel(CounterModel counter);
+
     public partial int Value { get; set; }
 
-    // Now uses Counter1 from CounterModel
-    public int Total => Value + CounterModel.Counter1;
+    // Now uses Counter1 from Counter property (generated from constructor parameter)
+    public int Total => Value + Counter.Counter1;
 }
 ```
 
@@ -101,9 +110,10 @@ public partial class CounterModel : ObservableModel
 }
 
 [ObservableModelScope(ModelScope.Transient)]
-[ObservableModelReference<CounterModel>]
 public partial class ParentModel : ObservableModel
 {
+    public partial ParentModel(CounterModel counter);
+
     public partial int Value { get; set; }
 
     [ObservableCommand(nameof(Execute))]
@@ -111,16 +121,69 @@ public partial class ParentModel : ObservableModel
 
     private void Execute()
     {
-        Value = CounterModel.Counter1 * 2;  // Uses Counter1
+        Value = Counter.Counter1 * 2;  // Uses Counter1 via Counter property
     }
+}
+```
+
+### Example 5: Trigger-Only Reference (No Error)
+
+```csharp
+// ✅ CORRECT - Reference counts as USED via component triggers
+public partial class SettingsModel : ObservableModel
+{
+    [ObservableComponentTrigger]
+    public partial bool IsDay { get; set; }
+
+    [ObservableComponentTriggerAsync]
+    public partial string Theme { get; set; }
+}
+
+[ObservableComponent]  // includeReferencedTriggers: true by default
+public partial class WeatherModel : ObservableModel
+{
+    // No RXBG012 error: Settings reference is USED because SettingsModel
+    // has ComponentTrigger attributes and WeatherModel has [ObservableComponent]
+    // This generates OnSettingsIsDayChanged() and OnSettingsThemeChangedAsync() hooks
+    public partial WeatherModel(SettingsModel settings);
+
+    public partial string Temperature { get; set; }
+}
+```
+
+### Example 6: Trigger-Only Reference with Disabled Feature (Error)
+
+```csharp
+// ❌ WRONG - includeReferencedTriggers: false makes reference unused
+public partial class SettingsModel : ObservableModel
+{
+    [ObservableComponentTrigger]
+    public partial bool IsDay { get; set; }
+}
+
+[ObservableComponent(includeReferencedTriggers: false)]  // Disabled
+public partial class WeatherModel : ObservableModel
+{
+    // Error: RXBG012 - settings is unused because:
+    // - No properties accessed in code
+    // - includeReferencedTriggers is disabled, so triggers don't count
+    public partial WeatherModel(SettingsModel settings);
+
+    public partial string Temperature { get; set; }
 }
 ```
 
 ## Code Fixes Available
 
-- **Remove unused ObservableModelReference attribute**: Removes the attribute
+- **Remove constructor parameter**: Removes the unused ObservableModel parameter from the partial constructor
 
 ## Related Diagnostics
 
-- RXBG051: Circular model reference
-- RXBG030: Invalid model reference target
+- RXBG011: Invalid model reference target (referenced type doesn't inherit from ObservableModel)
+- RXBG013: Derived model reference error
+- RXBG052: Referenced model with triggers must be in same assembly
+
+## See Also
+
+- **includeReferencedTriggers Feature**: See `[ObservableComponent]` attribute documentation
+- **Component Trigger Hooks**: See `[ObservableComponentTrigger]` and `[ObservableComponentTriggerAsync]` attribute documentation

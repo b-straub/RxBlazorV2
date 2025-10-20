@@ -1,0 +1,27 @@
+@using MudBlazor
+@inherits ErrorModelComponent
+
+@if (IconButton)
+{
+    <MudIconButton Icon="@Icons.Material.Filled.Error" @onclick="SetError" Color="Color.Error"/>
+}
+else
+{
+    <MudButton StartIcon="@Icons.Material.Filled.Error" @onclick="SetError" Variant="Variant.Filled" Color="Color.Error">
+        Set Random Error
+    </MudButton>
+}
+
+@code
+{
+    [Parameter]
+    public bool IconButton { get; set; }
+
+    [Parameter]
+    public string? Error { get; set; }
+    
+    private void SetError()
+    {
+        Model.Message = !string.IsNullOrEmpty(Error) ? Error : $"The error {Random.Shared.Next()} has occurred.";
+    }
+}

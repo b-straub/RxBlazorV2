@@ -144,13 +144,19 @@ public static class ConstructorTemplate
         }
 
         // Initialize commands
-        sb.AppendLine(CommandTemplate.GenerateCommandInitializations(modelInfo, getObservedProperties));
+        if (modelInfo.CommandProperties.Any())
+        {
+            sb.AppendLine(CommandTemplate.GenerateCommandInitializations(modelInfo, getObservedProperties));
+        }
 
         // Generate command trigger subscriptions for models without dependencies
         var commandsWithTriggers = modelInfo.CommandProperties.Where(cmd => cmd.Triggers.Any()).ToList();
         if (commandsWithTriggers.Any())
         {
-            sb.AppendLine();
+            if (modelInfo.CommandProperties.Any() || hasObservableCollections)
+            {
+                sb.AppendLine();
+            }
             sb.AppendLine(CommandTemplate.GenerateCommandTriggerSubscriptions(commandsWithTriggers, modelInfo));
         }
 
@@ -158,7 +164,10 @@ public static class ConstructorTemplate
         var propertiesWithTriggers = modelInfo.PartialProperties.Where(p => p.Triggers.Any()).ToList();
         if (propertiesWithTriggers.Any())
         {
-            sb.AppendLine();
+            if (modelInfo.CommandProperties.Any() || commandsWithTriggers.Any() || hasObservableCollections)
+            {
+                sb.AppendLine();
+            }
             sb.AppendLine(TriggerTemplate.GenerateTriggerSubscriptions(propertiesWithTriggers));
         }
 
@@ -215,14 +224,13 @@ public static class ConstructorTemplate
             // Filter for properties we care about (e.g., ["Model.IsDay", "Model.AutoRefresh"])
             var filterProps = modelRef.UsedProperties.Select(p => $"Model.{p}").ToList();
             var filterArray = $"[\"{string.Join("\", \"", filterProps)}\"]";
-            var filterArrayNewSyntax = $"new[] {{ \"{string.Join("\", \"", filterProps)}\" }}";
 
             // Transform "Model.IsDay" -> "Model.Settings.IsDay"
             var transformedPrefix = $"Model.{modelRef.PropertyName}.";
 
             sb.AppendLine($"        Subscriptions.Add({modelRef.PropertyName}.Observable");
-            sb.AppendLine($"            .Where(props => props.Intersect({filterArray}).Any())");
-            sb.AppendLine($"            .Select(props => props.Where(p => {filterArrayNewSyntax}.Contains(p)).Select(p => p.Replace(\"Model.\", \"{transformedPrefix}\")).ToArray())");
+            sb.AppendLine($"            .Select(props => props.Intersect({filterArray}).Select(p => p.Replace(\"Model.\", \"{transformedPrefix}\")).ToArray())");
+            sb.AppendLine($"            .Where(transformed => transformed.Length > 0)");
             sb.AppendLine("            .Subscribe(props => StateHasChanged(props)));");
         }
 

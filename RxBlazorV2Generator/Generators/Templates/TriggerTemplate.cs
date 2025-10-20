@@ -31,7 +31,9 @@ public static class TriggerTemplate
         {
             foreach (var trigger in prop.Triggers)
             {
-                var propertyNameArray = $"[\"{prop.Name}\"]";
+                // Use qualified property name (Model.PropertyName) to match filter system
+                var qualifiedPropertyName = $"Model.{prop.Name}";
+                var propertyNameArray = $"[\"{qualifiedPropertyName}\"]";
 
                 // Generate the subscription
                 sb.AppendLine($"        Subscriptions.Add(Observable.Where(p => p.Intersect({propertyNameArray}).Any())");

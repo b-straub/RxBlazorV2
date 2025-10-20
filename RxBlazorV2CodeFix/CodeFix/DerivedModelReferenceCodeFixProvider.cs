@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Diagnostics;
+using RxBlazorV2Generator.Extensions;
 using System.Collections.Immutable;
 using System.Threading;
 using System.Threading.Tasks;
@@ -45,9 +46,9 @@ public class DerivedModelReferenceCodeFixProvider : CodeFixProvider
 
             // Code Fix: Remove the derived model reference parameter
             var removeParameterAction = CodeAction.Create(
-                title: "Remove constructor parameter",
+                title: diagnostic.Descriptor.CodeFixMessage(0),
                 createChangedDocument: c => RemoveParameterAsync(context.Document, root, parameter, c),
-                equivalenceKey: "RemoveDerivedModelReference");
+                equivalenceKey: diagnostic.Descriptor.Id);
 
             context.RegisterCodeFix(removeParameterAction, diagnostic);
         }

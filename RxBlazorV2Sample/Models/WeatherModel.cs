@@ -1,6 +1,7 @@
 using RxBlazorV2.Interface;
 using RxBlazorV2.Model;
 using RxBlazorV2Sample.Services;
+using RxBlazorVSSampleComponents.ErrorManager;
 
 namespace RxBlazorV2Sample.Models;
 

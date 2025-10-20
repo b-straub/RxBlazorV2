@@ -1,13 +1,11 @@
 ﻿@page "/counter1"
-@using RxBlazorVSSampleComponents.ErrorManager
 @inherits CounterModelComponent
 
 <PageTitle>Counter</PageTitle>
 
-<MudText Typo="Typo.h3" GutterBottom="true">Counter</MudText>
-<ErrorDisplay />
-<MudAlert Severity="Severity.Info" Class="mt-4 mb-4">Current count 1: @Model.Counter1</MudAlert>
-<MudStack>
+<MudStack Style="width: fit-content">
+    <MudText Typo="Typo.h3" GutterBottom="true">Counter</MudText>
+    <MudAlert Severity="Severity.Info" Class="mt-4 mb-4">Current count 1: @Model.Counter1</MudAlert>
     <Counter2Display Model="Model"/>
     <ButtonFor1And2 Model="Model"/>
 </MudStack>

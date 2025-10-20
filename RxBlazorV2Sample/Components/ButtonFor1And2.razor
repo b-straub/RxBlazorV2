@@ -1,6 +1,7 @@
 @using RxBlazorV2Sample.HelperModel
+@using RxBlazorVSSampleComponents.ErrorManager
 
-<MudStack>
+<MudStack Style="width: fit-content">
     <MudButton @onclick="() => Model.Increment1.Execute()" Variant="Variant.Filled" Color="Color.Primary">
         Increment Counter1
     </MudButton>
@@ -33,6 +34,8 @@
 
     <MudSwitch @bind-Value="Switcher.AddMode" Color="Color.Success" UncheckedColor="Color.Error"
                Label=@(Switcher.AddMode ? "Add" : "Subtract")/>
+    
+    <ErrorTrigger />
 </MudStack>
 
 @code

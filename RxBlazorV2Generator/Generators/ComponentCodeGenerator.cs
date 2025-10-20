@@ -113,12 +113,30 @@ public static class ComponentCodeGenerator
         foreach (var trigger in componentInfo.ComponentTriggers)
         {
             sb.AppendLine();
-            // Use qualified property name: ModelTypeName.PropertyName
-            var qualifiedPropertyName = $"{componentInfo.ModelTypeName}.{trigger.PropertyName}";
+
+            // Determine which Observable to subscribe to and the filter property name:
+            // - Local triggers: Model.Observable with filter "Model.PropertyName"
+            // - Referenced triggers: Model.Observable with filter "Model.{RefProperty}.PropertyName"
+            //   (Referenced model properties are transformed and merged into Model.Observable)
+            string observableSource = "Model.Observable";
+            string filterPropertyName;
+
+            if (trigger.ReferencedModelPropertyName is not null)
+            {
+                // Referenced model trigger: Subscribe to Model.Observable
+                // Filter on "Model.{RefProperty}.PropertyName" because referenced properties are transformed
+                // Example: Settings.IsDay emits "Model.IsDay" → transformed to "Model.Settings.IsDay" in parent model
+                filterPropertyName = $"Model.{trigger.ReferencedModelPropertyName}.{trigger.PropertyName}";
+            }
+            else
+            {
+                // Local trigger: Subscribe to Model.Observable
+                filterPropertyName = $"Model.{trigger.PropertyName}";
+            }
 
             if (trigger.HookType == TriggerHookType.Sync)
             {
-                sb.AppendLine($"        Subscriptions.Add(Model.Observable.Where(p => p.Intersect([\"{qualifiedPropertyName}\"]).Any())");
+                sb.AppendLine($"        Subscriptions.Add({observableSource}.Where(p => p.Intersect([\"{filterPropertyName}\"]).Any())");
                 sb.AppendLine($"            .Chunk(TimeSpan.FromMilliseconds({updateFrequencyMs}))");
                 sb.AppendLine("            .Subscribe(chunks =>");
                 sb.AppendLine("            {");
@@ -127,7 +145,7 @@ public static class ComponentCodeGenerator
             }
             else if (trigger.HookType == TriggerHookType.Async)
             {
-                sb.AppendLine($"        Subscriptions.Add(Model.Observable.Where(p => p.Intersect([\"{qualifiedPropertyName}\"]).Any())");
+                sb.AppendLine($"        Subscriptions.Add({observableSource}.Where(p => p.Intersect([\"{filterPropertyName}\"]).Any())");
                 sb.AppendLine($"            .Chunk(TimeSpan.FromMilliseconds({updateFrequencyMs}))");
                 sb.AppendLine("            .SubscribeAwait(async (chunks, ct) =>");
                 sb.AppendLine("            {");

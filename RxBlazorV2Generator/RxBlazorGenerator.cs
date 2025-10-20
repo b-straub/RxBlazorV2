@@ -9,6 +9,7 @@ using RxBlazorV2Generator.Generators;
 using RxBlazorV2Generator.Models;
 using System;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 
 namespace RxBlazorV2Generator;
@@ -17,11 +18,13 @@ public class GeneratorConfig
 {
     public int UpdateFrequencyMs { get; }
     public string RootNamespace { get; }
+    public bool IsDesignTimeBuild { get; }
 
-    public GeneratorConfig(int updateFrequencyMs, string rootNamespace)
+    public GeneratorConfig(int updateFrequencyMs, string rootNamespace, bool isDesignTimeBuild)
     {
         UpdateFrequencyMs = updateFrequencyMs;
         RootNamespace = rootNamespace;
+        IsDesignTimeBuild = isDesignTimeBuild;
     }
 }
 
@@ -30,12 +33,18 @@ public class RxBlazorGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
+#if DEBUG
+        /*while (!Debugger.IsAttached)
+            Thread.Sleep(500);*/
+#endif
         // Read MSBuild properties for configuration
         var msbuildProvider = context.AnalyzerConfigOptionsProvider
             .Select(static (provider, _) =>
             {
-                provider.GlobalOptions.TryGetValue("build_property.RxBlazorObservableUpdateFrequencyMs", out var updateFrequencyValue);
-                var updateFrequency = int.TryParse(updateFrequencyValue, out var frequency) ? frequency : 100; // Default to 100ms
+                provider.GlobalOptions.TryGetValue("build_property.RxBlazorObservableUpdateFrequencyMs",
+                    out var updateFrequencyValue);
+                var updateFrequency =
+                    int.TryParse(updateFrequencyValue, out var frequency) ? frequency : 100; // Default to 100ms
 
                 // Get root namespace from project properties
                 provider.GlobalOptions.TryGetValue("build_property.RootNamespace", out var rootNamespace);
@@ -43,11 +52,16 @@ public class RxBlazorGenerator : IIncrementalGenerator
                 {
                     provider.GlobalOptions.TryGetValue("build_property.AssemblyName", out rootNamespace);
                 }
+
                 rootNamespace ??= "Global"; // Fallback if neither is available
 
-                return new GeneratorConfig(updateFrequency, rootNamespace);
+                // Detect design-time build
+                provider.GlobalOptions.TryGetValue("build_property.DesignTimeBuild", out var designTimeBuildValue);
+                var isDesignTimeBuild = string.Equals(designTimeBuildValue, "true", StringComparison.OrdinalIgnoreCase);
+
+                return new GeneratorConfig(updateFrequency, rootNamespace, isDesignTimeBuild);
             });
-        
+
         // Analyze service registrations to detect DI services
         var serviceClasses = context.SyntaxProvider
             .CreateSyntaxProvider(
@@ -102,39 +116,56 @@ public class RxBlazorGenerator : IIncrementalGenerator
 
                 return records.ToImmutableArray();
             });
-        
+
+        // Process records: Extract ComponentInfo now that all records are available
+        // This allows looking up referenced model triggers from their records
+        var processedRecords = observableModelRecords
+            .Select(static (records, _) =>
+            {
+                // Build lookup dictionary by fully qualified type name
+                var recordsByTypeName = new Dictionary<string, ObservableModelRecord>();
+                foreach (var record in records.Where(r => r != null))
+                {
+                    recordsByTypeName[record!.ModelInfo.FullyQualifiedName] = record;
+                }
+
+                // Extract ComponentInfo for each record that has [ObservableComponent]
+                foreach (var record in records.Where(r => r != null))
+                {
+                    // Check if record needs ComponentInfo (has ObservableComponent attribute)
+                    // This is indicated by ComponentInfo being null but model having the attribute
+                    // We'll let ExtractComponentInfo check for the attribute
+                    var componentInfo = ObservableModelRecord.ExtractComponentInfo(record!, recordsByTypeName);
+                    if (componentInfo != null)
+                    {
+                        record!.ComponentInfo = componentInfo;
+                    }
+                }
+
+                return records;
+            });
+
         // Report diagnostics from records during compilation
         // Strategy: Skip analyzer-handled diagnostics (to avoid duplicate code fixes in IDE)
         // but wrap them in RXBG004 generic error for build output (ensures build fails with clear message)
-        context.RegisterSourceOutput(observableModelRecords.Combine(context.CompilationProvider),
+        context.RegisterSourceOutput(processedRecords.Combine(context.CompilationProvider).Combine(msbuildProvider),
             (spc, combined) =>
             {
-                var (records, compilation) = combined;
+                var ((records, compilation), config) = combined;
                 foreach (var record in records.Where(r => r != null))
                 {
                     // Report diagnostics from record (SSOT)
                     foreach (var diagnostic in record!.Verify())
                     {
                         // Check if this diagnostic is handled by the analyzer
-                        if (RxBlazorDiagnosticAnalyzer.AllDiagnostics.Any(d => d.Id == diagnostic.Id))
+                        if (RxBlazorDiagnosticAnalyzer.AllDiagnostics.All(d => d.Id != diagnostic.Id))
                         {
-                            // Skip reporting the original diagnostic (analyzer handles it in IDE)
-                            // But report a generic generator error for build (with diagnostic title and ID)
-                            if (diagnostic.Severity == DiagnosticSeverity.Error)
+                            // Skip diagnostic reporting during design-time builds
+                            if (!config.IsDesignTimeBuild)
                             {
-                                var wrappedDiagnostic = Diagnostic.Create(
-                                    DiagnosticDescriptors.GeneratorDiagnosticError,
-                                    diagnostic.Location,
-                                    diagnostic.Descriptor.Title,
-                                    diagnostic.Id);
-
-                                spc.ReportDiagnostic(wrappedDiagnostic);
+                                // Not DesignTimeBuild, report directly
+                                spc.ReportDiagnostic(diagnostic);
                             }
-                        }
-                        else
-                        {
-                            // Not handled by analyzer, report directly
-                            spc.ReportDiagnostic(diagnostic);
                         }
                     }
 
@@ -176,7 +207,8 @@ public class RxBlazorGenerator : IIncrementalGenerator
                     // First, calculate the minimum required scope for ALL violations in this class
                     var violatingFields = record.DiFieldsWithScope
                         .Where(tuple => tuple.serviceScope is not null && tuple.location is not null &&
-                                       CheckScopeViolation(record.ModelInfo.ModelScope, tuple.serviceScope!) is not null)
+                                        CheckScopeViolation(record.ModelInfo.ModelScope, tuple.serviceScope!) is not
+                                            null)
                         .ToList();
 
                     if (violatingFields.Any())
@@ -225,8 +257,33 @@ public class RxBlazorGenerator : IIncrementalGenerator
                 }
             });
 
+        // Report RXBG052 for cross-assembly referenced model triggers
+        context.RegisterSourceOutput(processedRecords,
+            static (spc, records) =>
+            {
+                foreach (var record in records.Where(r => r != null))
+                {
+                    // Report cross-assembly trigger reference violations
+                    foreach (var (referencedModelName, referencedAssembly, currentAssembly, location) in record!
+                                 .CrossAssemblyTriggerReferences)
+                    {
+                        if (location is not null)
+                        {
+                            var diagnostic = Diagnostic.Create(
+                                DiagnosticDescriptors.ReferencedModelDifferentAssemblyError,
+                                location,
+                                record.ModelInfo.ClassName,
+                                referencedModelName,
+                                referencedAssembly,
+                                currentAssembly);
+                            spc.ReportDiagnostic(diagnostic);
+                        }
+                    }
+                }
+            });
+
         // Generate code for observable models
-        context.RegisterSourceOutput(observableModelRecords,
+        context.RegisterSourceOutput(processedRecords,
             static (spc, records) =>
             {
                 foreach (var record in records.Where(r => r != null && r!.ShouldGenerateCode))
@@ -236,11 +293,12 @@ public class RxBlazorGenerator : IIncrementalGenerator
             });
 
         // Generate components for models with [ObservableComponent] attribute
-        context.RegisterSourceOutput(observableModelRecords.Combine(msbuildProvider),
+        context.RegisterSourceOutput(processedRecords.Combine(msbuildProvider),
             static (spc, combined) =>
             {
                 var (records, config) = combined;
-                foreach (var record in records.Where(r => r != null && r!.ShouldGenerateCode && r.ComponentInfo != null))
+                foreach (var record in records.Where(r =>
+                             r != null && r!.ShouldGenerateCode && r.ComponentInfo != null))
                 {
                     ComponentCodeGenerator.GenerateComponent(spc, record!.ComponentInfo!, config.UpdateFrequencyMs);
                 }
@@ -278,13 +336,14 @@ public class RxBlazorGenerator : IIncrementalGenerator
         // Check for shared model scoping violations (RXBG014)
         // Count component usage in razor files for non-singleton models
         var allRazorFiles = razorFiles.Collect();
-        context.RegisterSourceOutput(observableModelRecords
+        context.RegisterSourceOutput(processedRecords
                 .Combine(allRazorFiles),
             static (spc, combined) =>
             {
                 var (records, razorFilesList) = combined;
 
-                foreach (var record in records.Where(r => r != null && r!.ShouldGenerateCode && r.ComponentInfo != null))
+                foreach (var record in records.Where(r =>
+                             r != null && r!.ShouldGenerateCode && r.ComponentInfo != null))
                 {
                     if (record is null || record.ComponentInfo is null)
                     {
@@ -341,7 +400,7 @@ public class RxBlazorGenerator : IIncrementalGenerator
             });
 
         // Check for same-assembly component usage without @page (RXBG061)
-        context.RegisterSourceOutput(observableModelRecords.Combine(allRazorFiles),
+        context.RegisterSourceOutput(processedRecords.Combine(allRazorFiles),
             static (spc, combined) =>
             {
                 var (records, razorFilesList) = combined;
@@ -379,7 +438,8 @@ public class RxBlazorGenerator : IIncrementalGenerator
                             var razorFileName = Path.GetFileNameWithoutExtension(razorFile.Path);
 
                             // Skip the default layout component - it's a top-level component by definition
-                            if (!string.IsNullOrEmpty(defaultLayoutComponent) && razorFileName == defaultLayoutComponent)
+                            if (!string.IsNullOrEmpty(defaultLayoutComponent) &&
+                                razorFileName == defaultLayoutComponent)
                             {
                                 continue;
                             }
@@ -415,7 +475,7 @@ public class RxBlazorGenerator : IIncrementalGenerator
         // Generate code-behind for components that inherit from ObservableComponents
         // Uses simple regex-based property detection that works across assembly boundaries
         // Combine with component records to pass namespace information for proper using directives
-        context.RegisterSourceOutput(allRazorFiles.Combine(observableModelRecords).Combine(context.CompilationProvider),
+        context.RegisterSourceOutput(allRazorFiles.Combine(processedRecords).Combine(context.CompilationProvider),
             static (spc, combined) =>
             {
                 var (files, compilation) = combined;
@@ -427,7 +487,8 @@ public class RxBlazorGenerator : IIncrementalGenerator
                     .ReferencedAssemblySymbols
                     .Select(s => (s, s.Modules.SelectMany(m => m.ReferencedAssemblies).Select(r => r.Name)))
                     .Where(t => t.Item2.Contains("RxBlazorV2"))
-                    .Select(t => ((IEnumerable<string>)t.s.NamespaceNames, t.s.TypeNames.Where(n => !n.StartsWith("<"))));
+                    .Select(t => ((IEnumerable<string>)t.s.NamespaceNames,
+                        t.s.TypeNames.Where(n => !n.StartsWith("<"))));
 
                 // Build map of component class names to their namespaces (same-assembly components)
                 var componentNamespaces = new Dictionary<string, string>();
@@ -460,13 +521,16 @@ public class RxBlazorGenerator : IIncrementalGenerator
             });
 
         // Generate AddObservableModels extension method
-        context.RegisterSourceOutput(observableModelRecords.Combine(msbuildProvider),
+        context.RegisterSourceOutput(processedRecords.Combine(msbuildProvider),
             static (spc, combined) =>
             {
                 var (records, config) = combined;
-                var validModels = records.Where(r => r != null && r!.ShouldGenerateCode).Select(r => r!.ModelInfo).ToArray();
-                ObservableModelCodeGenerator.GenerateAddObservableModelsExtension(spc, validModels, config.RootNamespace);
-                ObservableModelCodeGenerator.GenerateAddGenericObservableModelsExtension(spc, validModels, config.RootNamespace);
+                var validModels = records.Where(r => r != null && r!.ShouldGenerateCode).Select(r => r!.ModelInfo)
+                    .ToArray();
+                ObservableModelCodeGenerator.GenerateAddObservableModelsExtension(spc, validModels,
+                    config.RootNamespace);
+                ObservableModelCodeGenerator.GenerateAddGenericObservableModelsExtension(spc, validModels,
+                    config.RootNamespace);
             });
     }
 

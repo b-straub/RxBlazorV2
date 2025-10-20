@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace RxBlazorV2.Attributes;
+// ReSharper disable once CheckNamespace
+namespace RxBlazorV2.Model;
 
 /// <summary>
 /// Generates an async hook method that is called when the property value changes.

@@ -204,15 +204,132 @@ public class CircularTriggerReferenceTests
             {
                 public partial int Counter1 { get; set; }
                 public partial int Counter2 { get; set; }
-                             
+
                 [ObservableCommand(nameof(IncrementCounter2))]
                 [ObservableCommandTrigger(nameof(Counter1))] // This is OK, different property
                 [{|{{DiagnosticDescriptors.CircularTriggerReferenceError.Id}}:ObservableCommandTrigger(nameof(Counter2))|}] // This creates circular reference
                 public partial IObservableCommand IncrementCommand { get; }
-                             
+
                 private void IncrementCounter2()
                 {
                     Counter2++; // This modifies Counter2, which triggers the command
+                }
+            }
+        }
+        """;
+        await AnalyzerVerifier.VerifyAnalyzerAsync(test);
+    }
+
+    [Fact]
+    public async Task CommandTriggerModifiesReferencedModelProperty_CircularReferenceErrorExpected()
+    {
+        // lang=csharp
+        var test = $$"""
+
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class SharedModel : ObservableModel
+            {
+                public partial bool NotificationsEnabled { get; set; } = true;
+            }
+
+            [ObservableModelScope(ModelScope.Scoped)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial TestModel(SharedModel shared);
+
+                [ObservableCommand(nameof(SendNotification))]
+                [{|{{DiagnosticDescriptors.CircularTriggerReferenceError.Id}}:ObservableCommandTrigger(nameof(Shared.NotificationsEnabled))|}]
+                public partial IObservableCommand SendNotificationCommand { get; }
+
+                private void SendNotification()
+                {
+                    Shared.NotificationsEnabled = false; // This modifies the same property that triggers the command
+                }
+            }
+        }
+        """;
+        await AnalyzerVerifier.VerifyAnalyzerAsync(test);
+    }
+
+    [Fact]
+    public async Task CommandTriggerModifiesReferencedModelPropertyWithCondition_CircularReferenceErrorExpected()
+    {
+        // lang=csharp
+        var test = $$"""
+
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class SharedModel : ObservableModel
+            {
+                public partial bool NotificationsEnabled { get; set; } = true;
+            }
+
+            [ObservableModelScope(ModelScope.Scoped)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial TestModel(SharedModel shared);
+
+                [ObservableCommand(nameof(SendNotification))]
+                [{|{{DiagnosticDescriptors.CircularTriggerReferenceError.Id}}:ObservableCommandTrigger(nameof(Shared.NotificationsEnabled))|}]
+                public partial IObservableCommand SendNotificationCommand { get; }
+
+                private void SendNotification()
+                {
+                    if (Shared.NotificationsEnabled)
+                    {
+                        Shared.NotificationsEnabled = false; // This modifies the same property that triggers the command
+                    }
+                }
+            }
+        }
+        """;
+        await AnalyzerVerifier.VerifyAnalyzerAsync(test);
+    }
+
+    [Fact]
+    public async Task CommandTriggerReadsReferencedModelPropertyButModifiesDifferent_NoErrorsExpected()
+    {
+        // lang=csharp
+        var test = """
+
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class SharedModel : ObservableModel
+            {
+                public partial bool NotificationsEnabled { get; set; } = true;
+                public partial int NotificationCount { get; set; }
+            }
+
+            [ObservableModelScope(ModelScope.Scoped)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial TestModel(SharedModel shared);
+                public partial string Message { get; set; } = "";
+
+                [ObservableCommand(nameof(SendNotification))]
+                [ObservableCommandTrigger(nameof(Shared.NotificationsEnabled))]
+                public partial IObservableCommand SendNotificationCommand { get; }
+
+                private void SendNotification()
+                {
+                    if (Shared.NotificationsEnabled)
+                    {
+                        Shared.NotificationCount++; // This modifies a different property, not NotificationsEnabled
+                        Message = "Notification sent";
+                    }
                 }
             }
         }

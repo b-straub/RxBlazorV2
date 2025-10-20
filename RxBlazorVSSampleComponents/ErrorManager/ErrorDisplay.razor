@@ -1,16 +1,38 @@
 @using MudBlazor
 @inherits ErrorModelComponent
 
-<MudText>Error: @Model.Message</MudText>
-
-<MudButton @onclick="SetError" Variant="Variant.Filled" Color="Color.Primary">
-    SetError
-</MudButton>
+@if (Model.Message.Length > 0)
+{
+    <MudStack Row="true" AlignItems="AlignItems.Center">
+        <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error"></MudIcon>
+        <MudText>Last error: @Model.Message</MudText>
+        @if (Model.Message.Length > 0)
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.Clear" @onclick="ClearError" Color="Color.Inherit" />
+        }
+    </MudStack>
+}
 
 @code
 {
-    private void SetError()
+    [Inject]
+    public required ISnackbar Snackbar { get; init; }
+
+    private string? _lastMessage;
+
+    protected override void OnMessageChanged()
     {
-        Model.Message = "The error has occurred.";
+        if (_lastMessage is not null)
+        {
+            Snackbar.RemoveByKey(_lastMessage);
+        }
+
+        Snackbar.Add(Model.Message, Severity.Error);
+        _lastMessage = Model.Message;
+    }
+    
+    private void ClearError()
+    {
+        Model.Message = string.Empty;
     }
 }

@@ -1,5 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using RxBlazorV2Generator.Analysis;
 using RxBlazorV2Generator.Diagnostics;
 using RxBlazorV2Generator.Models;
 
@@ -113,13 +114,35 @@ public static class ModelReferenceAnalysisExtensions
     /// <summary>
     /// Analyzes enhanced model references for derived models and unused references, and creates diagnostics.
     /// This is the single source of truth for DerivedModelReferenceError (RXBG017) and UnusedModelReferenceError (RXBG008) detection.
+    /// A referenced model counts as USED if:
+    /// - It has properties used in code, OR
+    /// - Current model has [ObservableComponent(includeReferencedTriggers: true)] AND referenced model has [ObservableComponentTrigger] properties
     /// </summary>
     public static List<Diagnostic> CreateUnusedModelReferenceDiagnostics(
         this List<ModelReferenceInfo> enhancedModelReferences,
         INamedTypeSymbol classSymbol,
-        ClassDeclarationSyntax classDecl)
+        ClassDeclarationSyntax classDecl,
+        Compilation compilation,
+        Dictionary<string, ObservableModelRecord>? allRecords = null)
     {
         var diagnostics = new List<Diagnostic>();
+
+        // Check if current model has [ObservableComponent(includeReferencedTriggers: true)]
+        bool hasIncludeReferencedTriggers = false;
+        foreach (var attribute in classSymbol.GetAttributes())
+        {
+            if (attribute.AttributeClass?.Name == "ObservableComponentAttribute")
+            {
+                // Check includeReferencedTriggers parameter (defaults to true)
+                hasIncludeReferencedTriggers = true; // default
+                if (attribute.ConstructorArguments.Length > 0 &&
+                    attribute.ConstructorArguments[0].Value is bool includeRefTriggers)
+                {
+                    hasIncludeReferencedTriggers = includeRefTriggers;
+                }
+                break;
+            }
+        }
 
         foreach (var modelRef in enhancedModelReferences)
         {
@@ -137,13 +160,46 @@ public static class ModelReferenceAnalysisExtensions
             // Check for unused properties (RXBG008) only if not a derived model
             else if (modelRef.UsedProperties.Count == 0)
             {
-                var location = modelRef.AttributeLocation ?? classDecl.Identifier.GetLocation();
-                var diagnostic = Diagnostic.Create(
-                    DiagnosticDescriptors.UnusedModelReferenceError,
-                    location,
-                    classSymbol.Name,
-                    modelRef.ReferencedModelTypeName);
-                diagnostics.Add(diagnostic);
+                // Check if reference is used via includeReferencedTriggers
+                bool isUsedViaTriggers = false;
+
+                if (hasIncludeReferencedTriggers)
+                {
+                    if (allRecords is not null)
+                    {
+                        // Look up the referenced model's record to check for triggers
+                        // ReferencedModelTypeName already contains the fully qualified name
+                        var refFullTypeName = modelRef.ReferencedModelTypeName;
+
+                        if (allRecords.TryGetValue(refFullTypeName, out var referencedRecord))
+                        {
+                            // Check if referenced model has any component triggers
+                            if (referencedRecord.ComponentTriggerProperties.Count > 0)
+                            {
+                                isUsedViaTriggers = true;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // allRecords not available yet (called during Create phase)
+                        // Conservative approach: assume reference MIGHT be used via triggers
+                        // Don't report diagnostic now - will be verified later if needed
+                        isUsedViaTriggers = true;
+                    }
+                }
+
+                // Only report unused if not used in code AND not used via triggers
+                if (!isUsedViaTriggers)
+                {
+                    var location = modelRef.AttributeLocation ?? classDecl.Identifier.GetLocation();
+                    var diagnostic = Diagnostic.Create(
+                        DiagnosticDescriptors.UnusedModelReferenceError,
+                        location,
+                        classSymbol.Name,
+                        modelRef.ReferencedModelTypeName);
+                    diagnostics.Add(diagnostic);
+                }
             }
         }
 

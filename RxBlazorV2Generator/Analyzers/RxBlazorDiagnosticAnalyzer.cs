@@ -29,11 +29,13 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
         DiagnosticDescriptors.TypeConstraintMismatchError,
         DiagnosticDescriptors.InvalidOpenGenericReferenceError,
         DiagnosticDescriptors.InvalidInitPropertyError,
+        DiagnosticDescriptors.UnusedObservableComponentTriggerWarning,
         DiagnosticDescriptors.DerivedModelReferenceError,
         DiagnosticDescriptors.MissingObservableModelScopeWarning,
         DiagnosticDescriptors.NonPublicPartialConstructorError,
         DiagnosticDescriptors.ObservableEntityMissingPartialModifierError
         // NOTE: RXBG050 (UnregisteredServiceWarning), RXBG051 (DiServiceScopeViolationError),
+        // RXBG052 (ReferencedModelDifferentAssemblyError)
         // RXBG060 (DirectObservableComponentInheritanceError), and RXBG014 (SharedModelNotSingletonError)
         // are reported by generator, not analyzer
     ];

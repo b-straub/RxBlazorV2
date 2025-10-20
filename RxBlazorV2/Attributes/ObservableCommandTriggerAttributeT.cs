@@ -1,6 +1,7 @@
 #nullable enable
 using System.Diagnostics.CodeAnalysis;
 
+// ReSharper disable once CheckNamespace
 namespace RxBlazorV2.Model;
 
 /// <summary>

@@ -2086,7 +2086,7 @@ public class RazorFileDiagnosticsTests
 
         namespace Test
         {
-            [ObservableComponent("CustomComponent")]
+            [ObservableComponent(true, "CustomComponent")]
             public partial class TestModel : ObservableModel
             {
                 public partial string Data { get; set; }

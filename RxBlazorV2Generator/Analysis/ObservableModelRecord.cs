@@ -164,11 +164,7 @@ public class ObservableModelRecord
             var modelSymbolMap = new Dictionary<string, ITypeSymbol>();
             foreach (var modelRef in modelReferences)
             {
-                var fullTypeName = string.IsNullOrEmpty(modelRef.ReferencedModelNamespace)
-                    ? modelRef.ReferencedModelTypeName
-                    : $"{modelRef.ReferencedModelNamespace}.{modelRef.ReferencedModelTypeName}";
-
-                var typeSymbol = compilation.GetTypeByMetadataName(fullTypeName);
+                var typeSymbol = compilation.GetTypeByMetadataName(modelRef.ReferencedModelTypeName.ToMetadataTypeName());
                 if (typeSymbol != null)
                 {
                     modelSymbolMap[modelRef.PropertyName] = typeSymbol;
@@ -183,7 +179,8 @@ public class ObservableModelRecord
             // Check for unused model references and derived model issues (RXBG008, RXBG017)
             var modelReferenceDiagnostics = enhancedModelReferences.CreateUnusedModelReferenceDiagnostics(
                 namedTypeSymbol,
-                classDecl);
+                classDecl,
+                compilation);
             diagnostics.AddRange(modelReferenceDiagnostics);
 
             // NOTE: Shared model scoping (RXBG014) is now checked in generator post-step
@@ -216,8 +213,18 @@ public class ObservableModelRecord
             record.UnregisteredServices = unregisteredServices;
             record.DiFieldsWithScope = diFieldsWithScope;
 
-            // Extract component information if [ObservableComponent] attribute is present
-            record.ComponentInfo = ExtractComponentInfo(namedTypeSymbol, partialProperties, enhancedModelReferences, diFields);
+            // Check for cross-assembly trigger references for RXBG052 diagnostic
+            var crossAssemblyTriggerRefs = DetectCrossAssemblyTriggerReferences(namedTypeSymbol, enhancedModelReferences, compilation);
+            record.CrossAssemblyTriggerReferences = crossAssemblyTriggerRefs;
+
+            // Extract component attribute data for later ComponentInfo generation
+            ExtractComponentAttributeData(namedTypeSymbol, record);
+
+            // Check for unused ObservableComponentTrigger attributes (RXBG041)
+            CheckForUnusedComponentTriggers(namedTypeSymbol, classDecl, record, diagnostics);
+
+            // ComponentInfo will be extracted later in the pipeline when all records are available
+            // This allows looking up referenced model triggers from their ObservableModelRecords
 
             return record;
         }
@@ -232,8 +239,21 @@ public class ObservableModelRecord
     public List<(string paramName, string paramType, ITypeSymbol? typeSymbol, Location? location)> UnregisteredServices { get; private set; } = [];
     public List<(DIFieldInfo diField, string? serviceScope, Location? location)> DiFieldsWithScope { get; private set; } = [];
 
+    // Component attribute data (extracted during Create for use in later pipeline stages)
+    public bool HasObservableComponentAttribute { get; private set; }
+    public bool IncludeReferencedTriggers { get; private set; } = true; // default
+    public string? CustomComponentName { get; private set; }
+    public string GenericTypes { get; private set; } = string.Empty;
+    public string TypeConstraints { get; private set; } = string.Empty;
+    // Property names with component triggers (propertyName -> (hasSync, syncHookName, hasAsync, asyncHookName))
+    public Dictionary<string, (bool hasSync, string? syncHookName, bool hasAsync, string? asyncHookName)> ComponentTriggerProperties { get; private set; } = [];
+
     // Component information for component generation
-    public ComponentInfo? ComponentInfo { get; private set; }
+    // Set later in pipeline when all records are available for referenced model lookup
+    public ComponentInfo? ComponentInfo { get; set; }
+
+    // Track referenced models from different assemblies with triggers (for RXBG052)
+    public List<(string referencedModelName, string referencedAssembly, string currentAssembly, Location? location)> CrossAssemblyTriggerReferences { get; private set; } = [];
 
     /// <summary>
     /// Returns all diagnostics for this model.
@@ -246,131 +266,350 @@ public class ObservableModelRecord
     }
 
     /// <summary>
-    /// Extracts component information from [ObservableComponent] attribute if present.
+    /// Detects if any referenced models from different assemblies have triggers.
+    /// This is used for RXBG052 diagnostic reporting.
     /// </summary>
-    private static ComponentInfo? ExtractComponentInfo(
+    private static List<(string referencedModelName, string referencedAssembly, string currentAssembly, Location? location)>
+        DetectCrossAssemblyTriggerReferences(
+            INamedTypeSymbol namedTypeSymbol,
+            List<ModelReferenceInfo> modelReferences,
+            Compilation compilation)
+    {
+        var crossAssemblyTriggerRefs = new List<(string, string, string, Location?)>();
+
+        // Check if model has [ObservableComponent] with includeReferencedTriggers enabled
+        bool includeReferencedTriggers = false;
+        foreach (var attribute in namedTypeSymbol.GetAttributes())
+        {
+            if (attribute.AttributeClass?.Name == "ObservableComponentAttribute")
+            {
+                includeReferencedTriggers = true; // default
+                if (attribute.ConstructorArguments.Length > 0 &&
+                    attribute.ConstructorArguments[0].Value is bool includeRefTriggers)
+                {
+                    includeReferencedTriggers = includeRefTriggers;
+                }
+                break;
+            }
+        }
+
+        if (!includeReferencedTriggers || modelReferences.Count == 0)
+        {
+            return crossAssemblyTriggerRefs;
+        }
+
+        var currentAssembly = namedTypeSymbol.ContainingAssembly;
+
+        foreach (var modelRef in modelReferences)
+        {
+            // Try to get the type symbol
+            var referencedTypeSymbol = compilation.GetTypeByMetadataName(modelRef.ReferencedModelTypeName.ToMetadataTypeName());
+
+            if (referencedTypeSymbol is null)
+            {
+                continue;
+            }
+
+            // Check if referenced model is in a different assembly
+            if (!SymbolEqualityComparer.Default.Equals(referencedTypeSymbol.ContainingAssembly, currentAssembly))
+            {
+                // Different assembly - check if it has triggers
+                bool hasTriggers = false;
+                foreach (var member in referencedTypeSymbol.GetMembers())
+                {
+                    if (member is IPropertySymbol propSymbol)
+                    {
+                        foreach (var attr in propSymbol.GetAttributes())
+                        {
+                            if (attr.AttributeClass?.Name == "ObservableComponentTriggerAttribute" ||
+                                attr.AttributeClass?.Name == "ObservableComponentTriggerAsyncAttribute")
+                            {
+                                hasTriggers = true;
+                                break;
+                            }
+                        }
+                        if (hasTriggers)
+                        {
+                            break;
+                        }
+                    }
+                }
+
+                if (hasTriggers)
+                {
+                    crossAssemblyTriggerRefs.Add((
+                        modelRef.ReferencedModelTypeName,
+                        referencedTypeSymbol.ContainingAssembly.Name,
+                        currentAssembly.Name,
+                        modelRef.AttributeLocation));
+                }
+            }
+        }
+
+        return crossAssemblyTriggerRefs;
+    }
+
+    /// <summary>
+    /// Checks for ObservableComponentTrigger attributes that won't generate any code.
+    /// This happens when a model has trigger attributes but:
+    /// 1. Does NOT have [ObservableComponent] attribute (no component to generate hooks in)
+    /// 2. Is NOT referenced by another model with [ObservableComponent(includeReferencedTriggers: true)]
+    /// Note: Currently only checks condition 1 (no ObservableComponent). A full check for condition 2
+    /// would require compilation-wide analysis to see if ANY model references this one.
+    /// Reports RXBG041 warning for properties with unused trigger attributes.
+    /// </summary>
+    private static void CheckForUnusedComponentTriggers(
         INamedTypeSymbol namedTypeSymbol,
-        List<PartialPropertyInfo> partialProperties,
-        List<ModelReferenceInfo> modelReferences,
-        List<DIFieldInfo> diFields)
+        ClassDeclarationSyntax classDecl,
+        ObservableModelRecord record,
+        List<Diagnostic> diagnostics)
+    {
+        // If model has [ObservableComponent], triggers are used - no warning needed
+        if (record.HasObservableComponentAttribute)
+        {
+            return;
+        }
+
+        // If model has no trigger properties, nothing to check
+        if (record.ComponentTriggerProperties.Count == 0)
+        {
+            return;
+        }
+
+        // Model has trigger attributes but no [ObservableComponent]
+        // Report warning for each property with trigger attributes
+        // Note: We can't easily check if model is referenced by another model with includeReferencedTriggers: true
+        // at this point, so we report conservatively. The diagnostic message mentions both conditions.
+        foreach (var member in namedTypeSymbol.GetMembers())
+        {
+            if (member is IPropertySymbol propertySymbol)
+            {
+                foreach (var attr in propertySymbol.GetAttributes())
+                {
+                    if (attr.AttributeClass?.Name == "ObservableComponentTriggerAttribute" ||
+                        attr.AttributeClass?.Name == "ObservableComponentTriggerAsyncAttribute")
+                    {
+                        // Get the location of the attribute for precise error reporting
+                        var location = attr.ApplicationSyntaxReference?.GetSyntax().GetLocation()
+                            ?? propertySymbol.Locations.FirstOrDefault()
+                            ?? classDecl.Identifier.GetLocation();
+
+                        var diagnostic = Diagnostic.Create(
+                            DiagnosticDescriptors.UnusedObservableComponentTriggerWarning,
+                            location,
+                            propertySymbol.Name,
+                            namedTypeSymbol.Name);
+                        diagnostics.Add(diagnostic);
+
+                        // Only report once per property (even if it has both sync and async triggers)
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Extracts and stores component attribute data from [ObservableComponent] attribute.
+    /// This is called during Create() to store data for later ComponentInfo generation.
+    /// </summary>
+    private static void ExtractComponentAttributeData(INamedTypeSymbol namedTypeSymbol, ObservableModelRecord record)
+    {
+        // Check for [ObservableComponent] attribute
+        foreach (var attribute in namedTypeSymbol.GetAttributes())
+        {
+            if (attribute.AttributeClass?.Name == "ObservableComponentAttribute")
+            {
+                record.HasObservableComponentAttribute = true;
+
+                // Extract includeReferencedTriggers (default true)
+                if (attribute.ConstructorArguments.Length > 0 &&
+                    attribute.ConstructorArguments[0].Value is bool includeRefTriggers)
+                {
+                    record.IncludeReferencedTriggers = includeRefTriggers;
+                }
+
+                // Extract custom component name
+                if (attribute.ConstructorArguments.Length > 1 &&
+                    attribute.ConstructorArguments[1].Value is string componentName &&
+                    !string.IsNullOrWhiteSpace(componentName))
+                {
+                    record.CustomComponentName = componentName;
+                }
+
+                // Extract generic types and constraints
+                record.GenericTypes = namedTypeSymbol.ExtractObservableModelGenericTypes();
+                record.TypeConstraints = namedTypeSymbol.ContainingType?.DeclaringSyntaxReferences
+                    .Select(r => r.GetSyntax())
+                    .OfType<ClassDeclarationSyntax>()
+                    .FirstOrDefault()
+                    ?.ExtractTypeConstrains()
+                    ?? namedTypeSymbol.DeclaringSyntaxReferences
+                    .Select(r => r.GetSyntax())
+                    .OfType<ClassDeclarationSyntax>()
+                    .FirstOrDefault()
+                    ?.ExtractTypeConstrains()
+                    ?? string.Empty;
+
+                break;
+            }
+        }
+
+        // Extract component trigger properties with custom hook names
+        var componentTriggers = new Dictionary<string, (bool hasSync, string? syncHookName, bool hasAsync, string? asyncHookName)>();
+        foreach (var member in namedTypeSymbol.GetMembers())
+        {
+            if (member is IPropertySymbol propertySymbol)
+            {
+                bool hasSyncTrigger = false;
+                string? syncHookName = null;
+                bool hasAsyncTrigger = false;
+                string? asyncHookName = null;
+
+                foreach (var attr in propertySymbol.GetAttributes())
+                {
+                    if (attr.AttributeClass?.Name == "ObservableComponentTriggerAttribute")
+                    {
+                        hasSyncTrigger = true;
+                        // Extract custom hook name from first constructor argument
+                        if (attr.ConstructorArguments.Length > 0 &&
+                            attr.ConstructorArguments[0].Value is string customName &&
+                            !string.IsNullOrWhiteSpace(customName))
+                        {
+                            syncHookName = customName;
+                        }
+                    }
+                    else if (attr.AttributeClass?.Name == "ObservableComponentTriggerAsyncAttribute")
+                    {
+                        hasAsyncTrigger = true;
+                        // Extract custom hook name from first constructor argument
+                        if (attr.ConstructorArguments.Length > 0 &&
+                            attr.ConstructorArguments[0].Value is string customNameAsync &&
+                            !string.IsNullOrWhiteSpace(customNameAsync))
+                        {
+                            asyncHookName = customNameAsync;
+                        }
+                    }
+                }
+
+                if (hasSyncTrigger || hasAsyncTrigger)
+                {
+                    componentTriggers[propertySymbol.Name] = (hasSyncTrigger, syncHookName, hasAsyncTrigger, asyncHookName);
+                }
+            }
+        }
+        record.ComponentTriggerProperties = componentTriggers;
+    }
+
+    /// <summary>
+    /// Extracts component information from stored component attribute data.
+    /// This method should be called in the generator pipeline when all ObservableModelRecords are available,
+    /// allowing lookup of referenced model triggers from their records.
+    /// </summary>
+    public static ComponentInfo? ExtractComponentInfo(
+        ObservableModelRecord currentRecord,
+        Dictionary<string, ObservableModelRecord> allRecords)
     {
         try
         {
-            // Check for [ObservableComponent] attribute
-            AttributeData? componentAttribute = null;
-            foreach (var attribute in namedTypeSymbol.GetAttributes())
-            {
-                if (attribute.AttributeClass?.Name == "ObservableComponentAttribute")
-                {
-                    componentAttribute = attribute;
-                    break;
-                }
-            }
-
-            if (componentAttribute is null)
+            // Check if model has [ObservableComponent] attribute
+            if (!currentRecord.HasObservableComponentAttribute)
             {
                 return null;
             }
 
-            // Get component name from attribute parameter or default to {ModelName}Component
-            string? customComponentName = null;
-            if (componentAttribute.ConstructorArguments.Length > 0 &&
-                componentAttribute.ConstructorArguments[0].Value is string componentName &&
-                !string.IsNullOrWhiteSpace(componentName))
+            var modelInfo = currentRecord.ModelInfo;
+            var componentClassName = currentRecord.CustomComponentName ?? $"{modelInfo.ClassName}Component";
+            var componentNamespace = modelInfo.Namespace;
+
+            // Extract component triggers from current model's properties
+            var componentTriggers = new List<ComponentTriggerInfo>();
+
+            foreach (var kvp in currentRecord.ComponentTriggerProperties)
             {
-                customComponentName = componentName;
+                var propertyName = kvp.Key;
+                var (hasSync, syncHookName, hasAsync, asyncHookName) = kvp.Value;
+
+                // Use custom hook names if provided, otherwise ComponentTriggerInfo will use defaults
+                if (hasSync)
+                {
+                    componentTriggers.Add(new ComponentTriggerInfo(
+                        propertyName,
+                        TriggerHookType.Sync,
+                        syncHookName)); // Custom or null for default: On{PropertyName}Changed
+                }
+
+                if (hasAsync)
+                {
+                    componentTriggers.Add(new ComponentTriggerInfo(
+                        propertyName,
+                        TriggerHookType.Async,
+                        asyncHookName)); // Custom or null for default: On{PropertyName}ChangedAsync
+                }
             }
 
-            var componentClassName = customComponentName ?? $"{namedTypeSymbol.Name}Component";
+            // Process referenced model triggers if includeReferencedTriggers is enabled
+            var allComponentTriggers = new List<ComponentTriggerInfo>(componentTriggers);
 
-            // Component uses same namespace as the model
-            var modelNamespace = namedTypeSymbol.ContainingNamespace.ToDisplayString();
-            var componentNamespace = modelNamespace;
-
-            // Extract component triggers from properties
-            var componentTriggers = new List<ComponentTriggerInfo>();
-            foreach (var property in partialProperties)
+            if (currentRecord.IncludeReferencedTriggers && modelInfo.ModelReferences.Count > 0)
             {
-                // Check if property has trigger attributes
-                var propertySymbol = namedTypeSymbol.GetMembers(property.Name)
-                    .OfType<IPropertySymbol>()
-                    .FirstOrDefault();
-
-                if (propertySymbol is not null)
+                foreach (var modelRef in modelInfo.ModelReferences)
                 {
-                    bool hasSyncTrigger = false;
-                    bool hasAsyncTrigger = false;
-                    string? syncHookName = null;
-                    string? asyncHookName = null;
+                    // Look up the referenced model's record
+                    // ReferencedModelTypeName already contains the fully qualified name
+                    var refFullTypeName = modelRef.ReferencedModelTypeName;
 
-                    foreach (var attribute in propertySymbol.GetAttributes())
+                    if (!allRecords.TryGetValue(refFullTypeName, out var referencedRecord))
                     {
-                        if (attribute.AttributeClass?.Name == "ObservableComponentTriggerAttribute")
-                        {
-                            hasSyncTrigger = true;
-                            if (attribute.ConstructorArguments.Length > 0 &&
-                                attribute.ConstructorArguments[0].Value is string hookName &&
-                                !string.IsNullOrWhiteSpace(hookName))
-                            {
-                                syncHookName = hookName;
-                            }
-                        }
-                        else if (attribute.AttributeClass?.Name == "ObservableComponentTriggerAsyncAttribute")
-                        {
-                            hasAsyncTrigger = true;
-                            if (attribute.ConstructorArguments.Length > 0 &&
-                                attribute.ConstructorArguments[0].Value is string hookName &&
-                                !string.IsNullOrWhiteSpace(hookName))
-                            {
-                                asyncHookName = hookName;
-                            }
-                        }
+                        // Referenced model not found in same assembly - skip
+                        continue;
                     }
 
-                    // Create trigger based on which attributes are present
-                    if (hasSyncTrigger && hasAsyncTrigger)
+                    // Get triggers from referenced model
+                    foreach (var kvp in referencedRecord.ComponentTriggerProperties)
                     {
-                        // Both attributes present - create separate triggers
-                        componentTriggers.Add(new ComponentTriggerInfo(property.Name, TriggerHookType.Sync, syncHookName));
-                        componentTriggers.Add(new ComponentTriggerInfo(property.Name, TriggerHookType.Async, asyncHookName));
-                    }
-                    else if (hasSyncTrigger)
-                    {
-                        componentTriggers.Add(new ComponentTriggerInfo(property.Name, TriggerHookType.Sync, syncHookName));
-                    }
-                    else if (hasAsyncTrigger)
-                    {
-                        componentTriggers.Add(new ComponentTriggerInfo(property.Name, TriggerHookType.Async, asyncHookName));
+                        var propertyName = kvp.Key;
+                        var (hasSync, syncHookName, hasAsync, asyncHookName) = kvp.Value;
+
+                        // Build hook method name: On{ReferencedProperty}{PropertyName}Changed[Async]
+                        // Example: OnSettingsIsDayChanged
+                        // Note: Custom hook names from referenced model are ignored for parent component hooks
+                        var defaultBaseName = $"On{modelRef.PropertyName}{propertyName}";
+
+                        if (hasSync)
+                        {
+                            var hookName = $"{defaultBaseName}Changed";
+                            allComponentTriggers.Add(new ComponentTriggerInfo(
+                                propertyName,
+                                TriggerHookType.Sync,
+                                hookName,
+                                modelRef.PropertyName));
+                        }
+
+                        if (hasAsync)
+                        {
+                            var hookName = $"{defaultBaseName}ChangedAsync";
+                            allComponentTriggers.Add(new ComponentTriggerInfo(
+                                propertyName,
+                                TriggerHookType.Async,
+                                hookName,
+                                modelRef.PropertyName));
+                        }
                     }
                 }
             }
 
-            // Get generic types and constraints from the model symbol
-            var genericTypes = namedTypeSymbol.ExtractObservableModelGenericTypes();
-            var typeConstrains = namedTypeSymbol.ContainingType?.DeclaringSyntaxReferences
-                .Select(r => r.GetSyntax())
-                .OfType<ClassDeclarationSyntax>()
-                .FirstOrDefault()
-                ?.ExtractTypeConstrains()
-                ?? namedTypeSymbol.DeclaringSyntaxReferences
-                .Select(r => r.GetSyntax())
-                .OfType<ClassDeclarationSyntax>()
-                .FirstOrDefault()
-                ?.ExtractTypeConstrains()
-                ?? string.Empty;
-
-            // Use the model references and DI fields passed from the parent context
-            // These will be used to generate shortcut properties in the component
             return new ComponentInfo(
                 componentClassName,
                 componentNamespace,
-                namedTypeSymbol.Name,
-                modelNamespace,
-                componentTriggers,
-                genericTypes,
-                typeConstrains,
-                modelReferences,
-                diFields);
+                modelInfo.ClassName,
+                modelInfo.Namespace,
+                allComponentTriggers,
+                currentRecord.GenericTypes,
+                currentRecord.TypeConstraints,
+                modelInfo.ModelReferences,
+                modelInfo.DIFields,
+                currentRecord.IncludeReferencedTriggers);
         }
         catch (Exception)
         {

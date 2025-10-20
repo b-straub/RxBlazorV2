@@ -91,10 +91,77 @@ public partial class MyModel : ObservableModel
   - Generic versions for parametized commands
 - **DI Registration**: `AddObservableModels()` extension method generated automatically
 
+### Component Trigger Patterns
+
+Component triggers allow Blazor components to react to specific property changes in models through generated hook methods.
+
+#### Local Triggers (Same Model)
+```csharp
+public partial class SettingsModel : ObservableModel
+{
+    // Sync trigger - generates OnIsDayChanged() hook in SettingsModelComponent
+    [ObservableComponentTrigger]
+    public partial bool IsDay { get; set; }
+
+    // Async trigger - generates OnThemeChangedAsync(CancellationToken) hook
+    [ObservableComponentTriggerAsync]
+    public partial string Theme { get; set; }
+
+    // Custom hook names
+    [ObservableComponentTrigger("HandleDayNightSwitch")]
+    public partial bool IsDayCustom { get; set; }
+}
+```
+
+**Generated Component Hooks:**
+```csharp
+// In SettingsModelComponent.g.cs
+protected virtual void OnIsDayChanged() { }
+protected virtual Task OnThemeChangedAsync(CancellationToken ct) { return Task.CompletedTask; }
+protected virtual void HandleDayNightSwitch() { }
+```
+
+#### Referenced Model Triggers (Cross-Model)
+```csharp
+// SettingsModel.cs (no [ObservableComponent] needed)
+public partial class SettingsModel : ObservableModel
+{
+    [ObservableComponentTrigger]
+    public partial bool IsDay { get; set; }
+}
+
+// WeatherModel.cs
+[ObservableComponent]  // includeReferencedTriggers: true by default
+public partial class WeatherModel : ObservableModel
+{
+    public partial WeatherModel(SettingsModel settings);
+
+    public partial string Temperature { get; set; }
+}
+```
+
+**Generated Hooks in WeatherModelComponent:**
+```csharp
+// Hook naming: On{RefProperty}{TriggerProperty}Changed[Async]
+protected virtual void OnSettingsIsDayChanged() { }
+
+// Component subscribes to Model.Observable with filter "Model.Settings.IsDay"
+```
+
+**Important Notes:**
+- Referenced model does NOT need `[ObservableComponent]` attribute
+- Triggers automatically generate hooks when `includeReferencedTriggers: true` (default)
+- Set `[ObservableComponent(includeReferencedTriggers: false)]` to disable
+- Referenced models MUST be in same assembly (see RXBG052 diagnostic)
+- Reference counts as USED even with no code usage (prevents RXBG012 error)
+
 ## Key Attributes
 
 - `[ObservableModelScope]` - Controls DI lifetime (Singleton, Scoped, Transient)
 - `[ObservableCommand]` - Links command properties to implementation methods
+- `[ObservableComponent]` - Enables component generation with optional `includeReferencedTriggers` parameter
+- `[ObservableComponentTrigger]` - Generates sync hook method in component (optional custom name parameter)
+- `[ObservableComponentTriggerAsync]` - Generates async hook method in component (optional custom name parameter)
 
 ## Command Method Signatures
 

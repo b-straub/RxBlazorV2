@@ -182,6 +182,7 @@ public class ComponentInfo
     public string TypeConstrains { get; }
     public List<ModelReferenceInfo> ModelReferences { get; }
     public List<DIFieldInfo> DIFields { get; }
+    public bool IncludeReferencedTriggers { get; }
 
     public ComponentInfo(
         string componentClassName,
@@ -192,7 +193,8 @@ public class ComponentInfo
         string? genericTypes = null,
         string? typeConstrains = null,
         List<ModelReferenceInfo>? modelReferences = null,
-        List<DIFieldInfo>? diFields = null)
+        List<DIFieldInfo>? diFields = null,
+        bool includeReferencedTriggers = true)
     {
         ComponentClassName = componentClassName;
         ComponentNamespace = componentNamespace;
@@ -203,6 +205,7 @@ public class ComponentInfo
         TypeConstrains = typeConstrains ?? string.Empty;
         ModelReferences = modelReferences ?? [];
         DIFields = diFields ?? [];
+        IncludeReferencedTriggers = includeReferencedTriggers;
     }
 }
 
@@ -213,9 +216,34 @@ public enum TriggerHookType
     Both
 }
 
-public class ComponentTriggerInfo(string propertyName, TriggerHookType hookType, string? hookMethodName = null)
+public class ComponentTriggerInfo
 {
-    public string PropertyName { get; } = propertyName;
-    public TriggerHookType HookType { get; } = hookType;
-    public string HookMethodName { get; } = hookMethodName ?? (hookType == TriggerHookType.Async ? $"On{propertyName}ChangedAsync" : $"On{propertyName}Changed");
+    public string PropertyName { get; }
+    public TriggerHookType HookType { get; }
+    public string HookMethodName { get; }
+    public string? ReferencedModelPropertyName { get; }
+    public string QualifiedPropertyPath { get; }
+
+    public ComponentTriggerInfo(
+        string propertyName,
+        TriggerHookType hookType,
+        string? hookMethodName = null,
+        string? referencedModelPropertyName = null)
+    {
+        PropertyName = propertyName;
+        HookType = hookType;
+        ReferencedModelPropertyName = referencedModelPropertyName;
+
+        // For referenced model triggers, construct qualified path like "Model.Settings.IsDay"
+        QualifiedPropertyPath = referencedModelPropertyName is not null
+            ? $"Model.{referencedModelPropertyName}.{propertyName}"
+            : $"Model.{propertyName}";
+
+        // Use custom hook name if provided, otherwise generate based on trigger type
+        HookMethodName = !string.IsNullOrWhiteSpace(hookMethodName)
+            ? hookMethodName!
+            : hookType == TriggerHookType.Async
+                ? $"On{propertyName}ChangedAsync"
+                : $"On{propertyName}Changed";
+    }
 }

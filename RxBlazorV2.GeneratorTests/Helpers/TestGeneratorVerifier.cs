@@ -25,10 +25,10 @@ internal static class RxBlazorGeneratorVerifier
         test.TestState.GeneratedSources.Add((typeof(RxBlazorGenerator), $"Test.{modelFileName}.g.cs",
             SourceText.From(generated.NormalizeGeneratedCode(), Encoding.UTF8)));
         test.TestState.GeneratedSources.Add((typeof(RxBlazorGenerator), "ObservableModelsServiceCollectionExtension.g.cs",
-                SourceText.From(RxBlazorGeneratorTest.ObservableModelsServiceExtension(modelName, constrains), Encoding.UTF8))
+                SourceText.From(RxBlazorGeneratorTest.ObservableModelsServiceExtension([modelName], constrains), Encoding.UTF8))
         );
         test.TestState.GeneratedSources.Add((typeof(RxBlazorGenerator), "GenericModelsServiceCollectionExtension.g.cs",
-                SourceText.From(RxBlazorGeneratorTest.GenricModelsServiceExtension(modelName, constrains), Encoding.UTF8))
+                SourceText.From(RxBlazorGeneratorTest.GenricModelsServiceExtension([modelName], constrains), Encoding.UTF8))
         );
         test.ExpectedDiagnostics.AddRange(expected);
         test.TestState.ReferenceAssemblies = TestShared.ReferenceAssemblies();
@@ -59,18 +59,25 @@ internal static class ComponentGeneratorVerifier
 {
     public static Task VerifyComponentGeneratorAsync(string source, string generatedModel, string generatedComponent,
         string modelName, string componentClassName, string constrains = "",
+        params DiagnosticResult[] expected) => VerifyComponentGeneratorAsync(source, [generatedModel],
+        generatedComponent, [modelName], componentClassName, constrains, expected);
+    
+    public static Task VerifyComponentGeneratorAsync(string source, string[] generatedModels, string generatedComponent,
+        string[] modelNames, string componentClassName, string constrains = "",
         params DiagnosticResult[] expected)
     {
-        var genericSplit = modelName.IndexOf('<');
-        var modelFileName = genericSplit > 0 ? modelName[..genericSplit] : modelName;
-
         var test = new RxBlazorGeneratorTest { TestCode = source };
         test.TestState.Sources.Add(("GlobalUsings.cs", SourceText.From(TestShared.GlobalUsing, Encoding.UTF8)));
         
         // Add the expected model generation output
-        test.TestState.GeneratedSources.Add((typeof(RxBlazorGenerator), $"Test.{modelFileName}.g.cs",
-            SourceText.From(generatedModel.NormalizeGeneratedCode(), Encoding.UTF8)));
-
+        foreach (var modelNameWithIndex in modelNames.Select((name, index) => new { name, index }))
+        {
+            var genericSplit = modelNameWithIndex.name.IndexOf('<');
+            var modelFileName = genericSplit > 0 ? modelNameWithIndex.name[..genericSplit] : modelNameWithIndex.name;
+            test.TestState.GeneratedSources.Add((typeof(RxBlazorGenerator), $"Test.{modelFileName}.g.cs",
+                SourceText.From(generatedModels[modelNameWithIndex.index].NormalizeGeneratedCode(), Encoding.UTF8)));
+        }
+        
         // Add the expected component generation output
         // Component namespace is same as model namespace
         test.TestState.GeneratedSources.Add((typeof(RxBlazorGenerator), $"Test.{componentClassName}.g.cs",
@@ -78,10 +85,10 @@ internal static class ComponentGeneratorVerifier
 
         // Add service extension files
         test.TestState.GeneratedSources.Add((typeof(RxBlazorGenerator), "ObservableModelsServiceCollectionExtension.g.cs",
-                SourceText.From(RxBlazorGeneratorTest.ObservableModelsServiceExtension(modelName, constrains), Encoding.UTF8))
+                SourceText.From(RxBlazorGeneratorTest.ObservableModelsServiceExtension(modelNames, constrains), Encoding.UTF8))
         );
         test.TestState.GeneratedSources.Add((typeof(RxBlazorGenerator), "GenericModelsServiceCollectionExtension.g.cs",
-                SourceText.From(RxBlazorGeneratorTest.GenricModelsServiceExtension(modelName, constrains), Encoding.UTF8))
+                SourceText.From(RxBlazorGeneratorTest.GenricModelsServiceExtension(modelNames, constrains), Encoding.UTF8))
         );
 
         test.ExpectedDiagnostics.AddRange(expected);
@@ -151,10 +158,10 @@ internal static class RazorFileGeneratorVerifier
         if (generatedModel is not null && modelName is not null)
         {
             test.TestState.GeneratedSources.Add((typeof(RxBlazorGenerator), "ObservableModelsServiceCollectionExtension.g.cs",
-                    SourceText.From(RxBlazorGeneratorTest.ObservableModelsServiceExtension(modelName, constrains, modelScope), Encoding.UTF8))
+                    SourceText.From(RxBlazorGeneratorTest.ObservableModelsServiceExtension([modelName], constrains, modelScope), Encoding.UTF8))
             );
             test.TestState.GeneratedSources.Add((typeof(RxBlazorGenerator), "GenericModelsServiceCollectionExtension.g.cs",
-                    SourceText.From(RxBlazorGeneratorTest.GenricModelsServiceExtension(modelName, constrains), Encoding.UTF8))
+                    SourceText.From(RxBlazorGeneratorTest.GenricModelsServiceExtension([modelName], constrains), Encoding.UTF8))
             );
         }
 
@@ -175,7 +182,7 @@ internal class RxBlazorGeneratorTest : CSharpSourceGeneratorTest<RxBlazorGenerat
     }
 
 
-    public static string ObservableModelsServiceExtension(string modelName, string constrains, string modelScope = "Scoped")
+    public static string ObservableModelsServiceExtension(string[] modelNames, string constrains, string modelScope = "Scoped")
     {
         var registrationMethod = modelScope switch
         {
@@ -185,24 +192,36 @@ internal class RxBlazorGeneratorTest : CSharpSourceGeneratorTest<RxBlazorGenerat
             _ => "AddScoped"
         };
 
-        var serviceExtension = $$"""
+        var stringBuilder = new StringBuilder();
+        stringBuilder.Append("""
+using Microsoft.Extensions.DependencyInjection;
+using RxBlazorV2.Model;
+using Test;
 
-        using Microsoft.Extensions.DependencyInjection;
-        using RxBlazorV2.Model;
-        using Test;
+namespace Global;
 
-        namespace Global;
-
-        public static partial class ObservableModels
+public static partial class ObservableModels
+{
+    public static IServiceCollection Initialize(IServiceCollection services)
+    {
+""");
+       
+        foreach (var modelName in modelNames)
         {
-            public static IServiceCollection Initialize(IServiceCollection services)
-            {
-                services.{{registrationMethod}}<{{modelName}}>();
-                return services;
-            }
-        }
-        """;
+            stringBuilder.Append($$"""
 
+        services.{{registrationMethod}}<{{modelName}}>();
+""");
+        }
+
+        stringBuilder.Append("""
+
+        return services;
+    }
+}
+""");
+       
+        var serviceExtension = stringBuilder.ToString();
         serviceExtension = serviceExtension.TrimStart();
         serviceExtension = serviceExtension.Replace("\r\n", Environment.NewLine);
         serviceExtension += Environment.NewLine;
@@ -229,7 +248,7 @@ internal class RxBlazorGeneratorTest : CSharpSourceGeneratorTest<RxBlazorGenerat
         return constrains.Length > 0 ? serviceExtensionGeneric : serviceExtension;
     }
     
-    public static string GenricModelsServiceExtension(string modelName, string constrains)
+    public static string GenricModelsServiceExtension(string[] modelNames, string constrains)
     {
         var serviceExtension = $$"""
 
@@ -247,25 +266,38 @@ internal class RxBlazorGeneratorTest : CSharpSourceGeneratorTest<RxBlazorGenerat
         serviceExtension = serviceExtension.Replace("\r\n", Environment.NewLine);
         serviceExtension += Environment.NewLine;
         
-        var serviceExtensionGeneric = $$"""
+        var stringBuilder = new StringBuilder();
+        stringBuilder.Append($$"""
 
-        using Microsoft.Extensions.DependencyInjection;
-        using RxBlazorV2.Model;
-        using Test;
+using Microsoft.Extensions.DependencyInjection;
+using RxBlazorV2.Model;
+using Test;
 
-        namespace Global;
+namespace Global;
 
-        public static partial class ObservableModels
+public static partial class ObservableModels
+{
+""");
+        foreach (var modelName in modelNames)
         {
-            public static IServiceCollection {{modelName}}(IServiceCollection services)
-                {{constrains}}
-            {
-                services.AddSingleton<{{modelName}}>();
-                return services;
-            }
+            stringBuilder.Append($$"""
 
+    public static IServiceCollection {{modelName}}(IServiceCollection services)
+        {{constrains}}
+    {
+        services.AddSingleton<{{modelName}}>();
+        return services;
+    }
+""");
         }
-        """;
+        
+        stringBuilder.Append("""
+
+
+ }
+ """);
+        
+        var serviceExtensionGeneric = stringBuilder.ToString();
         serviceExtensionGeneric = serviceExtensionGeneric.TrimStart();
         serviceExtensionGeneric = serviceExtensionGeneric.Replace("\r\n", Environment.NewLine);
         serviceExtensionGeneric += Environment.NewLine;

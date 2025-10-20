@@ -252,16 +252,35 @@ internal static class SyntaxHelpers
 
     /// <summary>
     /// Adds an attribute to a member (e.g., constructor, method, property, class) while preserving trivias correctly.
-    /// The attribute gets all the leading trivias from the visibility token (including blank lines),
-    /// and the member keeps only its indentation (last whitespace trivia).
-    /// This ensures proper formatting when adding attributes above members.
-    /// Pattern from DexieNET: place attributes before all leading trivias from the visibility/keyword token.
+    /// Handles both cases: member with no existing attributes and member with existing attributes.
     /// </summary>
     /// <typeparam name="TMember">The type of member (must derive from MemberDeclarationSyntax)</typeparam>
     /// <param name="member">The member to add the attribute to</param>
     /// <param name="attribute">The attribute to add</param>
     /// <returns>The new member with the attribute added and trivias properly preserved</returns>
     public static TMember AddAttributePreservingTrivia<TMember>(
+        TMember member,
+        AttributeSyntax attribute) where TMember : MemberDeclarationSyntax
+    {
+        if (member.AttributeLists.Count == 0)
+        {
+            // No existing attributes - use original logic to preserve comments/trivia
+            return AddAttributePreservingTriviaNoExistingAttributes(member, attribute);
+        }
+        else
+        {
+            // Has existing attributes - add after them with proper indentation
+            return AddAttributeAfterExistingAttributes(member, attribute);
+        }
+    }
+
+    /// <summary>
+    /// Adds an attribute to a member that has no existing attributes.
+    /// The attribute gets all the leading trivias from the visibility token (including blank lines),
+    /// and the member keeps only its indentation (last whitespace trivia).
+    /// Pattern from DexieNET: place attributes before all leading trivias from the visibility/keyword token.
+    /// </summary>
+    private static TMember AddAttributePreservingTriviaNoExistingAttributes<TMember>(
         TMember member,
         AttributeSyntax attribute) where TMember : MemberDeclarationSyntax
     {
@@ -308,5 +327,31 @@ internal static class SyntaxHelpers
         return (TMember)member
             .WithLeadingTrivia(newMemberLeadingTrivia)
             .WithAttributeLists(member.AttributeLists.Add(attributeList));
+    }
+
+    /// <summary>
+    /// Adds an attribute to a member that already has existing attributes.
+    /// Appends the new attribute after the existing ones with proper indentation.
+    /// </summary>
+    private static TMember AddAttributeAfterExistingAttributes<TMember>(
+        TMember member,
+        AttributeSyntax attribute) where TMember : MemberDeclarationSyntax
+    {
+        var attributeList = SyntaxFactory.AttributeList(
+            SyntaxFactory.SingletonSeparatedList(attribute))
+            .WithTrailingTrivia(SyntaxFactory.CarriageReturnLineFeed);
+
+        // Get the indentation from the last existing attribute
+        var lastAttribute = member.AttributeLists.Last();
+        var indentation = lastAttribute.GetLeadingTrivia()
+            .LastOrDefault(t => t.IsKind(SyntaxKind.WhitespaceTrivia));
+
+        if (indentation != default)
+        {
+            attributeList = attributeList.WithLeadingTrivia(indentation);
+        }
+
+        return (TMember)member.WithAttributeLists(
+            member.AttributeLists.Add(attributeList));
     }
 }
