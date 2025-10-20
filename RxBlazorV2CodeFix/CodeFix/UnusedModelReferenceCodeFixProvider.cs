@@ -15,8 +15,7 @@ public class UnusedModelReferenceCodeFixProvider : CodeFixProvider
 {
     public sealed override ImmutableArray<string> FixableDiagnosticIds =>
         [
-            DiagnosticDescriptors.UnusedModelReferenceError.Id,
-            DiagnosticDescriptors.ReferencedModelDifferentAssemblyError.Id
+            DiagnosticDescriptors.UnusedModelReferenceError.Id
         ];
 
     public sealed override FixAllProvider GetFixAllProvider() =>

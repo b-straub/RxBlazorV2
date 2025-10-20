@@ -224,7 +224,6 @@ public class RazorFileDiagnosticsTests
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
-        using RxBlazorV2.Attributes;
 
         namespace Test
         {
@@ -244,7 +243,6 @@ public class RazorFileDiagnosticsTests
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
-        using RxBlazorV2.Attributes;
         using RxBlazorV2.Interface;
         using RxBlazorV2.Model;
         using System;
@@ -363,7 +361,6 @@ public class RazorFileDiagnosticsTests
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
-        using RxBlazorV2.Attributes;
 
         namespace Test
         {
@@ -384,7 +381,6 @@ public class RazorFileDiagnosticsTests
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
-        using RxBlazorV2.Attributes;
         using RxBlazorV2.Interface;
         using RxBlazorV2.Model;
         using System;
@@ -527,7 +523,6 @@ public class RazorFileDiagnosticsTests
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
-        using RxBlazorV2.Attributes;
 
         namespace Test
         {
@@ -548,7 +543,6 @@ public class RazorFileDiagnosticsTests
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
-        using RxBlazorV2.Attributes;
         using RxBlazorV2.Interface;
         using RxBlazorV2.Model;
         using System;
@@ -706,7 +700,6 @@ public class RazorFileDiagnosticsTests
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
-        using RxBlazorV2.Attributes;
 
         namespace Test
         {
@@ -727,7 +720,6 @@ public class RazorFileDiagnosticsTests
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
-        using RxBlazorV2.Attributes;
         using RxBlazorV2.Interface;
         using RxBlazorV2.Model;
         using System;
@@ -859,7 +851,6 @@ public class RazorFileDiagnosticsTests
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
-        using RxBlazorV2.Attributes;
 
         namespace Test
         {
@@ -880,7 +871,6 @@ public class RazorFileDiagnosticsTests
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
-        using RxBlazorV2.Attributes;
         using RxBlazorV2.Interface;
         using RxBlazorV2.Model;
         using System;
@@ -1092,7 +1082,6 @@ public class RazorFileDiagnosticsTests
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
-        using RxBlazorV2.Attributes;
 
         namespace Test
         {
@@ -1113,7 +1102,6 @@ public class RazorFileDiagnosticsTests
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
-        using RxBlazorV2.Attributes;
         using RxBlazorV2.Interface;
         using RxBlazorV2.Model;
         using System;
@@ -1284,7 +1272,6 @@ public class RazorFileDiagnosticsTests
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
-        using RxBlazorV2.Attributes;
 
         namespace Test
         {
@@ -1304,7 +1291,6 @@ public class RazorFileDiagnosticsTests
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
-        using RxBlazorV2.Attributes;
         using RxBlazorV2.Interface;
         using RxBlazorV2.Model;
         using System;
@@ -1423,7 +1409,6 @@ public class RazorFileDiagnosticsTests
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
-        using RxBlazorV2.Attributes;
 
         namespace Test
         {
@@ -1443,7 +1428,6 @@ public class RazorFileDiagnosticsTests
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
-        using RxBlazorV2.Attributes;
         using RxBlazorV2.Interface;
         using RxBlazorV2.Model;
         using System;
@@ -1574,7 +1558,6 @@ public class RazorFileDiagnosticsTests
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
-        using RxBlazorV2.Attributes;
 
         namespace Test
         {
@@ -1595,7 +1578,6 @@ public class RazorFileDiagnosticsTests
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
-        using RxBlazorV2.Attributes;
         using RxBlazorV2.Interface;
         using RxBlazorV2.Model;
         using System;
@@ -1761,7 +1743,6 @@ public class RazorFileDiagnosticsTests
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
-        using RxBlazorV2.Attributes;
 
         namespace Test
         {
@@ -1782,7 +1763,6 @@ public class RazorFileDiagnosticsTests
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
-        using RxBlazorV2.Attributes;
         using RxBlazorV2.Interface;
         using RxBlazorV2.Model;
         using System;
@@ -1935,7 +1915,6 @@ public class RazorFileDiagnosticsTests
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
-        using RxBlazorV2.Attributes;
 
         namespace Test
         {
@@ -1955,7 +1934,6 @@ public class RazorFileDiagnosticsTests
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
-        using RxBlazorV2.Attributes;
         using RxBlazorV2.Interface;
         using RxBlazorV2.Model;
         using System;
@@ -2082,7 +2060,6 @@ public class RazorFileDiagnosticsTests
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
-        using RxBlazorV2.Attributes;
 
         namespace Test
         {
@@ -2102,7 +2079,6 @@ public class RazorFileDiagnosticsTests
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
-        using RxBlazorV2.Attributes;
         using RxBlazorV2.Interface;
         using RxBlazorV2.Model;
         using System;
@@ -2236,7 +2212,6 @@ public class RazorFileDiagnosticsTests
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
-        using RxBlazorV2.Attributes;
 
         namespace Test
         {
@@ -2256,7 +2231,6 @@ public class RazorFileDiagnosticsTests
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
-        using RxBlazorV2.Attributes;
         using RxBlazorV2.Interface;
         using RxBlazorV2.Model;
         using System;

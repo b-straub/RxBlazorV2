@@ -34,8 +34,8 @@ public class RxBlazorGenerator : IIncrementalGenerator
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
 #if DEBUG
-        /*while (!Debugger.IsAttached)
-            Thread.Sleep(500);*/
+        while (!Debugger.IsAttached)
+            Thread.Sleep(500);
 #endif
         // Read MSBuild properties for configuration
         var msbuildProvider = context.AnalyzerConfigOptionsProvider
@@ -114,14 +114,15 @@ public class RxBlazorGenerator : IIncrementalGenerator
                     records.Add(record);
                 }
 
-                return records.ToImmutableArray();
+                return (records.ToImmutableArray(), compilation);
             });
 
         // Process records: Extract ComponentInfo now that all records are available
-        // This allows looking up referenced model triggers from their records
+        // This allows looking up referenced model triggers from their records (including cross-assembly)
         var processedRecords = observableModelRecords
-            .Select(static (records, _) =>
+            .Select(static (recordsWithCompilation, _) =>
             {
+                var (records, compilation) = recordsWithCompilation;
                 // Build lookup dictionary by fully qualified type name
                 var recordsByTypeName = new Dictionary<string, ObservableModelRecord>();
                 foreach (var record in records.Where(r => r != null))
@@ -135,7 +136,7 @@ public class RxBlazorGenerator : IIncrementalGenerator
                     // Check if record needs ComponentInfo (has ObservableComponent attribute)
                     // This is indicated by ComponentInfo being null but model having the attribute
                     // We'll let ExtractComponentInfo check for the attribute
-                    var componentInfo = ObservableModelRecord.ExtractComponentInfo(record!, recordsByTypeName);
+                    var componentInfo = ObservableModelRecord.ExtractComponentInfo(record!, recordsByTypeName, compilation);
                     if (componentInfo != null)
                     {
                         record!.ComponentInfo = componentInfo;
@@ -251,31 +252,6 @@ public class RxBlazorGenerator : IIncrementalGenerator
                                 diField.FieldName,
                                 diField.FieldType,
                                 serviceScope);
-                            spc.ReportDiagnostic(diagnostic);
-                        }
-                    }
-                }
-            });
-
-        // Report RXBG052 for cross-assembly referenced model triggers
-        context.RegisterSourceOutput(processedRecords,
-            static (spc, records) =>
-            {
-                foreach (var record in records.Where(r => r != null))
-                {
-                    // Report cross-assembly trigger reference violations
-                    foreach (var (referencedModelName, referencedAssembly, currentAssembly, location) in record!
-                                 .CrossAssemblyTriggerReferences)
-                    {
-                        if (location is not null)
-                        {
-                            var diagnostic = Diagnostic.Create(
-                                DiagnosticDescriptors.ReferencedModelDifferentAssemblyError,
-                                location,
-                                record.ModelInfo.ClassName,
-                                referencedModelName,
-                                referencedAssembly,
-                                currentAssembly);
                             spc.ReportDiagnostic(diagnostic);
                         }
                     }
@@ -490,6 +466,10 @@ public class RxBlazorGenerator : IIncrementalGenerator
                     .Select(t => ((IEnumerable<string>)t.s.NamespaceNames,
                         t.s.TypeNames.Where(n => !n.StartsWith("<"))));
 
+                var types = compilation.Assembly.TypeNames;
+                
+                var t = compilation.GetSymbolsWithName("ErrorModelComponent", SymbolFilter.Type);
+                
                 // Build map of component class names to their namespaces (same-assembly components)
                 var componentNamespaces = new Dictionary<string, string>();
                 foreach (var record in records.Where(r => r is not null && r!.ComponentInfo is not null))

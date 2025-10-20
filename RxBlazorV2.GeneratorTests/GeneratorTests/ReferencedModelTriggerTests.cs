@@ -4,20 +4,16 @@ using RxBlazorV2.GeneratorTests.Helpers;
 namespace RxBlazorV2.GeneratorTests.GeneratorTests;
 
 /// <summary>
-/// Tests for RXBG052: Referenced model with triggers must be in same assembly
-/// and includeReferencedTriggers feature of [ObservableComponent] attribute.
+/// Tests for includeReferencedTriggers feature of [ObservableComponent] attribute.
 ///
-/// Note: These tests focus on same-assembly scenarios and feature flag behavior.
-/// Testing actual cross-assembly errors (RXBG052) requires integration tests with
-/// multiple project references, which is beyond the scope of unit tests.
-///
-/// The RXBG052 diagnostic is reported when:
-/// - A model has [ObservableComponent(includeReferencedTriggers: true)] (default)
-/// - The model references another ObservableModel from a DIFFERENT assembly
-/// - The referenced model has [ObservableComponentTrigger] attributes
+/// The generator now supports cross-assembly trigger references by using
+/// Compilation.GetTypeByMetadataName to read trigger attributes from referenced
+/// models in different assemblies. This means trigger hooks can be generated
+/// for both same-assembly and cross-assembly model references.
 ///
 /// These tests verify the includeReferencedTriggers feature works correctly
-/// when models are in the SAME assembly (no RXBG052 error).
+/// for same-assembly scenarios. Cross-assembly scenarios work the same way
+/// but would require integration tests with multiple project references.
 /// </summary>
 public class ReferencedModelTriggerTests
 {
@@ -39,7 +35,6 @@ public class ReferencedModelTriggerTests
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
-        using RxBlazorV2.Attributes;
 
         namespace Test
         {
@@ -66,7 +61,6 @@ public class ReferencedModelTriggerTests
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
-        using RxBlazorV2.Attributes;
         using RxBlazorV2.Interface;
         using RxBlazorV2.Model;
         using System;
@@ -104,7 +98,6 @@ public class ReferencedModelTriggerTests
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
-        using RxBlazorV2.Attributes;
         using RxBlazorV2.Interface;
         using RxBlazorV2.Model;
         using System;
@@ -381,7 +374,6 @@ public class ReferencedModelTriggerTests
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
-        using RxBlazorV2.Attributes;
 
         namespace Test
         {
@@ -411,7 +403,6 @@ public class ReferencedModelTriggerTests
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
-        using RxBlazorV2.Attributes;
         using RxBlazorV2.Interface;
         using RxBlazorV2.Model;
         using System;
@@ -462,7 +453,6 @@ public class ReferencedModelTriggerTests
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
-        using RxBlazorV2.Attributes;
         using RxBlazorV2.Interface;
         using RxBlazorV2.Model;
         using System;
@@ -585,7 +575,6 @@ public class ReferencedModelTriggerTests
         const string test = """
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
-        using RxBlazorV2.Attributes;
 
         namespace Test
         {
@@ -615,7 +604,6 @@ public class ReferencedModelTriggerTests
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
-        using RxBlazorV2.Attributes;
         using RxBlazorV2.Interface;
         using RxBlazorV2.Model;
         using System;
@@ -653,7 +641,6 @@ public class ReferencedModelTriggerTests
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
-        using RxBlazorV2.Attributes;
         using RxBlazorV2.Interface;
         using RxBlazorV2.Model;
         using System;
@@ -776,7 +763,6 @@ public class ReferencedModelTriggerTests
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
-        using RxBlazorV2.Attributes;
 
         namespace Test
         {
@@ -796,7 +782,6 @@ public class ReferencedModelTriggerTests
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
-        using RxBlazorV2.Attributes;
         using RxBlazorV2.Interface;
         using RxBlazorV2.Model;
         using System;

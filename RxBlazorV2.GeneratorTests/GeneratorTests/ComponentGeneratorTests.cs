@@ -16,7 +16,6 @@ public class ComponentTriggerGeneratorTests
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
-        using RxBlazorV2.Attributes;
 
         namespace Test
         {
@@ -36,7 +35,6 @@ public class ComponentTriggerGeneratorTests
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
-        using RxBlazorV2.Attributes;
         using RxBlazorV2.Interface;
         using RxBlazorV2.Model;
         using System;
@@ -127,7 +125,6 @@ public class ComponentTriggerGeneratorTests
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
-        using RxBlazorV2.Attributes;
 
         namespace Test
         {
@@ -147,7 +144,6 @@ public class ComponentTriggerGeneratorTests
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
-        using RxBlazorV2.Attributes;
         using RxBlazorV2.Interface;
         using RxBlazorV2.Model;
         using System;
@@ -238,7 +234,6 @@ public class ComponentTriggerGeneratorTests
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
-        using RxBlazorV2.Attributes;
 
         namespace Test
         {
@@ -259,7 +254,6 @@ public class ComponentTriggerGeneratorTests
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
-        using RxBlazorV2.Attributes;
         using RxBlazorV2.Interface;
         using RxBlazorV2.Model;
         using System;
@@ -360,7 +354,6 @@ public class ComponentTriggerGeneratorTests
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
-        using RxBlazorV2.Attributes;
 
         namespace Test
         {
@@ -381,7 +374,6 @@ public class ComponentTriggerGeneratorTests
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
-        using RxBlazorV2.Attributes;
         using RxBlazorV2.Interface;
         using RxBlazorV2.Model;
         using System;
@@ -483,7 +475,6 @@ public class ComponentTriggerGeneratorTests
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
-        using RxBlazorV2.Attributes;
 
         namespace Test
         {
@@ -505,7 +496,6 @@ public class ComponentTriggerGeneratorTests
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
-        using RxBlazorV2.Attributes;
         using RxBlazorV2.Interface;
         using RxBlazorV2.Model;
         using System;
@@ -618,7 +608,6 @@ public class ComponentTriggerGeneratorTests
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
-        using RxBlazorV2.Attributes;
 
         namespace Test
         {
@@ -640,7 +629,6 @@ public class ComponentTriggerGeneratorTests
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
-        using RxBlazorV2.Attributes;
         using RxBlazorV2.Interface;
         using RxBlazorV2.Model;
         using System;
@@ -753,7 +741,6 @@ public class ComponentTriggerGeneratorTests
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
-        using RxBlazorV2.Attributes;
 
         namespace Test
         {
@@ -779,7 +766,6 @@ public class ComponentTriggerGeneratorTests
         using Microsoft.Extensions.DependencyInjection;
         using ObservableCollections;
         using R3;
-        using RxBlazorV2.Attributes;
         using RxBlazorV2.Interface;
         using RxBlazorV2.Model;
         using System;

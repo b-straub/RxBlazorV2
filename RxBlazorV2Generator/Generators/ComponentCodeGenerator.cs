@@ -118,7 +118,7 @@ public static class ComponentCodeGenerator
             // - Local triggers: Model.Observable with filter "Model.PropertyName"
             // - Referenced triggers: Model.Observable with filter "Model.{RefProperty}.PropertyName"
             //   (Referenced model properties are transformed and merged into Model.Observable)
-            string observableSource = "Model.Observable";
+            var observableSource = "Model.Observable";
             string filterPropertyName;
 
             if (trigger.ReferencedModelPropertyName is not null)

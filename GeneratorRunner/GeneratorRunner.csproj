@@ -22,10 +22,8 @@
 	<ItemGroup>
 		<ProjectReference Include="..\RxBlazorV2Generator\RxBlazorV2Generator.csproj" />
 		<ProjectReference Include="..\RxBlazorV2\RxBlazorV2.csproj" />
-		<!--
 		<ProjectReference Include="..\RxBlazorV2Sample\RxBlazorV2Sample.csproj" />
 		<ProjectReference Include="..\RxBlazorVSSampleComponents\RxBlazorVSSampleComponents.csproj" />
-		-->
 	</ItemGroup>
 	
 </Project>

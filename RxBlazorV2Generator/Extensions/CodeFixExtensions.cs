@@ -45,7 +45,7 @@ public static class CodeFixExtensions
     /// <returns>The property value or null if not found</returns>
     public static string? CodeFixProperty(this Diagnostic diagnostic, string property)
     {
-        if (diagnostic.Properties.TryGetValue(property, out string? value))
+        if (diagnostic.Properties.TryGetValue(property, out var value))
         {
             return value;
         }

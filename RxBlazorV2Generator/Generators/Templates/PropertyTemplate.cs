@@ -61,7 +61,7 @@ public static class PropertyTemplate
     {
         var sb = new StringBuilder();
         var propertiesList = partialProperties.ToList();
-        for (int i = 0; i < propertiesList.Count; i++)
+        for (var i = 0; i < propertiesList.Count; i++)
         {
             sb.AppendLine(GeneratePartialProperty(propertiesList[i], className));
             if (i < propertiesList.Count - 1)

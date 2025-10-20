@@ -213,10 +213,6 @@ public class ObservableModelRecord
             record.UnregisteredServices = unregisteredServices;
             record.DiFieldsWithScope = diFieldsWithScope;
 
-            // Check for cross-assembly trigger references for RXBG052 diagnostic
-            var crossAssemblyTriggerRefs = DetectCrossAssemblyTriggerReferences(namedTypeSymbol, enhancedModelReferences, compilation);
-            record.CrossAssemblyTriggerReferences = crossAssemblyTriggerRefs;
-
             // Extract component attribute data for later ComponentInfo generation
             ExtractComponentAttributeData(namedTypeSymbol, record);
 
@@ -252,9 +248,6 @@ public class ObservableModelRecord
     // Set later in pipeline when all records are available for referenced model lookup
     public ComponentInfo? ComponentInfo { get; set; }
 
-    // Track referenced models from different assemblies with triggers (for RXBG052)
-    public List<(string referencedModelName, string referencedAssembly, string currentAssembly, Location? location)> CrossAssemblyTriggerReferences { get; private set; } = [];
-
     /// <summary>
     /// Returns all diagnostics for this model.
     /// This is the single source of truth for diagnostic logic.
@@ -263,90 +256,6 @@ public class ObservableModelRecord
     public List<Diagnostic> Verify()
     {
         return new List<Diagnostic>(_diagnostics);
-    }
-
-    /// <summary>
-    /// Detects if any referenced models from different assemblies have triggers.
-    /// This is used for RXBG052 diagnostic reporting.
-    /// </summary>
-    private static List<(string referencedModelName, string referencedAssembly, string currentAssembly, Location? location)>
-        DetectCrossAssemblyTriggerReferences(
-            INamedTypeSymbol namedTypeSymbol,
-            List<ModelReferenceInfo> modelReferences,
-            Compilation compilation)
-    {
-        var crossAssemblyTriggerRefs = new List<(string, string, string, Location?)>();
-
-        // Check if model has [ObservableComponent] with includeReferencedTriggers enabled
-        bool includeReferencedTriggers = false;
-        foreach (var attribute in namedTypeSymbol.GetAttributes())
-        {
-            if (attribute.AttributeClass?.Name == "ObservableComponentAttribute")
-            {
-                includeReferencedTriggers = true; // default
-                if (attribute.ConstructorArguments.Length > 0 &&
-                    attribute.ConstructorArguments[0].Value is bool includeRefTriggers)
-                {
-                    includeReferencedTriggers = includeRefTriggers;
-                }
-                break;
-            }
-        }
-
-        if (!includeReferencedTriggers || modelReferences.Count == 0)
-        {
-            return crossAssemblyTriggerRefs;
-        }
-
-        var currentAssembly = namedTypeSymbol.ContainingAssembly;
-
-        foreach (var modelRef in modelReferences)
-        {
-            // Try to get the type symbol
-            var referencedTypeSymbol = compilation.GetTypeByMetadataName(modelRef.ReferencedModelTypeName.ToMetadataTypeName());
-
-            if (referencedTypeSymbol is null)
-            {
-                continue;
-            }
-
-            // Check if referenced model is in a different assembly
-            if (!SymbolEqualityComparer.Default.Equals(referencedTypeSymbol.ContainingAssembly, currentAssembly))
-            {
-                // Different assembly - check if it has triggers
-                bool hasTriggers = false;
-                foreach (var member in referencedTypeSymbol.GetMembers())
-                {
-                    if (member is IPropertySymbol propSymbol)
-                    {
-                        foreach (var attr in propSymbol.GetAttributes())
-                        {
-                            if (attr.AttributeClass?.Name == "ObservableComponentTriggerAttribute" ||
-                                attr.AttributeClass?.Name == "ObservableComponentTriggerAsyncAttribute")
-                            {
-                                hasTriggers = true;
-                                break;
-                            }
-                        }
-                        if (hasTriggers)
-                        {
-                            break;
-                        }
-                    }
-                }
-
-                if (hasTriggers)
-                {
-                    crossAssemblyTriggerRefs.Add((
-                        modelRef.ReferencedModelTypeName,
-                        referencedTypeSymbol.ContainingAssembly.Name,
-                        currentAssembly.Name,
-                        modelRef.AttributeLocation));
-                }
-            }
-        }
-
-        return crossAssemblyTriggerRefs;
     }
 
     /// <summary>
@@ -461,9 +370,9 @@ public class ObservableModelRecord
         {
             if (member is IPropertySymbol propertySymbol)
             {
-                bool hasSyncTrigger = false;
+                var hasSyncTrigger = false;
                 string? syncHookName = null;
-                bool hasAsyncTrigger = false;
+                var hasAsyncTrigger = false;
                 string? asyncHookName = null;
 
                 foreach (var attr in propertySymbol.GetAttributes())
@@ -505,10 +414,12 @@ public class ObservableModelRecord
     /// Extracts component information from stored component attribute data.
     /// This method should be called in the generator pipeline when all ObservableModelRecords are available,
     /// allowing lookup of referenced model triggers from their records.
+    /// For cross-assembly references, uses Compilation.GetTypeByMetadataName to read trigger attributes.
     /// </summary>
     public static ComponentInfo? ExtractComponentInfo(
         ObservableModelRecord currentRecord,
-        Dictionary<string, ObservableModelRecord> allRecords)
+        Dictionary<string, ObservableModelRecord> allRecords,
+        Compilation compilation)
     {
         try
         {
@@ -559,14 +470,69 @@ public class ObservableModelRecord
                     // ReferencedModelTypeName already contains the fully qualified name
                     var refFullTypeName = modelRef.ReferencedModelTypeName;
 
-                    if (!allRecords.TryGetValue(refFullTypeName, out var referencedRecord))
+                    Dictionary<string, (bool hasSync, string? syncHookName, bool hasAsync, string? asyncHookName)> triggerProperties;
+
+                    if (allRecords.TryGetValue(refFullTypeName, out var referencedRecord))
                     {
-                        // Referenced model not found in same assembly - skip
-                        continue;
+                        // Same assembly - use the record's component trigger properties
+                        triggerProperties = referencedRecord.ComponentTriggerProperties;
+                    }
+                    else
+                    {
+                        // Cross-assembly reference - use GetTypeByMetadataName to read trigger attributes
+                        var referencedTypeSymbol = compilation.GetTypeByMetadataName(refFullTypeName.ToMetadataTypeName());
+                        if (referencedTypeSymbol is null)
+                        {
+                            continue;
+                        }
+
+                        // Extract trigger properties from the type symbol
+                        triggerProperties = new Dictionary<string, (bool hasSync, string? syncHookName, bool hasAsync, string? asyncHookName)>();
+                        foreach (var member in referencedTypeSymbol.GetMembers())
+                        {
+                            if (member is IPropertySymbol propertySymbol)
+                            {
+                                bool hasSyncTrigger = false;
+                                string? syncHookName = null;
+                                bool hasAsyncTrigger = false;
+                                string? asyncHookName = null;
+
+                                foreach (var attr in propertySymbol.GetAttributes())
+                                {
+                                    if (attr.AttributeClass?.Name == "ObservableComponentTriggerAttribute")
+                                    {
+                                        hasSyncTrigger = true;
+                                        // Extract custom hook name from first constructor argument
+                                        if (attr.ConstructorArguments.Length > 0 &&
+                                            attr.ConstructorArguments[0].Value is string customName &&
+                                            !string.IsNullOrWhiteSpace(customName))
+                                        {
+                                            syncHookName = customName;
+                                        }
+                                    }
+                                    else if (attr.AttributeClass?.Name == "ObservableComponentTriggerAsyncAttribute")
+                                    {
+                                        hasAsyncTrigger = true;
+                                        // Extract custom hook name from first constructor argument
+                                        if (attr.ConstructorArguments.Length > 0 &&
+                                            attr.ConstructorArguments[0].Value is string customNameAsync &&
+                                            !string.IsNullOrWhiteSpace(customNameAsync))
+                                        {
+                                            asyncHookName = customNameAsync;
+                                        }
+                                    }
+                                }
+
+                                if (hasSyncTrigger || hasAsyncTrigger)
+                                {
+                                    triggerProperties[propertySymbol.Name] = (hasSyncTrigger, syncHookName, hasAsyncTrigger, asyncHookName);
+                                }
+                            }
+                        }
                     }
 
-                    // Get triggers from referenced model
-                    foreach (var kvp in referencedRecord.ComponentTriggerProperties)
+                    // Get triggers from referenced model (same or cross-assembly)
+                    foreach (var kvp in triggerProperties)
                     {
                         var propertyName = kvp.Key;
                         var (hasSync, syncHookName, hasAsync, asyncHookName) = kvp.Value;

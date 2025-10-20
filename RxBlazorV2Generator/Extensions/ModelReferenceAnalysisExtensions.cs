@@ -128,7 +128,7 @@ public static class ModelReferenceAnalysisExtensions
         var diagnostics = new List<Diagnostic>();
 
         // Check if current model has [ObservableComponent(includeReferencedTriggers: true)]
-        bool hasIncludeReferencedTriggers = false;
+        var hasIncludeReferencedTriggers = false;
         foreach (var attribute in classSymbol.GetAttributes())
         {
             if (attribute.AttributeClass?.Name == "ObservableComponentAttribute")
@@ -161,7 +161,7 @@ public static class ModelReferenceAnalysisExtensions
             else if (modelRef.UsedProperties.Count == 0)
             {
                 // Check if reference is used via includeReferencedTriggers
-                bool isUsedViaTriggers = false;
+                var isUsedViaTriggers = false;
 
                 if (hasIncludeReferencedTriggers)
                 {

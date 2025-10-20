@@ -94,5 +94,5 @@ public partial class CounterModel : ObservableModel
         }
     }
 
-    public partial CounterModel(ErrorModel errorModel, SettingsModel settings);
+    public partial CounterModel(ErrorModel errorModel);
 }

@@ -241,17 +241,6 @@ public static class DiagnosticDescriptors
         description: "Dependency injection scoping rules must be followed: Singleton services can only inject Singleton services. Scoped services can inject Singleton and Scoped services. Transient services can inject any scope. Violating these rules causes runtime DI container exceptions.",
         helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG051.md");
 
-    public static readonly DiagnosticDescriptor ReferencedModelDifferentAssemblyError = new(
-        id: "RXBG052",
-        title: "Referenced model with triggers must be in same assembly",
-        messageFormat: "ObservableModel '{0}' with [ObservableComponent(includeReferencedTriggers: true)] references model '{1}' from assembly '{2}', but the referenced model is not in the same assembly ('{3}'). Referenced models with [ObservableComponentTrigger] attributes must be in the same assembly to generate trigger hooks. Either move '{1}' to assembly '{3}', or set [ObservableComponent(includeReferencedTriggers: false)] to disable this feature.",
-        category: "RxBlazorGenerator",
-        DiagnosticSeverity.Error,
-        isEnabledByDefault: true,
-        description: "When includeReferencedTriggers is enabled (default), the source generator needs to access referenced ObservableModel properties with [ObservableComponentTrigger] attributes to generate hook methods in the component. Due to how source generators work during compilation, referenced models must be in the same assembly. Models from different assemblies are already compiled and their trigger information is not available during source generation.",
-        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG052.md",
-        customTags: ["Remove cross-assembly model reference"]);
-
     // ============================================================================
     // RXBG060-RXBG069: Components
     // ============================================================================

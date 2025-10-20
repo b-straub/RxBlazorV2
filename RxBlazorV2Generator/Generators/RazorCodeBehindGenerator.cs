@@ -169,7 +169,7 @@ public static class RazorCodeBehindGenerator
                     .ToList();
 
                 sb.AppendLine("        return [");
-                for (int i = 0; i < filterProperties.Count; i++)
+                for (var i = 0; i < filterProperties.Count; i++)
                 {
                     var comma = i < filterProperties.Count - 1 ? "," : "";
                     sb.AppendLine($"            \"{filterProperties[i]}\"{comma}");

@@ -1,5 +1,4 @@
 using ObservableCollections;
-using RxBlazorV2.Attributes;
 using RxBlazorV2.Interface;
 using RxBlazorV2.Model;
 using RxBlazorV2ExternalModel.Type;
