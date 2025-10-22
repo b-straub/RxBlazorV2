@@ -34,8 +34,8 @@ public class RxBlazorGenerator : IIncrementalGenerator
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
 #if DEBUG
-        while (!Debugger.IsAttached)
-            Thread.Sleep(500);
+        /*while (!Debugger.IsAttached)
+            Thread.Sleep(500);*/
 #endif
         // Read MSBuild properties for configuration
         var msbuildProvider = context.AnalyzerConfigOptionsProvider
@@ -457,19 +457,10 @@ public class RxBlazorGenerator : IIncrementalGenerator
                 var (files, compilation) = combined;
                 var (razorFilesList, records) = files;
 
-                // Get component candidates from referenced assemblies
-                var componentCandidates = compilation
-                    .SourceModule
-                    .ReferencedAssemblySymbols
-                    .Select(s => (s, s.Modules.SelectMany(m => m.ReferencedAssemblies).Select(r => r.Name)))
-                    .Where(t => t.Item2.Contains("RxBlazorV2"))
-                    .Select(t => ((IEnumerable<string>)t.s.NamespaceNames,
-                        t.s.TypeNames.Where(n => !n.StartsWith("<"))));
+                // Find all ObservableComponent types in referenced assemblies
+                // This accurately detects components by checking inheritance, not just guessing by assembly reference
+                var crossAssemblyComponents = compilation.FindCrossAssemblyObservableComponents();
 
-                var types = compilation.Assembly.TypeNames;
-                
-                var t = compilation.GetSymbolsWithName("ErrorModelComponent", SymbolFilter.Type);
-                
                 // Build map of component class names to their namespaces (same-assembly components)
                 var componentNamespaces = new Dictionary<string, string>();
                 foreach (var record in records.Where(r => r is not null && r!.ComponentInfo is not null))
@@ -496,7 +487,7 @@ public class RxBlazorGenerator : IIncrementalGenerator
                         razorFile,
                         content,
                         componentNamespaces,
-                        componentCandidates);
+                        crossAssemblyComponents);
                 }
             });
 

@@ -146,8 +146,9 @@ public class ModelReferenceInfo
     public Location? AttributeLocation { get; }
     public bool IsDerivedModel { get; }
     public string? BaseObservableModelType { get; }
+    public ITypeSymbol? TypeSymbol { get; }
 
-    public ModelReferenceInfo(string referencedModelTypeName, string referencedModelNamespace, string propertyName, List<string> usedProperties, Location? attributeLocation = null, bool isDerivedModel = false, string? baseObservableModelType = null)
+    public ModelReferenceInfo(string referencedModelTypeName, string referencedModelNamespace, string propertyName, List<string> usedProperties, Location? attributeLocation = null, bool isDerivedModel = false, string? baseObservableModelType = null, ITypeSymbol? typeSymbol = null)
     {
         ReferencedModelTypeName = referencedModelTypeName;
         ReferencedModelNamespace = referencedModelNamespace;
@@ -156,6 +157,7 @@ public class ModelReferenceInfo
         AttributeLocation = attributeLocation;
         IsDerivedModel = isDerivedModel;
         BaseObservableModelType = baseObservableModelType;
+        TypeSymbol = typeSymbol;
     }
 }
 

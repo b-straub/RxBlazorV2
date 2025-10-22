@@ -36,7 +36,7 @@ public static class RazorCodeBehindGenerator
         AdditionalText razorFile,
         SourceText razorContent,
         Dictionary<string, string> componentNamespaces,
-        IEnumerable<(IEnumerable<string> NamespaceNames, IEnumerable<string> TypeNames)> componentCandidates)
+        Dictionary<string, (string Namespace, INamedTypeSymbol TypeSymbol)> crossAssemblyComponents)
     {
         try
         {
@@ -56,33 +56,28 @@ public static class RazorCodeBehindGenerator
             // Strategy 1: Check same-assembly components (from observableModelRecords)
             var isSameAssemblyComponent = componentNamespaces.ContainsKey(componentTypeName);
 
-            // Strategy 2: Check cross-assembly components (from referenced assemblies)
+            // Strategy 2: Check cross-assembly components (accurate inheritance detection)
             var isCrossAssemblyComponent = false;
             if (!isSameAssemblyComponent)
             {
                 // Extract namespace from inheritsType (e.g., "MyNamespace.ComponentName" -> "MyNamespace")
                 var inheritsNamespace = ExtractNamespace(inheritsType);
 
-                // Check if namespace+typename exists in any referenced assembly that uses RxBlazorV2
-                foreach (var (namespaceNames, typeNames) in componentCandidates)
+                // Check if component exists in cross-assembly components map
+                if (crossAssemblyComponents.TryGetValue(componentTypeName, out var componentInfo))
                 {
-                    if (typeNames.Contains(componentTypeName))
+                    // If namespace is specified in @inherits, verify it matches
+                    if (!string.IsNullOrEmpty(inheritsNamespace))
                     {
-                        // If namespace is specified in @inherits, verify it matches
-                        if (!string.IsNullOrEmpty(inheritsNamespace))
+                        if (componentInfo.Namespace == inheritsNamespace)
                         {
-                            if (namespaceNames.Contains(inheritsNamespace))
-                            {
-                                isCrossAssemblyComponent = true;
-                                break;
-                            }
-                        }
-                        else
-                        {
-                            // No namespace specified, assume it's a match
                             isCrossAssemblyComponent = true;
-                            break;
                         }
+                    }
+                    else
+                    {
+                        // No namespace specified in @inherits, accept the match
+                        isCrossAssemblyComponent = true;
                     }
                 }
             }

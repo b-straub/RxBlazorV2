@@ -164,10 +164,9 @@ public class ObservableModelRecord
             var modelSymbolMap = new Dictionary<string, ITypeSymbol>();
             foreach (var modelRef in modelReferences)
             {
-                var typeSymbol = compilation.GetTypeByMetadataName(modelRef.ReferencedModelTypeName.ToMetadataTypeName());
-                if (typeSymbol != null)
+                if (modelRef.TypeSymbol is not null)
                 {
-                    modelSymbolMap[modelRef.PropertyName] = typeSymbol;
+                    modelSymbolMap[modelRef.PropertyName] = modelRef.TypeSymbol;
                 }
             }
 
@@ -477,14 +476,10 @@ public class ObservableModelRecord
                         // Same assembly - use the record's component trigger properties
                         triggerProperties = referencedRecord.ComponentTriggerProperties;
                     }
-                    else
+                    else if (modelRef.TypeSymbol is not null)
                     {
-                        // Cross-assembly reference - use GetTypeByMetadataName to read trigger attributes
-                        var referencedTypeSymbol = compilation.GetTypeByMetadataName(refFullTypeName.ToMetadataTypeName());
-                        if (referencedTypeSymbol is null)
-                        {
-                            continue;
-                        }
+                        // Cross-assembly reference - use the cached TypeSymbol to read trigger attributes
+                        var referencedTypeSymbol = modelRef.TypeSymbol;
 
                         // Extract trigger properties from the type symbol
                         triggerProperties = new Dictionary<string, (bool hasSync, string? syncHookName, bool hasAsync, string? asyncHookName)>();
@@ -529,6 +524,11 @@ public class ObservableModelRecord
                                 }
                             }
                         }
+                    }
+                    else
+                    {
+                        // TypeSymbol not available - skip this reference
+                        continue;
                     }
 
                     // Get triggers from referenced model (same or cross-assembly)

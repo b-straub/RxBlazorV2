@@ -10,6 +10,7 @@ namespace GeneratorRunner
             "../RxBlazorV2Sample/Models/WeatherModel.cs",
             "../RxBlazorV2Sample/Services/OpenMeteoApiClient.cs",
             "../RxBlazorV2Sample/Pages/Weather.razor.cs",
+            "../RxBlazorV2Sample/Models/CounterModel.cs",
             "../RxBlazorVSSampleComponents/ErrorManager/ErrorModel.cs",
             //"../RxBlazorV2Sample/Samples/BasicCommandWithReturn/BasicCommandsRModel.cs",
         ];

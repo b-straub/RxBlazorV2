@@ -75,7 +75,8 @@ public static class ConstructorAnalysisExtensions
                     usedProperties,
                     parameter.Type?.GetLocation(),
                     isDerivedModel,
-                    baseTypeName));
+                    baseTypeName,
+                    namedType));
 
                 // Also track scope for ObservableModel dependencies (for scope violation checking)
                 var diField = new DIFieldInfo(propertyName, parameterTypeName);
@@ -92,7 +93,10 @@ public static class ConstructorAnalysisExtensions
                     namedTypeSymbol.ContainingNamespace.ToDisplayString(),
                     propertyName,
                     usedProperties,
-                    parameter.Type?.GetLocation()));
+                    parameter.Type?.GetLocation(),
+                    false,
+                    null,
+                    namedTypeSymbol));
 
                 // Also track scope for IObservableModel dependencies (for scope violation checking)
                 var diField = new DIFieldInfo(propertyName, parameterTypeName);
