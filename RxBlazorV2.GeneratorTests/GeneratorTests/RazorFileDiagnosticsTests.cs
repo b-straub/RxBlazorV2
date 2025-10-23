@@ -1,3 +1,4 @@
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Testing;
 using Microsoft.CodeAnalysis.Text;
 using RxBlazorV2.GeneratorTests.Helpers;
@@ -55,6 +56,7 @@ public class RazorFileDiagnosticsTests
         }
         else
         {
+            sb.AppendLine("        // No properties detected in razor file - no automatic StateHasChanged");
             sb.AppendLine("        return [];");
         }
 
@@ -289,17 +291,7 @@ public class RazorFileDiagnosticsTests
             {
                 // Subscribe to model changes - respects Filter() method
                 var filter = Filter();
-                if (filter.Length == 0)
-                {
-                    // No filter - observe all property changes
-                    Subscriptions.Add(Model.Observable
-                        .Chunk(TimeSpan.FromMilliseconds(100))
-                        .Subscribe(chunks =>
-                        {
-                            InvokeAsync(StateHasChanged);
-                        }));
-                }
-                else
+                if (filter.Length > 0)
                 {
                     // Filter active - observe only filtered properties
                     Subscriptions.Add(Model.Observable
@@ -310,6 +302,7 @@ public class RazorFileDiagnosticsTests
                             InvokeAsync(StateHasChanged);
                         }));
                 }
+                // else: Empty filter - no automatic StateHasChanged, only triggers (if any) will fire
             }
 
             protected override Task InitializeGeneratedCodeAsync()
@@ -427,17 +420,7 @@ public class RazorFileDiagnosticsTests
             {
                 // Subscribe to model changes - respects Filter() method
                 var filter = Filter();
-                if (filter.Length == 0)
-                {
-                    // No filter - observe all property changes
-                    Subscriptions.Add(Model.Observable
-                        .Chunk(TimeSpan.FromMilliseconds(100))
-                        .Subscribe(chunks =>
-                        {
-                            InvokeAsync(StateHasChanged);
-                        }));
-                }
-                else
+                if (filter.Length > 0)
                 {
                     // Filter active - observe only filtered properties
                     Subscriptions.Add(Model.Observable
@@ -448,6 +431,7 @@ public class RazorFileDiagnosticsTests
                             InvokeAsync(StateHasChanged);
                         }));
                 }
+                // else: Empty filter - no automatic StateHasChanged, only triggers (if any) will fire
             }
 
             protected override Task InitializeGeneratedCodeAsync()
@@ -589,17 +573,7 @@ public class RazorFileDiagnosticsTests
             {
                 // Subscribe to model changes - respects Filter() method
                 var filter = Filter();
-                if (filter.Length == 0)
-                {
-                    // No filter - observe all property changes
-                    Subscriptions.Add(Model.Observable
-                        .Chunk(TimeSpan.FromMilliseconds(100))
-                        .Subscribe(chunks =>
-                        {
-                            InvokeAsync(StateHasChanged);
-                        }));
-                }
-                else
+                if (filter.Length > 0)
                 {
                     // Filter active - observe only filtered properties
                     Subscriptions.Add(Model.Observable
@@ -610,6 +584,7 @@ public class RazorFileDiagnosticsTests
                             InvokeAsync(StateHasChanged);
                         }));
                 }
+                // else: Empty filter - no automatic StateHasChanged, only triggers (if any) will fire
             }
 
             protected override Task InitializeGeneratedCodeAsync()
@@ -766,17 +741,7 @@ public class RazorFileDiagnosticsTests
             {
                 // Subscribe to model changes - respects Filter() method
                 var filter = Filter();
-                if (filter.Length == 0)
-                {
-                    // No filter - observe all property changes
-                    Subscriptions.Add(Model.Observable
-                        .Chunk(TimeSpan.FromMilliseconds(100))
-                        .Subscribe(chunks =>
-                        {
-                            InvokeAsync(StateHasChanged);
-                        }));
-                }
-                else
+                if (filter.Length > 0)
                 {
                     // Filter active - observe only filtered properties
                     Subscriptions.Add(Model.Observable
@@ -787,6 +752,7 @@ public class RazorFileDiagnosticsTests
                             InvokeAsync(StateHasChanged);
                         }));
                 }
+                // else: Empty filter - no automatic StateHasChanged, only triggers (if any) will fire
             }
 
             protected override Task InitializeGeneratedCodeAsync()
@@ -917,17 +883,7 @@ public class RazorFileDiagnosticsTests
             {
                 // Subscribe to model changes - respects Filter() method
                 var filter = Filter();
-                if (filter.Length == 0)
-                {
-                    // No filter - observe all property changes
-                    Subscriptions.Add(Model.Observable
-                        .Chunk(TimeSpan.FromMilliseconds(100))
-                        .Subscribe(chunks =>
-                        {
-                            InvokeAsync(StateHasChanged);
-                        }));
-                }
-                else
+                if (filter.Length > 0)
                 {
                     // Filter active - observe only filtered properties
                     Subscriptions.Add(Model.Observable
@@ -938,6 +894,7 @@ public class RazorFileDiagnosticsTests
                             InvokeAsync(StateHasChanged);
                         }));
                 }
+                // else: Empty filter - no automatic StateHasChanged, only triggers (if any) will fire
             }
 
             protected override Task InitializeGeneratedCodeAsync()
@@ -1148,17 +1105,7 @@ public class RazorFileDiagnosticsTests
             {
                 // Subscribe to model changes - respects Filter() method
                 var filter = Filter();
-                if (filter.Length == 0)
-                {
-                    // No filter - observe all property changes
-                    Subscriptions.Add(Model.Observable
-                        .Chunk(TimeSpan.FromMilliseconds(100))
-                        .Subscribe(chunks =>
-                        {
-                            InvokeAsync(StateHasChanged);
-                        }));
-                }
-                else
+                if (filter.Length > 0)
                 {
                     // Filter active - observe only filtered properties
                     Subscriptions.Add(Model.Observable
@@ -1169,6 +1116,7 @@ public class RazorFileDiagnosticsTests
                             InvokeAsync(StateHasChanged);
                         }));
                 }
+                // else: Empty filter - no automatic StateHasChanged, only triggers (if any) will fire
             }
 
             protected override Task InitializeGeneratedCodeAsync()
@@ -1337,17 +1285,7 @@ public class RazorFileDiagnosticsTests
             {
                 // Subscribe to model changes - respects Filter() method
                 var filter = Filter();
-                if (filter.Length == 0)
-                {
-                    // No filter - observe all property changes
-                    Subscriptions.Add(Model.Observable
-                        .Chunk(TimeSpan.FromMilliseconds(100))
-                        .Subscribe(chunks =>
-                        {
-                            InvokeAsync(StateHasChanged);
-                        }));
-                }
-                else
+                if (filter.Length > 0)
                 {
                     // Filter active - observe only filtered properties
                     Subscriptions.Add(Model.Observable
@@ -1358,6 +1296,7 @@ public class RazorFileDiagnosticsTests
                             InvokeAsync(StateHasChanged);
                         }));
                 }
+                // else: Empty filter - no automatic StateHasChanged, only triggers (if any) will fire
             }
 
             protected override Task InitializeGeneratedCodeAsync()
@@ -1474,17 +1413,7 @@ public class RazorFileDiagnosticsTests
             {
                 // Subscribe to model changes - respects Filter() method
                 var filter = Filter();
-                if (filter.Length == 0)
-                {
-                    // No filter - observe all property changes
-                    Subscriptions.Add(Model.Observable
-                        .Chunk(TimeSpan.FromMilliseconds(100))
-                        .Subscribe(chunks =>
-                        {
-                            InvokeAsync(StateHasChanged);
-                        }));
-                }
-                else
+                if (filter.Length > 0)
                 {
                     // Filter active - observe only filtered properties
                     Subscriptions.Add(Model.Observable
@@ -1495,6 +1424,7 @@ public class RazorFileDiagnosticsTests
                             InvokeAsync(StateHasChanged);
                         }));
                 }
+                // else: Empty filter - no automatic StateHasChanged, only triggers (if any) will fire
             }
 
             protected override Task InitializeGeneratedCodeAsync()
@@ -1624,17 +1554,7 @@ public class RazorFileDiagnosticsTests
             {
                 // Subscribe to model changes - respects Filter() method
                 var filter = Filter();
-                if (filter.Length == 0)
-                {
-                    // No filter - observe all property changes
-                    Subscriptions.Add(Model.Observable
-                        .Chunk(TimeSpan.FromMilliseconds(100))
-                        .Subscribe(chunks =>
-                        {
-                            InvokeAsync(StateHasChanged);
-                        }));
-                }
-                else
+                if (filter.Length > 0)
                 {
                     // Filter active - observe only filtered properties
                     Subscriptions.Add(Model.Observable
@@ -1645,6 +1565,7 @@ public class RazorFileDiagnosticsTests
                             InvokeAsync(StateHasChanged);
                         }));
                 }
+                // else: Empty filter - no automatic StateHasChanged, only triggers (if any) will fire
             }
 
             protected override Task InitializeGeneratedCodeAsync()
@@ -1809,17 +1730,7 @@ public class RazorFileDiagnosticsTests
             {
                 // Subscribe to model changes - respects Filter() method
                 var filter = Filter();
-                if (filter.Length == 0)
-                {
-                    // No filter - observe all property changes
-                    Subscriptions.Add(Model.Observable
-                        .Chunk(TimeSpan.FromMilliseconds(100))
-                        .Subscribe(chunks =>
-                        {
-                            InvokeAsync(StateHasChanged);
-                        }));
-                }
-                else
+                if (filter.Length > 0)
                 {
                     // Filter active - observe only filtered properties
                     Subscriptions.Add(Model.Observable
@@ -1830,6 +1741,7 @@ public class RazorFileDiagnosticsTests
                             InvokeAsync(StateHasChanged);
                         }));
                 }
+                // else: Empty filter - no automatic StateHasChanged, only triggers (if any) will fire
             }
 
             protected override Task InitializeGeneratedCodeAsync()
@@ -1980,17 +1892,7 @@ public class RazorFileDiagnosticsTests
             {
                 // Subscribe to model changes - respects Filter() method
                 var filter = Filter();
-                if (filter.Length == 0)
-                {
-                    // No filter - observe all property changes
-                    Subscriptions.Add(Model.Observable
-                        .Chunk(TimeSpan.FromMilliseconds(100))
-                        .Subscribe(chunks =>
-                        {
-                            InvokeAsync(StateHasChanged);
-                        }));
-                }
-                else
+                if (filter.Length > 0)
                 {
                     // Filter active - observe only filtered properties
                     Subscriptions.Add(Model.Observable
@@ -2001,6 +1903,7 @@ public class RazorFileDiagnosticsTests
                             InvokeAsync(StateHasChanged);
                         }));
                 }
+                // else: Empty filter - no automatic StateHasChanged, only triggers (if any) will fire
             }
 
             protected override Task InitializeGeneratedCodeAsync()
@@ -2125,17 +2028,7 @@ public class RazorFileDiagnosticsTests
             {
                 // Subscribe to model changes - respects Filter() method
                 var filter = Filter();
-                if (filter.Length == 0)
-                {
-                    // No filter - observe all property changes
-                    Subscriptions.Add(Model.Observable
-                        .Chunk(TimeSpan.FromMilliseconds(100))
-                        .Subscribe(chunks =>
-                        {
-                            InvokeAsync(StateHasChanged);
-                        }));
-                }
-                else
+                if (filter.Length > 0)
                 {
                     // Filter active - observe only filtered properties
                     Subscriptions.Add(Model.Observable
@@ -2146,6 +2039,7 @@ public class RazorFileDiagnosticsTests
                             InvokeAsync(StateHasChanged);
                         }));
                 }
+                // else: Empty filter - no automatic StateHasChanged, only triggers (if any) will fire
             }
 
             protected override Task InitializeGeneratedCodeAsync()
@@ -2277,17 +2171,7 @@ public class RazorFileDiagnosticsTests
             {
                 // Subscribe to model changes - respects Filter() method
                 var filter = Filter();
-                if (filter.Length == 0)
-                {
-                    // No filter - observe all property changes
-                    Subscriptions.Add(Model.Observable
-                        .Chunk(TimeSpan.FromMilliseconds(100))
-                        .Subscribe(chunks =>
-                        {
-                            InvokeAsync(StateHasChanged);
-                        }));
-                }
-                else
+                if (filter.Length > 0)
                 {
                     // Filter active - observe only filtered properties
                     Subscriptions.Add(Model.Observable
@@ -2298,6 +2182,7 @@ public class RazorFileDiagnosticsTests
                             InvokeAsync(StateHasChanged);
                         }));
                 }
+                // else: Empty filter - no automatic StateHasChanged, only triggers (if any) will fire
             }
 
             protected override Task InitializeGeneratedCodeAsync()
@@ -2343,6 +2228,283 @@ public class RazorFileDiagnosticsTests
             "ErrorModelComponent",
             additionalGeneratedSources: additionalGeneratedSources);
             // No expected diagnostic - this is the key difference!
+    }
+
+    [Fact]
+    public async Task ComponentWithNoTriggersAndNoProperties_ReportsRXBG062Error()
+    {
+        // lang=csharp
+        const string source = """
+
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+
+        namespace Test
+        {
+            [ObservableComponent]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Name { get; set; }
+                public partial int Counter { get; set; }
+            }
+        }
+        """;
+
+        // lang=csharp
+        const string generatedModel = """
+
+        #nullable enable
+        using JetBrains.Annotations;
+        using Microsoft.Extensions.DependencyInjection;
+        using ObservableCollections;
+        using R3;
+        using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using System;
+
+        namespace Test;
+
+        public partial class TestModel
+        {
+            public override string ModelID => "Test.TestModel";
+
+            public partial string Name
+            {
+                get => field;
+                [UsedImplicitly]
+                set
+                {
+                    if (field != value)
+                    {
+                        field = value;
+                        StateHasChanged("Model.Name");
+                    }
+                }
+            }
+
+            public partial int Counter
+            {
+                get => field;
+                [UsedImplicitly]
+                set
+                {
+                    if (field != value)
+                    {
+                        field = value;
+                        StateHasChanged("Model.Counter");
+                    }
+                }
+            }
+
+        }
+
+        """;
+
+        // lang=csharp
+        const string generatedComponent = """
+
+        using R3;
+        using ObservableCollections;
+        using System;
+        using System.Threading.Tasks;
+        using Microsoft.Extensions.DependencyInjection;
+        using RxBlazorV2.Component;
+
+        namespace Test;
+
+        public partial class TestModelComponent : ObservableComponent<TestModel>
+        {
+            protected override void InitializeGeneratedCode()
+            {
+                // Subscribe to model changes - respects Filter() method
+                var filter = Filter();
+                if (filter.Length > 0)
+                {
+                    // Filter active - observe only filtered properties
+                    Subscriptions.Add(Model.Observable
+                        .Where(changedProps => changedProps.Intersect(filter).Any())
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
+                // else: Empty filter - no automatic StateHasChanged, only triggers (if any) will fire
+            }
+
+            protected override Task InitializeGeneratedCodeAsync()
+            {
+                return Task.CompletedTask;
+            }
+
+        }
+
+        """;
+
+        // Razor file that doesn't use any model properties and has no triggers
+        var razorFiles = new Dictionary<string, string>
+        {
+            ["Pages/EmptyComponent.razor"] = """
+            @inherits TestModelComponent
+
+            <h3>Empty Component</h3>
+            <p>This component doesn't use any model properties</p>
+            """
+        };
+
+        var expected = new DiagnosticResult(DiagnosticDescriptors.NonReactiveComponentError)
+            .WithArguments("EmptyComponent");
+
+        // Note: No code-behind should be generated for EmptyComponent.razor when RXBG062 fires
+        // The generator returns early without creating EmptyComponent.g.cs
+        await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
+            source,
+            razorFiles,
+            generatedModel,
+            generatedComponent,
+            "TestModel",
+            "TestModelComponent",
+            expected: expected);
+    }
+
+    [Fact]
+    public async Task ComponentWithOnlyTriggers_NoRXBG062Error()
+    {
+        // lang=csharp
+        const string source = """
+
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+
+        namespace Test
+        {
+            [ObservableComponent]
+            public partial class TestModel : ObservableModel
+            {
+                [ObservableComponentTrigger]
+                public partial int Counter { get; set; }
+            }
+        }
+        """;
+
+        // lang=csharp
+        const string generatedModel = """
+
+        #nullable enable
+        using JetBrains.Annotations;
+        using Microsoft.Extensions.DependencyInjection;
+        using ObservableCollections;
+        using R3;
+        using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using System;
+
+        namespace Test;
+
+        public partial class TestModel
+        {
+            public override string ModelID => "Test.TestModel";
+
+            public partial int Counter
+            {
+                get => field;
+                [UsedImplicitly]
+                set
+                {
+                    if (field != value)
+                    {
+                        field = value;
+                        StateHasChanged("Model.Counter");
+                    }
+                }
+            }
+
+        }
+
+        """;
+
+        // lang=csharp
+        const string generatedComponent = """
+
+        using R3;
+        using ObservableCollections;
+        using System;
+        using System.Threading.Tasks;
+        using Microsoft.Extensions.DependencyInjection;
+        using RxBlazorV2.Component;
+
+        namespace Test;
+
+        public partial class TestModelComponent : ObservableComponent<TestModel>
+        {
+            protected override void InitializeGeneratedCode()
+            {
+                // Subscribe to model changes - respects Filter() method
+                var filter = Filter();
+                if (filter.Length > 0)
+                {
+                    // Filter active - observe only filtered properties
+                    Subscriptions.Add(Model.Observable
+                        .Where(changedProps => changedProps.Intersect(filter).Any())
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
+                // else: Empty filter - no automatic StateHasChanged, only triggers (if any) will fire
+
+                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Model.Counter"]).Any())
+                    .Chunk(TimeSpan.FromMilliseconds(100))
+                    .Subscribe(chunks =>
+                    {
+                        OnCounterChanged();
+                    }));
+            }
+
+            protected override Task InitializeGeneratedCodeAsync()
+            {
+                return Task.CompletedTask;
+            }
+
+            protected virtual void OnCounterChanged()
+            {
+            }
+        }
+
+        """;
+
+        // Razor file with component that only uses triggers, no direct property usage
+        var razorFiles = new Dictionary<string, string>
+        {
+            ["Pages/TriggerOnlyComponent.razor"] = """
+            @inherits TestModelComponent
+
+            <h3>Trigger Only Component</h3>
+            <p>This component uses triggers but doesn't directly reference model properties</p>
+            """
+        };
+
+        // Generate expected code-behind with empty filter (no properties used)
+        var additionalGeneratedSources = new Dictionary<string, string>
+        {
+            ["TriggerOnlyComponent.g.cs"] = GenerateFilterCodeBehind(
+                "TriggerOnlyComponent",
+                "TestModelComponent",
+                "Pages",
+                Array.Empty<string>(), // Empty filter - no properties observed
+                new[] { "Test" }) // Component namespace using directive
+        };
+
+        // No diagnostic expected - component has triggers
+        await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
+            source,
+            razorFiles,
+            generatedModel,
+            generatedComponent,
+            "TestModel",
+            "TestModelComponent",
+            additionalGeneratedSources: additionalGeneratedSources);
     }
 
 }

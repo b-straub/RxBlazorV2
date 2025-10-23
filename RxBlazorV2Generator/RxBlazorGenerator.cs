@@ -461,15 +461,18 @@ public class RxBlazorGenerator : IIncrementalGenerator
                 // This accurately detects components by checking inheritance, not just guessing by assembly reference
                 var crossAssemblyComponents = compilation.FindCrossAssemblyObservableComponents();
 
-                // Build map of component class names to their namespaces (same-assembly components)
+                // Build map of component class names to their namespaces and trigger status (same-assembly components)
                 var componentNamespaces = new Dictionary<string, string>();
+                var componentHasTriggers = new Dictionary<string, bool>();
                 foreach (var record in records.Where(r => r is not null && r!.ComponentInfo is not null))
                 {
                     if (record?.ComponentInfo is not null)
                     {
                         var componentName = record.ComponentInfo.ComponentClassName;
                         var componentNamespace = record.ComponentInfo.ComponentNamespace;
+                        var hasTriggers = record.ComponentInfo.ComponentTriggers.Any();
                         componentNamespaces[componentName] = componentNamespace;
+                        componentHasTriggers[componentName] = hasTriggers;
                     }
                 }
 
@@ -487,6 +490,7 @@ public class RxBlazorGenerator : IIncrementalGenerator
                         razorFile,
                         content,
                         componentNamespaces,
+                        componentHasTriggers,
                         crossAssemblyComponents);
                 }
             });

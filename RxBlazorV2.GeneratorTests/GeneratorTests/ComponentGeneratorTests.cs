@@ -82,17 +82,7 @@ public class ComponentTriggerGeneratorTests
             {
                 // Subscribe to model changes - respects Filter() method
                 var filter = Filter();
-                if (filter.Length == 0)
-                {
-                    // No filter - observe all property changes
-                    Subscriptions.Add(Model.Observable
-                        .Chunk(TimeSpan.FromMilliseconds(100))
-                        .Subscribe(chunks =>
-                        {
-                            InvokeAsync(StateHasChanged);
-                        }));
-                }
-                else
+                if (filter.Length > 0)
                 {
                     // Filter active - observe only filtered properties
                     Subscriptions.Add(Model.Observable
@@ -103,6 +93,7 @@ public class ComponentTriggerGeneratorTests
                             InvokeAsync(StateHasChanged);
                         }));
                 }
+                // else: Empty filter - no automatic StateHasChanged, only triggers (if any) will fire
             }
 
             protected override Task InitializeGeneratedCodeAsync()
@@ -191,17 +182,7 @@ public class ComponentTriggerGeneratorTests
             {
                 // Subscribe to model changes - respects Filter() method
                 var filter = Filter();
-                if (filter.Length == 0)
-                {
-                    // No filter - observe all property changes
-                    Subscriptions.Add(Model.Observable
-                        .Chunk(TimeSpan.FromMilliseconds(100))
-                        .Subscribe(chunks =>
-                        {
-                            InvokeAsync(StateHasChanged);
-                        }));
-                }
-                else
+                if (filter.Length > 0)
                 {
                     // Filter active - observe only filtered properties
                     Subscriptions.Add(Model.Observable
@@ -212,6 +193,7 @@ public class ComponentTriggerGeneratorTests
                             InvokeAsync(StateHasChanged);
                         }));
                 }
+                // else: Empty filter - no automatic StateHasChanged, only triggers (if any) will fire
             }
 
             protected override Task InitializeGeneratedCodeAsync()
@@ -301,17 +283,7 @@ public class ComponentTriggerGeneratorTests
             {
                 // Subscribe to model changes - respects Filter() method
                 var filter = Filter();
-                if (filter.Length == 0)
-                {
-                    // No filter - observe all property changes
-                    Subscriptions.Add(Model.Observable
-                        .Chunk(TimeSpan.FromMilliseconds(100))
-                        .Subscribe(chunks =>
-                        {
-                            InvokeAsync(StateHasChanged);
-                        }));
-                }
-                else
+                if (filter.Length > 0)
                 {
                     // Filter active - observe only filtered properties
                     Subscriptions.Add(Model.Observable
@@ -322,6 +294,7 @@ public class ComponentTriggerGeneratorTests
                             InvokeAsync(StateHasChanged);
                         }));
                 }
+                // else: Empty filter - no automatic StateHasChanged, only triggers (if any) will fire
 
                 Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Model.Counter"]).Any())
                     .Chunk(TimeSpan.FromMilliseconds(100))
@@ -421,17 +394,7 @@ public class ComponentTriggerGeneratorTests
             {
                 // Subscribe to model changes - respects Filter() method
                 var filter = Filter();
-                if (filter.Length == 0)
-                {
-                    // No filter - observe all property changes
-                    Subscriptions.Add(Model.Observable
-                        .Chunk(TimeSpan.FromMilliseconds(100))
-                        .Subscribe(chunks =>
-                        {
-                            InvokeAsync(StateHasChanged);
-                        }));
-                }
-                else
+                if (filter.Length > 0)
                 {
                     // Filter active - observe only filtered properties
                     Subscriptions.Add(Model.Observable
@@ -442,6 +405,7 @@ public class ComponentTriggerGeneratorTests
                             InvokeAsync(StateHasChanged);
                         }));
                 }
+                // else: Empty filter - no automatic StateHasChanged, only triggers (if any) will fire
 
                 Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Model.Counter"]).Any())
                     .Chunk(TimeSpan.FromMilliseconds(100))
@@ -543,17 +507,7 @@ public class ComponentTriggerGeneratorTests
             {
                 // Subscribe to model changes - respects Filter() method
                 var filter = Filter();
-                if (filter.Length == 0)
-                {
-                    // No filter - observe all property changes
-                    Subscriptions.Add(Model.Observable
-                        .Chunk(TimeSpan.FromMilliseconds(100))
-                        .Subscribe(chunks =>
-                        {
-                            InvokeAsync(StateHasChanged);
-                        }));
-                }
-                else
+                if (filter.Length > 0)
                 {
                     // Filter active - observe only filtered properties
                     Subscriptions.Add(Model.Observable
@@ -564,6 +518,7 @@ public class ComponentTriggerGeneratorTests
                             InvokeAsync(StateHasChanged);
                         }));
                 }
+                // else: Empty filter - no automatic StateHasChanged, only triggers (if any) will fire
 
                 Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Model.Counter"]).Any())
                     .Chunk(TimeSpan.FromMilliseconds(100))
@@ -676,17 +631,7 @@ public class ComponentTriggerGeneratorTests
             {
                 // Subscribe to model changes - respects Filter() method
                 var filter = Filter();
-                if (filter.Length == 0)
-                {
-                    // No filter - observe all property changes
-                    Subscriptions.Add(Model.Observable
-                        .Chunk(TimeSpan.FromMilliseconds(100))
-                        .Subscribe(chunks =>
-                        {
-                            InvokeAsync(StateHasChanged);
-                        }));
-                }
-                else
+                if (filter.Length > 0)
                 {
                     // Filter active - observe only filtered properties
                     Subscriptions.Add(Model.Observable
@@ -697,6 +642,7 @@ public class ComponentTriggerGeneratorTests
                             InvokeAsync(StateHasChanged);
                         }));
                 }
+                // else: Empty filter - no automatic StateHasChanged, only triggers (if any) will fire
 
                 Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Model.Counter"]).Any())
                     .Chunk(TimeSpan.FromMilliseconds(100))
@@ -841,17 +787,7 @@ public class ComponentTriggerGeneratorTests
             {
                 // Subscribe to model changes - respects Filter() method
                 var filter = Filter();
-                if (filter.Length == 0)
-                {
-                    // No filter - observe all property changes
-                    Subscriptions.Add(Model.Observable
-                        .Chunk(TimeSpan.FromMilliseconds(100))
-                        .Subscribe(chunks =>
-                        {
-                            InvokeAsync(StateHasChanged);
-                        }));
-                }
-                else
+                if (filter.Length > 0)
                 {
                     // Filter active - observe only filtered properties
                     Subscriptions.Add(Model.Observable
@@ -862,6 +798,7 @@ public class ComponentTriggerGeneratorTests
                             InvokeAsync(StateHasChanged);
                         }));
                 }
+                // else: Empty filter - no automatic StateHasChanged, only triggers (if any) will fire
 
                 Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Model.Counter"]).Any())
                     .Chunk(TimeSpan.FromMilliseconds(100))

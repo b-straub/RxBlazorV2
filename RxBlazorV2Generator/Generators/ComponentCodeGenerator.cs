@@ -87,17 +87,7 @@ public static class ComponentCodeGenerator
         // Generate subscription for model changes with filtering support
         sb.AppendLine("        // Subscribe to model changes - respects Filter() method");
         sb.AppendLine("        var filter = Filter();");
-        sb.AppendLine("        if (filter.Length == 0)");
-        sb.AppendLine("        {");
-        sb.AppendLine("            // No filter - observe all property changes");
-        sb.AppendLine("            Subscriptions.Add(Model.Observable");
-        sb.AppendLine($"                .Chunk(TimeSpan.FromMilliseconds({updateFrequencyMs}))");
-        sb.AppendLine("                .Subscribe(chunks =>");
-        sb.AppendLine("                {");
-        sb.AppendLine("                    InvokeAsync(StateHasChanged);");
-        sb.AppendLine("                }));");
-        sb.AppendLine("        }");
-        sb.AppendLine("        else");
+        sb.AppendLine("        if (filter.Length > 0)");
         sb.AppendLine("        {");
         sb.AppendLine("            // Filter active - observe only filtered properties");
         sb.AppendLine("            Subscriptions.Add(Model.Observable");
@@ -108,6 +98,7 @@ public static class ComponentCodeGenerator
         sb.AppendLine("                    InvokeAsync(StateHasChanged);");
         sb.AppendLine("                }));");
         sb.AppendLine("        }");
+        sb.AppendLine("        // else: Empty filter - no automatic StateHasChanged, only triggers (if any) will fire");
 
         // Generate subscriptions for component triggers with chunking
         foreach (var trigger in componentInfo.ComponentTriggers)

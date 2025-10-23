@@ -265,6 +265,16 @@ public static class DiagnosticDescriptors
         description: "When a source-generated component is rendered as a child component (e.g., <MyComponent />) within the same assembly where it's defined, the Razor compiler cannot find it because source generators run after Razor compilation. Solutions: (1) Add @page directive to make it a routable page instead of a child component, (2) Move the ObservableModel to a separate assembly so the component is pre-generated, or (3) Only render the component from a different assembly where the generated code already exists.",
         helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG061.md");
 
+    public static readonly DiagnosticDescriptor NonReactiveComponentError = new(
+        id: "RXBG062",
+        title: "Component has no reactive properties or triggers",
+        messageFormat: "Component '{0}' does not use any properties from its model and has no ObservableComponentTrigger hooks. This component will not react to any model changes and serves no reactive purpose. Either use model properties in the razor file to enable automatic re-rendering, or add [ObservableComponentTrigger] attributes to specific properties to generate hook methods.",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "ObservableComponent-based components must either observe model properties (for automatic re-rendering) or define trigger hooks (for manual handling of specific property changes). A component with neither serves no reactive purpose and should either use model properties, add trigger attributes, or not inherit from ObservableComponent.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG062.md");
+
     // ============================================================================
     // RXBG070-RXBG079: Attributes
     // ============================================================================

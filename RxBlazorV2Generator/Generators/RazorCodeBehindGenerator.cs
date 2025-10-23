@@ -36,6 +36,7 @@ public static class RazorCodeBehindGenerator
         AdditionalText razorFile,
         SourceText razorContent,
         Dictionary<string, string> componentNamespaces,
+        Dictionary<string, bool> componentHasTriggers,
         Dictionary<string, (string Namespace, INamedTypeSymbol TypeSymbol)> crossAssemblyComponents)
     {
         try
@@ -93,6 +94,27 @@ public static class RazorCodeBehindGenerator
             var usedProperties = ComponentFilterAnalyzer.AnalyzePropertyUsage(
                 razorContentText,
                 "Model");
+
+            // Check if component has triggers
+            var hasTriggers = false;
+            if (componentHasTriggers.TryGetValue(componentTypeName, out var triggersExist))
+            {
+                hasTriggers = triggersExist;
+            }
+
+            // Report diagnostic if component has no reactive properties and no triggers
+            // In this case, don't generate the code-behind at all - component is completely non-reactive
+            if (usedProperties.Count == 0 && !hasTriggers)
+            {
+                var componentFileName = Path.GetFileNameWithoutExtension(razorFile.Path);
+                var diagnostic = Diagnostic.Create(
+                    Diagnostics.DiagnosticDescriptors.NonReactiveComponentError,
+                    Location.None,
+                    componentFileName);
+                context.ReportDiagnostic(diagnostic);
+                // Don't generate - component serves no reactive purpose
+                return;
+            }
 
             // Generate code-behind file
             var sb = new StringBuilder();
@@ -173,8 +195,8 @@ public static class RazorCodeBehindGenerator
             }
             else
             {
-                // No properties detected - use empty filter (observe all changes)
-                sb.AppendLine("        // No properties detected in razor file - observe all changes");
+                // No properties detected - use empty filter (no automatic StateHasChanged, only triggers)
+                sb.AppendLine("        // No properties detected in razor file - no automatic StateHasChanged");
                 sb.AppendLine("        return [];");
             }
 
