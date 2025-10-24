@@ -143,6 +143,10 @@ public class RxBlazorGenerator : IIncrementalGenerator
                     }
                 }
 
+                // Check for unused ObservableComponentTrigger attributes (RXBG041)
+                // This must happen AFTER ComponentInfo extraction, when we have the complete model reference graph
+                CheckForUnusedComponentTriggersAcrossModels(records, recordsByTypeName);
+
                 return records;
             });
 
@@ -507,6 +511,74 @@ public class RxBlazorGenerator : IIncrementalGenerator
                 ObservableModelCodeGenerator.GenerateAddGenericObservableModelsExtension(spc, validModels,
                     config.RootNamespace);
             });
+    }
+
+    /// <summary>
+    /// Checks for unused ObservableComponentTrigger attributes (RXBG041).
+    /// A trigger attribute is unused when:
+    /// 1. The model does NOT have [ObservableComponent] attribute
+    /// 2. The model is NOT referenced by another model with [ObservableComponent(includeReferencedTriggers: true)]
+    ///
+    /// This check must happen after ComponentInfo extraction, where we have the complete model reference graph.
+    /// </summary>
+    private static void CheckForUnusedComponentTriggersAcrossModels(
+        ImmutableArray<ObservableModelRecord?> records,
+        Dictionary<string, ObservableModelRecord> recordsByTypeName)
+    {
+        // Build a set of models that ARE referenced by a model with includeReferencedTriggers: true
+        var modelsWithReferencedTriggers = new HashSet<string>();
+
+        foreach (var record in records.Where(r => r != null))
+        {
+            // Check if this model has [ObservableComponent] with includeReferencedTriggers: true (default)
+            if (record!.HasObservableComponentAttribute && record.IncludeReferencedTriggers)
+            {
+                // Add all referenced models to the set
+                foreach (var modelRef in record.ModelInfo.ModelReferences)
+                {
+                    modelsWithReferencedTriggers.Add(modelRef.ReferencedModelTypeName);
+                }
+            }
+        }
+
+        // Now check each model for unused trigger attributes
+        foreach (var record in records.Where(r => r != null))
+        {
+            // Skip if model has [ObservableComponent] - triggers are used
+            if (record!.HasObservableComponentAttribute)
+            {
+                continue;
+            }
+
+            // Skip if model has no trigger properties
+            if (record.ComponentTriggerProperties.Count == 0)
+            {
+                continue;
+            }
+
+            // Skip if model is referenced by another model with includeReferencedTriggers: true
+            if (modelsWithReferencedTriggers.Contains(record.ModelInfo.FullyQualifiedName))
+            {
+                continue;
+            }
+
+            // Model has trigger attributes but they're not used - report RXBG041 for each property
+            foreach (var triggerProperty in record.ComponentTriggerProperties)
+            {
+                var propertyName = triggerProperty.Key;
+                var location = triggerProperty.Value.location;
+
+                // Create diagnostic for this unused trigger
+                var diagnostic = Diagnostic.Create(
+                    DiagnosticDescriptors.UnusedObservableComponentTriggerWarning,
+                    location,
+                    propertyName,
+                    record.ModelInfo.ClassName);
+
+                // Add to record's diagnostics so it gets reported
+                record.AddDiagnostic(diagnostic);
+            }
+        }
     }
 
     /// <summary>

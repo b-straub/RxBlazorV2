@@ -1,5 +1,6 @@
 using Microsoft.CodeAnalysis.Testing;
 using RxBlazorV2.GeneratorTests.Helpers;
+using RxBlazorV2Generator.Diagnostics;
 
 namespace RxBlazorV2.GeneratorTests.GeneratorTests;
 
@@ -195,6 +196,7 @@ public class ReferencedModelTriggerTests
     {
         // This test verifies that when includeReferencedTriggers is false,
         // NO hooks are generated for triggers on referenced models.
+        // Additionally, since the trigger is not used, RXBG041 should be reported.
 
         // lang=csharp
         const string test = """
@@ -206,7 +208,7 @@ public class ReferencedModelTriggerTests
         {
             public partial class SettingsModel : ObservableModel
             {
-                [ObservableComponentTrigger]
+                [{|#0:ObservableComponentTrigger|}]
                 public partial bool IsDay { get; set; }
             }
 
@@ -336,13 +338,19 @@ public class ReferencedModelTriggerTests
 
         """;
 
+        var expected = DiagnosticResult
+            .CompilerWarning(DiagnosticDescriptors.UnusedObservableComponentTriggerWarning.Id)
+            .WithSpan(9, 10, 9, 36)
+            .WithArguments("IsDay", "SettingsModel");
+
         await ComponentGeneratorVerifier.VerifyComponentGeneratorAsync(
             test,
             [generatedSettingsModel, generatedWeatherModel],
             generatedComponent,
             ["SettingsModel", "WeatherModel"],
             "WeatherModelComponent",
-            "");
+            "",
+            expected);
     }
 
     [Fact]

@@ -215,8 +215,9 @@ public class ObservableModelRecord
             // Extract component attribute data for later ComponentInfo generation
             ExtractComponentAttributeData(namedTypeSymbol, record);
 
-            // Check for unused ObservableComponentTrigger attributes (RXBG041)
-            CheckForUnusedComponentTriggers(namedTypeSymbol, classDecl, record, diagnostics);
+            // NOTE: RXBG041 (UnusedObservableComponentTriggerWarning) is checked in the generator
+            // after all ComponentInfo is extracted, where we have the complete model reference graph
+            // to determine if a model is referenced by another model with includeReferencedTriggers: true
 
             // ComponentInfo will be extracted later in the pipeline when all records are available
             // This allows looking up referenced model triggers from their ObservableModelRecords
@@ -241,7 +242,7 @@ public class ObservableModelRecord
     public string GenericTypes { get; private set; } = string.Empty;
     public string TypeConstraints { get; private set; } = string.Empty;
     // Property names with component triggers (propertyName -> (hasSync, syncHookName, hasAsync, asyncHookName))
-    public Dictionary<string, (bool hasSync, string? syncHookName, bool hasAsync, string? asyncHookName)> ComponentTriggerProperties { get; private set; } = [];
+    public Dictionary<string, (bool hasSync, string? syncHookName, bool hasAsync, string? asyncHookName, Location location)> ComponentTriggerProperties { get; private set; } = [];
 
     // Component information for component generation
     // Set later in pipeline when all records are available for referenced model lookup
@@ -250,11 +251,21 @@ public class ObservableModelRecord
     /// <summary>
     /// Returns all diagnostics for this model.
     /// This is the single source of truth for diagnostic logic.
-    /// Note: RXBG020, RXBG021, and RXBG014 are reported by the generator in a separate pass.
+    /// Note: RXBG041, RXBG050, RXBG051, and RXBG014 are reported by the generator in a separate pass
+    /// (after cross-model analysis completes).
     /// </summary>
     public List<Diagnostic> Verify()
     {
         return new List<Diagnostic>(_diagnostics);
+    }
+
+    /// <summary>
+    /// Adds a diagnostic to this record. Used by generator for cross-model diagnostics
+    /// that can only be determined after all records are analyzed (e.g., RXBG041).
+    /// </summary>
+    public void AddDiagnostic(Diagnostic diagnostic)
+    {
+        _diagnostics.Add(diagnostic);
     }
 
     /// <summary>
@@ -363,8 +374,8 @@ public class ObservableModelRecord
             }
         }
 
-        // Extract component trigger properties with custom hook names
-        var componentTriggers = new Dictionary<string, (bool hasSync, string? syncHookName, bool hasAsync, string? asyncHookName)>();
+        // Extract component trigger properties with custom hook names and locations
+        var componentTriggers = new Dictionary<string, (bool hasSync, string? syncHookName, bool hasAsync, string? asyncHookName, Location location)>();
         foreach (var member in namedTypeSymbol.GetMembers())
         {
             if (member is IPropertySymbol propertySymbol)
@@ -373,6 +384,7 @@ public class ObservableModelRecord
                 string? syncHookName = null;
                 var hasAsyncTrigger = false;
                 string? asyncHookName = null;
+                Location? attributeLocation = null;
 
                 foreach (var attr in propertySymbol.GetAttributes())
                 {
@@ -386,6 +398,8 @@ public class ObservableModelRecord
                         {
                             syncHookName = customName;
                         }
+                        // Capture attribute location for diagnostic reporting
+                        attributeLocation ??= attr.ApplicationSyntaxReference?.GetSyntax().GetLocation();
                     }
                     else if (attr.AttributeClass?.Name == "ObservableComponentTriggerAsyncAttribute")
                     {
@@ -397,12 +411,19 @@ public class ObservableModelRecord
                         {
                             asyncHookName = customNameAsync;
                         }
+                        // Capture attribute location for diagnostic reporting
+                        attributeLocation ??= attr.ApplicationSyntaxReference?.GetSyntax().GetLocation();
                     }
                 }
 
                 if (hasSyncTrigger || hasAsyncTrigger)
                 {
-                    componentTriggers[propertySymbol.Name] = (hasSyncTrigger, syncHookName, hasAsyncTrigger, asyncHookName);
+                    // Use attribute location, fallback to property location, then None
+                    var location = attributeLocation
+                        ?? propertySymbol.Locations.FirstOrDefault()
+                        ?? Location.None;
+
+                    componentTriggers[propertySymbol.Name] = (hasSyncTrigger, syncHookName, hasAsyncTrigger, asyncHookName, location);
                 }
             }
         }
@@ -438,7 +459,7 @@ public class ObservableModelRecord
             foreach (var kvp in currentRecord.ComponentTriggerProperties)
             {
                 var propertyName = kvp.Key;
-                var (hasSync, syncHookName, hasAsync, asyncHookName) = kvp.Value;
+                var (hasSync, syncHookName, hasAsync, asyncHookName, _) = kvp.Value;
 
                 // Use custom hook names if provided, otherwise ComponentTriggerInfo will use defaults
                 if (hasSync)
@@ -469,7 +490,7 @@ public class ObservableModelRecord
                     // ReferencedModelTypeName already contains the fully qualified name
                     var refFullTypeName = modelRef.ReferencedModelTypeName;
 
-                    Dictionary<string, (bool hasSync, string? syncHookName, bool hasAsync, string? asyncHookName)> triggerProperties;
+                    Dictionary<string, (bool hasSync, string? syncHookName, bool hasAsync, string? asyncHookName, Location location)> triggerProperties;
 
                     if (allRecords.TryGetValue(refFullTypeName, out var referencedRecord))
                     {
@@ -482,7 +503,7 @@ public class ObservableModelRecord
                         var referencedTypeSymbol = modelRef.TypeSymbol;
 
                         // Extract trigger properties from the type symbol
-                        triggerProperties = new Dictionary<string, (bool hasSync, string? syncHookName, bool hasAsync, string? asyncHookName)>();
+                        triggerProperties = new Dictionary<string, (bool hasSync, string? syncHookName, bool hasAsync, string? asyncHookName, Location location)>();
                         foreach (var member in referencedTypeSymbol.GetMembers())
                         {
                             if (member is IPropertySymbol propertySymbol)
@@ -520,7 +541,8 @@ public class ObservableModelRecord
 
                                 if (hasSyncTrigger || hasAsyncTrigger)
                                 {
-                                    triggerProperties[propertySymbol.Name] = (hasSyncTrigger, syncHookName, hasAsyncTrigger, asyncHookName);
+                                    // Cross-assembly properties don't have source location
+                                    triggerProperties[propertySymbol.Name] = (hasSyncTrigger, syncHookName, hasAsyncTrigger, asyncHookName, Location.None);
                                 }
                             }
                         }
@@ -535,7 +557,7 @@ public class ObservableModelRecord
                     foreach (var kvp in triggerProperties)
                     {
                         var propertyName = kvp.Key;
-                        var (hasSync, syncHookName, hasAsync, asyncHookName) = kvp.Value;
+                        var (hasSync, syncHookName, hasAsync, asyncHookName, _) = kvp.Value;
 
                         // Build hook method name: On{ReferencedProperty}{PropertyName}Changed[Async]
                         // Example: OnSettingsIsDayChanged

@@ -232,12 +232,11 @@ public class UnusedComponentTriggerDiagnosticTests
     }
 
     [Fact]
-    public async Task ModelReferencedByAnotherModel_StillReportsWarning()
+    public async Task ModelReferencedByAnotherModel_NoWarning()
     {
-        // Note: This is a known limitation - we can't easily detect cross-model references
-        // in the analyzer phase. The diagnostic message mentions both conditions.
-        // In practice, if a model IS referenced with includeReferencedTriggers: true,
-        // the user can ignore this warning.
+        // Since RXBG041 is now checked in the generator (not analyzer), it CAN detect
+        // cross-model references. If a model is referenced by another model with
+        // [ObservableComponent(includeReferencedTriggers: true)], no warning is reported.
 
         // lang=csharp
         var test = """
@@ -250,11 +249,11 @@ public class UnusedComponentTriggerDiagnosticTests
             [ObservableModelScope(ModelScope.Singleton)]
             public partial class SettingsModel : ObservableModel
             {
-                [{|#0:ObservableComponentTrigger|}]
+                [ObservableComponentTrigger]
                 public partial bool IsDarkMode { get; set; }
             }
 
-            // ThemeModel references SettingsModel
+            // ThemeModel references SettingsModel with includeReferencedTriggers: true (default)
             [ObservableModelScope(ModelScope.Singleton)]
             [ObservableComponent]
             public partial class ThemeModel : ObservableModel
@@ -264,13 +263,8 @@ public class UnusedComponentTriggerDiagnosticTests
         }
         """;
 
-        // The diagnostic is still reported because we can't easily check references
-        // in the analyzer phase. This is documented in the help file.
-        var expected = AnalyzerVerifier.Diagnostic(DiagnosticDescriptors.UnusedObservableComponentTriggerWarning)
-            .WithLocation(0)
-            .WithArguments("IsDarkMode", "SettingsModel");
-
-        await AnalyzerVerifier.VerifyAnalyzerAsync(test, expected);
+        // No diagnostic expected - the trigger is used by ThemeModel's component hooks
+        await AnalyzerVerifier.VerifyAnalyzerAsync(test);
     }
 
     [Fact]
