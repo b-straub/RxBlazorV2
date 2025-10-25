@@ -20,13 +20,14 @@ public static class ConstructorTemplate
     {
         var hasObservableCollections = modelInfo.PartialProperties.Any(p => p.IsObservableCollection);
         var hasPropertyTriggers = modelInfo.PartialProperties.Any(p => p.Triggers.Any());
+        var hasCallbackTriggers = modelInfo.PartialProperties.Any(p => p.CallbackTriggers.Any());
 
         if (modelInfo.ModelReferences.Any() || modelInfo.DIFields.Any() || hasObservableCollections)
         {
             return GenerateConstructorWithDependencies(modelInfo, getObservedProperties, hasObservableCollections);
         }
 
-        if (modelInfo.CommandProperties.Any() || hasPropertyTriggers)
+        if (modelInfo.CommandProperties.Any() || hasPropertyTriggers || hasCallbackTriggers)
         {
             return GenerateConstructorWithCommandsOnly(modelInfo, getObservedProperties, hasObservableCollections);
         }
@@ -115,6 +116,14 @@ public static class ConstructorTemplate
             sb.AppendLine(TriggerTemplate.GenerateTriggerSubscriptions(propertiesWithTriggers));
         }
 
+        // Generate callback trigger subscriptions for external subscriptions
+        var propertiesWithCallbackTriggers = modelInfo.PartialProperties.Where(p => p.CallbackTriggers.Any()).ToList();
+        if (propertiesWithCallbackTriggers.Any())
+        {
+            sb.AppendLine();
+            sb.AppendLine(CallbackTriggerTemplate.GenerateCallbackSubscriptions(propertiesWithCallbackTriggers));
+        }
+
         sb.AppendLine("    }");
 
         return sb.ToString().TrimEnd('\r', '\n');
@@ -169,6 +178,17 @@ public static class ConstructorTemplate
                 sb.AppendLine();
             }
             sb.AppendLine(TriggerTemplate.GenerateTriggerSubscriptions(propertiesWithTriggers));
+        }
+
+        // Generate callback trigger subscriptions for external subscriptions
+        var propertiesWithCallbackTriggers = modelInfo.PartialProperties.Where(p => p.CallbackTriggers.Any()).ToList();
+        if (propertiesWithCallbackTriggers.Any())
+        {
+            if (modelInfo.CommandProperties.Any() || commandsWithTriggers.Any() || propertiesWithTriggers.Any() || hasObservableCollections)
+            {
+                sb.AppendLine();
+            }
+            sb.AppendLine(CallbackTriggerTemplate.GenerateCallbackSubscriptions(propertiesWithCallbackTriggers));
         }
 
         sb.AppendLine("    }");

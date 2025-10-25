@@ -84,8 +84,9 @@ public class PartialPropertyInfo
     public bool HasInitAccessor { get; }
     public string Accessibility { get; }
     public List<PropertyTriggerInfo> Triggers { get; }
+    public List<CallbackTriggerInfo> CallbackTriggers { get; }
 
-    public PartialPropertyInfo(string name, string type, bool isObservableCollection = false, bool isEquatable = false, string[]? batchIds = null, bool hasRequiredModifier = false, bool hasInitAccessor = false, string accessibility = "public", List<PropertyTriggerInfo>? triggers = null)
+    public PartialPropertyInfo(string name, string type, bool isObservableCollection = false, bool isEquatable = false, string[]? batchIds = null, bool hasRequiredModifier = false, bool hasInitAccessor = false, string accessibility = "public", List<PropertyTriggerInfo>? triggers = null, List<CallbackTriggerInfo>? callbackTriggers = null)
     {
         Name = name;
         Type = type;
@@ -96,6 +97,7 @@ public class PartialPropertyInfo
         HasInitAccessor = hasInitAccessor;
         Accessibility = accessibility;
         Triggers = triggers ?? [];
+        CallbackTriggers = callbackTriggers ?? [];
     }
 }
 
@@ -128,13 +130,26 @@ public class CommandTriggerInfo(string triggerProperty, string? canTriggerMethod
     public string? Parameter { get; } = parameter;
 }
 
-public class PropertyTriggerInfo(string executeMethod, string? canTriggerMethod = null, string? parameter = null, bool supportsCancellation = false)
+public class PropertyTriggerInfo(string executeMethod, string? canTriggerMethod = null, string? parameter = null, bool supportsCancellation = false, bool isAsync = false)
 {
     public string ExecuteMethod { get; } = executeMethod;
     public string? CanTriggerMethod { get; } = canTriggerMethod;
     public string? Parameter { get; } = parameter;
     public bool SupportsCancellation { get; } = supportsCancellation;
+    public bool IsAsync { get; } = isAsync;
     public string PropertyName { get; set; } = "";
+}
+
+public enum CallbackTriggerType
+{
+    Sync,
+    Async
+}
+
+public class CallbackTriggerInfo(string methodName, CallbackTriggerType triggerType)
+{
+    public string MethodName { get; } = methodName;
+    public CallbackTriggerType TriggerType { get; } = triggerType;
 }
 
 public class ModelReferenceInfo

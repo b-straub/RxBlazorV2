@@ -55,72 +55,71 @@ public static class PropertyAnalysisExtensions
                     .Select(m => m.ValueText)
                     .FirstOrDefault() ?? "public";
 
-                // Extract ObservableTrigger attributes
+                // Extract ObservableTrigger and ObservableTriggerAsync attributes
                 var attributes = member.AttributeLists.SelectMany(al => al.Attributes).ToArray();
-                var triggerAttrs = attributes.Where(a => a.IsObservableTrigger(semanticModel));
+                var syncTriggerAttrs = attributes.Where(a => a.IsObservableTrigger(semanticModel));
+                var asyncTriggerAttrs = attributes.Where(a => a.IsObservableTriggerAsync(semanticModel));
                 var triggers = new List<PropertyTriggerInfo>();
 
-                foreach (var triggerAttr in triggerAttrs)
+                // Process sync triggers
+                foreach (var triggerAttr in syncTriggerAttrs)
                 {
-                    var executeMethodArg = triggerAttr.ArgumentList?.Arguments.FirstOrDefault()?.Expression.ToString();
-
-                    // Check for generic trigger (with parameter)
-                    var triggerTypeArguments = triggerAttr.ChildNodes()
-                        .Where(t => t.IsKind(SyntaxKind.GenericName))
-                        .SelectMany(t => ((GenericNameSyntax)t).TypeArgumentList.Arguments)
-                        .Select(a => a.ToString()).ToArray();
-
-                    var parameterArg = triggerTypeArguments.Any() ?
-                        triggerAttr.ArgumentList?.Arguments.Skip(1).FirstOrDefault()?.Expression.ToString() :
-                        null;
-
-                    var canTriggerMethodArg = triggerTypeArguments.Any() ?
-                        triggerAttr.ArgumentList?.Arguments.Skip(2).FirstOrDefault()?.Expression.ToString() :
-                        triggerAttr.ArgumentList?.Arguments.Skip(1).FirstOrDefault()?.Expression.ToString();
-
-                    // Remove nameof() wrapper and quotes
-                    var executeMethod = executeMethodArg?.Replace("nameof(", "").Replace(")", "").Trim('"');
-                    var canTriggerMethod = canTriggerMethodArg?.Replace("nameof(", "").Replace(")", "").Trim('"');
-
-                    if (!string.IsNullOrEmpty(executeMethod))
+                    var trigger = ExtractTriggerInfo(triggerAttr, member, classDecl, semanticModel, isAsync: false, diagnostics);
+                    if (trigger is not null)
                     {
-                        // Explicit null check for flow analysis (should never be null after above check)
-                        if (executeMethod is null)
-                        {
-                            throw new InvalidOperationException($"Execute method name was unexpectedly null for trigger on property {member.Identifier.ValueText}");
-                        }
-
-                        // Analyze the execute method to determine if it supports cancellation
-                        var supportsCancellation = classDecl.Members.OfType<MethodDeclarationSyntax>()
-                            .FirstOrDefault(m => m.Identifier.ValueText == executeMethod)
-                            ?.HasCancellationTokenParameter(semanticModel) ?? false;
-
-                        // Check for circular references: trigger method modifies the property it's attached to
-                        var methodSyntax = classDecl.Members.OfType<MethodDeclarationSyntax>()
-                            .FirstOrDefault(m => m.Identifier.ValueText == executeMethod);
-
-                        if (methodSyntax is not null)
-                        {
-                            var modifiedProperties = methodSyntax.AnalyzePropertyModifications(semanticModel);
-                            if (modifiedProperties.Contains(member.Identifier.ValueText))
-                            {
-                                var diagnostic = Diagnostic.Create(
-                                    Diagnostics.DiagnosticDescriptors.CircularTriggerReferenceError,
-                                    triggerAttr.GetLocation(),
-                                    member.Identifier.ValueText, // Property name
-                                    member.Identifier.ValueText, // Trigger property (same as property for ObservableTrigger)
-                                    executeMethod); // Execute method name
-                                diagnostics.Add(diagnostic);
-                                continue; // Skip adding this trigger
-                            }
-                        }
-
-                        var trigger = new PropertyTriggerInfo(executeMethod, canTriggerMethod, parameterArg, supportsCancellation)
-                        {
-                            PropertyName = member.Identifier.ValueText
-                        };
                         triggers.Add(trigger);
                     }
+                }
+
+                // Process async triggers
+                foreach (var triggerAttr in asyncTriggerAttrs)
+                {
+                    var trigger = ExtractTriggerInfo(triggerAttr, member, classDecl, semanticModel, isAsync: true, diagnostics);
+                    if (trigger is not null)
+                    {
+                        triggers.Add(trigger);
+                    }
+                }
+
+                // Extract ObservableCallbackTrigger attributes
+                var callbackTriggers = new List<CallbackTriggerInfo>();
+
+                var syncCallbackAttr = attributes.FirstOrDefault(a => a.IsObservableCallbackTrigger(semanticModel));
+                if (syncCallbackAttr is not null)
+                {
+                    var methodNameArg = syncCallbackAttr.ArgumentList?.Arguments.FirstOrDefault()?.Expression.ToString();
+                    var methodName = methodNameArg?.Replace("nameof(", "").Replace(")", "").Trim('"');
+
+                    if (string.IsNullOrEmpty(methodName))
+                    {
+                        methodName = $"On{member.Identifier.ValueText}Changed";
+                    }
+
+                    if (methodName is null)
+                    {
+                        throw new InvalidOperationException($"Failed to determine callback trigger method name for property {member.Identifier.ValueText}");
+                    }
+
+                    callbackTriggers.Add(new CallbackTriggerInfo(methodName, CallbackTriggerType.Sync));
+                }
+
+                var asyncCallbackAttr = attributes.FirstOrDefault(a => a.IsObservableCallbackTriggerAsync(semanticModel));
+                if (asyncCallbackAttr is not null)
+                {
+                    var methodNameArg = asyncCallbackAttr.ArgumentList?.Arguments.FirstOrDefault()?.Expression.ToString();
+                    var methodName = methodNameArg?.Replace("nameof(", "").Replace(")", "").Trim('"');
+
+                    if (string.IsNullOrEmpty(methodName))
+                    {
+                        methodName = $"On{member.Identifier.ValueText}ChangedAsync";
+                    }
+
+                    if (methodName is null)
+                    {
+                        throw new InvalidOperationException($"Failed to determine callback trigger method name for property {member.Identifier.ValueText}");
+                    }
+
+                    callbackTriggers.Add(new CallbackTriggerInfo(methodName, CallbackTriggerType.Async));
                 }
 
                 partialProperties.Add(new PartialPropertyInfo(
@@ -132,7 +131,8 @@ public static class PropertyAnalysisExtensions
                     hasRequiredModifier,
                     hasInitAccessor,
                     accessibility,
-                    triggers));
+                    triggers,
+                    callbackTriggers));
             }
         }
 
@@ -143,6 +143,77 @@ public static class PropertyAnalysisExtensions
     {
         var (properties, _) = ExtractPartialPropertiesWithDiagnostics(classDecl, semanticModel);
         return properties;
+    }
+
+    private static PropertyTriggerInfo? ExtractTriggerInfo(
+        AttributeSyntax triggerAttr,
+        PropertyDeclarationSyntax member,
+        ClassDeclarationSyntax classDecl,
+        SemanticModel semanticModel,
+        bool isAsync,
+        List<Diagnostic> diagnostics)
+    {
+        var executeMethodArg = triggerAttr.ArgumentList?.Arguments.FirstOrDefault()?.Expression.ToString();
+
+        // Check for generic trigger (with parameter)
+        var triggerTypeArguments = triggerAttr.ChildNodes()
+            .Where(t => t.IsKind(SyntaxKind.GenericName))
+            .SelectMany(t => ((GenericNameSyntax)t).TypeArgumentList.Arguments)
+            .Select(a => a.ToString()).ToArray();
+
+        var parameterArg = triggerTypeArguments.Any() ?
+            triggerAttr.ArgumentList?.Arguments.Skip(1).FirstOrDefault()?.Expression.ToString() :
+            null;
+
+        var canTriggerMethodArg = triggerTypeArguments.Any() ?
+            triggerAttr.ArgumentList?.Arguments.Skip(2).FirstOrDefault()?.Expression.ToString() :
+            triggerAttr.ArgumentList?.Arguments.Skip(1).FirstOrDefault()?.Expression.ToString();
+
+        // Remove nameof() wrapper and quotes
+        var executeMethod = executeMethodArg?.Replace("nameof(", "").Replace(")", "").Trim('"');
+        var canTriggerMethod = canTriggerMethodArg?.Replace("nameof(", "").Replace(")", "").Trim('"');
+
+        if (string.IsNullOrEmpty(executeMethod))
+        {
+            return null;
+        }
+
+        // Explicit null check for flow analysis (should never be null after above check)
+        if (executeMethod is null)
+        {
+            throw new InvalidOperationException($"Execute method name was unexpectedly null for trigger on property {member.Identifier.ValueText}");
+        }
+
+        // Analyze the execute method to determine if it supports cancellation
+        var supportsCancellation = classDecl.Members.OfType<MethodDeclarationSyntax>()
+            .FirstOrDefault(m => m.Identifier.ValueText == executeMethod)
+            ?.HasCancellationTokenParameter(semanticModel) ?? false;
+
+        // Check for circular references: trigger method modifies the property it's attached to
+        var methodSyntax = classDecl.Members.OfType<MethodDeclarationSyntax>()
+            .FirstOrDefault(m => m.Identifier.ValueText == executeMethod);
+
+        if (methodSyntax is not null)
+        {
+            var modifiedProperties = methodSyntax.AnalyzePropertyModifications(semanticModel);
+            if (modifiedProperties.Contains(member.Identifier.ValueText))
+            {
+                var diagnostic = Diagnostic.Create(
+                    Diagnostics.DiagnosticDescriptors.CircularTriggerReferenceError,
+                    triggerAttr.GetLocation(),
+                    member.Identifier.ValueText, // Property name
+                    member.Identifier.ValueText, // Trigger property (same as property for ObservableTrigger)
+                    executeMethod); // Execute method name
+                diagnostics.Add(diagnostic);
+                return null; // Skip this trigger
+            }
+        }
+
+        var trigger = new PropertyTriggerInfo(executeMethod, canTriggerMethod, parameterArg, supportsCancellation, isAsync)
+        {
+            PropertyName = member.Identifier.ValueText
+        };
+        return trigger;
     }
 
     public static string[]? GetObservableBatchIds(this PropertyDeclarationSyntax property, SemanticModel semanticModel)

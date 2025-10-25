@@ -155,6 +155,129 @@ protected virtual void OnSettingsIsDayChanged() { }
 - Referenced models MUST be in same assembly (see RXBG052 diagnostic)
 - Reference counts as USED even with no code usage (prevents RXBG012 error)
 
+### Property Trigger Patterns (Internal Model Methods)
+
+Property triggers execute private methods automatically when properties change, without creating command objects.
+
+```csharp
+public partial class MyModel : ObservableModel
+{
+    // Sync trigger - infers from method signature
+    [ObservableTrigger(nameof(ValidateInput))]
+    public partial string Input { get; set; }
+
+    // Explicit async trigger
+    [ObservableTriggerAsync(nameof(SaveAsync))]
+    public partial string Data { get; set; }
+
+    // Parametrized sync trigger
+    [ObservableTrigger<string>(nameof(LogChange), "InputChanged")]
+    public partial int Count { get; set; }
+
+    // Parametrized async trigger with cancellation
+    [ObservableTriggerAsync<int>(nameof(ValidateRangeAsync), 100)]
+    public partial int Value { get; set; }
+
+    // Optional can-trigger guard
+    [ObservableTriggerAsync(nameof(SaveAsync), nameof(CanSave))]
+    public partial string SecureData { get; set; }
+
+    private void ValidateInput() { /* validation */ }
+    private async Task SaveAsync() { await _repo.SaveAsync(Data); }
+    private void LogChange(string message) { _logger.Log($"{message}: {Count}"); }
+    private async Task ValidateRangeAsync(int max, CancellationToken ct) { /* validate */ }
+    private bool CanSave() => !string.IsNullOrEmpty(SecureData);
+}
+```
+
+**Key Points:**
+- Methods must be `private`
+- `[ObservableTrigger]` infers async from method signature (CancellationToken parameter or "Async" suffix)
+- `[ObservableTriggerAsync]` makes async explicit and clearer
+- Generic versions support parametrized methods
+- Optional `canTriggerMethod` parameter for conditional execution
+- Avoid circular triggers (method modifying the same property)
+
+### Callback Trigger Patterns (External Service Subscriptions)
+
+Callback triggers provide clean API for external services to subscribe to property changes, replacing manual `Observable.Where()` subscriptions.
+
+```csharp
+// In Model
+[ObservableModelScope(ModelScope.Scoped)]
+public partial class StatusModel : ObservableModel
+{
+    // Generates: OnCurrentUserChanged(Action callback)
+    [ObservableCallbackTrigger]
+    public partial ClaimsPrincipal? CurrentUser { get; set; }
+
+    // Generates: HandleThemeUpdateAsync(Func<CancellationToken, Task> callback)
+    [ObservableCallbackTriggerAsync("HandleThemeUpdateAsync")]
+    public partial string Theme { get; set; }
+
+    // Both sync and async callbacks on same property
+    [ObservableCallbackTrigger]
+    [ObservableCallbackTriggerAsync]
+    public partial UserSettings? Settings { get; set; }
+}
+
+// In External Service
+public class MyAuthService
+{
+    private AuthenticationState _authenticationState;
+
+    public MyAuthService(StatusModel statusModel)
+    {
+        // Clean subscription instead of manual Observable.Where()
+        statusModel.OnCurrentUserChanged(() =>
+        {
+            _authenticationState = new AuthenticationState(
+                statusModel.CurrentUser ?? new ClaimsPrincipal());
+            NotifyAuthenticationStateChanged(Task.FromResult(_authenticationState));
+        });
+
+        // Async callback with CancellationToken
+        statusModel.OnSettingsChangedAsync(async (ct) =>
+        {
+            await SaveSettingsToFileAsync(statusModel.Settings, ct);
+        });
+    }
+}
+```
+
+**Generated Code (partial):**
+```csharp
+// Callback storage
+private readonly List<Action> _onCurrentUserChangedCallbacks = new();
+private readonly List<Func<CancellationToken, Task>> _onSettingsChangedAsyncCallbacks = new();
+
+// Registration methods
+public void OnCurrentUserChanged(Action callback)
+{
+    if (callback is null) throw new ArgumentNullException(nameof(callback));
+    _onCurrentUserChangedCallbacks.Add(callback);
+}
+
+public void OnSettingsChangedAsync(Func<CancellationToken, Task> callback)
+{
+    if (callback is null) throw new ArgumentNullException(nameof(callback));
+    _onSettingsChangedAsyncCallbacks.Add(callback);
+}
+
+// Constructor subscriptions
+Subscriptions.Add(Observable.Where(p => p.Intersect(["Model.CurrentUser"]).Any())
+    .Subscribe(_ => {
+        foreach (var callback in _onCurrentUserChangedCallbacks) callback();
+    }));
+```
+
+**Key Points:**
+- Replaces verbose `Observable.Where(c => c.Contains("Model.PropertyName"))` subscriptions
+- Subscriptions auto-managed via model's `CompositeDisposable`
+- All callbacks disposed when model is disposed
+- Optional custom method names
+- Callbacks invoked on Observable's scheduler thread
+
 ## Key Attributes
 
 - `[ObservableModelScope]` - Controls DI lifetime (Singleton, Scoped, Transient)
@@ -162,6 +285,12 @@ protected virtual void OnSettingsIsDayChanged() { }
 - `[ObservableComponent]` - Enables component generation with optional `includeReferencedTriggers` parameter
 - `[ObservableComponentTrigger]` - Generates sync hook method in component (optional custom name parameter)
 - `[ObservableComponentTriggerAsync]` - Generates async hook method in component (optional custom name parameter)
+- `[ObservableTrigger]` - Executes sync methods automatically when property changes (supports inference of async)
+- `[ObservableTriggerAsync]` - Explicitly marks async method execution on property changes
+- `[ObservableTrigger<T>]` - Executes parametrized sync methods on property changes
+- `[ObservableTriggerAsync<T>]` - Executes parametrized async methods on property changes
+- `[ObservableCallbackTrigger]` - Generates sync callback registration method for external services
+- `[ObservableCallbackTriggerAsync]` - Generates async callback registration method for external services
 
 ## Command Method Signatures
 

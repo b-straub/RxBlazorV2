@@ -60,8 +60,10 @@ public static class TriggerTemplate
     /// </summary>
     private static string GetDirectMethodCall(PropertyTriggerInfo trigger)
     {
-        // Check if method is async (either has cancellation token or method name ends with Async)
-        var isAsync = trigger.SupportsCancellation || trigger.ExecuteMethod.EndsWith("Async");
+        // Check if method is async:
+        // 1. Explicit IsAsync flag from ObservableTriggerAsync attribute
+        // 2. Or inferred from method signature (has CancellationToken or ends with "Async")
+        var isAsync = trigger.IsAsync || trigger.SupportsCancellation || trigger.ExecuteMethod.EndsWith("Async");
 
         if (isAsync)
         {

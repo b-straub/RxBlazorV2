@@ -8,7 +8,8 @@ namespace RxBlazorV2Sample.Models;
 [ObservableModelScope(ModelScope.Singleton)]
 public partial class CounterModel : ObservableModel
 {
-    [ObservableTrigger("HighError")]
+    [ObservableTrigger(nameof(HighError))]
+    [ObservableTriggerAsync(nameof(HighErrorAsync))]
     public partial int Counter1 { get; set; }
     public partial int Counter2 { get; set; }
 
@@ -91,6 +92,16 @@ public partial class CounterModel : ObservableModel
         if (Counter1 > 5)
         {
             ErrorModel.Message = "Counter 1 is to high";
+        }
+    }
+    
+    private async Task HighErrorAsync(CancellationToken token)
+    {
+        await Task.Delay(1000, token);
+        
+        if (Counter1 > 10)
+        {
+            ErrorModel.Message = "Counter 1 is extremely high";
         }
     }
 
