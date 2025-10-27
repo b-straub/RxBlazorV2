@@ -7,7 +7,7 @@ using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using RxBlazorV2Generator;
-using RxBlazorVSSampleComponents.ErrorManager;
+//using RxBlazorVSSampleComponents.ErrorManager;
 
 namespace GeneratorTest.Helpers
 {
@@ -52,7 +52,7 @@ namespace GeneratorTest.Helpers
                     .SelectMany(cl => cl.ResolveReferencePaths())
                     .Select(asm => MetadataReference.CreateFromFile(asm)).ToList();
 
-            var metaDataReferences = allReferences.Append(MetadataReference.CreateFromFile(typeof(ErrorModelComponent).Assembly.Location)).ToList();
+            var metaDataReferences = allReferences;//.Append(MetadataReference.CreateFromFile(typeof(ErrorModelComponent).Assembly.Location)).ToList();
             
             Compilation compilation = CSharpCompilation.Create("testgenerator", syntaxTrees, metaDataReferences, compilationOptions);
             var parseOptions = syntaxTrees.FirstOrDefault()?.Options as CSharpParseOptions;

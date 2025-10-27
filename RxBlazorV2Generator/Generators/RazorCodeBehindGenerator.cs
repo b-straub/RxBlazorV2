@@ -4,6 +4,7 @@ using RxBlazorV2Generator.Analyzers;
 using RxBlazorV2Generator.Models;
 using System.Text;
 using System.Collections.Immutable;
+using RxBlazorV2Generator.Builders;
 
 namespace RxBlazorV2Generator.Generators;
 
@@ -27,17 +28,19 @@ public static class RazorCodeBehindGenerator
         "Execute",
         "ExecuteAsync"
     };
+
     /// <summary>
     /// Generates .razor.cs code-behind file with Filter() method for components that inherit from ObservableComponents.
-    /// Uses simple regex-based property detection that works across assembly boundaries.
+    /// NEW UNIFIED APPROACH: Uses GeneratorContext as single source of truth for all component metadata.
+    /// Fixes cross-assembly bugs: missing using directives and missing "Model." prefix.
     /// </summary>
     public static void GenerateComponentFilterCodeBehind(
         SourceProductionContext context,
         AdditionalText razorFile,
         SourceText razorContent,
-        Dictionary<string, string> componentNamespaces,
-        Dictionary<string, bool> componentHasTriggers,
-        Dictionary<string, (string Namespace, INamedTypeSymbol TypeSymbol)> crossAssemblyComponents)
+        GeneratorContext generatorContext,
+        Dictionary<string, HashSet<string>> codeBehindPropertyUsages,
+        GeneratorConfig config)
     {
         try
         {
@@ -53,86 +56,89 @@ public static class RazorCodeBehindGenerator
             // Extract component type name (without generic parameters)
             var componentTypeName = ExtractComponentTypeName(inheritsType);
 
-            // Check if this is an Observable component
-            // Strategy 1: Check same-assembly components (from observableModelRecords)
-            var isSameAssemblyComponent = componentNamespaces.ContainsKey(componentTypeName);
-
-            // Strategy 2: Check cross-assembly components (accurate inheritance detection)
-            var isCrossAssemblyComponent = false;
-            if (!isSameAssemblyComponent)
+            // UNIFIED LOOKUP: Single check for both same-assembly and cross-assembly components
+            if (!generatorContext.AllComponents.TryGetValue(componentTypeName, out var component))
             {
-                // Extract namespace from inheritsType (e.g., "MyNamespace.ComponentName" -> "MyNamespace")
-                var inheritsNamespace = ExtractNamespace(inheritsType);
-
-                // Check if component exists in cross-assembly components map
-                if (crossAssemblyComponents.TryGetValue(componentTypeName, out var componentInfo))
-                {
-                    // If namespace is specified in @inherits, verify it matches
-                    if (!string.IsNullOrEmpty(inheritsNamespace))
-                    {
-                        if (componentInfo.Namespace == inheritsNamespace)
-                        {
-                            isCrossAssemblyComponent = true;
-                        }
-                    }
-                    else
-                    {
-                        // No namespace specified in @inherits, accept the match
-                        isCrossAssemblyComponent = true;
-                    }
-                }
+                return; // Not an observable component
             }
 
-            // If not an Observable component, skip code generation
-            if (!isSameAssemblyComponent && !isCrossAssemblyComponent)
-            {
-                return;
-            }
-
-            // Analyze property usage in razor file using simple regex
-            // Note: We use "Model" as the field name since that's what ObservableComponent<T> uses
-            var usedProperties = ComponentFilterAnalyzer.AnalyzePropertyUsage(
+            // Analyze property usage in razor file using simple regex (no validation)
+            var razorUsedProperties = ComponentFilterAnalyzer.AnalyzePropertyUsage(
                 razorContentText,
                 "Model");
 
-            // Check if component has triggers
-            var hasTriggers = false;
-            if (componentHasTriggers.TryGetValue(componentTypeName, out var triggersExist))
+            // Merge with code-behind property usages from .razor.cs files
+            var extractedProperties = new HashSet<string>();
+            foreach (var prop in razorUsedProperties)
             {
-                hasTriggers = triggersExist;
+                extractedProperties.Add(prop);
+            }
+
+            if (codeBehindPropertyUsages.TryGetValue(componentTypeName, out var codeBehindProps))
+            {
+                foreach (var prop in codeBehindProps)
+                {
+                    extractedProperties.Add(prop);
+                }
+            }
+
+            // Validate against SSOT filterable properties (already have "Model." prefix)
+            var usedProperties = new HashSet<string>();
+            foreach (var extractedProp in extractedProperties)
+            {
+                var matchedProperty = FindMatchingValidProperty(extractedProp, component.FilterableProperties);
+                if (matchedProperty is not null)
+                {
+                    usedProperties.Add(matchedProperty);
+                }
             }
 
             // Report diagnostic if component has no reactive properties and no triggers
-            // In this case, don't generate the code-behind at all - component is completely non-reactive
-            if (usedProperties.Count == 0 && !hasTriggers)
+            if (usedProperties.Count == 0 && !component.HasTriggers)
             {
                 var componentFileName = Path.GetFileNameWithoutExtension(razorFile.Path);
+
+                // Create a location for the razor file to help users identify the issue
+                var location = Location.Create(
+                    razorFile.Path,
+                    textSpan: default,
+                    lineSpan: new Microsoft.CodeAnalysis.Text.LinePositionSpan(
+                        new Microsoft.CodeAnalysis.Text.LinePosition(0, 0),
+                        new Microsoft.CodeAnalysis.Text.LinePosition(0, 0)));
+
                 var diagnostic = Diagnostic.Create(
                     Diagnostics.DiagnosticDescriptors.NonReactiveComponentError,
-                    Location.None,
+                    location,
                     componentFileName);
                 context.ReportDiagnostic(diagnostic);
-                // Don't generate - component serves no reactive purpose
-                return;
+                return; // Don't generate - component serves no reactive purpose
             }
 
             // Generate code-behind file
             var sb = new StringBuilder();
             var componentName = Path.GetFileNameWithoutExtension(razorFile.Path);
 
-            // Extract namespace from razor file (check @namespace directive first, then fall back to path)
-            var namespaceName = ExtractNamespaceFromRazorFile(razorContentText, razorFile.Path);
+            // Extract namespace from razor file location
+            // NOTE: component.Namespace is the BASE CLASS namespace, not the razor file namespace
+            var namespaceName = ExtractNamespaceFromRazorFile(razorContentText, razorFile.Path, config.RootNamespace);
 
             // Extract using directives from razor file
             var usingDirectives = ExtractUsingDirectives(razorContentText);
 
-            // Add using directive for component type's namespace if needed
-            if (componentNamespaces.TryGetValue(componentTypeName, out var componentNamespace))
+            // FIX #1: Add using directive for base component namespace if cross-assembly
+            if (component.BaseComponentNamespace is not null && component.BaseComponentNamespace.Length > 0)
             {
-                if (componentNamespace != namespaceName && !usingDirectives.Contains(componentNamespace))
+                if (component.BaseComponentNamespace != namespaceName &&
+                    !usingDirectives.Contains(component.BaseComponentNamespace))
                 {
-                    usingDirectives.Add(componentNamespace);
+                    usingDirectives.Add(component.BaseComponentNamespace);
                 }
+            }
+
+            // Add using directive for component's own namespace if needed
+            if (component.Namespace != namespaceName && !usingDirectives.Contains(component.Namespace))
+            {
+                usingDirectives.Add(component.Namespace);
             }
 
             // Add using directives
@@ -160,11 +166,7 @@ public static class RazorCodeBehindGenerator
 
             if (usedProperties.Count > 0)
             {
-                // Strip command interface members and prepend "Model."
-                // E.g., captured "ToggleThemeCommand.Execute" → "Model.ToggleThemeCommand"
-                // E.g., captured "RefreshCommand.Executing" → "Model.RefreshCommand"
-                // E.g., captured "Settings.IsDay" → "Model.Settings.IsDay"
-                // Observable streams emit "Model.PropertyName" for consistency
+                // FIX #2: Properties already have "Model." prefix from GeneratorContext
                 var filterProperties = usedProperties
                     .Select(prop =>
                     {
@@ -179,7 +181,7 @@ public static class RazorCodeBehindGenerator
                                 break;
                             }
                         }
-                        return $"Model.{cleaned}";
+                        return cleaned;
                     })
                     .Distinct()
                     .OrderBy(p => p)
@@ -281,7 +283,7 @@ public static class RazorCodeBehindGenerator
     /// <summary>
     /// Extracts namespace from razor file, checking @namespace directive first, then falling back to path.
     /// </summary>
-    private static string ExtractNamespaceFromRazorFile(string razorContent, string filePath)
+    private static string ExtractNamespaceFromRazorFile(string razorContent, string filePath, string rootNamespace)
     {
         // First, try to find @namespace directive
         var namespaceMatch = System.Text.RegularExpressions.Regex.Match(
@@ -295,47 +297,202 @@ public static class RazorCodeBehindGenerator
         }
 
         // Fall back to path-based extraction
-        return ExtractNamespaceFromPath(filePath);
+        return ExtractNamespaceFromPath(filePath, rootNamespace);
     }
 
     /// <summary>
-    /// Extracts namespace from razor file path.
-    /// Example: /Project/Components/Settings.razor -> Project.Components
+    /// Extracts namespace from razor file path using root namespace and relative path.
+    /// Example:
+    ///   Root: WebAppBase.Shared
+    ///   Path: /Project/WebAppBase.Shared/Components/Push/PushManager.razor
+    ///   Result: WebAppBase.Shared.Components.Push
     /// </summary>
-    private static string ExtractNamespaceFromPath(string filePath)
+    private static string ExtractNamespaceFromPath(string filePath, string rootNamespace)
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                return rootNamespace;
+            }
+
             var directory = Path.GetDirectoryName(filePath);
+
+            // For relative paths like "Components/MyWidget.razor", GetDirectoryName returns "Components"
+            // For paths with no directory like "MyWidget.razor", it returns empty
             if (string.IsNullOrEmpty(directory))
             {
-                return "Global";
+                // No directory in path - use root namespace
+                return rootNamespace;
             }
 
-            // Find the project root by looking for common project markers
-            // For now, we'll take the last two directory segments
-            var segments = directory.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-
-            // Filter out empty segments
-            segments = segments.Where(s => !string.IsNullOrWhiteSpace(s)).ToArray();
-
-            if (segments.Length >= 2)
+            // Try to find project root by looking for .csproj file
+            string? projectRoot = null;
+            try
             {
-                // Take last two segments (e.g., "RxBlazorV2Sample" + "Components")
-                var lastTwo = segments.Skip(segments.Length - 2).ToArray();
-                return string.Join(".", lastTwo);
+                projectRoot = FindProjectRoot(directory);
             }
-            else if (segments.Length == 1)
+            catch
             {
-                return segments[0];
+                // FindProjectRoot can fail if directory doesn't exist (test scenarios)
+                // Fall through to use simple path-based logic
             }
 
-            return "Global";
+            if (projectRoot is null)
+            {
+                // Fallback: no project root (common in tests or relative paths)
+                // Simple rule: namespace follows directory structure
+                var pathSegments = directory.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar, '/')
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .ToArray();
+
+                if (pathSegments.Length >= 2)
+                {
+                    // Take last two segments (e.g., "Test.Components" from "/foo/bar/Test/Components")
+                    return string.Join(".", pathSegments.Skip(pathSegments.Length - 2));
+                }
+                else if (pathSegments.Length == 1)
+                {
+                    // Single segment (e.g., "Components" from "Components/MyWidget.razor")
+                    return pathSegments[0];
+                }
+
+                // No segments - use root namespace
+                return rootNamespace;
+            }
+
+            // Calculate relative path from project root to file directory
+            var relativePath = GetRelativePath(projectRoot, directory);
+
+            // If file is in project root, use just the root namespace
+            if (string.IsNullOrEmpty(relativePath))
+            {
+                return rootNamespace;
+            }
+
+            // Split relative path into segments and combine with root namespace
+            var segments = relativePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .ToArray();
+
+            if (segments.Length == 0)
+            {
+                return rootNamespace;
+            }
+
+            // Combine root namespace with path segments
+            return $"{rootNamespace}.{string.Join(".", segments)}";
         }
         catch
         {
-            return "Global";
+            return rootNamespace;
         }
+    }
+
+    /// <summary>
+    /// Finds the project root directory by walking up the directory tree looking for .csproj file.
+    /// </summary>
+    private static string? FindProjectRoot(string startDirectory)
+    {
+        var directory = new DirectoryInfo(startDirectory);
+
+        while (directory is not null)
+        {
+            // Check if this directory contains a .csproj file
+            if (directory.GetFiles("*.csproj").Any())
+            {
+                return directory.FullName;
+            }
+
+            // Move up to parent directory
+            directory = directory.Parent;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Gets the relative path from one directory to another (polyfill for .NET Standard 2.0).
+    /// </summary>
+    private static string GetRelativePath(string fromPath, string toPath)
+    {
+        if (string.IsNullOrEmpty(fromPath))
+        {
+            throw new ArgumentNullException(nameof(fromPath));
+        }
+        if (string.IsNullOrEmpty(toPath))
+        {
+            throw new ArgumentNullException(nameof(toPath));
+        }
+
+        // Normalize paths
+        var fromUri = new Uri(AppendDirectorySeparator(fromPath));
+        var toUri = new Uri(AppendDirectorySeparator(toPath));
+
+        // If paths are on different drives/roots, can't get relative path
+        if (!fromUri.IsBaseOf(toUri))
+        {
+            return string.Empty;
+        }
+
+        var relativeUri = fromUri.MakeRelativeUri(toUri);
+        var relativePath = Uri.UnescapeDataString(relativeUri.ToString());
+
+        // Convert forward slashes to platform-specific directory separator
+        relativePath = relativePath.Replace('/', Path.DirectorySeparatorChar);
+
+        return relativePath;
+    }
+
+    /// <summary>
+    /// Appends directory separator to path if it doesn't already end with one.
+    /// </summary>
+    private static string AppendDirectorySeparator(string path)
+    {
+        if (!path.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal))
+        {
+            return path + Path.DirectorySeparatorChar;
+        }
+        return path;
+    }
+
+    /// <summary>
+    /// Finds the matching valid property for an extracted property chain.
+    /// Prefers longest (most specific) match to avoid collapsing nested properties.
+    /// E.g., extracted "PushModel.IsSupported" prefers "Model.PushModel.IsSupported" over "Model.PushModel"
+    /// E.g., extracted "CurrentUser.Identity.IsAuthenticated" matches valid "Model.CurrentUser" (longest available)
+    /// Returns the valid property name prefixed with "Model.", or null if no match.
+    /// </summary>
+    private static string? FindMatchingValidProperty(string extractedProp, HashSet<string> validProperties)
+    {
+        // Strategy: Find the LONGEST matching prefix (most specific)
+        // This prevents collapsing "PushModel.IsSupported" to just "PushModel"
+
+        // First, try exact match (most specific)
+        var fullPropertyName = $"Model.{extractedProp}";
+        if (validProperties.Contains(fullPropertyName))
+        {
+            return fullPropertyName;
+        }
+
+        // Try progressively shorter prefixes, but keep track of the longest match
+        // E.g., "CurrentUser.Identity.IsAuthenticated" → try each prefix length from longest to shortest
+        var parts = extractedProp.Split('.');
+
+        // Start from the longest prefix (length - 1) and work down
+        for (int length = parts.Length - 1; length > 0; length--)
+        {
+            var prefix = string.Join(".", parts.Take(length));
+            var prefixWithModel = $"Model.{prefix}";
+
+            if (validProperties.Contains(prefixWithModel))
+            {
+                // Found a match - return immediately (this is the longest/most specific match)
+                return prefixWithModel;
+            }
+        }
+
+        return null;
     }
 
 }

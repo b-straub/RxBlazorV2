@@ -1,5 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using RxBlazorV2Generator.Helpers;
 
 namespace RxBlazorV2Generator.Models;
 
@@ -152,7 +153,11 @@ public class CallbackTriggerInfo(string methodName, CallbackTriggerType triggerT
     public CallbackTriggerType TriggerType { get; } = triggerType;
 }
 
-public class ModelReferenceInfo
+/// <summary>
+/// Information about a model reference (dependency on another ObservableModel).
+/// TODO: Convert to record for better incremental generator caching
+/// </summary>
+public class ModelReferenceInfo : IEquatable<ModelReferenceInfo>
 {
     public string ReferencedModelTypeName { get; }
     public string ReferencedModelNamespace { get; }
@@ -163,7 +168,15 @@ public class ModelReferenceInfo
     public string? BaseObservableModelType { get; }
     public ITypeSymbol? TypeSymbol { get; }
 
-    public ModelReferenceInfo(string referencedModelTypeName, string referencedModelNamespace, string propertyName, List<string> usedProperties, Location? attributeLocation = null, bool isDerivedModel = false, string? baseObservableModelType = null, ITypeSymbol? typeSymbol = null)
+    public ModelReferenceInfo(
+        string referencedModelTypeName,
+        string referencedModelNamespace,
+        string propertyName,
+        List<string> usedProperties,
+        Location? attributeLocation = null,
+        bool isDerivedModel = false,
+        string? baseObservableModelType = null,
+        ITypeSymbol? typeSymbol = null)
     {
         ReferencedModelTypeName = referencedModelTypeName;
         ReferencedModelNamespace = referencedModelNamespace;
@@ -174,21 +187,109 @@ public class ModelReferenceInfo
         BaseObservableModelType = baseObservableModelType;
         TypeSymbol = typeSymbol;
     }
+
+    public bool Equals(ModelReferenceInfo? other)
+    {
+        if (other is null)
+        {
+            return false;
+        }
+
+        if (ReferenceEquals(this, other))
+        {
+            return true;
+        }
+
+        // Compare properties that affect code generation (skip Location and TypeSymbol)
+        return ReferencedModelTypeName == other.ReferencedModelTypeName &&
+               ReferencedModelNamespace == other.ReferencedModelNamespace &&
+               PropertyName == other.PropertyName &&
+               UsedPropertiesEqual(other.UsedProperties) &&
+               IsDerivedModel == other.IsDerivedModel &&
+               BaseObservableModelType == other.BaseObservableModelType;
+    }
+
+    private bool UsedPropertiesEqual(List<string> other)
+    {
+        if (UsedProperties.Count != other.Count)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < UsedProperties.Count; i++)
+        {
+            if (UsedProperties[i] != other[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return Equals(obj as ModelReferenceInfo);
+    }
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        hash.Add(ReferencedModelTypeName);
+        hash.Add(ReferencedModelNamespace);
+        hash.Add(PropertyName);
+
+        foreach (var prop in UsedProperties)
+        {
+            hash.Add(prop);
+        }
+
+        hash.Add(IsDerivedModel);
+        hash.Add(BaseObservableModelType);
+
+        return hash.ToHashCode();
+    }
 }
 
-public class DIFieldInfo
+public class DIFieldInfo : IEquatable<DIFieldInfo>
 {
     public string FieldName { get; }
     public string FieldType { get; }
-    
+
     public DIFieldInfo(string fieldName, string fieldType)
     {
         FieldName = fieldName;
         FieldType = fieldType;
     }
+
+    public bool Equals(DIFieldInfo? other)
+    {
+        if (other is null)
+        {
+            return false;
+        }
+
+        if (ReferenceEquals(this, other))
+        {
+            return true;
+        }
+
+        return FieldName == other.FieldName &&
+               FieldType == other.FieldType;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return Equals(obj as DIFieldInfo);
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(FieldName, FieldType);
+    }
 }
 
-public class ComponentInfo
+public class ComponentInfo : IEquatable<ComponentInfo>
 {
     public string ComponentClassName { get; }
     public string ComponentNamespace { get; }
@@ -224,6 +325,84 @@ public class ComponentInfo
         DIFields = diFields ?? [];
         IncludeReferencedTriggers = includeReferencedTriggers;
     }
+
+    public bool Equals(ComponentInfo? other)
+    {
+        if (other is null)
+        {
+            return false;
+        }
+
+        if (ReferenceEquals(this, other))
+        {
+            return true;
+        }
+
+        return ComponentClassName == other.ComponentClassName &&
+               ComponentNamespace == other.ComponentNamespace &&
+               ModelTypeName == other.ModelTypeName &&
+               ModelNamespace == other.ModelNamespace &&
+               ListEqual(ComponentTriggers, other.ComponentTriggers) &&
+               GenericTypes == other.GenericTypes &&
+               TypeConstrains == other.TypeConstrains &&
+               ListEqual(ModelReferences, other.ModelReferences) &&
+               ListEqual(DIFields, other.DIFields) &&
+               IncludeReferencedTriggers == other.IncludeReferencedTriggers;
+    }
+
+    private static bool ListEqual<T>(List<T> list1, List<T> list2) where T : IEquatable<T>
+    {
+        if (list1.Count != list2.Count)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < list1.Count; i++)
+        {
+            if (!list1[i].Equals(list2[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return Equals(obj as ComponentInfo);
+    }
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        hash.Add(ComponentClassName);
+        hash.Add(ComponentNamespace);
+        hash.Add(ModelTypeName);
+        hash.Add(ModelNamespace);
+
+        foreach (var trigger in ComponentTriggers)
+        {
+            hash.Add(trigger);
+        }
+
+        hash.Add(GenericTypes);
+        hash.Add(TypeConstrains);
+
+        foreach (var modelRef in ModelReferences)
+        {
+            hash.Add(modelRef);
+        }
+
+        foreach (var diField in DIFields)
+        {
+            hash.Add(diField);
+        }
+
+        hash.Add(IncludeReferencedTriggers);
+
+        return hash.ToHashCode();
+    }
 }
 
 public enum TriggerHookType
@@ -233,7 +412,7 @@ public enum TriggerHookType
     Both
 }
 
-public class ComponentTriggerInfo
+public class ComponentTriggerInfo : IEquatable<ComponentTriggerInfo>
 {
     public string PropertyName { get; }
     public TriggerHookType HookType { get; }
@@ -262,5 +441,34 @@ public class ComponentTriggerInfo
             : hookType == TriggerHookType.Async
                 ? $"On{propertyName}ChangedAsync"
                 : $"On{propertyName}Changed";
+    }
+
+    public bool Equals(ComponentTriggerInfo? other)
+    {
+        if (other is null)
+        {
+            return false;
+        }
+
+        if (ReferenceEquals(this, other))
+        {
+            return true;
+        }
+
+        return PropertyName == other.PropertyName &&
+               HookType == other.HookType &&
+               HookMethodName == other.HookMethodName &&
+               ReferencedModelPropertyName == other.ReferencedModelPropertyName &&
+               QualifiedPropertyPath == other.QualifiedPropertyPath;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return Equals(obj as ComponentTriggerInfo);
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(PropertyName, HookType, HookMethodName, ReferencedModelPropertyName, QualifiedPropertyPath);
     }
 }

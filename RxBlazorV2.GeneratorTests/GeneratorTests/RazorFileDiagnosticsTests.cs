@@ -2353,6 +2353,7 @@ public class RazorFileDiagnosticsTests
         };
 
         var expected = new DiagnosticResult(DiagnosticDescriptors.NonReactiveComponentError)
+            .WithSpan("Pages/EmptyComponent.razor", 1, 1, 1, 1)
             .WithArguments("EmptyComponent");
 
         // Note: No code-behind should be generated for EmptyComponent.razor when RXBG062 fires

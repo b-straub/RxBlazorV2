@@ -10,8 +10,9 @@ namespace RxBlazorV2Generator.Analysis;
 /// Represents a complete analysis record for an ObservableModel class.
 /// This is the single source of truth for ObservableModel analysis and diagnostics.
 /// Follows the DexieNET pattern for clean separation between analysis and diagnostic reporting.
+/// Implements IEquatable for incremental generator caching.
 /// </summary>
-public class ObservableModelRecord
+public class ObservableModelRecord : IEquatable<ObservableModelRecord>
 {
     public ObservableModelInfo ModelInfo { get; }
     private readonly List<Diagnostic> _diagnostics;
@@ -603,5 +604,104 @@ public class ObservableModelRecord
         {
             return null;
         }
+    }
+
+    // IEquatable implementation for incremental generator caching
+    public bool Equals(ObservableModelRecord? other)
+    {
+        if (other is null)
+        {
+            return false;
+        }
+
+        if (ReferenceEquals(this, other))
+        {
+            return true;
+        }
+
+        // Compare properties that affect code generation
+        return ModelInfo.Equals(other.ModelInfo) &&
+               ShouldGenerateCode == other.ShouldGenerateCode &&
+               HasObservableComponentAttribute == other.HasObservableComponentAttribute &&
+               IncludeReferencedTriggers == other.IncludeReferencedTriggers &&
+               CustomComponentName == other.CustomComponentName &&
+               GenericTypes == other.GenericTypes &&
+               TypeConstraints == other.TypeConstraints &&
+               ComponentTriggerPropertiesEqual(other.ComponentTriggerProperties) &&
+               ComponentInfoEqual(other.ComponentInfo);
+    }
+
+    private bool ComponentTriggerPropertiesEqual(
+        Dictionary<string, (bool hasSync, string? syncHookName, bool hasAsync, string? asyncHookName, Location location)> other)
+    {
+        if (ComponentTriggerProperties.Count != other.Count)
+        {
+            return false;
+        }
+
+        foreach (var kvp in ComponentTriggerProperties)
+        {
+            if (!other.TryGetValue(kvp.Key, out var otherValue))
+            {
+                return false;
+            }
+
+            // Compare trigger data (skip Location as it doesn't affect code generation)
+            if (kvp.Value.hasSync != otherValue.hasSync ||
+                kvp.Value.syncHookName != otherValue.syncHookName ||
+                kvp.Value.hasAsync != otherValue.hasAsync ||
+                kvp.Value.asyncHookName != otherValue.asyncHookName)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private bool ComponentInfoEqual(ComponentInfo? other)
+    {
+        if (ComponentInfo is null && other is null)
+        {
+            return true;
+        }
+
+        if (ComponentInfo is null || other is null)
+        {
+            return false;
+        }
+
+        return ComponentInfo.Equals(other);
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return Equals(obj as ObservableModelRecord);
+    }
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        hash.Add(ModelInfo);
+        hash.Add(ShouldGenerateCode);
+        hash.Add(HasObservableComponentAttribute);
+        hash.Add(IncludeReferencedTriggers);
+        hash.Add(CustomComponentName);
+        hash.Add(GenericTypes);
+        hash.Add(TypeConstraints);
+
+        // Hash component trigger properties
+        foreach (var kvp in ComponentTriggerProperties.OrderBy(k => k.Key))
+        {
+            hash.Add(kvp.Key);
+            hash.Add(kvp.Value.hasSync);
+            hash.Add(kvp.Value.syncHookName);
+            hash.Add(kvp.Value.hasAsync);
+            hash.Add(kvp.Value.asyncHookName);
+        }
+
+        hash.Add(ComponentInfo);
+
+        return hash.ToHashCode();
     }
 }

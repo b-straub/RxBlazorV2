@@ -3,8 +3,8 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Analysis;
 using RxBlazorV2Generator.Analyzers;
+using RxBlazorV2Generator.Builders;
 using RxBlazorV2Generator.Diagnostics;
-using RxBlazorV2Generator.Extensions;
 using RxBlazorV2Generator.Generators;
 using RxBlazorV2Generator.Models;
 using System;
@@ -453,32 +453,22 @@ public class RxBlazorGenerator : IIncrementalGenerator
             });
 
         // Generate code-behind for components that inherit from ObservableComponents
-        // Uses simple regex-based property detection that works across assembly boundaries
-        // Combine with component records to pass namespace information for proper using directives
-        context.RegisterSourceOutput(allRazorFiles.Combine(processedRecords).Combine(context.CompilationProvider),
+        // UNIFIED APPROACH: Uses GeneratorContext as single source of truth for all component metadata
+        // Fixes cross-assembly bugs: missing using directives and missing "Model." prefix
+        context.RegisterSourceOutput(allRazorFiles.Combine(processedRecords).Combine(context.CompilationProvider).Combine(msbuildProvider),
             static (spc, combined) =>
             {
-                var (files, compilation) = combined;
+                var (filesAndCompilation, config) = combined;
+                var (files, compilation) = filesAndCompilation;
                 var (razorFilesList, records) = files;
 
-                // Find all ObservableComponent types in referenced assemblies
-                // This accurately detects components by checking inheritance, not just guessing by assembly reference
-                var crossAssemblyComponents = compilation.FindCrossAssemblyObservableComponents();
+                // UNIFIED CONTEXT: Build once, contains ALL metadata for both current and referenced assemblies
+                var generatorContext = GeneratorContextBuilder.Build(records, compilation);
 
-                // Build map of component class names to their namespaces and trigger status (same-assembly components)
-                var componentNamespaces = new Dictionary<string, string>();
-                var componentHasTriggers = new Dictionary<string, bool>();
-                foreach (var record in records.Where(r => r is not null && r!.ComponentInfo is not null))
-                {
-                    if (record?.ComponentInfo is not null)
-                    {
-                        var componentName = record.ComponentInfo.ComponentClassName;
-                        var componentNamespace = record.ComponentInfo.ComponentNamespace;
-                        var hasTriggers = record.ComponentInfo.ComponentTriggers.Any();
-                        componentNamespaces[componentName] = componentNamespace;
-                        componentHasTriggers[componentName] = hasTriggers;
-                    }
-                }
+                // Analyze code-behind (.razor.cs) files for Model property usage
+                var codeBehindPropertyUsages = CodeBehindPropertyAnalyzer.AnalyzeCodeBehindPropertyUsage(
+                    compilation,
+                    generatorContext);
 
                 foreach (var razorFile in razorFilesList)
                 {
@@ -488,14 +478,14 @@ public class RxBlazorGenerator : IIncrementalGenerator
                         continue;
                     }
 
-                    // Generate Filter() method for components inheriting from ObservableComponents
+                    // Generate Filter() method using unified context
                     RazorCodeBehindGenerator.GenerateComponentFilterCodeBehind(
                         spc,
                         razorFile,
                         content,
-                        componentNamespaces,
-                        componentHasTriggers,
-                        crossAssemblyComponents);
+                        generatorContext,
+                        codeBehindPropertyUsages,
+                        config);
                 }
             });
 
