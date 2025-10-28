@@ -64,6 +64,9 @@ public static class ObservableModelCodeGenerator
             sb.AppendLine(PropertyTemplate.GenerateModelIDProperty(modelInfo.FullyQualifiedName));
             sb.AppendLine();
 
+            // Generate FilterUsedProperties method implementation
+            sb.AppendLine(PropertyTemplate.GenerateFilterUsedPropertiesMethod(modelInfo.ModelReferences));
+           
             // Generate protected properties for referenced models
             if (modelInfo.ModelReferences.Any())
             {

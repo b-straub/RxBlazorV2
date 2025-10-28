@@ -97,12 +97,15 @@ public class ObservableModelReferenceTests
         var notificationCount = 0;
         var receivedProperties = new List<string[]>();
 
-        using var subscription = parent.Observable.Subscribe(props =>
-        {
-            notificationCount++;
-            receivedProperties.Add(props);
-            _output.WriteLine($"Notification {notificationCount}: {string.Join(", ", props)}");
-        });
+        using var subscription = parent.Observable
+            .Select(props => props.Where(p => parent.FilterUsedProperties(p)).ToArray())
+            .Where(props => props.Length > 0)
+            .Subscribe(props =>
+            {
+                notificationCount++;
+                receivedProperties.Add(props);
+                _output.WriteLine($"Notification {notificationCount}: {string.Join(", ", props)}");
+            });
 
         // Act
         counterModel.Counter3 = 100;
@@ -121,12 +124,15 @@ public class ObservableModelReferenceTests
         var notificationCount = 0;
         var allProperties = new List<string>();
 
-        using var subscription = parent.Observable.Subscribe(props =>
-        {
-            notificationCount++;
-            allProperties.AddRange(props);
-            _output.WriteLine($"Notification {notificationCount}: {string.Join(", ", props)}");
-        });
+        using var subscription = parent.Observable
+            .Select(props => props.Where(p => parent.FilterUsedProperties(p)).ToArray())
+            .Where(props => props.Length > 0)
+            .Subscribe(props =>
+            {
+                notificationCount++;
+                allProperties.AddRange(props);
+                _output.WriteLine($"Notification {notificationCount}: {string.Join(", ", props)}");
+            });
 
         // Act - change all counters
         counterModel.Counter1 = 1;
@@ -234,12 +240,15 @@ public class ObservableModelReferenceTests
         var notificationCount = 0;
         var receivedProperties = new List<string[]>();
 
-        using var subscription = parent.Observable.Subscribe(props =>
-        {
-            notificationCount++;
-            receivedProperties.Add(props);
-            _output.WriteLine($"Notification {notificationCount}: {string.Join(", ", props)}");
-        });
+        using var subscription = parent.Observable
+            .Select(props => props.Where(p => parent.FilterUsedProperties(p)).ToArray())
+            .Where(props => props.Length > 0)
+            .Subscribe(props =>
+            {
+                notificationCount++;
+                receivedProperties.Add(props);
+                _output.WriteLine($"Notification {notificationCount}: {string.Join(", ", props)}");
+            });
 
         // Act - batch changes on CounterModel
         using (counterModel.SuspendNotifications())
@@ -291,22 +300,25 @@ public class ObservableModelReferenceTests
         var counter2Changes = 0;
         var counter3Changes = 0;
 
-        using var subscription = parent.Observable.Subscribe(props =>
-        {
-            if (props.Contains("Model.CounterModel.Counter1"))
+        using var subscription = parent.Observable
+            .Select(props => props.Where(p => parent.FilterUsedProperties(p)).ToArray())
+            .Where(props => props.Length > 0)
+            .Subscribe(props =>
             {
-                counter1Changes++;
-            }
-            if (props.Contains("Model.CounterModel.Counter2"))
-            {
-                counter2Changes++;
-            }
-            if (props.Contains("Model.CounterModel.Counter3"))
-            {
-                counter3Changes++;
-            }
-            _output.WriteLine($"Properties changed: {string.Join(", ", props)}");
-        });
+                if (props.Contains("Model.CounterModel.Counter1"))
+                {
+                    counter1Changes++;
+                }
+                if (props.Contains("Model.CounterModel.Counter2"))
+                {
+                    counter2Changes++;
+                }
+                if (props.Contains("Model.CounterModel.Counter3"))
+                {
+                    counter3Changes++;
+                }
+                _output.WriteLine($"Properties changed: {string.Join(", ", props)}");
+            });
 
         // Act
         counterModel.Counter1 = 1;

@@ -40,6 +40,17 @@ public class GeneratorTests
         {
             public override string ModelID => "Test.TestModel";
 
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
             public partial int Test
             {
                 get => field;

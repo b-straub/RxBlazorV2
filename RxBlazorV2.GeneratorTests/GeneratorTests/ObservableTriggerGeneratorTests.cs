@@ -49,6 +49,17 @@ public class ObservableTriggerGeneratorTests
         {
             public override string ModelID => "Test.TestModel";
 
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
             public partial string Message
             {
                 get => field;
@@ -119,6 +130,17 @@ public class ObservableTriggerGeneratorTests
         public partial class ErrorModel
         {
             public override string ModelID => "Test.ErrorModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
 
             public partial string Message
             {
@@ -197,6 +219,17 @@ public class ObservableTriggerGeneratorTests
         {
             public override string ModelID => "Test.TestModel";
 
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
             public partial string Input
             {
                 get => field;
@@ -274,6 +307,17 @@ public class ObservableTriggerGeneratorTests
         {
             public override string ModelID => "Test.TestModel";
 
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
             public partial string Data
             {
                 get => field;
@@ -349,6 +393,17 @@ public class ObservableTriggerGeneratorTests
         public partial class TestModel
         {
             public override string ModelID => "Test.TestModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
 
             public partial int Count
             {

@@ -6,7 +6,8 @@ namespace RxBlazorV2.Model;
 public abstract class ObservableModel : IObservableModel
 {
     public abstract string ModelID { get; }
-
+    public abstract bool FilterUsedProperties(params string[] propertyNames);
+    
     private bool _initialized;
     private bool _initializedAsync;
     private bool _suspendNotifications;

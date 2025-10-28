@@ -101,6 +101,17 @@ public class RazorFileDiagnosticsTests
         {
             public override string ModelID => "Test.TestModel";
 
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
             public partial string Name
             {
                 get => field;
@@ -178,6 +189,17 @@ public class RazorFileDiagnosticsTests
         {
             public override string ModelID => "Test.TestModel";
 
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
             public partial string Name
             {
                 get => field;
@@ -254,6 +276,17 @@ public class RazorFileDiagnosticsTests
         public partial class TestModel
         {
             public override string ModelID => "Test.TestModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
 
             public partial string Name
             {
@@ -383,6 +416,17 @@ public class RazorFileDiagnosticsTests
         public partial class TestModel
         {
             public override string ModelID => "Test.TestModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
 
             public partial string Name
             {
@@ -536,6 +580,17 @@ public class RazorFileDiagnosticsTests
         public partial class TestModel
         {
             public override string ModelID => "Test.TestModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
 
             public partial int Count
             {
@@ -705,6 +760,17 @@ public class RazorFileDiagnosticsTests
         {
             public override string ModelID => "Test.TestModel";
 
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
             public partial string Name
             {
                 get => field;
@@ -847,6 +913,17 @@ public class RazorFileDiagnosticsTests
         {
             public override string ModelID => "Test.TestModel";
 
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
             public partial string Name
             {
                 get => field;
@@ -975,6 +1052,17 @@ public class RazorFileDiagnosticsTests
         {
             public override string ModelID => "Test.TestModel";
 
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
             public partial string Name
             {
                 get => field;
@@ -1068,6 +1156,17 @@ public class RazorFileDiagnosticsTests
         public partial class TestModel
         {
             public override string ModelID => "Test.TestModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
 
             public partial string Name
             {
@@ -1249,6 +1348,17 @@ public class RazorFileDiagnosticsTests
         {
             public override string ModelID => "Test.TestModel";
 
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
             public partial string Name
             {
                 get => field;
@@ -1376,6 +1486,17 @@ public class RazorFileDiagnosticsTests
         public partial class TestModel
         {
             public override string ModelID => "Test.TestModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
 
             public partial string Name
             {
@@ -1517,6 +1638,17 @@ public class RazorFileDiagnosticsTests
         public partial class TestModel
         {
             public override string ModelID => "Test.TestModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
 
             public partial string Name
             {
@@ -1694,6 +1826,17 @@ public class RazorFileDiagnosticsTests
         {
             public override string ModelID => "Test.TestModel";
 
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
             public partial string Title
             {
                 get => field;
@@ -1856,6 +1999,17 @@ public class RazorFileDiagnosticsTests
         {
             public override string ModelID => "Test.TestModel";
 
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
             public partial string Data
             {
                 get => field;
@@ -1991,6 +2145,17 @@ public class RazorFileDiagnosticsTests
         public partial class TestModel
         {
             public override string ModelID => "Test.TestModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
 
             public partial string Data
             {
@@ -2135,6 +2300,17 @@ public class RazorFileDiagnosticsTests
         {
             public override string ModelID => "Test.ErrorModel";
 
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
             public partial string Message
             {
                 get => field;
@@ -2267,6 +2443,17 @@ public class RazorFileDiagnosticsTests
         public partial class TestModel
         {
             public override string ModelID => "Test.TestModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
 
             public partial string Name
             {
@@ -2405,6 +2592,17 @@ public class RazorFileDiagnosticsTests
         public partial class TestModel
         {
             public override string ModelID => "Test.TestModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
 
             public partial int Counter
             {

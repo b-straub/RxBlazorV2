@@ -145,4 +145,56 @@ public static class PropertyTemplate
         sb.Append("    }");
         return sb.ToString();
     }
+
+    /// <summary>
+    /// Generates the FilterUsedProperties method implementation for model-to-model filtering.
+    /// This method checks if any of the given property names match properties used from referenced models.
+    /// </summary>
+    /// <param name="modelReferences">Collection of model references.</param>
+    /// <returns>Generated method code.</returns>
+    public static string GenerateFilterUsedPropertiesMethod(IEnumerable<ModelReferenceInfo> modelReferences)
+    {
+        var sb = new StringBuilder();
+        var modelRefsList = modelReferences.ToList();
+
+        sb.AppendLine("    public override bool FilterUsedProperties(params string[] propertyNames)");
+        sb.AppendLine("    {");
+
+        sb.AppendLine("        if (propertyNames.Length == 0)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            return false;");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+
+        // Collect all used properties across all model references
+        var allUsedProps = new List<string>();
+        foreach (var modelRef in modelRefsList)
+        {
+            foreach (var usedProp in modelRef.UsedProperties)
+            {
+                // Transform "IsDay" -> "Model.Settings.IsDay"
+                var qualifiedProp = $"Model.{modelRef.PropertyName}.{usedProp}";
+                allUsedProps.Add(qualifiedProp);
+            }
+        }
+
+        // If no model references or no used properties at all, return true (pass through all - no filtering information)
+        if (modelRefsList.Count == 0 || allUsedProps.Count == 0)
+        {
+            sb.AppendLine("        // No filtering information available - pass through all");
+            sb.AppendLine("        return true;");
+            sb.AppendLine("    }");
+            return sb.ToString();
+        }
+
+        // Generate the array of used properties
+        sb.Append("        var usedProps = new[] { ");
+        sb.Append(string.Join(", ", allUsedProps.Select(p => $"\"{p}\"")));
+        sb.AppendLine(" };");
+        sb.AppendLine();
+        sb.AppendLine("        return propertyNames.Intersect(usedProps).Any();");
+        sb.AppendLine("    }");
+
+        return sb.ToString();
+    }
 }

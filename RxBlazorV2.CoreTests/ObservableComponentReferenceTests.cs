@@ -165,11 +165,14 @@ public class ObservableComponentReferenceTests : BunitContext
         var filter = (string[])filterMethod!.Invoke(cut.Instance, null)!;
 
         var emittedBatches = new List<string[]>();
-        using var subscription = cut.Instance.Model.Observable.Subscribe(props =>
-        {
-            emittedBatches.Add(props);
-            _output.WriteLine($"Batch emitted: [{string.Join(", ", props)}]");
-        });
+        using var subscription = cut.Instance.Model.Observable
+            .Select(props => props.Where(p => cut.Instance.Model.FilterUsedProperties(p)).ToArray())
+            .Where(props => props.Length > 0)
+            .Subscribe(props =>
+            {
+                emittedBatches.Add(props);
+                _output.WriteLine($"Batch emitted: [{string.Join(", ", props)}]");
+            });
 
         // Act - batch change multiple properties
         using (cut.Instance.Model.GetCounterModel().SuspendNotifications())

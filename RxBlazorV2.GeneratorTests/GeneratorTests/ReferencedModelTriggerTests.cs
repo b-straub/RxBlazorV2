@@ -72,6 +72,17 @@ public class ReferencedModelTriggerTests
         {
             public override string ModelID => "Test.SettingsModel";
 
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
             public partial bool IsDay
             {
                 get => field;
@@ -110,6 +121,17 @@ public class ReferencedModelTriggerTests
         {
             public override string ModelID => "Test.WeatherModel";
 
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
             public Test.SettingsModel Settings { get; }
 
 
@@ -120,9 +142,9 @@ public class ReferencedModelTriggerTests
 
                 // Subscribe to referenced model changes
                 // Transform referenced model property names: Model.X -> Model.{RefName}.X
+                // Filtering happens at component level via Filter() method
                 Subscriptions.Add(Settings.Observable
-                    .Select(props => props.Intersect([""]).Select(p => p.Replace("Model.", "Model.Settings.")).ToArray())
-                    .Where(transformed => transformed.Length > 0)
+                    .Select(props => props.Select(p => p.Replace("Model.", "Model.Settings.")).ToArray())
                     .Subscribe(props => StateHasChanged(props)));
             }
         }
@@ -239,6 +261,17 @@ public class ReferencedModelTriggerTests
         {
             public override string ModelID => "Test.SettingsModel";
 
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
             public partial bool IsDay
             {
                 get => field;
@@ -277,6 +310,17 @@ public class ReferencedModelTriggerTests
         {
             public override string ModelID => "Test.WeatherModel";
 
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
             public Test.SettingsModel Settings { get; }
 
 
@@ -287,9 +331,9 @@ public class ReferencedModelTriggerTests
 
                 // Subscribe to referenced model changes
                 // Transform referenced model property names: Model.X -> Model.{RefName}.X
+                // Filtering happens at component level via Filter() method
                 Subscriptions.Add(Settings.Observable
-                    .Select(props => props.Intersect([""]).Select(p => p.Replace("Model.", "Model.Settings.")).ToArray())
-                    .Where(transformed => transformed.Length > 0)
+                    .Select(props => props.Select(p => p.Replace("Model.", "Model.Settings.")).ToArray())
                     .Subscribe(props => StateHasChanged(props)));
             }
         }
@@ -403,6 +447,17 @@ public class ReferencedModelTriggerTests
         {
             public override string ModelID => "Test.SettingsModel";
 
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
             public partial bool IsDay
             {
                 get => field;
@@ -454,6 +509,17 @@ public class ReferencedModelTriggerTests
         {
             public override string ModelID => "Test.WeatherModel";
 
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
             public Test.SettingsModel Settings { get; }
 
 
@@ -464,9 +530,9 @@ public class ReferencedModelTriggerTests
 
                 // Subscribe to referenced model changes
                 // Transform referenced model property names: Model.X -> Model.{RefName}.X
+                // Filtering happens at component level via Filter() method
                 Subscriptions.Add(Settings.Observable
-                    .Select(props => props.Intersect([""]).Select(p => p.Replace("Model.", "Model.Settings.")).ToArray())
-                    .Where(transformed => transformed.Length > 0)
+                    .Select(props => props.Select(p => p.Replace("Model.", "Model.Settings.")).ToArray())
                     .Subscribe(props => StateHasChanged(props)));
             }
         }
@@ -595,6 +661,17 @@ public class ReferencedModelTriggerTests
         {
             public override string ModelID => "Test.SettingsModel";
 
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
             public partial bool IsDay
             {
                 get => field;
@@ -633,6 +710,17 @@ public class ReferencedModelTriggerTests
         {
             public override string ModelID => "Test.WeatherModel";
 
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
             public Test.SettingsModel Settings { get; }
 
             public partial string Temperature
@@ -656,9 +744,9 @@ public class ReferencedModelTriggerTests
 
                 // Subscribe to referenced model changes
                 // Transform referenced model property names: Model.X -> Model.{RefName}.X
+                // Filtering happens at component level via Filter() method
                 Subscriptions.Add(Settings.Observable
-                    .Select(props => props.Intersect([""]).Select(p => p.Replace("Model.", "Model.Settings.")).ToArray())
-                    .Where(transformed => transformed.Length > 0)
+                    .Select(props => props.Select(p => p.Replace("Model.", "Model.Settings.")).ToArray())
                     .Subscribe(props => StateHasChanged(props)));
             }
         }
@@ -763,6 +851,17 @@ public class ReferencedModelTriggerTests
         public partial class TestModel
         {
             public override string ModelID => "Test.TestModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
 
             public partial int Count
             {

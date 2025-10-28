@@ -232,25 +232,22 @@ public static class ConstructorTemplate
     /// <summary>
     /// Generates subscriptions for referenced model changes.
     /// Transforms referenced model's "Model.X" emissions to "Model.{RefName}.X" for this model's context.
+    /// No filtering here - that happens at component level via Filter() method.
     /// </summary>
     private static string GenerateModelReferenceSubscriptions(ObservableModelInfo modelInfo)
     {
         var sb = new StringBuilder();
         sb.AppendLine("        // Subscribe to referenced model changes");
         sb.AppendLine("        // Transform referenced model property names: Model.X -> Model.{RefName}.X");
+        sb.AppendLine("        // Filtering happens at component level via Filter() method");
 
         foreach (var modelRef in modelInfo.ModelReferences)
         {
-            // Filter for properties we care about (e.g., ["Model.IsDay", "Model.AutoRefresh"])
-            var filterProps = modelRef.UsedProperties.Select(p => $"Model.{p}").ToList();
-            var filterArray = $"[\"{string.Join("\", \"", filterProps)}\"]";
-
             // Transform "Model.IsDay" -> "Model.Settings.IsDay"
             var transformedPrefix = $"Model.{modelRef.PropertyName}.";
 
             sb.AppendLine($"        Subscriptions.Add({modelRef.PropertyName}.Observable");
-            sb.AppendLine($"            .Select(props => props.Intersect({filterArray}).Select(p => p.Replace(\"Model.\", \"{transformedPrefix}\")).ToArray())");
-            sb.AppendLine($"            .Where(transformed => transformed.Length > 0)");
+            sb.AppendLine($"            .Select(props => props.Select(p => p.Replace(\"Model.\", \"{transformedPrefix}\")).ToArray())");
             sb.AppendLine("            .Subscribe(props => StateHasChanged(props)));");
         }
 

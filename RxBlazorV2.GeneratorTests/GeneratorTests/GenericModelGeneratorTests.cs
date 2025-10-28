@@ -41,6 +41,17 @@ public class GenericModelGeneratorTests
         {
             public override string ModelID => "Test.GenericModel<T>";
 
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
             public partial T Item
             {
                 get => field;
@@ -96,6 +107,17 @@ public class GenericModelGeneratorTests
         public partial class GenericModel<T, P>
         {
             public override string ModelID => "Test.GenericModel<T, P>";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
 
             public partial T Item1
             {
@@ -167,6 +189,17 @@ public class GenericModelGeneratorTests
         public partial class GenericModel<T>
         {
             public override string ModelID => "Test.GenericModel<T>";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
 
 
             private ObservableCommand<T> _testCommand;

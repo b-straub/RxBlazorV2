@@ -45,6 +45,17 @@ public class ComponentTriggerGeneratorTests
         {
             public override string ModelID => "Test.TestModel";
 
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
             public partial int Counter
             {
                 get => field;
@@ -144,6 +155,17 @@ public class ComponentTriggerGeneratorTests
         public partial class TestModel
         {
             public override string ModelID => "Test.TestModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
 
             public partial int Counter
             {
@@ -245,6 +267,17 @@ public class ComponentTriggerGeneratorTests
         public partial class TestModel
         {
             public override string ModelID => "Test.TestModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
 
             public partial int Counter
             {
@@ -356,6 +389,17 @@ public class ComponentTriggerGeneratorTests
         public partial class TestModel
         {
             public override string ModelID => "Test.TestModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
 
             public partial int Counter
             {
@@ -469,6 +513,17 @@ public class ComponentTriggerGeneratorTests
         public partial class TestModel
         {
             public override string ModelID => "Test.TestModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
 
             public partial int Counter
             {
@@ -593,6 +648,17 @@ public class ComponentTriggerGeneratorTests
         public partial class TestModel
         {
             public override string ModelID => "Test.TestModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
 
             public partial int Counter
             {
@@ -721,6 +787,17 @@ public class ComponentTriggerGeneratorTests
         public partial class TestModel
         {
             public override string ModelID => "Test.TestModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
 
             public partial int Counter
             {
