@@ -260,7 +260,7 @@ public static class GeneratorContextBuilder
 
                 if (modelsByFullName.TryGetValue(modelFullName, out var model) && model.ModelInfo is not null)
                 {
-                    var filterableProperties = BuildFilterablePropertiesForModel(model, modelsByFullName);
+                    var filterableProperties = BuildFilterablePropertiesForModel(model, modelsByFullName, component.ComponentInfo);
 
                     // Update the component with calculated properties
                     components[componentName] = new ComponentMetadata(
@@ -282,7 +282,7 @@ public static class GeneratorContextBuilder
                 // Look up the model directly using the stored type name
                 if (modelsByFullName.TryGetValue(component.ModelTypeName, out var model))
                 {
-                    var filterableProperties = BuildFilterablePropertiesForModel(model, modelsByFullName);
+                    var filterableProperties = BuildFilterablePropertiesForModel(model, modelsByFullName, component.ComponentInfo);
 
                     // Update the component with calculated properties
                     components[componentName] = new ComponentMetadata(
@@ -308,7 +308,8 @@ public static class GeneratorContextBuilder
     /// </summary>
     private static HashSet<string> BuildFilterablePropertiesForModel(
         ModelMetadata model,
-        Dictionary<string, ModelMetadata> modelsByFullName)
+        Dictionary<string, ModelMetadata> modelsByFullName,
+        ComponentInfo? componentInfo = null)
     {
         var properties = new HashSet<string>();
 
@@ -323,6 +324,16 @@ public static class GeneratorContextBuilder
         foreach (var cmdName in model.CommandProperties)
         {
             properties.Add($"Model.{cmdName}");
+        }
+
+        // Add component trigger properties from ComponentInfo if available
+        // This ensures properties with [ObservableComponentTrigger] are included in the filter for re-rendering
+        if (componentInfo is not null)
+        {
+            foreach (var trigger in componentInfo.ComponentTriggers)
+            {
+                properties.Add(trigger.QualifiedPropertyPath);
+            }
         }
 
         // Add referenced model properties
@@ -343,6 +354,23 @@ public static class GeneratorContextBuilder
                 foreach (var cmdName in referencedModel.CommandProperties)
                 {
                     properties.Add($"Model.{modelRef.PropertyName}.{cmdName}");
+                }
+
+                // Add component trigger properties from referenced model if it has triggers
+                // For referenced models, we need to check if that model has ComponentTriggers
+                // These would have been generated when processing that model's @ObservableComponent attribute
+                if (componentInfo is not null && componentInfo.IncludeReferencedTriggers)
+                {
+                    // Find triggers that belong to this referenced model
+                    foreach (var trigger in componentInfo.ComponentTriggers)
+                    {
+                        // Referenced model triggers have ReferencedModelPropertyName set
+                        if (trigger.ReferencedModelPropertyName == modelRef.PropertyName)
+                        {
+                            // Already has full path like "Model.Settings.IsDay"
+                            properties.Add(trigger.QualifiedPropertyPath);
+                        }
+                    }
                 }
             }
         }

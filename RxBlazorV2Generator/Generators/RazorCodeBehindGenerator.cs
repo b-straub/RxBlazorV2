@@ -93,6 +93,17 @@ public static class RazorCodeBehindGenerator
                 }
             }
 
+            // Add ALL component trigger properties to filter for automatic re-rendering
+            // Triggers must always be in the filter even if not explicitly used in razor file
+            // because their hooks need to trigger component re-renders
+            if (component.ComponentInfo is not null)
+            {
+                foreach (var trigger in component.ComponentInfo.ComponentTriggers)
+                {
+                    usedProperties.Add(trigger.QualifiedPropertyPath);
+                }
+            }
+
             // Report diagnostic if component has no reactive properties and no triggers
             if (usedProperties.Count == 0 && !component.HasTriggers)
             {
