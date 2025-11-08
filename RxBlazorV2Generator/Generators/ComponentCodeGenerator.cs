@@ -52,9 +52,14 @@ public static class ComponentCodeGenerator
             sb.AppendLine();
 
             // Generate hook methods for properties with [ObservableComponentTrigger]
-            if (componentInfo.ComponentTriggers.Any())
+            // UNLESS they are RenderOnly (TriggerBehavior == 1)
+            var triggersWithHooks = componentInfo.ComponentTriggers
+                .Where(t => t.TriggerBehavior != 1) // 1 = RenderOnly (no hooks)
+                .ToList();
+
+            if (triggersWithHooks.Any())
             {
-                GenerateHookMethods(sb, componentInfo.ComponentTriggers);
+                GenerateHookMethods(sb, triggersWithHooks);
             }
 
             sb.AppendLine("}");
@@ -101,8 +106,15 @@ public static class ComponentCodeGenerator
         sb.AppendLine("        // else: Empty filter - no automatic StateHasChanged, only triggers (if any) will fire");
 
         // Generate subscriptions for component triggers with chunking
+        // UNLESS they are RenderOnly (TriggerBehavior == 1)
         foreach (var trigger in componentInfo.ComponentTriggers)
         {
+            // Skip RenderOnly triggers (1 = RenderOnly, no hook subscriptions)
+            if (trigger.TriggerBehavior == 1)
+            {
+                continue;
+            }
+
             sb.AppendLine();
 
             // Determine which Observable to subscribe to and the filter property name:

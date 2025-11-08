@@ -624,8 +624,8 @@ public class ComponentTriggerGeneratorTests
             [ObservableComponent(true, "TestModelComponent")]
             public partial class TestModel : ObservableModel
             {
-                [ObservableComponentTrigger("HandleCounterUpdate")]
-                [ObservableComponentTriggerAsync("HandleCounterUpdateAsync")]
+                [ObservableComponentTrigger(hookMethodName: "HandleCounterUpdate")]
+                [ObservableComponentTriggerAsync(hookMethodName: "HandleCounterUpdateAsync")]
                 public partial int Counter { get; set; }
             }
         }

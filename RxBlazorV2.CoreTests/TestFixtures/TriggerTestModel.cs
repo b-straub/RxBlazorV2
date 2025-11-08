@@ -14,7 +14,7 @@ public partial class TriggerTestModel : ObservableModel
     [ObservableComponentTriggerAsync]
     public partial int AsyncTriggerProperty { get; set; }
 
-    [ObservableComponentTrigger("OnCustomTriggered")]
+    [ObservableComponentTrigger(hookMethodName: "OnCustomTriggered")]
     public partial int CustomNamedTriggerProperty { get; set; }
 
     public partial string RegularProperty { get; set; } = "Regular";

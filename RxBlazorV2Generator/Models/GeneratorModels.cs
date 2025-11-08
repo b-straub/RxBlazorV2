@@ -419,16 +419,19 @@ public class ComponentTriggerInfo : IEquatable<ComponentTriggerInfo>
     public string HookMethodName { get; }
     public string? ReferencedModelPropertyName { get; }
     public string QualifiedPropertyPath { get; }
+    public int TriggerBehavior { get; } // 0=RenderAndHook, 1=RenderOnly, 2=HookOnly
 
     public ComponentTriggerInfo(
         string propertyName,
         TriggerHookType hookType,
         string? hookMethodName = null,
-        string? referencedModelPropertyName = null)
+        string? referencedModelPropertyName = null,
+        int triggerBehavior = 0) // Default to RenderAndHook
     {
         PropertyName = propertyName;
         HookType = hookType;
         ReferencedModelPropertyName = referencedModelPropertyName;
+        TriggerBehavior = triggerBehavior;
 
         // For referenced model triggers, construct qualified path like "Model.Settings.IsDay"
         QualifiedPropertyPath = referencedModelPropertyName is not null
@@ -459,7 +462,8 @@ public class ComponentTriggerInfo : IEquatable<ComponentTriggerInfo>
                HookType == other.HookType &&
                HookMethodName == other.HookMethodName &&
                ReferencedModelPropertyName == other.ReferencedModelPropertyName &&
-               QualifiedPropertyPath == other.QualifiedPropertyPath;
+               QualifiedPropertyPath == other.QualifiedPropertyPath &&
+               TriggerBehavior == other.TriggerBehavior;
     }
 
     public override bool Equals(object? obj)
@@ -469,6 +473,6 @@ public class ComponentTriggerInfo : IEquatable<ComponentTriggerInfo>
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(PropertyName, HookType, HookMethodName, ReferencedModelPropertyName, QualifiedPropertyPath);
+        return HashCode.Combine(PropertyName, HookType, HookMethodName, ReferencedModelPropertyName, QualifiedPropertyPath, TriggerBehavior);
     }
 }

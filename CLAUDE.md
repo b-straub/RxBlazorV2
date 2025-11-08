@@ -108,7 +108,7 @@ public partial class SettingsModel : ObservableModel
     public partial string Theme { get; set; }
 
     // Custom hook names
-    [ObservableComponentTrigger("HandleDayNightSwitch")]
+    [ObservableComponentTrigger(hookMethodName: "HandleDayNightSwitch")]
     public partial bool IsDayCustom { get; set; }
 }
 ```

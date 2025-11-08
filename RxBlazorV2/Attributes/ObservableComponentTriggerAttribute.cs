@@ -11,10 +11,19 @@ namespace RxBlazorV2.Model;
 /// When applied to properties in models that are referenced by other models (via partial constructor),
 /// the hook methods are automatically propagated to the referencing model's component.
 /// </summary>
+/// <param name="type">
+/// Specifies the trigger behavior. Defaults to <see cref="ComponentTriggerType.RenderAndHook"/>.
+/// <list type="bullet">
+/// <item><see cref="ComponentTriggerType.RenderAndHook"/> - Calls hook AND re-renders component (default)</item>
+/// <item><see cref="ComponentTriggerType.HookOnly"/> - Calls hook but does NOT re-render component</item>
+/// <item><see cref="ComponentTriggerType.RenderOnly"/> - Re-renders component but does NOT generate/call hook</item>
+/// </list>
+/// </param>
 /// <param name="hookMethodName">
 /// Optional. The name of the hook method to generate.
 /// If not specified, defaults to On{PropertyName}Changed.
 /// Use <see langword="nameof"/> for compile-time safety when specifying.
+/// Only applicable when type is <see cref="ComponentTriggerType.RenderAndHook"/> or <see cref="ComponentTriggerType.HookOnly"/>.
 /// </param>
 /// <remarks>
 /// <para><b>Usage:</b> Apply to partial properties in models decorated with [ObservableComponent].</para>
@@ -94,7 +103,7 @@ namespace RxBlazorV2.Model;
 #pragma warning disable CS9113
 [ExcludeFromCodeCoverage]
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = true)]
-public class ObservableComponentTriggerAttribute(string? hookMethodName = null)
+public class ObservableComponentTriggerAttribute(ComponentTriggerType type = ComponentTriggerType.RenderAndHook, string? hookMethodName = null)
     : Attribute
 {
 }

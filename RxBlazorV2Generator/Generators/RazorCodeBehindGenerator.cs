@@ -93,14 +93,18 @@ public static class RazorCodeBehindGenerator
                 }
             }
 
-            // Add ALL component trigger properties to filter for automatic re-rendering
-            // Triggers must always be in the filter even if not explicitly used in razor file
-            // because their hooks need to trigger component re-renders
+            // Add component trigger properties to filter for automatic re-rendering
+            // UNLESS they are HookOnly (TriggerBehavior == 2)
+            // HookOnly triggers execute hooks but don't trigger component re-renders
             if (component.ComponentInfo is not null)
             {
                 foreach (var trigger in component.ComponentInfo.ComponentTriggers)
                 {
-                    usedProperties.Add(trigger.QualifiedPropertyPath);
+                    // Only add to filter if NOT HookOnly (2 = HookOnly)
+                    if (trigger.TriggerBehavior != 2)
+                    {
+                        usedProperties.Add(trigger.QualifiedPropertyPath);
+                    }
                 }
             }
 

@@ -366,7 +366,7 @@ public class RazorFileDiagnosticsTests
                 "Weather",
                 "TestModelComponent",
                 "Pages",
-                new[] { "Model.Name" }, new[] { "Test" })
+                ["Model.Name"], ["Test"])
         };
 
         await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
@@ -523,12 +523,12 @@ public class RazorFileDiagnosticsTests
                 "Counter",
                 "TestModelComponent",
                 "Pages",
-                new[] { "Model.Name" }, new[] { "Test" }),
+                ["Model.Name"], ["Test"]),
             ["Weather.g.cs"] = GenerateFilterCodeBehind(
                 "Weather",
                 "TestModelComponent",
                 "Pages",
-                new[] { "Model.Name" }, new[] { "Test" })
+                ["Model.Name"], ["Test"])
         };
 
         await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
@@ -697,17 +697,17 @@ public class RazorFileDiagnosticsTests
                 "Page1",
                 "TestModelComponent",
                 "Pages",
-                new[] { "Model.Count" }, new[] { "Test" }),
+                ["Model.Count"], ["Test"]),
             ["Page2.g.cs"] = GenerateFilterCodeBehind(
                 "Page2",
                 "TestModelComponent",
                 "Pages",
-                new[] { "Model.Count" }, new[] { "Test" }),
+                ["Model.Count"], ["Test"]),
             ["Page3.g.cs"] = GenerateFilterCodeBehind(
                 "Page3",
                 "TestModelComponent",
                 "Pages",
-                new[] { "Model.Count" }, new[] { "Test" })
+                ["Model.Count"], ["Test"])
         };
 
         await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
@@ -856,12 +856,12 @@ public class RazorFileDiagnosticsTests
                 "Counter",
                 "TestModelComponent",
                 "Pages",
-                new[] { "Model.Name" }, new[] { "Test" }),
+                ["Model.Name"], ["Test"]),
             ["Weather.g.cs"] = GenerateFilterCodeBehind(
                 "Weather",
                 "TestModelComponent",
                 "Pages",
-                new[] { "Model.Name" }, new[] { "Test" })
+                ["Model.Name"], ["Test"])
         };
 
         await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
@@ -1002,7 +1002,7 @@ public class RazorFileDiagnosticsTests
                 "Weather",
                 "TestModelComponent",
                 "Pages",
-                new[] { "Model.Name" }, new[] { "Test" })
+                ["Model.Name"], ["Test"])
         };
 
         await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
@@ -1291,12 +1291,12 @@ public class RazorFileDiagnosticsTests
                 "Counter",
                 "TestModelComponent",
                 "Pages",
-                new[] { "Model.Name" }, new[] { "Test" }),
+                ["Model.Name"], ["Test"]),
             ["Weather.g.cs"] = GenerateFilterCodeBehind(
                 "Weather",
                 "TestModelComponent",
                 "Pages",
-                new[] { "Model.Name" }, new[] { "Test" })
+                ["Model.Name"], ["Test"])
         };
 
         await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
@@ -1437,7 +1437,7 @@ public class RazorFileDiagnosticsTests
                 "Weather",
                 "TestModelComponent",
                 "Pages",
-                new[] { "Model.Name" }, new[] { "Test" })
+                ["Model.Name"], ["Test"])
         };
 
         await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
@@ -1587,7 +1587,7 @@ public class RazorFileDiagnosticsTests
                 "Widget",
                 "TestModelComponent",
                 "Components",
-                new[] { "Model.Name" }, new[] { "Test" })
+                ["Model.Name"], ["Test"])
         };
 
         await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
@@ -1763,17 +1763,17 @@ public class RazorFileDiagnosticsTests
                 "Footer",
                 "TestModelComponent",
                 "Components",
-                new[] { "Model.Name" }, new[] { "Test" }),
+                ["Model.Name"], ["Test"]),
             ["Header.g.cs"] = GenerateFilterCodeBehind(
                 "Header",
                 "TestModelComponent",
                 "Components",
-                new[] { "Model.Name" }, new[] { "Test" }),
+                ["Model.Name"], ["Test"]),
             ["Widget.g.cs"] = GenerateFilterCodeBehind(
                 "Widget",
                 "TestModelComponent",
                 "Components",
-                new[] { "Model.Name" }, new[] { "Test" })
+                ["Model.Name"], ["Test"])
         };
 
         await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
@@ -1937,17 +1937,17 @@ public class RazorFileDiagnosticsTests
                 "Dashboard",
                 "TestModelComponent",
                 "Pages",
-                new[] { "Model.Title" }, new[] { "Test" }),
+                ["Model.Title"], ["Test"]),
             ["Settings.g.cs"] = GenerateFilterCodeBehind(
                 "Settings",
                 "TestModelComponent",
                 "Pages",
-                new[] { "Model.Title" }, new[] { "Test" }),
+                ["Model.Title"], ["Test"]),
             ["Sidebar.g.cs"] = GenerateFilterCodeBehind(
                 "Sidebar",
                 "TestModelComponent",
                 "Components",
-                new[] { "Model.Title" }, new[] { "Test" })
+                ["Model.Title"], ["Test"])
         };
 
         await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
@@ -2095,7 +2095,7 @@ public class RazorFileDiagnosticsTests
                 "Composed",
                 "Test.TestModelComponent",  // Fully-qualified as used in razor file
                 "Components",
-                new[] { "Model.Data" }, new[] { "Test" })
+                ["Model.Data"], ["Test"])
         };
 
         await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
@@ -2245,7 +2245,7 @@ public class RazorFileDiagnosticsTests
                 "MyWidget",
                 "CustomComponent",
                 "Components",
-                new[] { "Model.Data" }, new[] { "Test" })
+                ["Model.Data"], ["Test"])
         };
 
         await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
@@ -2392,7 +2392,7 @@ public class RazorFileDiagnosticsTests
                 "ErrorDisplay",
                 "ErrorModelComponent",
                 "Components",
-                new[] { "Model.Message" }, new[] { "Test" })
+                ["Model.Message"], ["Test"])
         };
 
         await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
@@ -2556,7 +2556,7 @@ public class RazorFileDiagnosticsTests
     }
 
     [Fact]
-    public async Task ComponentWithOnlyTriggers_NoRXBG062Error()
+    public async Task ComponentWithOnlyTriggers_RenderAndHook()
     {
         // lang=csharp
         const string source = """
@@ -2691,8 +2691,300 @@ public class RazorFileDiagnosticsTests
                 "TriggerOnlyComponent",
                 "TestModelComponent",
                 "Pages",
-                Array.Empty<string>(), // Empty filter - no properties observed
-                new[] { "Test" }) // Component namespace using directive
+                ["Model.Counter"], // Filter from ObservableComponentTrigger attribute default behavior
+                ["Test"]) // Component namespace using directive
+        };
+
+        // No diagnostic expected - component has triggers
+        await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
+            source,
+            razorFiles,
+            generatedModel,
+            generatedComponent,
+            "TestModel",
+            "TestModelComponent",
+            additionalGeneratedSources: additionalGeneratedSources);
+    }
+    
+    [Fact]
+    public async Task ComponentWithOnlyTriggers_Render()
+    {
+        // lang=csharp
+        const string source = """
+
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+
+        namespace Test
+        {
+            [ObservableComponent]
+            public partial class TestModel : ObservableModel
+            {
+                [ObservableComponentTrigger(ComponentTriggerType.RenderOnly)]
+                public partial int Counter { get; set; }
+            }
+        }
+        """;
+
+        // lang=csharp
+        const string generatedModel = """
+
+        #nullable enable
+        using JetBrains.Annotations;
+        using Microsoft.Extensions.DependencyInjection;
+        using ObservableCollections;
+        using R3;
+        using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using System;
+
+        namespace Test;
+
+        public partial class TestModel
+        {
+            public override string ModelID => "Test.TestModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
+            public partial int Counter
+            {
+                get => field;
+                [UsedImplicitly]
+                set
+                {
+                    if (field != value)
+                    {
+                        field = value;
+                        StateHasChanged("Model.Counter");
+                    }
+                }
+            }
+
+        }
+
+        """;
+
+        // lang=csharp
+        const string generatedComponent = """
+
+        using R3;
+        using ObservableCollections;
+        using System;
+        using System.Threading.Tasks;
+        using Microsoft.Extensions.DependencyInjection;
+        using RxBlazorV2.Component;
+
+        namespace Test;
+
+        public partial class TestModelComponent : ObservableComponent<TestModel>
+        {
+            protected override void InitializeGeneratedCode()
+            {
+                // Subscribe to model changes - respects Filter() method
+                var filter = Filter();
+                if (filter.Length > 0)
+                {
+                    // Filter active - observe only filtered properties
+                    Subscriptions.Add(Model.Observable
+                        .Where(changedProps => changedProps.Intersect(filter).Any())
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
+                // else: Empty filter - no automatic StateHasChanged, only triggers (if any) will fire
+            }
+
+            protected override Task InitializeGeneratedCodeAsync()
+            {
+                return Task.CompletedTask;
+            }
+
+        }
+
+        """;
+
+        // Razor file with component that only uses triggers, no direct property usage
+        var razorFiles = new Dictionary<string, string>
+        {
+            ["Pages/TriggerOnlyComponent.razor"] = """
+            @inherits TestModelComponent
+
+            <h3>Trigger Only Component</h3>
+            <p>This component uses triggers but doesn't directly reference model properties</p>
+            """
+        };
+
+        // Generate expected code-behind with empty filter (no properties used)
+        var additionalGeneratedSources = new Dictionary<string, string>
+        {
+            ["TriggerOnlyComponent.g.cs"] = GenerateFilterCodeBehind(
+                "TriggerOnlyComponent",
+                "TestModelComponent",
+                "Pages",
+                ["Model.Counter"], // Filter from ObservableComponentTrigger attribute default behavior
+                ["Test"]) // Component namespace using directive
+        };
+
+        // No diagnostic expected - component has triggers
+        await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
+            source,
+            razorFiles,
+            generatedModel,
+            generatedComponent,
+            "TestModel",
+            "TestModelComponent",
+            additionalGeneratedSources: additionalGeneratedSources);
+    }
+    
+    [Fact]
+    public async Task ComponentWithOnlyTriggers_Hook()
+    {
+        // lang=csharp
+        const string source = """
+
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+
+        namespace Test
+        {
+            [ObservableComponent]
+            public partial class TestModel : ObservableModel
+            {
+                [ObservableComponentTrigger(ComponentTriggerType.HookOnly)]
+                public partial int Counter { get; set; }
+            }
+        }
+        """;
+
+        // lang=csharp
+        const string generatedModel = """
+
+        #nullable enable
+        using JetBrains.Annotations;
+        using Microsoft.Extensions.DependencyInjection;
+        using ObservableCollections;
+        using R3;
+        using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using System;
+
+        namespace Test;
+
+        public partial class TestModel
+        {
+            public override string ModelID => "Test.TestModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
+            public partial int Counter
+            {
+                get => field;
+                [UsedImplicitly]
+                set
+                {
+                    if (field != value)
+                    {
+                        field = value;
+                        StateHasChanged("Model.Counter");
+                    }
+                }
+            }
+
+        }
+
+        """;
+
+        // lang=csharp
+        const string generatedComponent = """
+
+        using R3;
+        using ObservableCollections;
+        using System;
+        using System.Threading.Tasks;
+        using Microsoft.Extensions.DependencyInjection;
+        using RxBlazorV2.Component;
+
+        namespace Test;
+
+        public partial class TestModelComponent : ObservableComponent<TestModel>
+        {
+            protected override void InitializeGeneratedCode()
+            {
+                // Subscribe to model changes - respects Filter() method
+                var filter = Filter();
+                if (filter.Length > 0)
+                {
+                    // Filter active - observe only filtered properties
+                    Subscriptions.Add(Model.Observable
+                        .Where(changedProps => changedProps.Intersect(filter).Any())
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
+                // else: Empty filter - no automatic StateHasChanged, only triggers (if any) will fire
+
+                Subscriptions.Add(Model.Observable.Where(p => p.Intersect(["Model.Counter"]).Any())
+                    .Chunk(TimeSpan.FromMilliseconds(100))
+                    .Subscribe(chunks =>
+                    {
+                        OnCounterChanged();
+                    }));
+            }
+
+            protected override Task InitializeGeneratedCodeAsync()
+            {
+                return Task.CompletedTask;
+            }
+
+            protected virtual void OnCounterChanged()
+            {
+            }
+        }
+
+        """;
+
+        // Razor file with component that only uses triggers, no direct property usage
+        var razorFiles = new Dictionary<string, string>
+        {
+            ["Pages/TriggerOnlyComponent.razor"] = """
+            @inherits TestModelComponent
+
+            <h3>Trigger Only Component</h3>
+            <p>This component uses triggers but doesn't directly reference model properties</p>
+            """
+        };
+
+        // Generate expected code-behind with empty filter (no properties used)
+        var additionalGeneratedSources = new Dictionary<string, string>
+        {
+            ["TriggerOnlyComponent.g.cs"] = GenerateFilterCodeBehind(
+                "TriggerOnlyComponent",
+                "TestModelComponent",
+                "Pages",
+                [], // Filter from ObservableComponentTrigger attribute default behavior
+                ["Test"]) // Component namespace using directive
         };
 
         // No diagnostic expected - component has triggers

@@ -200,7 +200,7 @@ public class UnusedComponentTriggerDiagnosticTests
             [ObservableModelScope(ModelScope.Singleton)]
             public partial class TestModel : ObservableModel
             {
-                [{|#0:ObservableComponentTrigger("CustomHookName")|}]
+                [{|#0:ObservableComponentTrigger(hookMethodName: "CustomHookName")|}]
                 public partial string Name { get; set; }
             }
         }

@@ -1,3 +1,4 @@
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Diagnostics;
@@ -242,8 +243,8 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
     public string? CustomComponentName { get; private set; }
     public string GenericTypes { get; private set; } = string.Empty;
     public string TypeConstraints { get; private set; } = string.Empty;
-    // Property names with component triggers (propertyName -> (hasSync, syncHookName, hasAsync, asyncHookName))
-    public Dictionary<string, (bool hasSync, string? syncHookName, bool hasAsync, string? asyncHookName, Location location)> ComponentTriggerProperties { get; private set; } = [];
+    // Property names with component triggers (propertyName -> (hasSync, syncHookName, syncBehavior, hasAsync, asyncHookName, asyncBehavior, location))
+    public Dictionary<string, (bool hasSync, string? syncHookName, int syncBehavior, bool hasAsync, string? asyncHookName, int asyncBehavior, Location location)> ComponentTriggerProperties { get; private set; } = [];
 
     // Component information for component generation
     // Set later in pipeline when all records are available for referenced model lookup
@@ -375,16 +376,18 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
             }
         }
 
-        // Extract component trigger properties with custom hook names and locations
-        var componentTriggers = new Dictionary<string, (bool hasSync, string? syncHookName, bool hasAsync, string? asyncHookName, Location location)>();
+        // Extract component trigger properties with custom hook names, trigger behaviors, and locations
+        var componentTriggers = new Dictionary<string, (bool hasSync, string? syncHookName, int syncBehavior, bool hasAsync, string? asyncHookName, int asyncBehavior, Location location)>();
         foreach (var member in namedTypeSymbol.GetMembers())
         {
             if (member is IPropertySymbol propertySymbol)
             {
                 var hasSyncTrigger = false;
                 string? syncHookName = null;
+                var syncTriggerBehavior = 0; // Default: RenderAndHook
                 var hasAsyncTrigger = false;
                 string? asyncHookName = null;
+                var asyncTriggerBehavior = 0; // Default: RenderAndHook
                 Location? attributeLocation = null;
 
                 foreach (var attr in propertySymbol.GetAttributes())
@@ -392,9 +395,15 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                     if (attr.AttributeClass?.Name == "ObservableComponentTriggerAttribute")
                     {
                         hasSyncTrigger = true;
-                        // Extract custom hook name from first constructor argument
+                        // Extract ComponentTriggerType enum from first constructor argument
                         if (attr.ConstructorArguments.Length > 0 &&
-                            attr.ConstructorArguments[0].Value is string customName &&
+                            attr.ConstructorArguments[0].Value is int enumValue)
+                        {
+                            syncTriggerBehavior = enumValue;
+                        }
+                        // Extract custom hook name from second constructor argument
+                        if (attr.ConstructorArguments.Length > 1 &&
+                            attr.ConstructorArguments[1].Value is string customName &&
                             !string.IsNullOrWhiteSpace(customName))
                         {
                             syncHookName = customName;
@@ -405,9 +414,15 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                     else if (attr.AttributeClass?.Name == "ObservableComponentTriggerAsyncAttribute")
                     {
                         hasAsyncTrigger = true;
-                        // Extract custom hook name from first constructor argument
+                        // Extract ComponentTriggerType enum from first constructor argument
                         if (attr.ConstructorArguments.Length > 0 &&
-                            attr.ConstructorArguments[0].Value is string customNameAsync &&
+                            attr.ConstructorArguments[0].Value is int enumValue)
+                        {
+                            asyncTriggerBehavior = enumValue;
+                        }
+                        // Extract custom hook name from second constructor argument
+                        if (attr.ConstructorArguments.Length > 1 &&
+                            attr.ConstructorArguments[1].Value is string customNameAsync &&
                             !string.IsNullOrWhiteSpace(customNameAsync))
                         {
                             asyncHookName = customNameAsync;
@@ -424,7 +439,7 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                         ?? propertySymbol.Locations.FirstOrDefault()
                         ?? Location.None;
 
-                    componentTriggers[propertySymbol.Name] = (hasSyncTrigger, syncHookName, hasAsyncTrigger, asyncHookName, location);
+                    componentTriggers[propertySymbol.Name] = (hasSyncTrigger, syncHookName, syncTriggerBehavior, hasAsyncTrigger, asyncHookName, asyncTriggerBehavior, location);
                 }
             }
         }
@@ -460,7 +475,7 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
             foreach (var kvp in currentRecord.ComponentTriggerProperties)
             {
                 var propertyName = kvp.Key;
-                var (hasSync, syncHookName, hasAsync, asyncHookName, _) = kvp.Value;
+                var (hasSync, syncHookName, syncBehavior, hasAsync, asyncHookName, asyncBehavior, _) = kvp.Value;
 
                 // Use custom hook names if provided, otherwise ComponentTriggerInfo will use defaults
                 if (hasSync)
@@ -468,7 +483,9 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                     componentTriggers.Add(new ComponentTriggerInfo(
                         propertyName,
                         TriggerHookType.Sync,
-                        syncHookName)); // Custom or null for default: On{PropertyName}Changed
+                        syncHookName,
+                        referencedModelPropertyName: null,
+                        triggerBehavior: syncBehavior));
                 }
 
                 if (hasAsync)
@@ -476,7 +493,9 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                     componentTriggers.Add(new ComponentTriggerInfo(
                         propertyName,
                         TriggerHookType.Async,
-                        asyncHookName)); // Custom or null for default: On{PropertyName}ChangedAsync
+                        asyncHookName,
+                        referencedModelPropertyName: null,
+                        triggerBehavior: asyncBehavior));
                 }
             }
 
@@ -491,7 +510,7 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                     // ReferencedModelTypeName already contains the fully qualified name
                     var refFullTypeName = modelRef.ReferencedModelTypeName;
 
-                    Dictionary<string, (bool hasSync, string? syncHookName, bool hasAsync, string? asyncHookName, Location location)> triggerProperties;
+                    Dictionary<string, (bool hasSync, string? syncHookName, int syncBehavior, bool hasAsync, string? asyncHookName, int asyncBehavior, Location location)> triggerProperties;
 
                     if (allRecords.TryGetValue(refFullTypeName, out var referencedRecord))
                     {
@@ -504,24 +523,32 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                         var referencedTypeSymbol = modelRef.TypeSymbol;
 
                         // Extract trigger properties from the type symbol
-                        triggerProperties = new Dictionary<string, (bool hasSync, string? syncHookName, bool hasAsync, string? asyncHookName, Location location)>();
+                        triggerProperties = new Dictionary<string, (bool hasSync, string? syncHookName, int syncBehavior, bool hasAsync, string? asyncHookName, int asyncBehavior, Location location)>();
                         foreach (var member in referencedTypeSymbol.GetMembers())
                         {
                             if (member is IPropertySymbol propertySymbol)
                             {
                                 bool hasSyncTrigger = false;
                                 string? syncHookName = null;
+                                int syncTriggerBehavior = 0;
                                 bool hasAsyncTrigger = false;
                                 string? asyncHookName = null;
+                                int asyncTriggerBehavior = 0;
 
                                 foreach (var attr in propertySymbol.GetAttributes())
                                 {
                                     if (attr.AttributeClass?.Name == "ObservableComponentTriggerAttribute")
                                     {
                                         hasSyncTrigger = true;
-                                        // Extract custom hook name from first constructor argument
+                                        // Extract ComponentTriggerType enum from first constructor argument
                                         if (attr.ConstructorArguments.Length > 0 &&
-                                            attr.ConstructorArguments[0].Value is string customName &&
+                                            attr.ConstructorArguments[0].Value is int enumValue)
+                                        {
+                                            syncTriggerBehavior = enumValue;
+                                        }
+                                        // Extract custom hook name from second constructor argument
+                                        if (attr.ConstructorArguments.Length > 1 &&
+                                            attr.ConstructorArguments[1].Value is string customName &&
                                             !string.IsNullOrWhiteSpace(customName))
                                         {
                                             syncHookName = customName;
@@ -530,9 +557,15 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                                     else if (attr.AttributeClass?.Name == "ObservableComponentTriggerAsyncAttribute")
                                     {
                                         hasAsyncTrigger = true;
-                                        // Extract custom hook name from first constructor argument
+                                        // Extract ComponentTriggerType enum from first constructor argument
                                         if (attr.ConstructorArguments.Length > 0 &&
-                                            attr.ConstructorArguments[0].Value is string customNameAsync &&
+                                            attr.ConstructorArguments[0].Value is int enumValue)
+                                        {
+                                            asyncTriggerBehavior = enumValue;
+                                        }
+                                        // Extract custom hook name from second constructor argument
+                                        if (attr.ConstructorArguments.Length > 1 &&
+                                            attr.ConstructorArguments[1].Value is string customNameAsync &&
                                             !string.IsNullOrWhiteSpace(customNameAsync))
                                         {
                                             asyncHookName = customNameAsync;
@@ -543,7 +576,7 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                                 if (hasSyncTrigger || hasAsyncTrigger)
                                 {
                                     // Cross-assembly properties don't have source location
-                                    triggerProperties[propertySymbol.Name] = (hasSyncTrigger, syncHookName, hasAsyncTrigger, asyncHookName, Location.None);
+                                    triggerProperties[propertySymbol.Name] = (hasSyncTrigger, syncHookName, syncTriggerBehavior, hasAsyncTrigger, asyncHookName, asyncTriggerBehavior, Location.None);
                                 }
                             }
                         }
@@ -558,7 +591,7 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                     foreach (var kvp in triggerProperties)
                     {
                         var propertyName = kvp.Key;
-                        var (hasSync, syncHookName, hasAsync, asyncHookName, _) = kvp.Value;
+                        var (hasSync, syncHookName, syncBehavior, hasAsync, asyncHookName, asyncBehavior, _) = kvp.Value;
 
                         // Build hook method name: On{ReferencedProperty}{PropertyName}Changed[Async]
                         // Example: OnSettingsIsDayChanged
@@ -572,7 +605,8 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                                 propertyName,
                                 TriggerHookType.Sync,
                                 hookName,
-                                modelRef.PropertyName));
+                                modelRef.PropertyName,
+                                triggerBehavior: syncBehavior));
                         }
 
                         if (hasAsync)
@@ -582,7 +616,8 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                                 propertyName,
                                 TriggerHookType.Async,
                                 hookName,
-                                modelRef.PropertyName));
+                                modelRef.PropertyName,
+                                triggerBehavior: asyncBehavior));
                         }
                     }
                 }
@@ -632,7 +667,7 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
     }
 
     private bool ComponentTriggerPropertiesEqual(
-        Dictionary<string, (bool hasSync, string? syncHookName, bool hasAsync, string? asyncHookName, Location location)> other)
+        Dictionary<string, (bool hasSync, string? syncHookName, int syncBehavior, bool hasAsync, string? asyncHookName, int asyncBehavior, Location location)> other)
     {
         if (ComponentTriggerProperties.Count != other.Count)
         {
