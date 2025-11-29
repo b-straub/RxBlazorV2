@@ -21,6 +21,9 @@ jobs:
       with:
         dotnet-version: '10.0.x'
 
+    - name: Create local NuGet folder
+      run: mkdir -p .nuget
+
     - name: Extract version from tag
       id: get_version
       run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
@@ -32,7 +35,7 @@ jobs:
       run: dotnet build RxBlazorV2/RxBlazorV2.csproj --configuration Release --no-restore
 
     - name: Pack RxBlazorV2 with version
-      run: dotnet pack RxBlazorV2/RxBlazorV2.csproj --configuration Release --no-build --output ./nupkg /p:PackageVersion=${{ steps.get_version.outputs.VERSION }}
+      run: dotnet pack RxBlazorV2/RxBlazorV2.csproj --configuration Release --no-build /p:PackageVersion=${{ steps.get_version.outputs.VERSION }}
 
     - name: Restore all dependencies
       run: dotnet restore RxBlazorV2.slnx
@@ -47,12 +50,12 @@ jobs:
       run: dotnet test RxBlazorV2.CoreTests/RxBlazorV2.CoreTests.csproj --configuration Release --no-build --verbosity normal
 
     - name: Publish to NuGet
-      run: dotnet nuget push ./nupkg/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+      run: dotnet nuget push ./.nuget/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
-        files: ./nupkg/*.nupkg
+        files: ./.nuget/*.nupkg
         generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -20,6 +20,9 @@ jobs:
       with:
         dotnet-version: '10.0.x'
 
+    - name: Create local NuGet folder
+      run: mkdir -p .nuget
+
     - name: Restore RxBlazorV2 dependencies
       run: dotnet restore RxBlazorV2/RxBlazorV2.csproj
 
@@ -27,7 +30,7 @@ jobs:
       run: dotnet build RxBlazorV2/RxBlazorV2.csproj --configuration Release --no-restore
 
     - name: Pack RxBlazorV2
-      run: dotnet pack RxBlazorV2/RxBlazorV2.csproj --configuration Release --no-build --output ./nupkg
+      run: dotnet pack RxBlazorV2/RxBlazorV2.csproj --configuration Release --no-build
 
     - name: Set base path for GitHub Pages
       run: |
