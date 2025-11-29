@@ -10,14 +10,14 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="bunit" Version="2.0.57-preview" />
-        <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="9.10.0" />
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.0" />
-        <PackageReference Include="xunit.analyzers" Version="1.24.0">
+        <PackageReference Include="bunit" Version="2.1.1" />
+        <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.0.0" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+        <PackageReference Include="xunit.analyzers" Version="1.26.0">
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
           <PrivateAssets>all</PrivateAssets>
         </PackageReference>
-        <PackageReference Include="Xunit.DependencyInjection" Version="11.0.0" />
+        <PackageReference Include="Xunit.DependencyInjection" Version="11.1.0" />
         <PackageReference Include="coverlet.msbuild" Version="6.0.4">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -26,8 +26,8 @@
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
           <PrivateAssets>all</PrivateAssets>
         </PackageReference>
-        <PackageReference Include="xunit.v3" Version="3.1.0" />
-        <PackageReference Include="xunit.v3.assert" Version="3.1.0" />
+        <PackageReference Include="xunit.v3" Version="3.2.1" />
+        <PackageReference Include="xunit.v3.assert" Version="3.2.1" />
     </ItemGroup>
 
     <ItemGroup>

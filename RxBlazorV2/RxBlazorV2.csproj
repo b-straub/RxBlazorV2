@@ -4,13 +4,64 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!-- NuGet Package Configuration -->
+    <PackageId>RxBlazorV2</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>bernisoft</Authors>
+    <Company>bernisoft</Company>
+    <Product>RxBlazorV2</Product>
+    <Description>Reactive programming framework for Blazor applications built on R3. Uses Roslyn source generation to automatically create observable models with command bindings, dependency injection support, and component triggers. Includes code fixes for quick refactoring.</Description>
+    <PackageTags>blazor;reactive;r3;source-generator;observables;roslyn;mvvm;commands;dependency-injection</PackageTags>
+    <Copyright>Copyright (c) 2025 bernisoft</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/b-straub/RxBlazorV2</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/b-straub/RxBlazorV2</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageReleaseNotes>
+      v1.0.0 - Initial Release
+      - ObservableModel base class with R3 reactive state management
+      - Roslyn incremental source generator for partial properties and commands
+      - Automatic DI registration with AddObservableModels()
+      - Component triggers for reactive UI updates
+      - Property triggers for internal model methods
+      - Callback triggers for external service subscriptions
+      - Code fixes for common patterns
+    </PackageReleaseNotes>
+    <GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <EmbedAllSources>true</EmbedAllSources>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <PackageOutputPath>$(MSBuildThisFileDirectory)../.nuget</PackageOutputPath>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="JetBrains.Annotations" Version="2025.2.2" />
-    <PackageReference Include="Microsoft.AspNetCore.Components" Version="10.0.0-rc.2.25502.107" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../README.md" Pack="true" PackagePath="/" />
+    <None Include="../LICENSE" Pack="true" PackagePath="/" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="JetBrains.Annotations" Version="2025.2.4" />
+    <PackageReference Include="Microsoft.AspNetCore.Components" Version="10.0.0" />
     <PackageReference Include="ObservableCollections.R3" Version="3.3.4" />
     <PackageReference Include="R3" Version="1.3.0" />
+  </ItemGroup>
+
+  <!-- Reference Generator and CodeFix for build order only -->
+  <ItemGroup>
+    <ProjectReference Include="..\RxBlazorV2Generator\RxBlazorV2Generator.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\RxBlazorV2CodeFix\RxBlazorV2CodeFix.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <!-- Pack Generator and CodeFix as analyzers -->
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)..\RxBlazorV2Generator\bin\$(Configuration)\netstandard2.0\RxBlazorV2Generator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="$(MSBuildThisFileDirectory)..\RxBlazorV2CodeFix\bin\$(Configuration)\netstandard2.0\RxBlazorV2CodeFix.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
 
 </Project>

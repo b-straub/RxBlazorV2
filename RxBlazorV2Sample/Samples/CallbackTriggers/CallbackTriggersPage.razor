@@ -1,0 +1,210 @@
+@page "/samples/callback-triggers"
+@using RxBlazorV2Sample.Samples.Helpers
+@inherits CallbackTriggersModelComponent
+@inject CallbackTriggersService CallbackService
+
+<PageTitle>Callback Triggers</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large">
+    <MudText Typo="Typo.h3" GutterBottom="true">Callback Triggers</MudText>
+    <MudText Typo="Typo.body1" Class="mb-4">
+        Demonstrates [ObservableCallbackTrigger] attributes that allow external services to subscribe to property changes.
+    </MudText>
+
+    <MudGrid>
+        <!-- Current User (Sync Callback) -->
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Sync Callback - User Change</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="3">
+                        <MudAlert Severity="Severity.Info" Dense="true">
+                            <strong>[ObservableCallbackTrigger]</strong>
+                            generates OnCurrentUserChanged(Action callback)
+                        </MudAlert>
+
+                        <MudButtonGroup Variant="Variant.Outlined" Color="Color.Primary">
+                            <MudButton OnClick="@(() => Model.CurrentUser = "Guest")"
+                                       Variant="@(Model.CurrentUser == "Guest" ? Variant.Filled : Variant.Outlined)">
+                                Guest
+                            </MudButton>
+                            <MudButton OnClick="@(() => Model.CurrentUser = "Admin")"
+                                       Variant="@(Model.CurrentUser == "Admin" ? Variant.Filled : Variant.Outlined)">
+                                Admin
+                            </MudButton>
+                            <MudButton OnClick="@(() => Model.CurrentUser = "User")"
+                                       Variant="@(Model.CurrentUser == "User" ? Variant.Filled : Variant.Outlined)">
+                                User
+                            </MudButton>
+                        </MudButtonGroup>
+
+                        <MudText>Current: <strong>@Model.CurrentUser</strong></MudText>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Settings (Async Callback) -->
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Async Callback - Settings</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="3">
+                        <MudAlert Severity="Severity.Warning" Dense="true">
+                            <strong>[ObservableCallbackTriggerAsync]</strong>
+                            generates OnSettingsChangedAsync(Func&lt;CancellationToken, Task&gt;)
+                        </MudAlert>
+
+                        <MudTextField @bind-Value="@Model.Settings"
+                                      Label="Settings JSON"
+                                      Variant="Variant.Outlined"
+                                      Lines="2"
+                                      Immediate="true" />
+
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Async callback simulates saving settings
+                        </MudText>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Theme (Custom Method Name) -->
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Custom Method Name</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="3">
+                        <MudAlert Severity="Severity.Success" Dense="true">
+                            <strong>[ObservableCallbackTrigger("HandleThemeUpdate")]</strong>
+                            uses custom callback registration name
+                        </MudAlert>
+
+                        <MudButtonGroup Variant="Variant.Outlined" Color="Color.Secondary">
+                            <MudButton OnClick="@(() => Model.Theme = "Light")"
+                                       Variant="@(Model.Theme == "Light" ? Variant.Filled : Variant.Outlined)">
+                                Light
+                            </MudButton>
+                            <MudButton OnClick="@(() => Model.Theme = "Dark")"
+                                       Variant="@(Model.Theme == "Dark" ? Variant.Filled : Variant.Outlined)">
+                                Dark
+                            </MudButton>
+                            <MudButton OnClick="@(() => Model.Theme = "Auto")"
+                                       Variant="@(Model.Theme == "Auto" ? Variant.Filled : Variant.Outlined)">
+                                Auto
+                            </MudButton>
+                        </MudButtonGroup>
+
+                        <MudText>Theme: <strong>@Model.Theme</strong></MudText>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Notification Count (Both Sync and Async) -->
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Both Sync and Async</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="3">
+                        <MudAlert Severity="Severity.Error" Dense="true">
+                            Both <strong>[ObservableCallbackTrigger]</strong> and
+                            <strong>[ObservableCallbackTriggerAsync]</strong> on same property
+                        </MudAlert>
+
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       OnClick="@(() => Model.NotificationCount++)">
+                                Add Notification
+                            </MudButton>
+                            <MudText Typo="Typo.h5">@Model.NotificationCount</MudText>
+                        </MudStack>
+
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Both sync and async callbacks execute
+                        </MudText>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Callback Results -->
+    <MudCard Class="mt-4">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h6">Service Callback Results</MudText>
+            </CardHeaderContent>
+            <CardHeaderActions>
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Error"
+                           OnClick="@(() => Model.CallbackResults.Clear())">
+                    Clear
+                </MudButton>
+            </CardHeaderActions>
+        </MudCardHeader>
+        <MudCardContent>
+            @if (Model.CallbackResults.Count == 0)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Tertiary">
+                    No callbacks executed yet. Change properties above to see service reactions.
+                </MudText>
+            }
+            else
+            {
+                <MudList T="string" Dense="true">
+                    @foreach (var result in Enumerable.Reverse(Model.CallbackResults).Take(10))
+                    {
+                        <MudListItem T="string">
+                            <MudIcon Icon="@Icons.Material.Filled.Notifications" Size="Size.Small" Class="mr-2" />
+                            @result
+                        </MudListItem>
+                    }
+                </MudList>
+            }
+        </MudCardContent>
+    </MudCard>
+
+    <UsageWithLogging Usage=@Model.Usage LogEntries=@Model.LogEntries Class="mt-4"/>
+
+    <MudPaper Class="pa-4 mt-4">
+        <MudText Typo="Typo.h6" GutterBottom="true">Key Concepts</MudText>
+        <MudList T="string">
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                <strong>[ObservableCallbackTrigger]:</strong> Generates sync callback registration method
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Timer">
+                <strong>[ObservableCallbackTriggerAsync]:</strong> Generates async callback with CancellationToken
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Edit">
+                <strong>Custom names:</strong> Use methodName parameter for custom registration method names
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Hub">
+                <strong>External services:</strong> Services inject the model and register callbacks in constructor
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Delete">
+                <strong>Auto-disposal:</strong> Callbacks are automatically disposed when model is disposed
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Compare">
+                <strong>vs Observable.Where():</strong> Cleaner API than manual Observable subscriptions
+            </MudListItem>
+        </MudList>
+    </MudPaper>
+</MudContainer>

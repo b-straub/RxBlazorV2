@@ -6,19 +6,14 @@ namespace GeneratorRunner
     {
         private static readonly string[] SourcePaths =
         [
-            "../../WebAppBase/WebAppBase.Shared/Models/Status/StatusModel.cs",
-            "../../WebAppBase/WebAppBase.Shared/Models/Sync/SyncModel.cs",
-            "../../WebAppBase/WebAppBase.Shared/Models/Push/PushModel.cs",
-            "../../WebAppBase/WebAppBase.Shared/Components/Push/PushManager.razor.cs",
-            "../../WebAppBase/WebAppBase.Shared/Services/PushService.cs",
-            "../../WebAppBase/WebAppBase.UserSample/Pages/TodoManager.razor.cs"
+            "../../WebAppBase/WebAppBase.AdminDesktop/Models/UserManagementModel.cs",
+            "../../WebAppBase/WebAppBase.AdminDesktop/Pages/Users.razor.cs"
         ];
 
         private static readonly string[] AdditionalTextPaths =
         [
             //"../RxBlazorV2Sample/Layout/MainLayout.razor",
-            "../../WebAppBase/WebAppBase.Shared/Components/Push/PushManager.razor",
-            "../../WebAppBase/WebAppBase.UserSample/Pages/TodoManager.razor"
+            "../../WebAppBase/WebAppBase.AdminDesktop/Pages/Users.razor",
         ];
 
         public static void Main(string[] _)

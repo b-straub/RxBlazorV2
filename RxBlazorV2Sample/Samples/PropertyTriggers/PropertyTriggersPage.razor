@@ -1,0 +1,195 @@
+@page "/samples/property-triggers"
+@using RxBlazorV2Sample.Samples.Helpers
+@inherits PropertyTriggersModelComponent
+
+<PageTitle>Property Triggers</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large">
+    <MudText Typo="Typo.h3" GutterBottom="true">Property Triggers</MudText>
+    <MudText Typo="Typo.body1" Class="mb-4">
+        Demonstrates [ObservableTrigger] attributes that execute internal model methods automatically when properties change.
+    </MudText>
+
+    <MudGrid>
+        <!-- Email Validation (Sync Trigger) -->
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Sync Trigger - Email Validation</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="3">
+                        <MudAlert Severity="Severity.Info" Dense="true">
+                            <strong>[ObservableTrigger(nameof(ValidateEmail))]</strong>
+                            executes ValidateEmail() when Email changes.
+                        </MudAlert>
+
+                        <MudTextField @bind-Value="@Model.Email"
+                                      Label="Email Address"
+                                      Variant="Variant.Outlined"
+                                      Immediate="true"
+                                      Placeholder="Enter email to validate..."
+                                      Adornment="Adornment.End"
+                                      AdornmentIcon="@(Model.IsEmailValid ? Icons.Material.Filled.Check : Icons.Material.Filled.Error)"
+                                      AdornmentColor="@(Model.IsEmailValid ? Color.Success : Color.Error)" />
+
+                        @if (!string.IsNullOrEmpty(Model.EmailValidationMessage))
+                        {
+                            <MudText Typo="Typo.caption"
+                                     Color="@(Model.IsEmailValid ? Color.Success : Color.Error)">
+                                @Model.EmailValidationMessage
+                            </MudText>
+                        }
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Auto-Save (Async Trigger with Guard) -->
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Async Trigger with Guard</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="3">
+                        <MudAlert Severity="Severity.Warning" Dense="true">
+                            <strong>[ObservableTriggerAsync(nameof(AutoSaveAsync), nameof(CanAutoSave))]</strong>
+                            with conditional execution.
+                        </MudAlert>
+
+                        <MudSwitch @bind-Value="@Model.AutoSaveEnabled"
+                                   Color="Color.Primary"
+                                   Label="Auto-Save Enabled" />
+
+                        <MudTextField @bind-Value="@Model.DocumentContent"
+                                      Label="Document Content"
+                                      Variant="Variant.Outlined"
+                                      Lines="3"
+                                      Immediate="true"
+                                      Placeholder="Type to trigger auto-save..." />
+
+                        <MudText Typo="Typo.caption">
+                            Status: <strong>@Model.SaveStatus</strong>
+                        </MudText>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Parametrized Trigger -->
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Parametrized Trigger</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="3">
+                        <MudAlert Severity="Severity.Success" Dense="true">
+                            <strong>[ObservableTrigger&lt;string&gt;(nameof(LogChange), "Counter changed")]</strong>
+                            passes a parameter to the method.
+                        </MudAlert>
+
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudButton Variant="Variant.Outlined"
+                                       Color="Color.Primary"
+                                       OnClick="@(() => Model.Counter--)">
+                                -
+                            </MudButton>
+                            <MudText Typo="Typo.h4" Class="mx-4">@Model.Counter</MudText>
+                            <MudButton Variant="Variant.Outlined"
+                                       Color="Color.Primary"
+                                       OnClick="@(() => Model.Counter++)">
+                                +
+                            </MudButton>
+                        </MudStack>
+
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Each change triggers LogChange("Counter changed")
+                        </MudText>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Multiple Triggers -->
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Multiple Triggers</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="3">
+                        <MudAlert Severity="Severity.Error" Dense="true">
+                            Multiple triggers on same property execute all methods.
+                        </MudAlert>
+
+                        <MudTextField @bind-Value="@Model.FirstName"
+                                      Label="First Name"
+                                      Variant="Variant.Outlined"
+                                      Immediate="true"
+                                      Error="@(!string.IsNullOrEmpty(Model.NameValidationMessage))"
+                                      ErrorText="@Model.NameValidationMessage" />
+
+                        <MudTextField @bind-Value="@Model.LastName"
+                                      Label="Last Name"
+                                      Variant="Variant.Outlined"
+                                      Immediate="true" />
+
+                        <MudText>
+                            Full Name: <strong>@(string.IsNullOrEmpty(Model.FullName) ? "(empty)" : Model.FullName)</strong>
+                        </MudText>
+
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            FirstName triggers: UpdateFullName + ValidateName
+                            <br/>
+                            LastName triggers: UpdateFullName
+                        </MudText>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    <MudCard Class="mt-4">
+        <MudCardContent>
+            <MudText Typo="Typo.h6">
+                Total Trigger Executions: <strong>@Model.TriggerExecutionCount</strong>
+            </MudText>
+        </MudCardContent>
+    </MudCard>
+
+    <UsageWithLogging Usage=@Model.Usage LogEntries=@Model.LogEntries Class="mt-4"/>
+
+    <MudPaper Class="pa-4 mt-4">
+        <MudText Typo="Typo.h6" GutterBottom="true">Key Concepts</MudText>
+        <MudList T="string">
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                <strong>[ObservableTrigger]:</strong> Executes a private method when property changes
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Timer">
+                <strong>[ObservableTriggerAsync]:</strong> For async methods with optional CancellationToken
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Input">
+                <strong>[ObservableTrigger&lt;T&gt;]:</strong> Pass a parameter to the triggered method
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Security">
+                <strong>canTriggerMethod:</strong> Optional guard to conditionally execute
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.List">
+                <strong>Multiple triggers:</strong> Stack attributes to execute multiple methods
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Warning">
+                <strong>Avoid circular triggers:</strong> Don't modify the same property in the triggered method
+            </MudListItem>
+        </MudList>
+    </MudPaper>
+</MudContainer>

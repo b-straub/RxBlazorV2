@@ -1,0 +1,206 @@
+@page "/samples/component-triggers"
+@using RxBlazorV2Sample.Samples.Helpers
+@inherits ComponentTriggersModelComponent
+
+<PageTitle>Component Triggers</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large">
+    <MudText Typo="Typo.h3" GutterBottom="true">Component Triggers</MudText>
+    <MudText Typo="Typo.body1" Class="mb-4">
+        Demonstrates [ObservableComponentTrigger] attributes that generate hook methods in components for property changes.
+    </MudText>
+
+    <MudGrid>
+        <!-- RenderAndHook (Default) -->
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">RenderAndHook (Default)</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="3">
+                        <MudAlert Severity="Severity.Info" Dense="true">
+                            <strong>[ObservableComponentTrigger]</strong> generates OnThemeChanged() hook AND triggers re-render.
+                        </MudAlert>
+
+                        <MudButtonGroup Variant="Variant.Outlined" Color="Color.Primary">
+                            <MudButton OnClick="@(() => Model.Theme = "Light")"
+                                       Variant="@(Model.Theme == "Light" ? Variant.Filled : Variant.Outlined)">
+                                Light
+                            </MudButton>
+                            <MudButton OnClick="@(() => Model.Theme = "Dark")"
+                                       Variant="@(Model.Theme == "Dark" ? Variant.Filled : Variant.Outlined)">
+                                Dark
+                            </MudButton>
+                            <MudButton OnClick="@(() => Model.Theme = "System")"
+                                       Variant="@(Model.Theme == "System" ? Variant.Filled : Variant.Outlined)">
+                                System
+                            </MudButton>
+                        </MudButtonGroup>
+
+                        <MudText>Current Theme: <strong>@Model.Theme</strong></MudText>
+                        <MudText Typo="Typo.caption">Hook executed: @Model.ThemeHookCount times</MudText>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Async Hook with Custom Name -->
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Async Hook (Custom Name)</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="3">
+                        <MudAlert Severity="Severity.Warning" Dense="true">
+                            <strong>[ObservableComponentTriggerAsync(hookMethodName: "HandleUserNameUpdateAsync")]</strong>
+                            generates async hook with custom name.
+                        </MudAlert>
+
+                        <MudTextField @bind-Value="@Model.UserName"
+                                      Label="User Name"
+                                      Variant="Variant.Outlined"
+                                      Immediate="true"
+                                      Placeholder="Type to trigger async hook..." />
+
+                        <MudText Typo="Typo.caption">Async hook executed: @Model.UserNameHookCount times</MudText>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- RenderOnly -->
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">RenderOnly</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="3">
+                        <MudAlert Severity="Severity.Success" Dense="true">
+                            <strong>[ObservableComponentTrigger(ComponentTriggerType.RenderOnly)]</strong>
+                            triggers re-render but no hook method is generated.
+                        </MudAlert>
+
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   OnClick="@(() => Model.RenderOnlyCounter++)">
+                            Increment Counter
+                        </MudButton>
+
+                        <MudText>Counter Value: <strong>@Model.RenderOnlyCounter</strong></MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            No hook method - just automatic re-render on change
+                        </MudText>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- HookOnly -->
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">HookOnly</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="3">
+                        <MudAlert Severity="Severity.Error" Dense="true">
+                            <strong>[ObservableComponentTrigger(ComponentTriggerType.HookOnly)]</strong>
+                            calls hook but does NOT trigger automatic re-render.
+                        </MudAlert>
+
+                        <MudButtonGroup Variant="Variant.Outlined" Color="Color.Secondary">
+                            <MudButton OnClick="@(() => Model.BackgroundStatus = "Running")">
+                                Start
+                            </MudButton>
+                            <MudButton OnClick="@(() => Model.BackgroundStatus = "Paused")">
+                                Pause
+                            </MudButton>
+                            <MudButton OnClick="@(() => Model.BackgroundStatus = "Stopped")">
+                                Stop
+                            </MudButton>
+                        </MudButtonGroup>
+
+                        <MudText>Background Status: <strong>@Model.BackgroundStatus</strong></MudText>
+                        <MudText Typo="Typo.caption">Hook executed: @Model.BackgroundHookCount times</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Warning">
+                            Note: UI updates because other properties trigger re-render
+                        </MudText>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    <MudCard Class="mt-4">
+        <MudCardContent>
+            <MudText Typo="Typo.h6" GutterBottom="true">Last Hook Message</MudText>
+            <MudText>@Model.LastHookMessage</MudText>
+        </MudCardContent>
+    </MudCard>
+
+    <UsageWithLogging Usage=@Model.Usage LogEntries=@Model.LogEntries Class="mt-4"/>
+
+    <MudPaper Class="pa-4 mt-4">
+        <MudText Typo="Typo.h6" GutterBottom="true">Key Concepts</MudText>
+        <MudList T="string">
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                <strong>RenderAndHook (default):</strong> Generates hook method AND triggers StateHasChanged
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Visibility">
+                <strong>RenderOnly:</strong> Only triggers re-render, no hook method generated
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Code">
+                <strong>HookOnly:</strong> Calls hook method but no automatic re-render
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Timer">
+                <strong>Async hooks:</strong> Use [ObservableComponentTriggerAsync] for async operations with CancellationToken
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Edit">
+                <strong>Custom names:</strong> Use hookMethodName parameter to specify custom hook method names
+            </MudListItem>
+        </MudList>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    // Override the generated hook for Theme changes
+    protected override void OnThemeChanged()
+    {
+        Model.ThemeHookCount++;
+        Model.LastHookMessage = $"Theme changed to '{Model.Theme}' at {DateTime.Now:HH:mm:ss}";
+        Model.LogEntries.Add(new LogEntry($"OnThemeChanged hook: Theme = {Model.Theme}", DateTime.Now));
+    }
+
+    // Override the async hook with custom name
+    protected override async Task HandleUserNameUpdateAsync(CancellationToken ct)
+    {
+        Model.UserNameHookCount++;
+        Model.LastHookMessage = $"User name updating to '{Model.UserName}'...";
+        Model.LogEntries.Add(new LogEntry($"HandleUserNameUpdateAsync started: UserName = {Model.UserName}", DateTime.Now));
+
+        // Simulate async operation
+        await Task.Delay(100, ct);
+
+        Model.LastHookMessage = $"User name updated to '{Model.UserName}' at {DateTime.Now:HH:mm:ss}";
+        Model.LogEntries.Add(new LogEntry($"HandleUserNameUpdateAsync completed: UserName = {Model.UserName}", DateTime.Now));
+    }
+
+    // Override the HookOnly trigger
+    protected override void OnBackgroundStatusChanged()
+    {
+        Model.BackgroundHookCount++;
+        Model.LastHookMessage = $"Background status: '{Model.BackgroundStatus}' (hook only, no auto-render)";
+        Model.LogEntries.Add(new LogEntry($"OnBackgroundStatusChanged hook: Status = {Model.BackgroundStatus}", DateTime.Now));
+    }
+}

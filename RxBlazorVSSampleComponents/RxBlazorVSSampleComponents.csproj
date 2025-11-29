@@ -13,11 +13,12 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.0-rc.2.25502.107" />
-        <PackageReference Include="MudBlazor" Version="8.13.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.0" />
+        <PackageReference Include="MudBlazor" Version="8.15.0" />
+        <PackageReference Include="RxBlazorV2" Version="1.0.0" Condition="'$(Configuration)' == 'Release'"/>
     </ItemGroup>
 
-    <ItemGroup>
+    <ItemGroup Condition="'$(Configuration)' == 'Debug'">
         <ProjectReference Include="..\RxBlazorV2\RxBlazorV2.csproj"/>
         <ProjectReference Include="..\RxBlazorV2Generator\RxBlazorV2Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
         <ProjectReference Include="..\RxBlazorV2CodeFix\RxBlazorV2CodeFix.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
