@@ -370,7 +370,9 @@ out/
 # Mac
 .DS_Store
 
-# Generated files (specific to this project)
+# Project-specific
 **/Generated/
-GeneratorRunner/GeneratedOutput
-CoverageReport
+GeneratorRunner/
+CoverageReport/
+.nuget/
+nupkg/
