@@ -38,6 +38,9 @@ public class BasicCommandsTests
     [Fact]
     public void IncrementCommand_MultipleCalls_ShouldIncrementMultipleTimes()
     {
+        // Arrange
+        _model.Counter = 0;
+
         // Act
         _model.IncrementCommand.Execute();
         _model.IncrementCommand.Execute();
