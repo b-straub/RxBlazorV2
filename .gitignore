@@ -376,3 +376,4 @@ GeneratorRunner/
 CoverageReport/
 .nuget/
 nupkg/
+.claude/
