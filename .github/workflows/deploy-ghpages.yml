@@ -1,0 +1,62 @@
+name: Deploy to GitHub Pages
+
+on:
+  workflow_dispatch:  # Manual trigger only
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Set base path for GitHub Pages
+      run: |
+        # Update index.html base href for GitHub Pages subdirectory
+        sed -i 's|<base href="/" />|<base href="/RxBlazorV2/" />|g' RxBlazorV2Sample/wwwroot/index.html
+
+    - name: Clean previous builds
+      run: |
+        dotnet clean -c Release --nologo
+        rm -rf RxBlazorV2Sample/bin/Release RxBlazorV2Sample/obj/Release
+
+    - name: Build Sample
+      run: dotnet build RxBlazorV2Sample/RxBlazorV2Sample.csproj -c Release --nologo
+
+    - name: Publish Sample
+      run: dotnet publish RxBlazorV2Sample/RxBlazorV2Sample.csproj -c Release -o ./build --nologo /p:UseSharedCompilation=false
+
+    - name: Add .nojekyll and 404.html
+      run: |
+        cd build/wwwroot
+        touch .nojekyll
+        cp index.html 404.html
+
+    - name: List files to deploy
+      run: |
+        echo "Files to deploy:"
+        find build/wwwroot -type f | head -20
+
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: ./build/wwwroot
+
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
+
+    - name: Deployment complete
+      run: |
+        echo "Deployed to GitHub Pages!"
+        echo "Site URL: ${{ steps.deployment.outputs.page_url }}"
