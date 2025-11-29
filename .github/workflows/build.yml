@@ -19,17 +19,23 @@ jobs:
       with:
         dotnet-version: '10.0.x'
 
-    - name: Restore dependencies
-      run: dotnet restore
+    - name: Restore RxBlazorV2 dependencies
+      run: dotnet restore RxBlazorV2/RxBlazorV2.csproj
+
+    - name: Build RxBlazorV2
+      run: dotnet build RxBlazorV2/RxBlazorV2.csproj --configuration Release --no-restore
+
+    - name: Pack RxBlazorV2
+      run: dotnet pack RxBlazorV2/RxBlazorV2.csproj --configuration Release --no-build
+
+    - name: Restore all dependencies
+      run: dotnet restore RxBlazorV2.slnx
 
     - name: Build solution
-      run: dotnet build --configuration Release --no-restore
+      run: dotnet build RxBlazorV2.slnx --configuration Release
 
     - name: Test Generator
       run: dotnet test RxBlazorV2.GeneratorTests/RxBlazorV2.GeneratorTests.csproj --configuration Release --no-build --verbosity normal
 
     - name: Test Core
       run: dotnet test RxBlazorV2.CoreTests/RxBlazorV2.CoreTests.csproj --configuration Release --no-build --verbosity normal
-
-    - name: Pack NuGet
-      run: dotnet pack RxBlazorV2/RxBlazorV2.csproj --configuration Release --no-build

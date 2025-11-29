@@ -25,20 +25,26 @@ jobs:
       id: get_version
       run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
-    - name: Restore dependencies
-      run: dotnet restore
+    - name: Restore RxBlazorV2 dependencies
+      run: dotnet restore RxBlazorV2/RxBlazorV2.csproj
+
+    - name: Build RxBlazorV2
+      run: dotnet build RxBlazorV2/RxBlazorV2.csproj --configuration Release --no-restore
+
+    - name: Pack RxBlazorV2 with version
+      run: dotnet pack RxBlazorV2/RxBlazorV2.csproj --configuration Release --no-build --output ./.nuget /p:PackageVersion=${{ steps.get_version.outputs.VERSION }}
+
+    - name: Restore all dependencies
+      run: dotnet restore RxBlazorV2.slnx
 
     - name: Build solution
-      run: dotnet build --configuration Release --no-restore
+      run: dotnet build RxBlazorV2.slnx --configuration Release
 
     - name: Test Generator
       run: dotnet test RxBlazorV2.GeneratorTests/RxBlazorV2.GeneratorTests.csproj --configuration Release --no-build --verbosity normal
 
     - name: Test Core
       run: dotnet test RxBlazorV2.CoreTests/RxBlazorV2.CoreTests.csproj --configuration Release --no-build --verbosity normal
-
-    - name: Pack NuGet with version
-      run: dotnet pack RxBlazorV2/RxBlazorV2.csproj --configuration Release --no-build --output ./.nuget /p:PackageVersion=${{ steps.get_version.outputs.VERSION }}
 
     - name: Publish to NuGet
       run: dotnet nuget push ./.nuget/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate

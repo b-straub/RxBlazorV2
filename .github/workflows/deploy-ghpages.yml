@@ -20,21 +20,28 @@ jobs:
       with:
         dotnet-version: '10.0.x'
 
+    - name: Restore RxBlazorV2 dependencies
+      run: dotnet restore RxBlazorV2/RxBlazorV2.csproj
+
+    - name: Build RxBlazorV2
+      run: dotnet build RxBlazorV2/RxBlazorV2.csproj --configuration Release --no-restore
+
+    - name: Pack RxBlazorV2
+      run: dotnet pack RxBlazorV2/RxBlazorV2.csproj --configuration Release --no-build
+
     - name: Set base path for GitHub Pages
       run: |
         # Update index.html base href for GitHub Pages subdirectory
         sed -i 's|<base href="/" />|<base href="/RxBlazorV2/" />|g' RxBlazorV2Sample/wwwroot/index.html
 
-    - name: Clean previous builds
-      run: |
-        dotnet clean -c Release --nologo
-        rm -rf RxBlazorV2Sample/bin/Release RxBlazorV2Sample/obj/Release
+    - name: Restore all dependencies
+      run: dotnet restore RxBlazorV2.slnx
 
     - name: Build Sample
-      run: dotnet build RxBlazorV2Sample/RxBlazorV2Sample.csproj -c Release --nologo
+      run: dotnet build RxBlazorV2Sample/RxBlazorV2Sample.csproj -c Release
 
     - name: Publish Sample
-      run: dotnet publish RxBlazorV2Sample/RxBlazorV2Sample.csproj -c Release -o ./build --nologo /p:UseSharedCompilation=false
+      run: dotnet publish RxBlazorV2Sample/RxBlazorV2Sample.csproj -c Release -o ./build --nologo
 
     - name: Add .nojekyll and 404.html
       run: |
