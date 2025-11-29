@@ -1,0 +1,10 @@
+<Solution>
+  <Project Path="RxBlazorV2/RxBlazorV2.csproj" />
+  <Project Path="RxBlazorV2Generator/RxBlazorV2Generator.csproj" />
+  <Project Path="RxBlazorV2CodeFix/RxBlazorV2CodeFix.csproj" />
+  <Project Path="RxBlazorV2Sample/RxBlazorV2Sample.csproj" />
+  <Project Path="RxBlazorV2ExternalModel/RxBlazorV2ExternalModel.csproj" />
+  <Project Path="RxBlazorVSSampleComponents/RxBlazorVSSampleComponents.csproj" />
+  <Project Path="RxBlazorV2.GeneratorTests/RxBlazorV2.GeneratorTests.csproj" />
+  <Project Path="RxBlazorV2.CoreTests/RxBlazorV2.CoreTests.csproj" />
+</Solution>

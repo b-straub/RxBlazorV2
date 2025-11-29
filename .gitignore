@@ -377,3 +377,4 @@ CoverageReport/
 .nuget/
 nupkg/
 .claude/
+RxBlazorV2Internal.slnx
