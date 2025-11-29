@@ -27,7 +27,7 @@ jobs:
       run: dotnet build RxBlazorV2/RxBlazorV2.csproj --configuration Release --no-restore
 
     - name: Pack RxBlazorV2
-      run: dotnet pack RxBlazorV2/RxBlazorV2.csproj --configuration Release --no-build
+      run: dotnet pack RxBlazorV2/RxBlazorV2.csproj --configuration Release --no-build --output ./nupkg
 
     - name: Set base path for GitHub Pages
       run: |
