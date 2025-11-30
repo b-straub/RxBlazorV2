@@ -1,5 +1,11 @@
 # RxBlazorV2
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![.NET](https://img.shields.io/badge/.NET-10.0-purple.svg)](https://dotnet.microsoft.com/)
+[![NuGet](https://img.shields.io/nuget/v/RxBlazorV2)](https://www.nuget.org/packages/RxBlazorV2)
+[![Build and Test](https://github.com/b-straub/RxBlazorV2/actions/workflows/build.yml/badge.svg)](https://github.com/b-straub/RxBlazorV2/actions/workflows/build.yml)
+[![GitHub Repo stars](https://img.shields.io/github/stars/b-straub/RxBlazorV2)](https://github.com/b-straub/RxBlazorV2/stargazers)
+
 A reactive programming framework for Blazor applications built on top of [R3 (Reactive Extensions)](https://github.com/Cysharp/R3). RxBlazorV2 uses Roslyn source generators to automatically create observable models with reactive property bindings, command patterns, and dependency injection support.
 
 ## Features
