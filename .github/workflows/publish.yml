@@ -37,14 +37,20 @@ jobs:
     - name: Pack RxBlazorV2 with version
       run: dotnet pack RxBlazorV2/RxBlazorV2.csproj --configuration Release --no-build /p:PackageVersion=${{ steps.get_version.outputs.VERSION }}
 
+    - name: Restore RxBlazorV2.MudBlazor dependencies
+      run: dotnet restore RxBlazorV2.MudBlazor/RxBlazorV2.MudBlazor.csproj
+
+    - name: Build RxBlazorV2.MudBlazor
+      run: dotnet build RxBlazorV2.MudBlazor/RxBlazorV2.MudBlazor.csproj --configuration Release --no-restore
+
+    - name: Pack RxBlazorV2.MudBlazor with version
+      run: dotnet pack RxBlazorV2.MudBlazor/RxBlazorV2.MudBlazor.csproj --configuration Release --no-build /p:PackageVersion=${{ steps.get_version.outputs.VERSION }}
+
     - name: Restore all dependencies
       run: dotnet restore RxBlazorV2.slnx
 
     - name: Build solution
       run: dotnet build RxBlazorV2.slnx --configuration Release
-
-    - name: Pack RxBlazorV2.MudBlazor with version
-      run: dotnet pack RxBlazorV2.MudBlazor/RxBlazorV2.MudBlazor.csproj --configuration Release --no-build /p:PackageVersion=${{ steps.get_version.outputs.VERSION }}
 
     - name: Test Generator
       run: dotnet test RxBlazorV2.GeneratorTests/RxBlazorV2.GeneratorTests.csproj --configuration Release --no-build --verbosity normal
