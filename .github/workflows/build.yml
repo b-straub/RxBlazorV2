@@ -37,6 +37,9 @@ jobs:
     - name: Build solution
       run: dotnet build RxBlazorV2.slnx --configuration Release
 
+    - name: Pack RxBlazorV2.MudBlazor
+      run: dotnet pack RxBlazorV2.MudBlazor/RxBlazorV2.MudBlazor.csproj --configuration Release --no-build
+
     - name: Test Generator
       run: dotnet test RxBlazorV2.GeneratorTests/RxBlazorV2.GeneratorTests.csproj --configuration Release --no-build --verbosity normal
 

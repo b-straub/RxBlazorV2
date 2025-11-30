@@ -1,0 +1,168 @@
+@page "/"
+@using RxBlazorV2.MudBlazor.Buttons
+@using RxBlazorV2.MudBlazor.IconButtons
+@using RxBlazorV2.MudBlazor.FabButtons
+@inherits ButtonDemoModelComponent
+
+<PageTitle>RxBlazorV2.MudBlazor Demo</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium">
+    <MudText Typo="Typo.h4" Class="mb-4">Reactive MudBlazor Button Components</MudText>
+
+    <MudPaper Class="pa-4 mb-4" Elevation="2">
+        <MudText Typo="Typo.h6" Class="mb-2">Current State</MudText>
+        <MudStack Row="true" Spacing="4" AlignItems="AlignItems.Center">
+            <MudText><strong>Counter:</strong> @Model.Counter</MudText>
+            <MudText><strong>Status:</strong> @Model.StatusMessage</MudText>
+            @if (Model.IncrementAsyncCommand.Executing || Model.LongOperationCommand.Executing || Model.AddAsyncCommand.Executing)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+            }
+        </MudStack>
+    </MudPaper>
+
+    @* Sync Buttons Section *@
+    <MudPaper Class="pa-4 mb-4" Elevation="2">
+        <MudText Typo="Typo.h6" Class="mb-3">Sync Buttons (MudButtonRx)</MudText>
+        <MudStack Row="true" Spacing="2">
+            <MudButtonRx Command="@Model.IncrementCommand"
+                         Variant="Variant.Filled"
+                         Color="Color.Primary">
+                Increment
+            </MudButtonRx>
+
+            <MudButtonRx Command="@Model.IncrementCommand"
+                         CanExecute="@Model.CanIncrement"
+                         Variant="Variant.Outlined"
+                         Color="Color.Primary">
+                Increment (max 100)
+            </MudButtonRx>
+
+            <MudButtonRxOf T="int"
+                           Command="@Model.AddCommand"
+                           Parameter="5"
+                           Variant="Variant.Filled"
+                           Color="Color.Secondary">
+                Add 5
+            </MudButtonRxOf>
+
+            <MudButtonRxOf T="int"
+                           Command="@Model.AddCommand"
+                           Parameter="-1"
+                           CanExecute="@Model.CanDecrement"
+                           Variant="Variant.Outlined"
+                           Color="Color.Error">
+                Subtract 1
+            </MudButtonRxOf>
+        </MudStack>
+    </MudPaper>
+
+    @* Async Buttons Section *@
+    <MudPaper Class="pa-4 mb-4" Elevation="2">
+        <MudText Typo="Typo.h6" Class="mb-3">Async Buttons (MudButtonAsyncRx)</MudText>
+        <MudStack Row="true" Spacing="2">
+            <MudButtonAsyncRx Command="@Model.IncrementAsyncCommand"
+                              Variant="Variant.Filled"
+                              Color="Color.Primary">
+                Increment Async
+            </MudButtonAsyncRx>
+
+            <MudButtonAsyncRx Command="@Model.LongOperationCommand"
+                              CancelText="Cancel"
+                              Variant="Variant.Filled"
+                              Color="Color.Warning">
+                Long Operation (+10)
+            </MudButtonAsyncRx>
+
+            <MudButtonAsyncRxOf T="int"
+                                Command="@Model.AddAsyncCommand"
+                                Parameter="3"
+                                CancelText="Cancel"
+                                CancelColor="Color.Error"
+                                Variant="Variant.Outlined"
+                                Color="Color.Success">
+                Add 3 Async
+            </MudButtonAsyncRxOf>
+        </MudStack>
+    </MudPaper>
+
+    @* Icon Buttons Section *@
+    <MudPaper Class="pa-4 mb-4" Elevation="2">
+        <MudText Typo="Typo.h6" Class="mb-3">Icon Buttons</MudText>
+        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+            <MudIconButtonRx Command="@Model.IncrementCommand"
+                             Icon="@Icons.Material.Filled.Add"
+                             Color="Color.Primary" />
+
+            <MudIconButtonAsyncRx Command="@Model.IncrementAsyncCommand"
+                                   Icon="@Icons.Material.Filled.CloudUpload"
+                                   Color="Color.Info" />
+
+            <MudIconButtonAsyncRx Command="@Model.LongOperationCommand"
+                                   Icon="@Icons.Material.Filled.Sync"
+                                   Color="Color.Warning" />
+        </MudStack>
+    </MudPaper>
+
+    @* FAB Buttons Section *@
+    <MudPaper Class="pa-4 mb-4" Elevation="2">
+        <MudText Typo="Typo.h6" Class="mb-3">Floating Action Buttons</MudText>
+        <MudStack Row="true" Spacing="4" AlignItems="AlignItems.Center">
+            <MudFabRx Command="@Model.IncrementCommand"
+                      StartIcon="@Icons.Material.Filled.Add"
+                      Color="Color.Primary" />
+
+            <MudFabRxOf T="int"
+                        Command="@Model.AddCommand"
+                        Parameter="10"
+                        StartIcon="@Icons.Material.Filled.Exposure"
+                        Label="Add 10"
+                        Color="Color.Secondary" />
+
+            <MudFabAsyncRx Command="@Model.IncrementAsyncCommand"
+                           StartIcon="@Icons.Material.Filled.CloudUpload"
+                           Color="Color.Info" />
+
+            <MudFabAsyncRx Command="@Model.LongOperationCommand"
+                           StartIcon="@Icons.Material.Filled.Timer"
+                           Label="Long Op"
+                           CancelText="Cancel"
+                           Color="Color.Warning" />
+        </MudStack>
+    </MudPaper>
+
+    @* Confirmation Dialog Section *@
+    <MudPaper Class="pa-4" Elevation="2">
+        <MudText Typo="Typo.h6" Class="mb-3">With Confirmation Dialog</MudText>
+        <MudStack Row="true" Spacing="2">
+            <MudButtonRx Command="@Model.IncrementCommand"
+                         ConfirmExecutionAsync="@ConfirmActionAsync"
+                         Variant="Variant.Filled"
+                         Color="Color.Error">
+                Increment (Confirm)
+            </MudButtonRx>
+
+            <MudButtonAsyncRx Command="@Model.LongOperationCommand"
+                              ConfirmExecutionAsync="@ConfirmActionAsync"
+                              CancelText="Abort"
+                              Variant="Variant.Filled"
+                              Color="Color.Error">
+                Long Op (Confirm)
+            </MudButtonAsyncRx>
+        </MudStack>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    [Inject]
+    private IDialogService DialogService { get; set; } = default!;
+
+    private async Task<bool> ConfirmActionAsync()
+    {
+        var result = await DialogService.ShowMessageBox(
+            "Confirm Action",
+            "Are you sure you want to proceed?",
+            yesText: "Yes", cancelText: "Cancel");
+        return result == true;
+    }
+}

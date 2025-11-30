@@ -1,0 +1,66 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <!-- NuGet Package Configuration -->
+    <PackageId>RxBlazorV2.MudBlazor</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>bernisoft</Authors>
+    <Company>bernisoft</Company>
+    <Product>RxBlazorV2.MudBlazor</Product>
+    <Description>Reactive MudBlazor button components for RxBlazorV2. Provides automatic progress indicators, cancellation support, and confirmation dialogs for command bindings.</Description>
+    <PackageTags>blazor;mudblazor;reactive;r3;commands;buttons;progress</PackageTags>
+    <Copyright>Copyright (c) 2025 bernisoft</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/b-straub/RxBlazorV2</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/b-straub/RxBlazorV2</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReleaseNotes>
+      v1.0.0 - Initial Release
+      - MudButtonRx and MudButtonAsyncRx for command binding
+      - MudIconButtonRx and MudIconButtonAsyncRx with badge-based progress
+      - MudFabRx and MudFabAsyncRx floating action buttons
+      - Automatic progress spinner during async execution
+      - Cancel badge/button when operation supports cancellation
+      - Optional confirmation dialog before execution
+    </PackageReleaseNotes>
+    <GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <EmbedAllSources>true</EmbedAllSources>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <PackageOutputPath>$(MSBuildThisFileDirectory)../.nuget</PackageOutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <MudIllegalParameters>V7CaseSensitive</MudIllegalParameters>
+    <MudAllowedAttributePattern>LowerCase</MudAllowedAttributePattern>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="/" />
+    <None Include="../LICENSE" Pack="true" PackagePath="/" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.0" />
+    <PackageReference Include="MudBlazor" Version="8.15.0" />
+    <PackageReference Include="RxBlazorV2" Version="1.0.0" Condition="'$(Configuration)' == 'Release'"/>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+    <ProjectReference Include="..\RxBlazorV2\RxBlazorV2.csproj" />
+  </ItemGroup>
+
+</Project>

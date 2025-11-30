@@ -1,4 +1,6 @@
 <Solution>
+  <Project Path="RxBlazorV2.MudBlazor.Sample/RxBlazorV2.MudBlazor.Sample.csproj" />
+  <Project Path="RxBlazorV2.MudBlazor/RxBlazorV2.MudBlazor.csproj" />
   <Project Path="RxBlazorV2/RxBlazorV2.csproj" />
   <Project Path="RxBlazorV2Generator/RxBlazorV2Generator.csproj" />
   <Project Path="RxBlazorV2CodeFix/RxBlazorV2CodeFix.csproj" />

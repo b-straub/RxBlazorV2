@@ -30,6 +30,12 @@ dotnet add package RxBlazorV2
 
 The package includes the source generator and code fixes automatically.
 
+### Companion Packages
+
+| Package | Description |
+|---------|-------------|
+| [RxBlazorV2.MudBlazor](https://www.nuget.org/packages/RxBlazorV2.MudBlazor) | Reactive MudBlazor button components with progress indicators, cancellation, and confirmation dialogs |
+
 ## Quick Start
 
 ```csharp
@@ -329,6 +335,7 @@ dotnet run --project RxBlazorV2Sample
 - **RxBlazorV2** - Core runtime library with base classes and interfaces
 - **RxBlazorV2Generator** - Roslyn source generator for code generation
 - **RxBlazorV2CodeFix** - Code analyzers and fixes for common issues
+- **RxBlazorV2.MudBlazor** - MudBlazor button components with command binding
 - **RxBlazorV2Sample** - Sample Blazor WebAssembly application
 
 ## Diagnostics
