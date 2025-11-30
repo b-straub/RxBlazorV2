@@ -31,11 +31,14 @@ jobs:
     - name: Pack RxBlazorV2
       run: dotnet pack RxBlazorV2/RxBlazorV2.csproj --configuration Release --no-build
 
-    - name: Restore RxBlazorV2.MudBlazor dependencies
-      run: dotnet restore RxBlazorV2.MudBlazor/RxBlazorV2.MudBlazor.csproj
+    - name: List local NuGet packages
+      run: ls -la .nuget/
+
+    - name: Clear NuGet HTTP cache
+      run: dotnet nuget locals http-cache --clear
 
     - name: Build RxBlazorV2.MudBlazor
-      run: dotnet build RxBlazorV2.MudBlazor/RxBlazorV2.MudBlazor.csproj --configuration Release --no-restore
+      run: dotnet build RxBlazorV2.MudBlazor/RxBlazorV2.MudBlazor.csproj --configuration Release
 
     - name: Pack RxBlazorV2.MudBlazor
       run: dotnet pack RxBlazorV2.MudBlazor/RxBlazorV2.MudBlazor.csproj --configuration Release --no-build
