@@ -8,6 +8,8 @@
 
 A reactive programming framework for Blazor applications built on top of [R3 (Reactive Extensions)](https://github.com/Cysharp/R3). RxBlazorV2 uses Roslyn source generators to automatically create observable models with reactive property bindings, command patterns, and dependency injection support.
 
+**[Live Demo](https://b-straub.github.io/RxBlazorV2/)**
+
 ## Features
 
 - **Reactive State Management**: Automatic change notifications using R3 observables
