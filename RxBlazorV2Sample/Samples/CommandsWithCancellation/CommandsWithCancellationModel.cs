@@ -28,7 +28,7 @@ public partial class CommandsWithCancellationModel : SampleBaseModel
 
         try
         {
-            for (int i = 1; i <= 10; i++)
+            for (var i = 1; i <= 10; i++)
             {
                 await Task.Delay(500, cancellationToken);
                 Progress = i * 10;
@@ -54,7 +54,7 @@ public partial class CommandsWithCancellationModel : SampleBaseModel
 
         try
         {
-            for (int i = 1; i <= iterations; i++)
+            for (var i = 1; i <= iterations; i++)
             {
                 await Task.Delay(1000, cancellationToken);
                 Progress = (i * 100) / iterations;

@@ -7,15 +7,12 @@ namespace RxBlazorV2Sample.Services;
 public class OpenMeteoApiClient
 {
     private readonly HttpClient _httpClient;
-    private readonly WeatherCodeParser _weatherCodeParser;
     private readonly LocationService _locationService;
     private const string BaseUrl = "https://api.open-meteo.com/v1/forecast";
 
-    public OpenMeteoApiClient(HttpClient httpClient, WeatherCodeParser weatherCodeParser,
-        LocationService locationService)
+    public OpenMeteoApiClient(HttpClient httpClient, LocationService locationService)
     {
         _httpClient = httpClient;
-        _weatherCodeParser = weatherCodeParser;
         _locationService = locationService;
     }
 
@@ -43,16 +40,19 @@ public class OpenMeteoApiClient
         }
     }
 
-    public async Task<WeatherForecast[]> GetWeatherForecastAsync(double latitude, double longitude, bool isDayTime,
+    public async Task<WeatherForecast[]> GetWeatherForecastAsync(double latitude, double longitude,
         string? locationName = null, int forecastDays = 7)
     {
         var response = await GetWeatherAsync(latitude, longitude, forecastDays);
-        if (response == null) return Array.Empty<WeatherForecast>();
+        if (response is null)
+        {
+            return [];
+        }
 
-        return await ConvertToWeatherForecastAsync(response, locationName ?? $"{latitude:F4}, {longitude:F4}", isDayTime);
+        return ConvertToWeatherForecast(response, locationName ?? $"{latitude:F4}, {longitude:F4}");
     }
 
-    public async Task<WeatherForecast[]> GetWeatherForecastAsync(string location, bool isDayTime, int forecastDays = 7)
+    public async Task<WeatherForecast[]> GetWeatherForecastAsync(string location, int forecastDays = 7)
     {
         if (string.IsNullOrWhiteSpace(location))
         {
@@ -66,7 +66,7 @@ public class OpenMeteoApiClient
             throw new ArgumentException("Location not found", nameof(location));
         }
 
-        return await GetWeatherForecastAsync(coordinates.Value.Latitude, coordinates.Value.Longitude, isDayTime, location,
+        return await GetWeatherForecastAsync(coordinates.Value.Latitude, coordinates.Value.Longitude, location,
             forecastDays);
     }
 
@@ -84,7 +84,7 @@ public class OpenMeteoApiClient
                $"forecast_days={forecastDays}";
     }
 
-    private async Task<WeatherForecast[]> ConvertToWeatherForecastAsync(OpenMeteoResponse response, string location, bool isDayTime)
+    private WeatherForecast[] ConvertToWeatherForecast(OpenMeteoResponse response, string location)
     {
         var forecasts = new List<WeatherForecast>();
 
@@ -96,8 +96,7 @@ public class OpenMeteoApiClient
             if (todayIndex >= 0 && todayIndex < response.Daily.TemperatureMax.Length)
             {
                 var weatherCode = response.Daily.WeatherCode[todayIndex];
-                var description = await _weatherCodeParser.GetDescriptionAsync(weatherCode, isDayTime) ??
-                                  GetFallbackWeatherDescription(weatherCode);
+                var description = GetWeatherDescription(weatherCode);
 
                 forecasts.Add(new WeatherForecast
                 {
@@ -110,17 +109,16 @@ public class OpenMeteoApiClient
             }
         }
 
-        if (response.Daily != null)
+        if (response.Daily?.Time != null)
         {
             var startIndex = forecasts.Count > 0 ? 1 : 0;
 
-            for (int i = startIndex;
+            for (var i = startIndex;
                  i < Math.Min(response.Daily.Time.Length, response.Daily.TemperatureMax.Length);
                  i++)
             {
                 var weatherCode = response.Daily.WeatherCode[i];
-                var description = await _weatherCodeParser.GetDescriptionAsync(weatherCode, true) ??
-                                  GetFallbackWeatherDescription(weatherCode);
+                var description = GetWeatherDescription(weatherCode);
 
                 forecasts.Add(new WeatherForecast
                 {
@@ -136,7 +134,7 @@ public class OpenMeteoApiClient
         return forecasts.ToArray();
     }
     
-    private string GetFallbackWeatherDescription(int weatherCode)
+    private static string GetWeatherDescription(int weatherCode)
     {
         return weatherCode switch
         {

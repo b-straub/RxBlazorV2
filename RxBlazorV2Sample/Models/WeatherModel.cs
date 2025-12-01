@@ -1,3 +1,4 @@
+using R3;
 using RxBlazorV2.Interface;
 using RxBlazorV2.Model;
 using RxBlazorV2Sample.Services;
@@ -12,12 +13,20 @@ public partial class WeatherModel : ObservableModel
     // Declare partial constructor with dependencies
     public partial WeatherModel(SettingsModel settings, OpenMeteoApiClient openMeteoClient);
 
+    private IDisposable? _autoRefreshSubscription;
+
+    protected override void OnContextReady()
+    {
+        base.OnContextReady();
+        Settings.OnAutoRefreshChanged(UpdateAutoRefreshTimer);
+        Settings.OnRefreshIntervalChanged(UpdateAutoRefreshTimer);
+    }
+
     public bool NotInComponentObservation => Settings.NotInComponentObservation;
     public partial bool IsLoading { get; set; }
     public partial string? ErrorMessage { get; set; }
     public partial WeatherForecast[]? Forecasts { get; set; }
-    public partial string CurrentLocation { get; set; } = "Karlsruhe";
-    public partial int RefreshIntervalMinutes { get; set; } = 5;
+    public partial string CurrentLocation { get; set; } = "Berlin";
     public partial DateTime LastRefresh { get; set; }
 
     [ObservableCommand(nameof(LoadWeatherAsync), nameof(CanLoadWeather))]
@@ -32,7 +41,7 @@ public partial class WeatherModel : ObservableModel
 
     [ObservableCommand(nameof(SimulateError))]
     public partial IObservableCommand SimulateErrorCommand { get; }
-    
+
     private bool CanLoadWeather()
     {
         return !IsLoading && !string.IsNullOrEmpty(CurrentLocation);
@@ -40,12 +49,31 @@ public partial class WeatherModel : ObservableModel
 
     private bool CanRefresh()
     {
-        return !IsLoading && Forecasts != null && Settings.AutoRefresh;
+        return !IsLoading && Forecasts is not null && Settings.AutoRefresh;
     }
 
     private bool CanChangeLocation()
     {
         return !IsLoading;
+    }
+
+    private void UpdateAutoRefreshTimer()
+    {
+        _autoRefreshSubscription?.Dispose();
+        _autoRefreshSubscription = null;
+
+        if (Settings.AutoRefresh && Forecasts is not null)
+        {
+            _autoRefreshSubscription = R3.Observable
+                .Interval(TimeSpan.FromMinutes(Settings.RefreshInterval))
+                .Subscribe(_ =>
+                {
+                    if (CanRefresh())
+                    {
+                        RefreshCommand.ExecuteAsync();
+                    }
+                });
+        }
     }
 
     private async Task LoadWeatherAsync()
@@ -55,12 +83,13 @@ public partial class WeatherModel : ObservableModel
             IsLoading = true;
             ErrorMessage = null;
 
-            var forecasts = await OpenMeteoClient.GetWeatherForecastAsync(CurrentLocation, Settings.IsDay);
-            
+            var forecasts = await OpenMeteoClient.GetWeatherForecastAsync(CurrentLocation);
+
             if (forecasts.Length > 0)
             {
                 Forecasts = forecasts;
                 LastRefresh = DateTime.Now;
+                UpdateAutoRefreshTimer();
             }
             else
             {
@@ -94,9 +123,16 @@ public partial class WeatherModel : ObservableModel
         catch (Exception e)
         {
             Console.WriteLine(e);
-            //throw;
         }
-      
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _autoRefreshSubscription?.Dispose();
+        }
+        base.Dispose(disposing);
     }
 
     private async Task ChangeLocationAsync(string newLocation)
