@@ -139,22 +139,7 @@ public partial class WeatherModel : ObservableModel
     {
         if (string.IsNullOrWhiteSpace(newLocation))
         {
-            ErrorMessage = "Location cannot be empty. Use format: latitude,longitude (e.g., 49.0094,8.4044)";
-            return;
-        }
-
-        var parts = newLocation.Split(',');
-        if (parts.Length != 2 || 
-            !double.TryParse(parts[0].Trim(), out var lat) || 
-            !double.TryParse(parts[1].Trim(), out var lng))
-        {
-            ErrorMessage = "Invalid location format. Use: latitude,longitude (e.g., 49.0094,8.4044)";
-            return;
-        }
-
-        if (lat < -90 || lat > 90 || lng < -180 || lng > 180)
-        {
-            ErrorMessage = "Invalid coordinates. Latitude must be between -90 and 90, longitude between -180 and 180";
+            ErrorMessage = "Location cannot be empty";
             return;
         }
 
