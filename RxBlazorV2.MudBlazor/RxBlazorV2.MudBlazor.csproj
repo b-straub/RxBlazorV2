@@ -7,7 +7,7 @@
 
     <!-- NuGet Package Configuration -->
     <PackageId>RxBlazorV2.MudBlazor</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <Authors>bernisoft</Authors>
     <Company>bernisoft</Company>
     <Product>RxBlazorV2.MudBlazor</Product>

@@ -32,7 +32,6 @@
             </MudButtonRx>
 
             <MudButtonRx Command="@Model.IncrementCommand"
-                         CanExecute="@Model.CanIncrement"
                          Variant="Variant.Outlined"
                          Color="Color.Primary">
                 Increment (max 100)
@@ -49,7 +48,6 @@
             <MudButtonRxOf T="int"
                            Command="@Model.AddCommand"
                            Parameter="-1"
-                           CanExecute="@Model.CanDecrement"
                            Variant="Variant.Outlined"
                            Color="Color.Error">
                 Subtract 1

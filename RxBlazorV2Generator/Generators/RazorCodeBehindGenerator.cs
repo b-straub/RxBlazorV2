@@ -1,6 +1,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
 using RxBlazorV2Generator.Analyzers;
+using RxBlazorV2Generator.Extensions;
 using RxBlazorV2Generator.Models;
 using System.Text;
 using System.Collections.Immutable;
@@ -104,6 +105,31 @@ public static class RazorCodeBehindGenerator
                     if (trigger.TriggerBehavior != 2)
                     {
                         usedProperties.Add(trigger.QualifiedPropertyPath);
+                    }
+                }
+            }
+
+            // Add command observed properties (including CanExecute dependencies) to the filter
+            // When a command is used in razor (e.g., Model.AddCommand), we need to re-render
+            // when any property that affects the command's CanExecute state changes
+            if (component.ComponentInfo is not null)
+            {
+                var modelFullName = $"{component.ComponentInfo.ModelNamespace}.{component.ComponentInfo.ModelTypeName}{component.ComponentInfo.GenericTypes}";
+                if (generatorContext.AllModels.TryGetValue(modelFullName, out var model) && model.ModelInfo is not null)
+                {
+                    // Find which commands are used in the razor file
+                    foreach (var command in model.ModelInfo.CommandProperties)
+                    {
+                        var commandPropertyName = $"Model.{command.Name}";
+                        if (usedProperties.Contains(commandPropertyName))
+                        {
+                            // Add all observed properties for this command to the filter
+                            var commandObservedProps = model.ModelInfo.GetObservedPropertiesForCommand(command);
+                            foreach (var prop in commandObservedProps)
+                            {
+                                usedProperties.Add(prop);
+                            }
+                        }
                     }
                 }
             }

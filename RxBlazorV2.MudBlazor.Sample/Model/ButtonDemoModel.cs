@@ -10,27 +10,40 @@ public partial class ButtonDemoModel : ObservableModel
     public partial int Counter { get; set; }
 
     public partial string StatusMessage { get; set; } = "Ready";
+    
+    public partial bool IndirectUsageReady { get; set; } = false;
 
     // Sync command - simple increment
-    [ObservableCommand(nameof(IncrementSync))]
+    [ObservableCommand(nameof(IncrementSync), nameof(CanIncrement))]
     public partial IObservableCommand IncrementCommand { get; }
 
     // Sync command with parameter
-    [ObservableCommand(nameof(AddValueSync))]
+    [ObservableCommand(nameof(AddValueSync), nameof(CanRun))]
     public partial IObservableCommand<int> AddCommand { get; }
 
     // Async command - simulates work
-    [ObservableCommand(nameof(IncrementAsync))]
+    [ObservableCommand(nameof(IncrementAsync), nameof(CanIncrement))]
     public partial IObservableCommandAsync IncrementAsyncCommand { get; }
 
     // Async command with cancellation support
-    [ObservableCommand(nameof(LongOperationAsync))]
+    [ObservableCommand(nameof(LongOperationAsync), nameof(CanRun))]
     public partial IObservableCommandAsync LongOperationCommand { get; }
 
     // Async command with parameter
-    [ObservableCommand(nameof(AddValueAsync))]
+    [ObservableCommand(nameof(AddValueAsync), nameof(CanRun))]
     public partial IObservableCommandAsync<int> AddAsyncCommand { get; }
 
+    protected override async Task OnContextReadyAsync()
+    {
+        await Task.Delay(3000);
+        IndirectUsageReady = true;
+    }
+
+    private bool CanRun()
+    {
+        return IndirectUsageReady;
+    }
+    
     private void IncrementSync()
     {
         Counter++;
@@ -73,7 +86,5 @@ public partial class ButtonDemoModel : ObservableModel
         StatusMessage = $"Added {value}, now {Counter}";
     }
 
-    public bool CanIncrement() => Counter < 100;
-
-    public bool CanDecrement() => Counter > 0;
+    private bool CanIncrement() => Counter < 100;
 }

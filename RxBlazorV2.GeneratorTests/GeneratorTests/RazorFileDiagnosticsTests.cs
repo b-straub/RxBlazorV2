@@ -2998,4 +2998,178 @@ public class RazorFileDiagnosticsTests
             additionalGeneratedSources: additionalGeneratedSources);
     }
 
+    [Fact]
+    public async Task Filter_IncludesCanExecuteProperties_WhenCommandUsedInRazor()
+    {
+        // This test verifies that when a command is used in a Razor file,
+        // the properties referenced in the command's CanExecute method are also
+        // included in the Filter() method. This ensures the component re-renders
+        // when the CanExecute state changes.
+
+        // lang=csharp
+        const string source = """
+
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Scoped)]
+            [ObservableComponent]
+            public partial class CommandModel : ObservableModel
+            {
+                // This property is ONLY used in CanExecute - not directly in razor
+                public partial bool IsReady { get; set; }
+
+                // Command with CanExecute that uses IsReady
+                [ObservableCommand(nameof(Execute), nameof(CanExecute))]
+                public partial IObservableCommand RunCommand { get; }
+
+                private void Execute()
+                {
+                    // Do something
+                }
+
+                private bool CanExecute()
+                {
+                    return IsReady;
+                }
+            }
+        }
+        """;
+
+        // lang=csharp
+        const string generatedModel = """
+
+        #nullable enable
+        using JetBrains.Annotations;
+        using Microsoft.Extensions.DependencyInjection;
+        using ObservableCollections;
+        using R3;
+        using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using System;
+
+        namespace Test;
+
+        public partial class CommandModel
+        {
+            public override string ModelID => "Test.CommandModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
+            public partial bool IsReady
+            {
+                get => field;
+                [UsedImplicitly]
+                set
+                {
+                    if (field != value)
+                    {
+                        field = value;
+                        StateHasChanged("Model.IsReady");
+                    }
+                }
+            }
+
+            private ObservableCommand _runCommand;
+
+            public partial IObservableCommand RunCommand
+            {
+                get => _runCommand;
+            }
+
+            public CommandModel() : base()
+            {
+                // Initialize commands
+                _runCommand = new ObservableCommandFactory(this, ["Model.IsReady"], Execute, CanExecute);
+            }
+        }
+
+        """;
+
+        // lang=csharp
+        const string generatedComponent = """
+
+        using R3;
+        using ObservableCollections;
+        using System;
+        using System.Threading.Tasks;
+        using Microsoft.Extensions.DependencyInjection;
+        using RxBlazorV2.Component;
+
+        namespace Test;
+
+        public partial class CommandModelComponent : ObservableComponent<CommandModel>
+        {
+            protected override void InitializeGeneratedCode()
+            {
+                // Subscribe to model changes - respects Filter() method
+                var filter = Filter();
+                if (filter.Length > 0)
+                {
+                    // Filter active - observe only filtered properties
+                    Subscriptions.Add(Model.Observable
+                        .Where(changedProps => changedProps.Intersect(filter).Any())
+                        .Chunk(TimeSpan.FromMilliseconds(100))
+                        .Subscribe(chunks =>
+                        {
+                            InvokeAsync(StateHasChanged);
+                        }));
+                }
+                // else: Empty filter - no automatic StateHasChanged, only triggers (if any) will fire
+            }
+
+            protected override Task InitializeGeneratedCodeAsync()
+            {
+                return Task.CompletedTask;
+            }
+
+        }
+
+        """;
+
+        // Razor file that ONLY uses the command - not IsReady directly
+        // The Filter should still include Model.IsReady because it affects RunCommand's CanExecute
+        var razorFiles = new Dictionary<string, string>
+        {
+            ["Pages/CommandPage.razor"] = """
+            @inherits CommandModelComponent
+
+            <h3>Command Test</h3>
+            <button @onclick="Model.RunCommand.Execute">Run</button>
+            """
+        };
+
+        // Expected code-behind: Filter should include BOTH the command AND IsReady
+        // because IsReady is used in the command's CanExecute method
+        var additionalGeneratedSources = new Dictionary<string, string>
+        {
+            ["CommandPage.g.cs"] = GenerateFilterCodeBehind(
+                "CommandPage",
+                "CommandModelComponent",
+                "Pages",
+                ["Model.IsReady", "Model.RunCommand"], // IsReady must be included even though not directly used
+                ["Test"])
+        };
+
+        await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
+            source,
+            razorFiles,
+            generatedModel,
+            generatedComponent,
+            "CommandModel",
+            "CommandModelComponent",
+            additionalGeneratedSources: additionalGeneratedSources);
+    }
+
 }
