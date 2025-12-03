@@ -17,12 +17,6 @@ public class MudIconButtonRx : MudIconButton
     public required IObservableCommand Command { get; set; }
 
     /// <summary>
-    /// Additional guard function to determine if the command can execute.
-    /// </summary>
-    [Parameter]
-    public Func<bool>? CanExecute { get; set; }
-
-    /// <summary>
     /// Optional confirmation function called before execution.
     /// Return true to proceed, false to cancel.
     /// </summary>
@@ -36,7 +30,7 @@ public class MudIconButtonRx : MudIconButton
             throw new InvalidOperationException("Icon is required for MudIconButtonRx");
         }
 
-        Disabled = !Command.CanExecute || (CanExecute is not null && !CanExecute());
+        Disabled = !Command.CanExecute;
         OnClick = EventCallback.Factory.Create<MouseEventArgs>(this, ExecuteCommandAsync);
 
         base.OnParametersSet();
@@ -70,13 +64,7 @@ public class MudIconButtonRxOf<T> : MudIconButton
     /// </summary>
     [Parameter, EditorRequired]
     public required T Parameter { get; set; }
-
-    /// <summary>
-    /// Additional guard function to determine if the command can execute.
-    /// </summary>
-    [Parameter]
-    public Func<bool>? CanExecute { get; set; }
-
+    
     /// <summary>
     /// Optional confirmation function called before execution.
     /// Return true to proceed, false to cancel.
@@ -91,7 +79,7 @@ public class MudIconButtonRxOf<T> : MudIconButton
             throw new InvalidOperationException("Icon is required for MudIconButtonRx<T>");
         }
 
-        Disabled = !Command.CanExecute || (CanExecute is not null && !CanExecute());
+        Disabled = !Command.CanExecute;
         OnClick = EventCallback.Factory.Create<MouseEventArgs>(this, ExecuteCommandAsync);
 
         base.OnParametersSet();

@@ -15,13 +15,7 @@ public class MudButtonRx : MudButton
     /// </summary>
     [Parameter, EditorRequired]
     public required IObservableCommand Command { get; set; }
-
-    /// <summary>
-    /// Additional guard function to determine if the command can execute.
-    /// </summary>
-    [Parameter]
-    public Func<bool>? CanExecute { get; set; }
-
+    
     /// <summary>
     /// Optional confirmation function called before execution.
     /// Return true to proceed, false to cancel.
@@ -31,7 +25,7 @@ public class MudButtonRx : MudButton
 
     protected override void OnParametersSet()
     {
-        Disabled = !Command.CanExecute || (CanExecute is not null && !CanExecute());
+        Disabled = !Command.CanExecute;
         OnClick = EventCallback.Factory.Create<MouseEventArgs>(this, ExecuteCommandAsync);
 
         base.OnParametersSet();
@@ -67,12 +61,6 @@ public class MudButtonRxOf<T> : MudButton
     public required T Parameter { get; set; }
 
     /// <summary>
-    /// Additional guard function to determine if the command can execute.
-    /// </summary>
-    [Parameter]
-    public Func<bool>? CanExecute { get; set; }
-
-    /// <summary>
     /// Optional confirmation function called before execution.
     /// Return true to proceed, false to cancel.
     /// </summary>
@@ -81,7 +69,7 @@ public class MudButtonRxOf<T> : MudButton
 
     protected override void OnParametersSet()
     {
-        Disabled = !Command.CanExecute || (CanExecute is not null && !CanExecute());
+        Disabled = !Command.CanExecute;
         OnClick = EventCallback.Factory.Create<MouseEventArgs>(this, ExecuteCommandAsync);
 
         base.OnParametersSet();

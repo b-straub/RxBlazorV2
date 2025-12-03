@@ -16,13 +16,7 @@ public class MudFabAsyncRx : MudFab
     /// </summary>
     [Parameter, EditorRequired]
     public required IObservableCommandAsync Command { get; set; }
-
-    /// <summary>
-    /// Additional guard function to determine if the command can execute.
-    /// </summary>
-    [Parameter]
-    public Func<bool>? CanExecute { get; set; }
-
+    
     /// <summary>
     /// Optional confirmation function called before execution.
     /// Return true to proceed, false to cancel.
@@ -115,7 +109,7 @@ public class MudFabAsyncRx : MudFab
             Label = _originalLabel;
             Color = _originalColor;
             OnClick = EventCallback.Factory.Create<MouseEventArgs>(this, ExecuteCommandAsync);
-            Disabled = !Command.CanExecute || (CanExecute is not null && !CanExecute());
+            Disabled = !Command.CanExecute;
         }
 
         base.OnParametersSet();
@@ -151,12 +145,6 @@ public class MudFabAsyncRxOf<T> : MudFab
     public required T Parameter { get; set; }
 
     /// <summary>
-    /// Additional guard function to determine if the command can execute.
-    /// </summary>
-    [Parameter]
-    public Func<bool>? CanExecute { get; set; }
-
-    /// <summary>
     /// Optional confirmation function called before execution.
     /// Return true to proceed, false to cancel.
     /// </summary>
@@ -248,7 +236,7 @@ public class MudFabAsyncRxOf<T> : MudFab
             Label = _originalLabel;
             Color = _originalColor;
             OnClick = EventCallback.Factory.Create<MouseEventArgs>(this, ExecuteCommandAsync);
-            Disabled = !Command.CanExecute || (CanExecute is not null && !CanExecute());
+            Disabled = !Command.CanExecute;
         }
 
         base.OnParametersSet();
