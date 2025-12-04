@@ -14,7 +14,7 @@
         <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.0"/>
         <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.0" PrivateAssets="all"/>
         <PackageReference Include="MudBlazor" Version="8.15.0"/>
-        <PackageReference Include="RxBlazorV2" Version="1.0.0" Condition="'$(Configuration)' == 'Release'"/>
+        <PackageReference Include="RxBlazorV2" Version="$(RxBlazorV2Version)" Condition="'$(Configuration)' == 'Release'"/>
     </ItemGroup>
 
     <ItemGroup>
