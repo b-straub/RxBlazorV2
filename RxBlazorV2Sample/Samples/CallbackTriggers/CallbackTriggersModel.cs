@@ -5,7 +5,7 @@ using RxBlazorV2Sample.Samples.Helpers;
 namespace RxBlazorV2Sample.Samples.CallbackTriggers;
 
 [ObservableComponent]
-[ObservableModelScope(ModelScope.Scoped)]
+[ObservableModelScope(ModelScope.Singleton)]
 public partial class CallbackTriggersModel : SampleBaseModel
 {
     public override string Usage => "Callback triggers allow external services to subscribe to property changes";

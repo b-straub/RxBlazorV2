@@ -28,7 +28,7 @@ public class CallbackTriggersService
             _model.LogEntries.Add(new Helpers.LogEntry(message, DateTime.Now));
 
             // Simulate async processing
-            await Task.Delay(200, ct);
+            await Task.Delay(1000, ct);
 
             var completeMessage = $"[Service] Settings saved at {DateTime.Now:HH:mm:ss}";
             _model.CallbackResults.Add(completeMessage);
@@ -41,6 +41,19 @@ public class CallbackTriggersService
             var message = $"[Service] Theme updated to: {_model.Theme} at {DateTime.Now:HH:mm:ss}";
             _model.CallbackResults.Add(message);
             _model.LogEntries.Add(new Helpers.LogEntry(message, DateTime.Now));
+
+            switch (_model.Theme)
+            {
+                case "Light":
+                    _model.Settings = "{\"theme\": \"light\"}";
+                    break;
+                case "Dark":
+                    _model.Settings = "{\"theme\": \"dark\"}";
+                    break;
+                case "Auto":
+                    _model.Settings = "{\"theme\": \"auto\"}";
+                    break;
+            }
         });
 
         // Subscribe to NotificationCount with both sync and async callbacks
