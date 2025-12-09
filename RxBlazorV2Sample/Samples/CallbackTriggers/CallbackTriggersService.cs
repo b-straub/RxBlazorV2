@@ -6,70 +6,66 @@ namespace RxBlazorV2Sample.Samples.CallbackTriggers;
 /// </summary>
 public class CallbackTriggersService
 {
-    private readonly CallbackTriggersModel _model;
-
-    public CallbackTriggersService(CallbackTriggersModel model)
+    public void Init(CallbackTriggersModel model)
     {
-        _model = model;
-
         // Subscribe to CurrentUser changes using the generated callback method
-        _model.OnCurrentUserChanged(() =>
+        model.OnCurrentUserChanged(() =>
         {
-            var message = $"[Service] User changed to: {_model.CurrentUser} at {DateTime.Now:HH:mm:ss}";
-            _model.CallbackResults.Add(message);
-            _model.LogEntries.Add(new Helpers.LogEntry(message, DateTime.Now));
+            var message = $"[Service] User changed to: {model.CurrentUser} at {DateTime.Now:HH:mm:ss}";
+            model.CallbackResults.Add(message);
+            model.LogEntries.Add(new Helpers.LogEntry(message, DateTime.Now));
         });
 
         // Subscribe to Settings changes using the generated async callback method
-        _model.OnSettingsChangedAsync(async ct =>
+        model.OnSettingsChangedAsync(async ct =>
         {
-            var message = $"[Service] Settings updating: {_model.Settings}";
-            _model.CallbackResults.Add(message);
-            _model.LogEntries.Add(new Helpers.LogEntry(message, DateTime.Now));
+            var message = $"[Service] Settings updating: {model.Settings}";
+            model.CallbackResults.Add(message);
+            model.LogEntries.Add(new Helpers.LogEntry(message, DateTime.Now));
 
             // Simulate async processing
             await Task.Delay(1000, ct);
 
             var completeMessage = $"[Service] Settings saved at {DateTime.Now:HH:mm:ss}";
-            _model.CallbackResults.Add(completeMessage);
-            _model.LogEntries.Add(new Helpers.LogEntry(completeMessage, DateTime.Now));
+            model.CallbackResults.Add(completeMessage);
+            model.LogEntries.Add(new Helpers.LogEntry(completeMessage, DateTime.Now));
         });
 
         // Subscribe using custom method name
-        _model.HandleThemeUpdate(() =>
+        model.HandleThemeUpdate(() =>
         {
-            var message = $"[Service] Theme updated to: {_model.Theme} at {DateTime.Now:HH:mm:ss}";
-            _model.CallbackResults.Add(message);
-            _model.LogEntries.Add(new Helpers.LogEntry(message, DateTime.Now));
+            var message = $"[Service] Theme updated to: {model.Theme} at {DateTime.Now:HH:mm:ss}";
+            model.CallbackResults.Add(message);
+            model.LogEntries.Add(new Helpers.LogEntry(message, DateTime.Now));
 
-            switch (_model.Theme)
+            switch (model.Theme)
             {
                 case "Light":
-                    _model.Settings = "{\"theme\": \"light\"}";
+                    model.Settings = "{\"theme\": \"light\"}";
                     break;
                 case "Dark":
-                    _model.Settings = "{\"theme\": \"dark\"}";
+                    model.Settings = "{\"theme\": \"dark\"}";
                     break;
                 case "Auto":
-                    _model.Settings = "{\"theme\": \"auto\"}";
+                    model.Settings = "{\"theme\": \"auto\"}";
                     break;
             }
         });
 
         // Subscribe to NotificationCount with both sync and async callbacks
-        _model.OnNotificationCountChanged(() =>
+        model.OnNotificationCountChanged(() =>
         {
-            var message = $"[Sync] Notification count: {_model.NotificationCount}";
-            _model.CallbackResults.Add(message);
-            _model.LogEntries.Add(new Helpers.LogEntry(message, DateTime.Now));
+            var message = $"[Sync] Notification count: {model.NotificationCount}";
+            model.CallbackResults.Add(message);
+            model.LogEntries.Add(new Helpers.LogEntry(message, DateTime.Now));
         });
 
-        _model.OnNotificationCountChangedAsync(async ct =>
+        model.OnNotificationCountChangedAsync(async ct =>
         {
             await Task.Delay(100, ct);
-            var message = $"[Async] Processed notification #{_model.NotificationCount}";
-            _model.CallbackResults.Add(message);
-            _model.LogEntries.Add(new Helpers.LogEntry(message, DateTime.Now));
+            var message = $"[Async] Processed notification #{model.NotificationCount}";
+            model.CallbackResults.Add(message);
+            model.LogEntries.Add(new Helpers.LogEntry(message, DateTime.Now));
         });
     }
 }
