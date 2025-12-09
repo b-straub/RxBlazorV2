@@ -1,5 +1,4 @@
 using MudBlazor;
-using RxBlazorV2Sample.Components;
 using RxBlazorV2Sample.Models;
 
 // Extend the generated WeatherComponent with custom view logic

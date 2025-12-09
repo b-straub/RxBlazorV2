@@ -1,4 +1,3 @@
-using Microsoft.CodeAnalysis.Testing;
 using RxBlazorV2Generator.Diagnostics;
 using AnalyzerVerifier = RxBlazorV2.GeneratorTests.Helpers.CSharpCodeFixVerifier<RxBlazorV2Generator.Analyzers.RxBlazorDiagnosticAnalyzer,
         RxBlazorV2CodeFix.CodeFix.InvalidModelReferenceCodeFix>;

@@ -1,7 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Models;
-using RxBlazorV2Generator.Diagnostics;
 using RxBlazorV2Generator.Extensions;
 
 namespace RxBlazorV2Generator.Analyzers;

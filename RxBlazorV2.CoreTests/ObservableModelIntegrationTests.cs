@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Time.Testing;
-using R3;
 using RxBlazorV2.CoreTests.TestFixtures;
 
 namespace RxBlazorV2.CoreTests;

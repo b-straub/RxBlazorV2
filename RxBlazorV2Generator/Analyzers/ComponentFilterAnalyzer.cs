@@ -1,8 +1,5 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
-using RxBlazorV2Generator.Extensions;
-using RxBlazorV2Generator.Models;
-using System.Collections.Immutable;
 using System.Text.RegularExpressions;
 
 namespace RxBlazorV2Generator.Analyzers;

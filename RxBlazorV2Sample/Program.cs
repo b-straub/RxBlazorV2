@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using MudBlazor.Services;
 using RxBlazorV2Sample;
-using RxBlazorV2Sample.Models;
 using RxBlazorV2Sample.Samples.CallbackTriggers;
 using RxBlazorV2Sample.Services;
 

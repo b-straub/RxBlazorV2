@@ -1,9 +1,7 @@
 using Microsoft.CodeAnalysis;
 using RxBlazorV2Generator.Analysis;
-using RxBlazorV2Generator.Helpers;
 using RxBlazorV2Generator.Models;
 using System.Collections.Immutable;
-using System.Linq;
 
 namespace RxBlazorV2Generator.Builders;
 

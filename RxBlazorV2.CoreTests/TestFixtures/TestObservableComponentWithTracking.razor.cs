@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Rendering;
 using RxBlazorV2.Component;
 
 namespace RxBlazorV2.CoreTests.TestFixtures;

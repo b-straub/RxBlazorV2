@@ -1,7 +1,5 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Components;
 using R3;
-using RxBlazorV2.Interface;
 using RxBlazorV2.Model;
 
 namespace RxBlazorV2.Component;

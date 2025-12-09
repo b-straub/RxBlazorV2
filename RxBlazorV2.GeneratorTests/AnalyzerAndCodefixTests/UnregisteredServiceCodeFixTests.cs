@@ -1,7 +1,6 @@
 using RxBlazorV2Generator.Diagnostics;
 using CodeFixVerifier = RxBlazorV2.GeneratorTests.Helpers.CSharpCodeFixVerifier<RxBlazorV2Generator.Analyzers.RxBlazorDiagnosticAnalyzer,
     RxBlazorV2CodeFix.CodeFix.UnregisteredServiceCodeFixProvider>;
-using AnalyzerVerifier = RxBlazorV2.GeneratorTests.Helpers.CSharpAnalyzerVerifier<RxBlazorV2Generator.Analyzers.RxBlazorDiagnosticAnalyzer>;
 
 namespace RxBlazorV2.GeneratorTests.AnalyzerAndCodefixTests;
 

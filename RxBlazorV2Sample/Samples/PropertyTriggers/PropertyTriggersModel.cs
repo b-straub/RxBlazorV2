@@ -1,4 +1,3 @@
-using ObservableCollections;
 using RxBlazorV2.Model;
 using RxBlazorV2Sample.Samples.Helpers;
 

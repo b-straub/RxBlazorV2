@@ -5,7 +5,6 @@ using Microsoft.CodeAnalysis.Diagnostics;
 using RxBlazorV2Generator.Analysis;
 using RxBlazorV2Generator.Diagnostics;
 using RxBlazorV2Generator.Extensions;
-using RxBlazorV2Generator.Models;
 using System.Collections.Immutable;
 
 namespace RxBlazorV2Generator.Analyzers;

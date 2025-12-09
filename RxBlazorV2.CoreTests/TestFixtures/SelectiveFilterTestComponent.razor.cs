@@ -1,5 +1,3 @@
-using R3;
-
 namespace RxBlazorV2.CoreTests.TestFixtures;
 
 public partial class SelectiveFilterTestComponent

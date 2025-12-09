@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Components;
-
 namespace RxBlazorV2.CoreTests.TestFixtures;
 
 public partial class ParentTriggerTestComponent

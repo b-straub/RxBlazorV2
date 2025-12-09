@@ -1,5 +1,4 @@
 using RxBlazorV2Generator.Diagnostics;
-using Microsoft.CodeAnalysis.Testing;
 using CodeFixVerifier = RxBlazorV2.GeneratorTests.Helpers.CSharpCodeFixVerifier<RxBlazorV2Generator.Analyzers.RxBlazorDiagnosticAnalyzer,
         RxBlazorV2CodeFix.CodeFix.ObservableEntityMissingPartialCodeFixProvider>;
 

@@ -1,6 +1,5 @@
 using RxBlazorV2Generator.Diagnostics;
 using AnalyzerVerifier = RxBlazorV2.GeneratorTests.Helpers.CSharpAnalyzerVerifier<RxBlazorV2Generator.Analyzers.RxBlazorDiagnosticAnalyzer>;
-using Microsoft.CodeAnalysis.Testing;
 
 namespace RxBlazorV2.GeneratorTests.AnalyzerAndCodefixTests;
 

@@ -1,4 +1,3 @@
-using Microsoft;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Analysis;
@@ -7,10 +6,7 @@ using RxBlazorV2Generator.Builders;
 using RxBlazorV2Generator.Diagnostics;
 using RxBlazorV2Generator.Generators;
 using RxBlazorV2Generator.Models;
-using System;
 using System.Collections.Immutable;
-using System.Diagnostics;
-using System.Linq;
 
 namespace RxBlazorV2Generator;
 

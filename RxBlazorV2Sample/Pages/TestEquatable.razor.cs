@@ -1,5 +1,4 @@
 using R3;
-using RxBlazorV2Sample.Components;
 using RxBlazorV2Sample.Models;
 
 namespace RxBlazorV2Sample.Pages

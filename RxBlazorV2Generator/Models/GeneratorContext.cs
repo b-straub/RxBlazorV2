@@ -1,5 +1,3 @@
-using Microsoft.CodeAnalysis;
-
 namespace RxBlazorV2Generator.Models;
 
 /// <summary>
