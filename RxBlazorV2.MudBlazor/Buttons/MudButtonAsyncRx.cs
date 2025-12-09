@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using MudBlazor;
+using RxBlazorV2.Interface;
 using RxBlazorV2.MudBlazor.Internal;
 
 namespace RxBlazorV2.MudBlazor.Buttons;

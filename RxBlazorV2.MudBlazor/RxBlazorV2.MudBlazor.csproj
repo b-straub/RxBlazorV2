@@ -59,4 +59,8 @@
     <PackageReference Include="RxBlazorV2" Version="$(RxBlazorV2Version)" Condition="'$(Configuration)' == 'Release'"/>
   </ItemGroup>
 
+  <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+    <ProjectReference Include="..\RxBlazorV2\RxBlazorV2.csproj" />
+   </ItemGroup>
+
 </Project>

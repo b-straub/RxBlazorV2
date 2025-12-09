@@ -92,7 +92,7 @@ public class ObservableComponentTriggerRerenderTests : BunitContext
         cut.Instance.Model.AsyncTriggerProperty = 42;
 
         // Wait for chunk buffer and async hook execution
-        await Task.Delay(200);
+        await Task.Delay(200, Xunit.TestContext.Current.CancellationToken);
 
         // Assert - both hook AND re-render should occur
         var newRenderCount = cut.Instance.RenderCount;
