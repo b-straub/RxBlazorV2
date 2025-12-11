@@ -30,3 +30,6 @@
 | RXBG070 | RxBlazorGenerator | Warning | ObservableModel is missing ObservableModelScope attribute |
 | RXBG071 | RxBlazorGenerator | Error | Partial constructor with DI parameters must be public |
 | RXBG072 | RxBlazorGenerator | Error | Observable entity must be declared as partial |
+| RXBG080 | RxBlazorGenerator | Error | ObservableModelObserver method has invalid signature |
+| RXBG081 | RxBlazorGenerator | Error | ObservableModelObserver property not found on model |
+| RXBG082 | RxBlazorGenerator | Warning | Internal model observer method has invalid signature |

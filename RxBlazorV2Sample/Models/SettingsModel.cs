@@ -12,11 +12,9 @@ public partial class SettingsModel : ObservableModel, ISettingsModel
     
     [ObservableComponentTrigger]
     public partial bool IsDay { get; set; } = false;
-
-    [ObservableCallbackTrigger]
+    
     public partial bool AutoRefresh { get; set; } = true;
-
-    [ObservableCallbackTrigger]
+    
     public partial int RefreshInterval { get; set; } = 5;
     public partial bool NotInComponentObservation { get; set; }
 

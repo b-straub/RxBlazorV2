@@ -18,7 +18,7 @@ internal static class RxBlazorGeneratorVerifier
     {
         var genericSplit = modelName.IndexOf('<');
         var modelFileName = genericSplit > 0 ? modelName[..genericSplit] : modelName;
-        
+
         var test = new RxBlazorGeneratorTest { TestCode = source };
         test.TestState.Sources.Add(("GlobalUsings.cs", SourceText.From(TestShared.GlobalUsing, Encoding.UTF8)));
 
@@ -30,6 +30,25 @@ internal static class RxBlazorGeneratorVerifier
         test.TestState.GeneratedSources.Add((typeof(RxBlazorGenerator), "GenericModelsServiceCollectionExtension.g.cs",
                 SourceText.From(RxBlazorGeneratorTest.GenricModelsServiceExtension([modelName], constrains), Encoding.UTF8))
         );
+        test.ExpectedDiagnostics.AddRange(expected);
+        test.TestState.ReferenceAssemblies = TestShared.ReferenceAssemblies();
+        test.TestState.AdditionalReferences.Add(typeof(Model.ObservableModel).Assembly);
+
+        return test.RunAsync();
+    }
+
+    /// <summary>
+    /// Verifies generator diagnostics without checking generated sources.
+    /// Used for testing diagnostics like RXBG082 that require cross-model analysis.
+    /// </summary>
+    public static Task VerifyGeneratorDiagnosticsAsync(string source, params DiagnosticResult[] expected)
+    {
+        var test = new RxBlazorGeneratorTest { TestCode = source };
+        test.TestState.Sources.Add(("GlobalUsings.cs", SourceText.From(TestShared.GlobalUsing, Encoding.UTF8)));
+
+        // Skip generated sources verification - we only care about diagnostics
+        test.TestBehaviors = TestBehaviors.SkipGeneratedSourcesCheck;
+
         test.ExpectedDiagnostics.AddRange(expected);
         test.TestState.ReferenceAssemblies = TestShared.ReferenceAssemblies();
         test.TestState.AdditionalReferences.Add(typeof(Model.ObservableModel).Assembly);

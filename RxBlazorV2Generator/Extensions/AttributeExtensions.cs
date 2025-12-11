@@ -108,23 +108,22 @@ public static class AttributeExtensions
     }
 
     /// <summary>
-    /// Checks if an attribute is ObservableCallbackTrigger
+    /// Checks if an attribute is ObservableModelObserver
     /// </summary>
-    public static bool IsObservableCallbackTrigger(
+    public static bool IsObservableModelObserver(
         this AttributeSyntax attribute,
         SemanticModel semanticModel)
     {
-        return attribute.IsAttributeOfType(semanticModel, "ObservableCallbackTriggerAttribute");
+        return attribute.IsAttributeOfType(semanticModel, "ObservableModelObserverAttribute");
     }
 
     /// <summary>
-    /// Checks if an attribute is ObservableCallbackTriggerAsync
+    /// Checks if an AttributeData represents ObservableModelObserver.
+    /// Use this for attributes retrieved via ISymbol.GetAttributes().
     /// </summary>
-    public static bool IsObservableCallbackTriggerAsync(
-        this AttributeSyntax attribute,
-        SemanticModel semanticModel)
+    public static bool IsObservableModelObserver(this AttributeData attribute)
     {
-        return attribute.IsAttributeOfType(semanticModel, "ObservableCallbackTriggerAsyncAttribute");
+        return attribute.IsAttributeOfType("ObservableModelObserverAttribute");
     }
 
     /// <summary>

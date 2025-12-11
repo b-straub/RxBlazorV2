@@ -96,8 +96,8 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
             var (partialProperties, partialPropertyDiagnostics) = classDecl.ExtractPartialPropertiesWithDiagnostics(semanticModel);
             var (commandProperties, commandPropertiesDiagnostics) = classDecl.ExtractCommandPropertiesWithDiagnostics(methods, semanticModel);
 
-            // Extract model references and DI fields from partial constructor parameters
-            var (modelReferences, diFields, unregisteredServices, diFieldsWithScope) = classDecl.ExtractPartialConstructorDependencies(semanticModel, serviceClasses);
+            // Extract model references, DI fields, and model observers from partial constructor parameters
+            var (modelReferences, diFields, unregisteredServices, diFieldsWithScope, modelObservers, modelObserverDiagnostics) = classDecl.ExtractPartialConstructorDependencies(semanticModel, serviceClasses, namedTypeSymbol);
 
             // Extract additional DI fields from private field declarations
             var additionalDIFields = classDecl.ExtractDIFields(semanticModel, serviceClasses);
@@ -113,9 +113,10 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
             var constructorAccessibility = classDecl.GetConstructorAccessibility();
             var classAccessibility = classDecl.GetClassAccessibility();
 
-            // Add diagnostics from partial properties and command properties analysis
+            // Add diagnostics from partial properties, command properties, and model observer analysis
             diagnostics.AddRange(partialPropertyDiagnostics);
             diagnostics.AddRange(commandPropertiesDiagnostics);
+            diagnostics.AddRange(modelObserverDiagnostics);
 
             // Check for missing ObservableModelScope attribute (RXBG070)
             if (!hasScopeAttribute)
@@ -183,6 +184,16 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                 compilation);
             diagnostics.AddRange(modelReferenceDiagnostics);
 
+            // Analyze private methods for internal model observers (auto-detection)
+            // These are methods that access referenced model properties and will generate subscriptions
+            var (internalModelObservers, invalidInternalObservers) = classDecl.AnalyzeInternalModelObserversWithDiagnostics(
+                semanticModel,
+                enhancedModelReferences,
+                modelSymbolMap);
+
+            // NOTE: RXBG082 (InternalModelObserverInvalidSignatureWarning) is reported by generator
+            // after cross-model analysis completes. Invalid observers are stored for later.
+
             // NOTE: Shared model scoping (RXBG014) is now checked in generator post-step
             // by counting component usage in razor files
 
@@ -205,13 +216,16 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                     usingStatements,
                     baseModelTypeName,
                     constructorAccessibility,
-                    classAccessibility),
+                    classAccessibility,
+                    modelObservers,
+                    internalModelObservers),
                 diagnostics,
                 shouldGenerateCode);
 
-            // Store unregistered services and DI scope info for generator diagnostic reporting
+            // Store unregistered services, DI scope info, and invalid observers for generator diagnostic reporting
             record.UnregisteredServices = unregisteredServices;
             record.DiFieldsWithScope = diFieldsWithScope;
+            record.InvalidInternalObservers = invalidInternalObservers;
 
             // Extract component attribute data for later ComponentInfo generation
             ExtractComponentAttributeData(namedTypeSymbol, record);
@@ -232,9 +246,10 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
         }
     }
 
-    // Properties for generator-specific diagnostics (RXBG020, RXBG021)
+    // Properties for generator-specific diagnostics (RXBG020, RXBG021, RXBG082)
     public List<(string paramName, string paramType, ITypeSymbol? typeSymbol, Location? location)> UnregisteredServices { get; private set; } = [];
     public List<(DIFieldInfo diField, string? serviceScope, Location? location)> DiFieldsWithScope { get; private set; } = [];
+    public List<InvalidInternalModelObserverInfo> InvalidInternalObservers { get; private set; } = [];
 
     // Component attribute data (extracted during Create for use in later pipeline stages)
     public bool HasObservableComponentAttribute { get; private set; }
@@ -252,7 +267,7 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
     /// <summary>
     /// Returns all diagnostics for this model.
     /// This is the single source of truth for diagnostic logic.
-    /// Note: RXBG041, RXBG050, RXBG051, and RXBG014 are reported by the generator in a separate pass
+    /// Note: RXBG041, RXBG050, RXBG051, RXBG082, and RXBG014 are reported by the generator in a separate pass
     /// (after cross-model analysis completes).
     /// </summary>
     public List<Diagnostic> Verify()

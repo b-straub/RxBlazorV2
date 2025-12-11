@@ -104,21 +104,6 @@ public static class ObservableModelCodeGenerator
                 sb.Append(CommandTemplate.GenerateCommandProperties(modelInfo.CommandProperties));
             }
 
-            // Generate callback storage fields for external subscriptions
-            var callbackStorageFields = CallbackTriggerTemplate.GenerateCallbackStorageFields(modelInfo.PartialProperties);
-            if (!string.IsNullOrEmpty(callbackStorageFields))
-            {
-                sb.AppendLine();
-                sb.Append(callbackStorageFields);
-            }
-
-            // Generate callback registration methods for external subscriptions
-            var callbackRegistrationMethods = CallbackTriggerTemplate.GenerateCallbackRegistrationMethods(modelInfo.PartialProperties);
-            if (!string.IsNullOrEmpty(callbackRegistrationMethods))
-            {
-                sb.Append(callbackRegistrationMethods);
-            }
-
             // Generate constructor
             var constructorCode = ConstructorTemplate.GenerateConstructor(modelInfo, ObservableModelAnalyzer.GetObservedProperties);
             if (!string.IsNullOrEmpty(constructorCode))
@@ -126,6 +111,13 @@ public static class ObservableModelCodeGenerator
                 sb.AppendLine();
                 sb.AppendLine();
                 sb.Append(constructorCode);
+            }
+
+            // Generate OnContextReadyIntern() for model observers in services
+            var onContextReadyCode = ModelObserverTemplate.GenerateOnContextReadyIntern(modelInfo.ModelObservers);
+            if (!string.IsNullOrEmpty(onContextReadyCode))
+            {
+                sb.Append(onContextReadyCode);
             }
 
             sb.AppendLine();

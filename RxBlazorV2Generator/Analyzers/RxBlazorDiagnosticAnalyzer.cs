@@ -31,15 +31,30 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
         DiagnosticDescriptors.DerivedModelReferenceError,
         DiagnosticDescriptors.MissingObservableModelScopeWarning,
         DiagnosticDescriptors.NonPublicPartialConstructorError,
-        DiagnosticDescriptors.ObservableEntityMissingPartialModifierError
+        DiagnosticDescriptors.ObservableEntityMissingPartialModifierError,
+        DiagnosticDescriptors.ObservableModelObserverInvalidSignatureError,
+        DiagnosticDescriptors.ObservableModelObserverPropertyNotFoundError
         // NOTE: RXBG041 (UnusedObservableComponentTriggerWarning), RXBG050 (UnregisteredServiceWarning),
         // RXBG051 (DiServiceScopeViolationError), RXBG052 (ReferencedModelDifferentAssemblyError),
-        // RXBG060 (DirectObservableComponentInheritanceError), and RXBG014 (SharedModelNotSingletonError)
-        // are reported by generator, not analyzer (require cross-model analysis)
+        // RXBG060 (DirectObservableComponentInheritanceError), RXBG014 (SharedModelNotSingletonError),
+        // RXBG080 (ObservableModelObserverInvalidSignatureError), RXBG081 (ObservableModelObserverPropertyNotFoundError),
+        // and RXBG082 (InternalModelObserverInvalidSignatureWarning)
+        // are reported by generator, not analyzer (require cross-model/cross-type analysis)
+    ];
+
+    /// <summary>
+    /// Additional diagnostics that are reported by the generator but need code fix support.
+    /// These are not in AllDiagnostics because the generator handles reporting them,
+    /// but they're included in SupportedDiagnostics so code fixes can work.
+    /// </summary>
+    private static readonly DiagnosticDescriptor[] GeneratorReportedDiagnosticsWithCodeFix =
+    [
+        DiagnosticDescriptors.InternalModelObserverInvalidSignatureWarning,  // RXBG082
+        DiagnosticDescriptors.UnregisteredServiceWarning  // RXBG050
     ];
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-        ImmutableArray.Create(AllDiagnostics);
+        ImmutableArray.Create([..AllDiagnostics, ..GeneratorReportedDiagnosticsWithCodeFix]);
 
     public override void Initialize(AnalysisContext context)
     {

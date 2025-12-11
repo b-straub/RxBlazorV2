@@ -35,8 +35,9 @@ public static class PropertyTemplate
     }
 
     /// <summary>
-    /// Generates public properties for DI injected services.
-    /// Changed from protected to public to allow component access.
+    /// Generates properties for DI injected services.
+    /// Services with ObservableModelObserver methods are protected (like model references).
+    /// Other services are public to allow component access.
     /// </summary>
     /// <param name="diFields">Collection of DI fields.</param>
     /// <returns>Generated properties code.</returns>
@@ -45,7 +46,9 @@ public static class PropertyTemplate
         var sb = new StringBuilder();
         foreach (var diField in diFields)
         {
-            sb.AppendLine($"    public {diField.FieldType} {diField.FieldName} {{ get; }}");
+            // Services with model observers use protected visibility (like model references)
+            var accessibility = diField.HasModelObservers ? "protected" : "public";
+            sb.AppendLine($"    {accessibility} {diField.FieldType} {diField.FieldName} {{ get; }}");
         }
         return sb.ToString().TrimEnd('\r', '\n');
     }

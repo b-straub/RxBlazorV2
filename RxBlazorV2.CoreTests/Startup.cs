@@ -1,5 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
-using RxBlazorV2Sample.Samples.CallbackTriggers;
+using RxBlazorV2Sample.Samples.ModelObservers;
 
 namespace RxBlazorV2.CoreTests;
 
@@ -10,6 +10,6 @@ public class Startup
         // Register all ObservableModels from the Sample project
         ObservableModels.Initialize(services);
         RxBlazorV2Sample.ObservableModels.Initialize(services);
-        services.AddScoped<CallbackTriggersService>();
+        services.AddScoped<ModelObserversService>();
     }
 }

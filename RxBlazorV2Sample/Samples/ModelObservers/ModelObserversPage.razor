@@ -1,0 +1,240 @@
+@page "/samples/model-observers"
+@using RxBlazorV2Sample.Samples.Helpers
+@inherits ModelObserversModelComponent
+
+<PageTitle>Model Observers</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large">
+    <MudText Typo="Typo.h3" GutterBottom="true">Model Observers</MudText>
+    <MudText Typo="Typo.body1" Class="mb-4">
+        Demonstrates model observers - both internal (auto-detected private methods) and external ([ObservableModelObserver] on service methods).
+    </MudText>
+
+    <MudGrid>
+        <!-- Internal Observers Section -->
+        <MudItem xs="12">
+            <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-2">Internal Observers (Auto-Detected)</MudText>
+            <MudText Typo="Typo.body2" Class="mb-3">
+                Private methods that access injected ObservableModel properties are automatically subscribed.
+            </MudText>
+        </MudItem>
+
+        <!-- Timer Control (Internal Observer Demo) -->
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Timer (Internal Observer)</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="3">
+                        <MudAlert Severity="Severity.Success" Dense="true">
+                            <code>OnTickCountChanged()</code> auto-detects access to <code>TimerSettings.TickCount</code>
+                        </MudAlert>
+
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Success"
+                                       Disabled="@Model.TimerSettings.IsRunning"
+                                       OnClick="@(() => Model.TimerSettings.StartTimer())">
+                                Start Timer
+                            </MudButton>
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Error"
+                                       Disabled="@(!Model.TimerSettings.IsRunning)"
+                                       OnClick="@(() => Model.TimerSettings.StopTimer())">
+                                Stop Timer
+                            </MudButton>
+                            <MudChip T="string" Color="@(Model.TimerSettings.IsRunning ? Color.Success : Color.Default)">
+                                @(Model.TimerSettings.IsRunning ? "Running" : "Stopped")
+                            </MudChip>
+                        </MudStack>
+
+                        <MudText Typo="Typo.h4">Tick Count: @Model.TimerSettings.TickCount</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Timer ticks every 2 seconds. Internal observer logs each tick automatically.
+                        </MudText>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- External Observers Section -->
+        <MudItem xs="12" Class="mt-4">
+            <MudText Typo="Typo.h5" Color="Color.Secondary" Class="mb-2">External Observers ([ObservableModelObserver])</MudText>
+            <MudText Typo="Typo.body2" Class="mb-3">
+                Service methods decorated with [ObservableModelObserver] are subscribed via OnContextReadyIntern().
+            </MudText>
+        </MudItem>
+
+        <!-- Current User (External Sync Observer) -->
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">User (External Sync)</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="3">
+                        <MudAlert Severity="Severity.Info" Dense="true">
+                            <code>[ObservableModelObserver]</code> on <code>CurrentUserChanged()</code>
+                        </MudAlert>
+
+                        <MudButtonGroup Variant="Variant.Outlined" Color="Color.Primary">
+                            <MudButton OnClick="@(() => Model.CurrentUser = "Guest")"
+                                       Variant="@(Model.CurrentUser == "Guest" ? Variant.Filled : Variant.Outlined)">
+                                Guest
+                            </MudButton>
+                            <MudButton OnClick="@(() => Model.CurrentUser = "Admin")"
+                                       Variant="@(Model.CurrentUser == "Admin" ? Variant.Filled : Variant.Outlined)">
+                                Admin
+                            </MudButton>
+                            <MudButton OnClick="@(() => Model.CurrentUser = "User")"
+                                       Variant="@(Model.CurrentUser == "User" ? Variant.Filled : Variant.Outlined)">
+                                User
+                            </MudButton>
+                        </MudButtonGroup>
+
+                        <MudText>Current: <strong>@Model.CurrentUser</strong></MudText>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Theme (External Observer with chained effect) -->
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Theme (External + Chain)</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="3">
+                        <MudAlert Severity="Severity.Warning" Dense="true">
+                            Theme observer updates Settings (chained reaction)
+                        </MudAlert>
+
+                        <MudButtonGroup Variant="Variant.Outlined" Color="Color.Secondary">
+                            <MudButton OnClick="@(() => Model.Theme = "Light")"
+                                       Variant="@(Model.Theme == "Light" ? Variant.Filled : Variant.Outlined)">
+                                Light
+                            </MudButton>
+                            <MudButton OnClick="@(() => Model.Theme = "Dark")"
+                                       Variant="@(Model.Theme == "Dark" ? Variant.Filled : Variant.Outlined)">
+                                Dark
+                            </MudButton>
+                            <MudButton OnClick="@(() => Model.Theme = "Auto")"
+                                       Variant="@(Model.Theme == "Auto" ? Variant.Filled : Variant.Outlined)">
+                                Auto
+                            </MudButton>
+                        </MudButtonGroup>
+
+                        <MudText>Theme: <strong>@Model.Theme</strong></MudText>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Notification Count (Multiple External Observers) -->
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Notifications (Multiple Observers)</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="3">
+                        <MudAlert Severity="Severity.Error" Dense="true">
+                            Multiple observers on same property (sync + async)
+                        </MudAlert>
+
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       OnClick="@(() => Model.NotificationCount++)">
+                                Add Notification
+                            </MudButton>
+                            <MudText Typo="Typo.h5">@Model.NotificationCount</MudText>
+                        </MudStack>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Observer Results -->
+    <MudCard Class="mt-4">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h6">Observer Execution Log</MudText>
+            </CardHeaderContent>
+            <CardHeaderActions>
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Error"
+                           OnClick="@(() => Model.ObserverResults.Clear())">
+                    Clear
+                </MudButton>
+            </CardHeaderActions>
+        </MudCardHeader>
+        <MudCardContent>
+            @if (Model.ObserverResults.Count == 0)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Tertiary">
+                    No observers executed yet. Start the timer or change properties above.
+                </MudText>
+            }
+            else
+            {
+                <MudList T="string" Dense="true">
+                    @foreach (var result in Enumerable.Reverse(Model.ObserverResults).Take(15))
+                    {
+                        <MudListItem T="string">
+                            <MudIcon Icon="@GetIconForResult(result)" Size="Size.Small" Class="mr-2" />
+                            @result
+                        </MudListItem>
+                    }
+                </MudList>
+            }
+        </MudCardContent>
+    </MudCard>
+
+    <UsageWithLogging Usage=@Model.Usage LogEntries=@Model.LogEntries Class="mt-4"/>
+
+    <MudPaper Class="pa-4 mt-4">
+        <MudText Typo="Typo.h6" GutterBottom="true">Key Concepts</MudText>
+        <MudList T="string">
+            <MudListItem T="string" Icon="@Icons.Material.Filled.AutoAwesome">
+                <strong>Internal observers:</strong> Private methods accessing injected ObservableModel properties - no attribute needed!
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Code">
+                <strong>External observers:</strong> Service methods with [ObservableModelObserver(nameof(Model.Property))]
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                <strong>Sync signature:</strong> void Method() (internal) or void Method(ModelType model) (external)
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Timer">
+                <strong>Async signature:</strong> Task Method(CancellationToken ct) (internal) or Task Method(ModelType model, CancellationToken ct) (external)
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Delete">
+                <strong>Auto-disposal:</strong> All subscriptions automatically disposed when model is disposed
+            </MudListItem>
+        </MudList>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private string GetIconForResult(string result)
+    {
+        if (result.Contains("[Internal"))
+            return Icons.Material.Filled.Memory;
+        if (result.Contains("[External-Async"))
+            return Icons.Material.Filled.Schedule;
+        if (result.Contains("[External-Combined"))
+            return Icons.Material.Filled.MergeType;
+        return Icons.Material.Filled.Notifications;
+    }
+}

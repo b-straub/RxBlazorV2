@@ -47,12 +47,17 @@ public class ObservableModelInfo
 
     public string ClassAccessibility { get; }
 
+    public List<ModelObserverInfo> ModelObservers { get; }
+
+    public List<InternalModelObserverInfo> InternalModelObservers { get; }
+
     public ObservableModelInfo(string namespaceName, string className, string fullyQualifiedName,
         List<PartialPropertyInfo> partialProperties, List<CommandPropertyInfo> commandProperties,
         Dictionary<string, MethodDeclarationSyntax> methods, List<ModelReferenceInfo> modelReferences,
         string modelScope = "Singleton", List<DIFieldInfo>? diFields = null, List<string>? implementedInterfaces = null,
         string? genericTypes = null, string? typeConstrains = null, List<string>? usingStatements = null,
-        string? baseModelTypeName = null, string constructorAccessibility = "public", string classAccessibility = "public")
+        string? baseModelTypeName = null, string constructorAccessibility = "public", string classAccessibility = "public",
+        List<ModelObserverInfo>? modelObservers = null, List<InternalModelObserverInfo>? internalModelObservers = null)
     {
         Namespace = namespaceName;
         ClassName = className;
@@ -70,6 +75,8 @@ public class ObservableModelInfo
         BaseModelTypeName = baseModelTypeName;
         ConstructorAccessibility = constructorAccessibility;
         ClassAccessibility = classAccessibility;
+        ModelObservers = modelObservers ?? [];
+        InternalModelObservers = internalModelObservers ?? [];
     }
 }
 
@@ -84,9 +91,8 @@ public class PartialPropertyInfo
     public bool HasInitAccessor { get; }
     public string Accessibility { get; }
     public List<PropertyTriggerInfo> Triggers { get; }
-    public List<CallbackTriggerInfo> CallbackTriggers { get; }
 
-    public PartialPropertyInfo(string name, string type, bool isObservableCollection = false, bool isEquatable = false, string[]? batchIds = null, bool hasRequiredModifier = false, bool hasInitAccessor = false, string accessibility = "public", List<PropertyTriggerInfo>? triggers = null, List<CallbackTriggerInfo>? callbackTriggers = null)
+    public PartialPropertyInfo(string name, string type, bool isObservableCollection = false, bool isEquatable = false, string[]? batchIds = null, bool hasRequiredModifier = false, bool hasInitAccessor = false, string accessibility = "public", List<PropertyTriggerInfo>? triggers = null)
     {
         Name = name;
         Type = type;
@@ -97,7 +103,6 @@ public class PartialPropertyInfo
         HasInitAccessor = hasInitAccessor;
         Accessibility = accessibility;
         Triggers = triggers ?? [];
-        CallbackTriggers = callbackTriggers ?? [];
     }
 }
 
@@ -138,18 +143,6 @@ public class PropertyTriggerInfo(string executeMethod, string? canTriggerMethod 
     public bool SupportsCancellation { get; } = supportsCancellation;
     public bool IsAsync { get; } = isAsync;
     public string PropertyName { get; set; } = "";
-}
-
-public enum CallbackTriggerType
-{
-    Sync,
-    Async
-}
-
-public class CallbackTriggerInfo(string methodName, CallbackTriggerType triggerType)
-{
-    public string MethodName { get; } = methodName;
-    public CallbackTriggerType TriggerType { get; } = triggerType;
 }
 
 /// <summary>
@@ -254,11 +247,13 @@ public class DIFieldInfo : IEquatable<DIFieldInfo>
 {
     public string FieldName { get; }
     public string FieldType { get; }
+    public bool HasModelObservers { get; }
 
-    public DIFieldInfo(string fieldName, string fieldType)
+    public DIFieldInfo(string fieldName, string fieldType, bool hasModelObservers = false)
     {
         FieldName = fieldName;
         FieldType = fieldType;
+        HasModelObservers = hasModelObservers;
     }
 
     public bool Equals(DIFieldInfo? other)
@@ -274,7 +269,8 @@ public class DIFieldInfo : IEquatable<DIFieldInfo>
         }
 
         return FieldName == other.FieldName &&
-               FieldType == other.FieldType;
+               FieldType == other.FieldType &&
+               HasModelObservers == other.HasModelObservers;
     }
 
     public override bool Equals(object? obj)
@@ -284,7 +280,217 @@ public class DIFieldInfo : IEquatable<DIFieldInfo>
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(FieldName, FieldType);
+        return HashCode.Combine(FieldName, FieldType, HasModelObservers);
+    }
+}
+
+/// <summary>
+/// Information about a model observer method in a service class.
+/// Used to generate subscriptions in OnContextReadyIntern().
+/// </summary>
+public class ModelObserverInfo : IEquatable<ModelObserverInfo>
+{
+    public string ServiceFieldName { get; }
+    public string MethodName { get; }
+    public string PropertyName { get; }
+    public bool IsAsync { get; }
+    public bool HasCancellationToken { get; }
+    public Location? Location { get; }
+
+    public ModelObserverInfo(
+        string serviceFieldName,
+        string methodName,
+        string propertyName,
+        bool isAsync,
+        bool hasCancellationToken,
+        Location? location = null)
+    {
+        ServiceFieldName = serviceFieldName;
+        MethodName = methodName;
+        PropertyName = propertyName;
+        IsAsync = isAsync;
+        HasCancellationToken = hasCancellationToken;
+        Location = location;
+    }
+
+    public bool Equals(ModelObserverInfo? other)
+    {
+        if (other is null)
+        {
+            return false;
+        }
+
+        if (ReferenceEquals(this, other))
+        {
+            return true;
+        }
+
+        return ServiceFieldName == other.ServiceFieldName &&
+               MethodName == other.MethodName &&
+               PropertyName == other.PropertyName &&
+               IsAsync == other.IsAsync &&
+               HasCancellationToken == other.HasCancellationToken;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return Equals(obj as ModelObserverInfo);
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(ServiceFieldName, MethodName, PropertyName, IsAsync, HasCancellationToken);
+    }
+}
+
+/// <summary>
+/// Information about a private method in a model that observes properties from a referenced model.
+/// Auto-detected by analyzing method body for referenced model property access.
+/// Used to generate subscriptions in the model constructor.
+/// </summary>
+public class InternalModelObserverInfo : IEquatable<InternalModelObserverInfo>
+{
+    /// <summary>
+    /// The name of the model reference property (e.g., "Settings")
+    /// </summary>
+    public string ModelReferenceName { get; }
+
+    /// <summary>
+    /// The name of the private method to call when properties change
+    /// </summary>
+    public string MethodName { get; }
+
+    /// <summary>
+    /// The properties from the referenced model that this method accesses
+    /// </summary>
+    public List<string> ObservedProperties { get; }
+
+    /// <summary>
+    /// Whether the method is async (returns Task/ValueTask)
+    /// </summary>
+    public bool IsAsync { get; }
+
+    /// <summary>
+    /// Whether the method has a CancellationToken parameter
+    /// </summary>
+    public bool HasCancellationToken { get; }
+
+    public InternalModelObserverInfo(
+        string modelReferenceName,
+        string methodName,
+        List<string> observedProperties,
+        bool isAsync,
+        bool hasCancellationToken)
+    {
+        ModelReferenceName = modelReferenceName;
+        MethodName = methodName;
+        ObservedProperties = observedProperties;
+        IsAsync = isAsync;
+        HasCancellationToken = hasCancellationToken;
+    }
+
+    public bool Equals(InternalModelObserverInfo? other)
+    {
+        if (other is null)
+        {
+            return false;
+        }
+
+        if (ReferenceEquals(this, other))
+        {
+            return true;
+        }
+
+        return ModelReferenceName == other.ModelReferenceName &&
+               MethodName == other.MethodName &&
+               ObservedPropertiesEqual(other.ObservedProperties) &&
+               IsAsync == other.IsAsync &&
+               HasCancellationToken == other.HasCancellationToken;
+    }
+
+    private bool ObservedPropertiesEqual(List<string> other)
+    {
+        if (ObservedProperties.Count != other.Count)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < ObservedProperties.Count; i++)
+        {
+            if (ObservedProperties[i] != other[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return Equals(obj as InternalModelObserverInfo);
+    }
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        hash.Add(ModelReferenceName);
+        hash.Add(MethodName);
+        hash.Add(IsAsync);
+        hash.Add(HasCancellationToken);
+
+        foreach (var prop in ObservedProperties)
+        {
+            hash.Add(prop);
+        }
+
+        return hash.ToHashCode();
+    }
+}
+
+/// <summary>
+/// Information about a method that accesses referenced model properties but has an invalid signature.
+/// Used for reporting RXBG082 diagnostic.
+/// </summary>
+public class InvalidInternalModelObserverInfo
+{
+    /// <summary>
+    /// The name of the method that has an invalid signature
+    /// </summary>
+    public string MethodName { get; }
+
+    /// <summary>
+    /// The name of the model reference property (e.g., "Settings")
+    /// </summary>
+    public string ModelReferenceName { get; }
+
+    /// <summary>
+    /// The properties from the referenced model that this method accesses
+    /// </summary>
+    public List<string> AccessedProperties { get; }
+
+    /// <summary>
+    /// Description of why the signature is invalid
+    /// </summary>
+    public string InvalidReason { get; }
+
+    /// <summary>
+    /// The location of the method for diagnostic reporting
+    /// </summary>
+    public Location? Location { get; }
+
+    public InvalidInternalModelObserverInfo(
+        string methodName,
+        string modelReferenceName,
+        List<string> accessedProperties,
+        string invalidReason,
+        Location? location)
+    {
+        MethodName = methodName;
+        ModelReferenceName = modelReferenceName;
+        AccessedProperties = accessedProperties;
+        InvalidReason = invalidReason;
+        Location = location;
     }
 }
 

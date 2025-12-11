@@ -33,6 +33,7 @@ public abstract class ObservableModel : IObservableModel
     {
         if (!_initialized)
         {
+            OnContextReadyIntern();
             OnContextReady();
             _initialized = true;
         }
@@ -45,6 +46,10 @@ public abstract class ObservableModel : IObservableModel
             await OnContextReadyAsync();
             _initializedAsync = true;
         }
+    }
+    
+    protected virtual void OnContextReadyIntern()
+    {
     }
 
     protected virtual void OnContextReady()

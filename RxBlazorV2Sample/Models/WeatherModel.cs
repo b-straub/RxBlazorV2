@@ -13,14 +13,7 @@ public partial class WeatherModel : ObservableModel
     public partial WeatherModel(SettingsModel settings, OpenMeteoApiClient openMeteoClient);
 
     private IDisposable? _autoRefreshSubscription;
-
-    protected override void OnContextReady()
-    {
-        base.OnContextReady();
-        Settings.OnAutoRefreshChanged(UpdateAutoRefreshTimer);
-        Settings.OnRefreshIntervalChanged(UpdateAutoRefreshTimer);
-    }
-
+    
     public bool NotInComponentObservation => Settings.NotInComponentObservation;
     public partial bool IsLoading { get; set; }
     public partial string? ErrorMessage { get; set; }
@@ -56,6 +49,7 @@ public partial class WeatherModel : ObservableModel
         return !IsLoading;
     }
 
+    // auto-detect usage of Settings.RefreshInterval and Settings.AutoRefresh
     private void UpdateAutoRefreshTimer()
     {
         _autoRefreshSubscription?.Dispose();
@@ -72,6 +66,25 @@ public partial class WeatherModel : ObservableModel
                         RefreshCommand.ExecuteAsync();
                     }
                 });
+        }
+    }
+
+    // auto-detect usage of Settings.IsDay
+    private async Task TestMethodAsync()
+    {
+        if (Settings.IsDay)
+        {
+            await Task.Delay(2000);
+            Console.WriteLine("Changed to Day!");
+        }
+    }
+    
+    private async Task TestMethodCtAsync(CancellationToken ct)
+    {
+        if (Settings.IsDay)
+        {
+            await Task.Delay(2000, ct);
+            Console.WriteLine("Changed to Day!");
         }
     }
 

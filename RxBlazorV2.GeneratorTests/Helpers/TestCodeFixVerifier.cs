@@ -34,7 +34,7 @@ internal static class CSharpCodeFixVerifier<TAnalyzer, TCodeFix>
             TestCode = source,
             SkippedDiagnosticIds = skippedDiagnosticIds
         };
-        
+
         test.TestState.Sources.Add(("GlobalUsings.cs", SourceText.From(TestShared.GlobalUsing, Encoding.UTF8)));
         test.TestBehaviors |= TestBehaviors.SkipGeneratedSourcesCheck;
         test.ExpectedDiagnostics.AddRange(expected);
@@ -58,13 +58,13 @@ internal static class CSharpCodeFixVerifier<TAnalyzer, TCodeFix>
             SkippedDiagnosticIds = skippedDiagnosticIds,
             CodeFixTestBehaviors = codeActionIndex is not null ? CodeFixTestBehaviors.SkipFixAllCheck : CodeFixTestBehaviors.None
         };
-        
+
         test.TestState.Sources.Add(("GlobalUsings.cs", SourceText.From(TestShared.GlobalUsing, Encoding.UTF8)));
         test.FixedState.Sources.Add(("GlobalUsings.cs", SourceText.From(TestShared.GlobalUsing, Encoding.UTF8)));
         test.TestBehaviors |= TestBehaviors.SkipGeneratedSourcesCheck;
         test.ExpectedDiagnostics.AddRange(expected);
         test.DisabledDiagnostics.Add(DiagnosticDescriptors.GeneratorDiagnosticError.Id);
-        
+
         return test.RunAsync();
     }
 }
@@ -74,11 +74,11 @@ internal class CodeFixTest<TAnalyzer, TCodeFix> : CSharpCodeFixTest<TAnalyzer, T
     where TCodeFix : CodeFixProvider, new()
 {
     public string[] SkippedDiagnosticIds { get; init; } = [];
-    
+
     public CodeFixTest()
     {
         ReferenceAssemblies = TestShared.ReferenceAssemblies();
-          
+
         SolutionTransforms.Add((solution, projectId) =>
         {
             var project = solution.GetProject(projectId)!;
@@ -88,7 +88,7 @@ internal class CodeFixTest<TAnalyzer, TCodeFix> : CSharpCodeFixTest<TAnalyzer, T
             project = project.WithParseOptions(new CSharpParseOptions(
                 languageVersion: LanguageVersion.Preview,
                 preprocessorSymbols: ["DEBUG"]));
-            
+
             return project.Solution;
         });
     }

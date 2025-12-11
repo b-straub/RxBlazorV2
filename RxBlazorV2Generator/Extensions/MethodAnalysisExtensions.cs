@@ -1,5 +1,7 @@
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using RxBlazorV2Generator.Models;
 
 namespace RxBlazorV2Generator.Extensions;
 
@@ -92,5 +94,317 @@ public static class MethodAnalysisExtensions
         }
 
         return usedProperties.ToList();
+    }
+
+    /// <summary>
+    /// Analyzes private methods in the class for referenced model property access.
+    /// Returns a list of InternalModelObserverInfo for methods that:
+    /// - Are private
+    /// - Have no parameters (or only CancellationToken for async)
+    /// - Access properties from referenced models
+    /// - Return void (sync) or Task/ValueTask (async)
+    /// </summary>
+    public static List<InternalModelObserverInfo> AnalyzeInternalModelObservers(
+        this ClassDeclarationSyntax classDecl,
+        SemanticModel semanticModel,
+        List<ModelReferenceInfo> modelReferences,
+        Dictionary<string, ITypeSymbol> modelSymbols)
+    {
+        var (observers, _) = AnalyzeInternalModelObserversWithDiagnostics(classDecl, semanticModel, modelReferences, modelSymbols);
+        return observers;
+    }
+
+    /// <summary>
+    /// Analyzes methods in the class for referenced model property access.
+    /// Returns both valid observers and information about methods with invalid signatures.
+    /// </summary>
+    public static (List<InternalModelObserverInfo> Observers, List<InvalidInternalModelObserverInfo> InvalidObservers) AnalyzeInternalModelObserversWithDiagnostics(
+        this ClassDeclarationSyntax classDecl,
+        SemanticModel semanticModel,
+        List<ModelReferenceInfo> modelReferences,
+        Dictionary<string, ITypeSymbol> modelSymbols)
+    {
+        var observers = new List<InternalModelObserverInfo>();
+        var invalidObservers = new List<InvalidInternalModelObserverInfo>();
+
+        if (modelReferences.Count == 0)
+        {
+            return (observers, invalidObservers);
+        }
+
+        // Build a map of property names to their owning model reference
+        // Key: property name (e.g., "AutoRefresh"), Value: model reference info
+        var propertyToModelRef = new Dictionary<string, (ModelReferenceInfo modelRef, string propertyName)>();
+        foreach (var modelRef in modelReferences)
+        {
+            if (!modelSymbols.TryGetValue(modelRef.PropertyName, out var modelSymbol))
+            {
+                continue;
+            }
+
+            // Get all property names from the referenced model type
+            foreach (var member in modelSymbol.GetMembers())
+            {
+                if (member is IPropertySymbol propertySymbol)
+                {
+                    // Only add if not already present (first model wins if multiple models have same property name)
+                    if (!propertyToModelRef.ContainsKey(propertySymbol.Name))
+                    {
+                        propertyToModelRef[propertySymbol.Name] = (modelRef, propertySymbol.Name);
+                    }
+                }
+            }
+        }
+
+        foreach (var member in classDecl.Members.OfType<MethodDeclarationSyntax>())
+        {
+            var methodName = member.Identifier.ValueText;
+
+            // First, find which model properties this method accesses
+            var propertiesByModelRef = FindAccessedModelProperties(member, modelReferences, propertyToModelRef);
+
+            // If no model properties accessed, skip this method entirely
+            if (!propertiesByModelRef.Any(kvp => kvp.Value.Count > 0))
+            {
+                continue;
+            }
+
+            // Check if this is a valid internal observer
+            var isPrivate = member.Modifiers.Any(SyntaxKind.PrivateKeyword);
+            var (isValidSignature, isAsync, hasCancellationToken, invalidReason) = ValidateObserverMethodSignatureWithReason(member, semanticModel);
+
+            if (isPrivate && isValidSignature)
+            {
+                // Valid internal observer
+                foreach (var kvp in propertiesByModelRef)
+                {
+                    var modelRefName = kvp.Key;
+                    var usedProperties = kvp.Value;
+
+                    if (usedProperties.Count > 0)
+                    {
+                        observers.Add(new InternalModelObserverInfo(
+                            modelRefName,
+                            methodName,
+                            usedProperties,
+                            isAsync,
+                            hasCancellationToken));
+                    }
+                }
+            }
+            else if (LooksLikeIntendedObserverMethod(methodName))
+            {
+                // Method looks like it was intended to be an internal observer
+                // but has invalid signature - report diagnostic
+                string reason;
+                if (!isPrivate)
+                {
+                    reason = "Method must be private to be auto-detected as internal observer.";
+                }
+                else
+                {
+                    reason = invalidReason ?? "Unknown signature issue.";
+                }
+
+                foreach (var kvp in propertiesByModelRef)
+                {
+                    var modelRefName = kvp.Key;
+                    var accessedProperties = kvp.Value;
+
+                    if (accessedProperties.Count > 0)
+                    {
+                        invalidObservers.Add(new InvalidInternalModelObserverInfo(
+                            methodName,
+                            modelRefName,
+                            accessedProperties,
+                            reason,
+                            member.Identifier.GetLocation()));
+                    }
+                }
+            }
+            // Note: Methods that access model properties but don't look like intended observers
+            // (e.g., command methods like AddItem, CanRefresh) are silently ignored
+        }
+
+        return (observers, invalidObservers);
+    }
+
+    /// <summary>
+    /// Checks if a method name suggests it was intended to be an internal observer.
+    /// Uses naming conventions like On*Changed, Handle*, *Handler, etc.
+    /// </summary>
+    private static bool LooksLikeIntendedObserverMethod(string methodName)
+    {
+        // Naming patterns that suggest the method is intended to be an observer:
+        // - On*Changed, On*Updated, On*Refreshed (explicit change handlers)
+        // - Handle*, *Handler (generic handlers)
+        // - *Observer (explicit observer pattern)
+        // - On*Async, *ChangedAsync (async versions)
+
+        // Check prefixes
+        if (methodName.StartsWith("On") && (
+            methodName.EndsWith("Changed") ||
+            methodName.EndsWith("ChangedAsync") ||
+            methodName.EndsWith("Updated") ||
+            methodName.EndsWith("UpdatedAsync") ||
+            methodName.EndsWith("Refreshed") ||
+            methodName.EndsWith("RefreshedAsync")))
+        {
+            return true;
+        }
+
+        // Handle* prefix
+        if (methodName.StartsWith("Handle"))
+        {
+            return true;
+        }
+
+        // *Handler suffix
+        if (methodName.EndsWith("Handler"))
+        {
+            return true;
+        }
+
+        // *Observer suffix
+        if (methodName.EndsWith("Observer"))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Finds model properties accessed in a method.
+    /// </summary>
+    private static Dictionary<string, List<string>> FindAccessedModelProperties(
+        MethodDeclarationSyntax method,
+        List<ModelReferenceInfo> modelReferences,
+        Dictionary<string, (ModelReferenceInfo modelRef, string propertyName)> propertyToModelRef)
+    {
+        var propertiesByModelRef = new Dictionary<string, List<string>>();
+
+        // Search for member access expressions that access referenced model properties
+        // Pattern: {ModelRefName}.{PropertyName} (e.g., Settings.AutoRefresh)
+        foreach (var node in method.DescendantNodes())
+        {
+            if (node is MemberAccessExpressionSyntax memberAccess)
+            {
+                // Check if the expression is a simple identifier (the model reference name)
+                if (memberAccess.Expression is IdentifierNameSyntax identifier)
+                {
+                    var modelRefName = identifier.Identifier.ValueText;
+                    var propertyName = memberAccess.Name.Identifier.ValueText;
+
+                    // Check if this matches a model reference and property
+                    var matchingModelRef = modelReferences.FirstOrDefault(mr => mr.PropertyName == modelRefName);
+                    if (matchingModelRef is not null && propertyToModelRef.ContainsKey(propertyName))
+                    {
+                        // Verify the property belongs to this model reference
+                        var (owningModelRef, _) = propertyToModelRef[propertyName];
+                        if (owningModelRef.PropertyName == modelRefName)
+                        {
+                            if (!propertiesByModelRef.ContainsKey(modelRefName))
+                            {
+                                propertiesByModelRef[modelRefName] = [];
+                            }
+
+                            if (!propertiesByModelRef[modelRefName].Contains(propertyName))
+                            {
+                                propertiesByModelRef[modelRefName].Add(propertyName);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return propertiesByModelRef;
+    }
+
+    /// <summary>
+    /// Validates that the method has a valid signature for internal model observer.
+    /// Valid signatures:
+    /// - void MethodName() - sync
+    /// - Task MethodName() - async without cancellation
+    /// - Task MethodName(CancellationToken ct) - async with cancellation
+    /// - ValueTask MethodName() - async without cancellation
+    /// - ValueTask MethodName(CancellationToken ct) - async with cancellation
+    /// </summary>
+    private static (bool IsValid, bool IsAsync, bool HasCancellationToken) ValidateObserverMethodSignature(
+        MethodDeclarationSyntax method,
+        SemanticModel semanticModel)
+    {
+        var (isValid, isAsync, hasCancellationToken, _) = ValidateObserverMethodSignatureWithReason(method, semanticModel);
+        return (isValid, isAsync, hasCancellationToken);
+    }
+
+    /// <summary>
+    /// Validates that the method has a valid signature for internal model observer.
+    /// Returns a reason string if the signature is invalid.
+    /// </summary>
+    private static (bool IsValid, bool IsAsync, bool HasCancellationToken, string? InvalidReason) ValidateObserverMethodSignatureWithReason(
+        MethodDeclarationSyntax method,
+        SemanticModel semanticModel)
+    {
+        var paramCount = method.ParameterList.Parameters.Count;
+
+        // Get return type
+        var returnTypeInfo = semanticModel.GetTypeInfo(method.ReturnType);
+        var returnType = returnTypeInfo.Type;
+
+        if (returnType is null)
+        {
+            return (false, false, false, "Unable to determine return type.");
+        }
+
+        // Check for void return (sync method)
+        if (returnType.SpecialType == SpecialType.System_Void)
+        {
+            // Sync methods must have no parameters
+            if (paramCount == 0)
+            {
+                return (true, false, false, null);
+            }
+
+            return (false, false, false, $"Sync methods (returning void) must have no parameters. Found {paramCount} parameter(s).");
+        }
+
+        // Check for Task/ValueTask return (async method)
+        var isTask = returnType.Name == "Task" &&
+                     returnType.ContainingNamespace?.ToDisplayString() == "System.Threading.Tasks";
+        var isValueTask = returnType.Name == "ValueTask" &&
+                          returnType.ContainingNamespace?.ToDisplayString() == "System.Threading.Tasks";
+
+        if (!isTask && !isValueTask)
+        {
+            return (false, false, false, $"Return type must be void, Task, or ValueTask. Found '{returnType.ToDisplayString()}'.");
+        }
+
+        // Async methods can have 0 or 1 parameters
+        if (paramCount == 0)
+        {
+            return (true, true, false, null);
+        }
+
+        if (paramCount == 1)
+        {
+            var param = method.ParameterList.Parameters[0];
+            if (param.Type is null)
+            {
+                return (false, false, false, "Unable to determine parameter type.");
+            }
+
+            var paramTypeInfo = semanticModel.GetTypeInfo(param.Type);
+            if (paramTypeInfo.Type?.Name == "CancellationToken" &&
+                paramTypeInfo.Type.ContainingNamespace?.ToDisplayString() == "System.Threading")
+            {
+                return (true, true, true, null);
+            }
+
+            return (false, false, false, $"Async methods can only have a CancellationToken parameter. Found parameter of type '{paramTypeInfo.Type?.ToDisplayString() ?? "unknown"}'.");
+        }
+
+        return (false, false, false, $"Async methods can have at most one parameter (CancellationToken). Found {paramCount} parameters.");
     }
 }

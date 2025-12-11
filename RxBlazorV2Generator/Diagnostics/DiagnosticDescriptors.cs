@@ -311,4 +311,41 @@ public static class DiagnosticDescriptors
         description: "Observable entities such as classes inheriting from ObservableModel or properties implementing IObservableCommand must be declared as partial to allow the source generator to generate the required implementation code. This error causes subsequent compiler errors about missing implementations, which will be resolved once the partial modifier is added.",
         helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG072.md",
         customTags: ["Add 'partial' modifier"]);
+
+    // ============================================================================
+    // RXBG080-RXBG089: Model Observer Attributes
+    // ============================================================================
+
+    public static readonly DiagnosticDescriptor ObservableModelObserverInvalidSignatureError = new(
+        id: "RXBG080",
+        title: "ObservableModelObserver method has invalid signature",
+        messageFormat: "Method '{0}' in service '{1}' has invalid signature for [ObservableModelObserver]. Sync methods must be 'void MethodName({2} model)'. Async methods must be 'Task MethodName({2} model)' or 'Task MethodName({2} model, CancellationToken ct)'.",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Methods decorated with [ObservableModelObserver] must follow specific signature patterns. Sync methods take only the model parameter and return void. Async methods return Task and take the model parameter, optionally followed by a CancellationToken.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG080.md",
+        customTags: ["Fix method signature"]);
+
+    public static readonly DiagnosticDescriptor ObservableModelObserverPropertyNotFoundError = new(
+        id: "RXBG081",
+        title: "ObservableModelObserver references non-existent property",
+        messageFormat: "Method '{0}' in service '{1}' references property '{2}' which does not exist on model '{3}'. Verify the property name in the [ObservableModelObserver] attribute.",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "The [ObservableModelObserver] attribute must reference a valid property name on the target ObservableModel. The property name is typically specified using nameof() to ensure type safety.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG081.md",
+        customTags: ["Fix property name"]);
+
+    public static readonly DiagnosticDescriptor InternalModelObserverInvalidSignatureWarning = new(
+        id: "RXBG082",
+        title: "Internal model observer has invalid signature",
+        messageFormat: "Method '{0}' accesses '{1}' from referenced model '{2}' but has invalid signature for auto-detection - {3}",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "Methods that access properties from injected ObservableModel references can be auto-detected as internal observers. To be auto-detected, a method must: (1) be private, (2) return void (sync) or Task/ValueTask (async), and (3) take no parameters (sync) or optionally a CancellationToken (async). If this method is not intended to be an internal observer, you can ignore this warning.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG082.md",
+        customTags: ["Fix method signature"]);
 }

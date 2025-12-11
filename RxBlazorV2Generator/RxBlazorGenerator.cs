@@ -204,6 +204,23 @@ public class RxBlazorGenerator : IIncrementalGenerator
                         }
                     }
 
+                    // Report RXBG082 for methods that access referenced model properties but have invalid signatures
+                    foreach (var invalidObserver in record!.InvalidInternalObservers)
+                    {
+                        if (invalidObserver.Location is not null)
+                        {
+                            var propertiesDisplay = string.Join(", ", invalidObserver.AccessedProperties);
+                            var diagnostic = Diagnostic.Create(
+                                DiagnosticDescriptors.InternalModelObserverInvalidSignatureWarning,
+                                invalidObserver.Location,
+                                invalidObserver.MethodName,
+                                propertiesDisplay,
+                                invalidObserver.ModelReferenceName,
+                                invalidObserver.InvalidReason);
+                            spc.ReportDiagnostic(diagnostic);
+                        }
+                    }
+
                     // Report RXBG021 for DI scope violations
                     // First, calculate the minimum required scope for ALL violations in this class
                     var violatingFields = record.DiFieldsWithScope

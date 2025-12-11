@@ -20,14 +20,13 @@ public static class ConstructorTemplate
     {
         var hasObservableCollections = modelInfo.PartialProperties.Any(p => p.IsObservableCollection);
         var hasPropertyTriggers = modelInfo.PartialProperties.Any(p => p.Triggers.Any());
-        var hasCallbackTriggers = modelInfo.PartialProperties.Any(p => p.CallbackTriggers.Any());
 
         if (modelInfo.ModelReferences.Any() || modelInfo.DIFields.Any() || hasObservableCollections)
         {
             return GenerateConstructorWithDependencies(modelInfo, getObservedProperties, hasObservableCollections);
         }
 
-        if (modelInfo.CommandProperties.Any() || hasPropertyTriggers || hasCallbackTriggers)
+        if (modelInfo.CommandProperties.Any() || hasPropertyTriggers)
         {
             return GenerateConstructorWithCommandsOnly(modelInfo, getObservedProperties, hasObservableCollections);
         }
@@ -116,12 +115,11 @@ public static class ConstructorTemplate
             sb.AppendLine(TriggerTemplate.GenerateTriggerSubscriptions(propertiesWithTriggers));
         }
 
-        // Generate callback trigger subscriptions for external subscriptions
-        var propertiesWithCallbackTriggers = modelInfo.PartialProperties.Where(p => p.CallbackTriggers.Any()).ToList();
-        if (propertiesWithCallbackTriggers.Any())
+        // Generate internal model observer subscriptions (auto-detected private methods observing referenced model properties)
+        if (modelInfo.InternalModelObservers.Any())
         {
             sb.AppendLine();
-            sb.AppendLine(CallbackTriggerTemplate.GenerateCallbackSubscriptions(propertiesWithCallbackTriggers));
+            sb.AppendLine(GenerateInternalModelObserverSubscriptions(modelInfo));
         }
 
         sb.AppendLine("    }");
@@ -178,17 +176,6 @@ public static class ConstructorTemplate
                 sb.AppendLine();
             }
             sb.AppendLine(TriggerTemplate.GenerateTriggerSubscriptions(propertiesWithTriggers));
-        }
-
-        // Generate callback trigger subscriptions for external subscriptions
-        var propertiesWithCallbackTriggers = modelInfo.PartialProperties.Where(p => p.CallbackTriggers.Any()).ToList();
-        if (propertiesWithCallbackTriggers.Any())
-        {
-            if (modelInfo.CommandProperties.Any() || commandsWithTriggers.Any() || propertiesWithTriggers.Any() || hasObservableCollections)
-            {
-                sb.AppendLine();
-            }
-            sb.AppendLine(CallbackTriggerTemplate.GenerateCallbackSubscriptions(propertiesWithCallbackTriggers));
         }
 
         sb.AppendLine("    }");
@@ -249,6 +236,45 @@ public static class ConstructorTemplate
             sb.AppendLine($"        Subscriptions.Add({modelRef.PropertyName}.Observable");
             sb.AppendLine($"            .Select(props => props.Select(p => p.Replace(\"Model.\", \"{transformedPrefix}\")).ToArray())");
             sb.AppendLine("            .Subscribe(props => StateHasChanged(props)));");
+        }
+
+        return sb.ToString().TrimEnd('\r', '\n');
+    }
+
+    /// <summary>
+    /// Generates subscriptions for internal model observers.
+    /// These are private methods that access properties from referenced models.
+    /// Auto-detected by analyzing method body for referenced model property access.
+    /// </summary>
+    private static string GenerateInternalModelObserverSubscriptions(ObservableModelInfo modelInfo)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("        // Subscribe to internal model observers (auto-detected)");
+
+        foreach (var observer in modelInfo.InternalModelObservers)
+        {
+            // Build property filter array: ["Model.AutoRefresh", "Model.RefreshInterval"]
+            var propsArray = $"[\"{string.Join("\", \"", observer.ObservedProperties.Select(p => $"Model.{p}"))}\"]";
+
+            sb.AppendLine($"        Subscriptions.Add({observer.ModelReferenceName}.Observable.Where(p => p.Intersect({propsArray}).Any())");
+
+            if (observer.IsAsync)
+            {
+                // Async method with or without CancellationToken
+                if (observer.HasCancellationToken)
+                {
+                    sb.AppendLine($"            .SubscribeAwait(async (_, ct) => await {observer.MethodName}(ct), AwaitOperation.Switch));");
+                }
+                else
+                {
+                    sb.AppendLine($"            .SubscribeAwait(async (_, _) => await {observer.MethodName}(), AwaitOperation.Switch));");
+                }
+            }
+            else
+            {
+                // Sync method
+                sb.AppendLine($"            .Subscribe(_ => {observer.MethodName}()));");
+            }
         }
 
         return sb.ToString().TrimEnd('\r', '\n');

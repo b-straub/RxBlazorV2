@@ -378,3 +378,5 @@ CoverageReport/
 nupkg/
 .claude/
 RxBlazorV2Internal.slnx
+
+CLAUDE.md

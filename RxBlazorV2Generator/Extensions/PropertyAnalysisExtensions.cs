@@ -81,47 +81,6 @@ public static class PropertyAnalysisExtensions
                     }
                 }
 
-                // Extract ObservableCallbackTrigger attributes
-                var callbackTriggers = new List<CallbackTriggerInfo>();
-
-                var syncCallbackAttr = attributes.FirstOrDefault(a => a.IsObservableCallbackTrigger(semanticModel));
-                if (syncCallbackAttr is not null)
-                {
-                    var methodNameArg = syncCallbackAttr.ArgumentList?.Arguments.FirstOrDefault()?.Expression.ToString();
-                    var methodName = methodNameArg?.Replace("nameof(", "").Replace(")", "").Trim('"');
-
-                    if (string.IsNullOrEmpty(methodName))
-                    {
-                        methodName = $"On{member.Identifier.ValueText}Changed";
-                    }
-
-                    if (methodName is null)
-                    {
-                        throw new InvalidOperationException($"Failed to determine callback trigger method name for property {member.Identifier.ValueText}");
-                    }
-
-                    callbackTriggers.Add(new CallbackTriggerInfo(methodName, CallbackTriggerType.Sync));
-                }
-
-                var asyncCallbackAttr = attributes.FirstOrDefault(a => a.IsObservableCallbackTriggerAsync(semanticModel));
-                if (asyncCallbackAttr is not null)
-                {
-                    var methodNameArg = asyncCallbackAttr.ArgumentList?.Arguments.FirstOrDefault()?.Expression.ToString();
-                    var methodName = methodNameArg?.Replace("nameof(", "").Replace(")", "").Trim('"');
-
-                    if (string.IsNullOrEmpty(methodName))
-                    {
-                        methodName = $"On{member.Identifier.ValueText}ChangedAsync";
-                    }
-
-                    if (methodName is null)
-                    {
-                        throw new InvalidOperationException($"Failed to determine callback trigger method name for property {member.Identifier.ValueText}");
-                    }
-
-                    callbackTriggers.Add(new CallbackTriggerInfo(methodName, CallbackTriggerType.Async));
-                }
-
                 partialProperties.Add(new PartialPropertyInfo(
                     member.Identifier.ValueText,
                     member.Type!.ToString(),
@@ -131,8 +90,7 @@ public static class PropertyAnalysisExtensions
                     hasRequiredModifier,
                     hasInitAccessor,
                     accessibility,
-                    triggers,
-                    callbackTriggers));
+                    triggers));
             }
         }
 

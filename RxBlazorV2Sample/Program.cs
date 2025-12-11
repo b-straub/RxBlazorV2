@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using MudBlazor.Services;
 using RxBlazorV2Sample;
-using RxBlazorV2Sample.Samples.CallbackTriggers;
+using RxBlazorV2Sample.Samples.ModelObservers;
 using RxBlazorV2Sample.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -26,7 +26,7 @@ RxBlazorVSSampleComponents.ObservableModels.Initialize(builder.Services);
 ObservableModels.GenericModelsBaseModel<string, int>(builder.Services);
 ObservableModels.GenericModelsModel<string, int>(builder.Services);
 
-// Register callback triggers sample service
-builder.Services.AddScoped<CallbackTriggersService>();
+// Register model observers sample service
+builder.Services.AddScoped<ModelObserversService>();
 
 await builder.Build().RunAsync();

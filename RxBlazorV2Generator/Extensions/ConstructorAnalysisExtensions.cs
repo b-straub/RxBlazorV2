@@ -13,17 +13,20 @@ public static class ConstructorAnalysisExtensions
     /// <summary>
     /// Extracts model references and DI fields from partial constructor parameters.
     /// Parameters that are ObservableModels become ModelReferenceInfo, others become DIFieldInfo.
-    /// Returns unregistered services and information about DI fields for scope checking.
+    /// Returns unregistered services, scope information, model observers, and diagnostics.
     /// </summary>
-    public static (List<ModelReferenceInfo> modelReferences, List<DIFieldInfo> diFields, List<(string parameterName, string parameterType, ITypeSymbol? typeSymbol, Location? location)> unregisteredServices, List<(DIFieldInfo diField, string? serviceScope, Location? location)> diFieldsWithScope) ExtractPartialConstructorDependencies(
+    public static (List<ModelReferenceInfo> modelReferences, List<DIFieldInfo> diFields, List<(string parameterName, string parameterType, ITypeSymbol? typeSymbol, Location? location)> unregisteredServices, List<(DIFieldInfo diField, string? serviceScope, Location? location)> diFieldsWithScope, List<ModelObserverInfo> modelObservers, List<Diagnostic> modelObserverDiagnostics) ExtractPartialConstructorDependencies(
         this ClassDeclarationSyntax classDecl,
         SemanticModel semanticModel,
-        ServiceInfoList? serviceClasses = null)
+        ServiceInfoList? serviceClasses = null,
+        INamedTypeSymbol? modelTypeSymbol = null)
     {
         var modelReferences = new List<ModelReferenceInfo>();
         var diFields = new List<DIFieldInfo>();
         var unregisteredServices = new List<(string parameterName, string parameterType, ITypeSymbol? typeSymbol, Location? location)>();
         var diFieldsWithScope = new List<(DIFieldInfo diField, string? serviceScope, Location? location)>();
+        var modelObservers = new List<ModelObserverInfo>();
+        var modelObserverDiagnostics = new List<Diagnostic>();
 
         // Find all partial constructors
         var partialConstructors = classDecl.Members
@@ -33,7 +36,7 @@ public static class ConstructorAnalysisExtensions
 
         if (!partialConstructors.Any())
         {
-            return (modelReferences, diFields, unregisteredServices, diFieldsWithScope);
+            return (modelReferences, diFields, unregisteredServices, diFieldsWithScope, modelObservers, modelObserverDiagnostics);
         }
 
         // Use the first partial constructor (there should only be one)
@@ -105,9 +108,21 @@ public static class ConstructorAnalysisExtensions
             }
             else
             {
-                // All other parameters are treated as DI services - always generate the property and constructor
-                // to avoid confusing "Partial member must have an implementation part" errors
-                var diField = new DIFieldInfo(propertyName, parameterTypeName);
+                // All other parameters are treated as DI services
+                // Check if this service has ObservableModelObserver methods targeting this model
+                var hasObservers = false;
+                if (modelTypeSymbol is not null && parameterType is INamedTypeSymbol serviceNamedType)
+                {
+                    var (observers, diagnostics) = serviceNamedType.ExtractModelObserversWithDiagnostics(propertyName, modelTypeSymbol);
+                    if (observers.Count > 0)
+                    {
+                        hasObservers = true;
+                        modelObservers.AddRange(observers);
+                    }
+                    modelObserverDiagnostics.AddRange(diagnostics);
+                }
+
+                var diField = new DIFieldInfo(propertyName, parameterTypeName, hasObservers);
                 diFields.Add(diField);
 
                 // Check if this service is registered in DI - if not, track it for a warning
@@ -123,7 +138,7 @@ public static class ConstructorAnalysisExtensions
             }
         }
 
-        return (modelReferences, diFields, unregisteredServices, diFieldsWithScope);
+        return (modelReferences, diFields, unregisteredServices, diFieldsWithScope, modelObservers, modelObserverDiagnostics);
     }
 
     /// <summary>
