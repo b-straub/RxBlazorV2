@@ -210,30 +210,6 @@ public partial class ValidationModel : ObservableModel
 }
 ```
 
-### Callback Triggers
-
-Allow external services to subscribe to property changes:
-
-```csharp
-public partial class AuthModel : ObservableModel
-{
-    [ObservableCallbackTrigger]
-    public partial ClaimsPrincipal? CurrentUser { get; set; }
-}
-
-// In external service:
-public class AuthService
-{
-    public AuthService(AuthModel authModel)
-    {
-        authModel.OnCurrentUserChanged(() =>
-        {
-            // React to user changes
-        });
-    }
-}
-```
-
 ### Command Triggers
 
 Auto-execute commands when properties change:
@@ -248,6 +224,65 @@ public partial class SearchModel : ObservableModel
     public partial IObservableCommandAsync SearchCommand { get; }
 
     private async Task Search() { /* search logic */ }
+}
+```
+
+### Internal Model Observers (Auto-Detection)
+
+Private methods that access referenced model properties are automatically detected and subscribed:
+
+```csharp
+[ObservableModelScope(ModelScope.Scoped)]
+public partial class DashboardModel : ObservableModel
+{
+    public partial DashboardModel(SettingsModel settings, UserModel user);
+
+    // Auto-detected: reacts to Settings.Theme changes
+    private void OnThemeChanged()
+    {
+        UpdateDashboardColors(Settings.Theme);
+    }
+
+    // Auto-detected: reacts to User.Preferences changes (async)
+    private async Task OnPreferencesChangedAsync(CancellationToken ct)
+    {
+        await RefreshWidgetsAsync(User.Preferences, ct);
+    }
+}
+```
+
+**Valid Signatures:**
+- Sync: `private void MethodName()`
+- Async: `private Task MethodName()` or `private Task MethodName(CancellationToken ct)`
+
+**Naming Conventions** (method name should match one of):
+- `On{PropertyName}Changed` / `On{PropertyName}ChangedAsync`
+- `Handle{PropertyName}` / `Handle{PropertyName}Async`
+- `{PropertyName}Observer` / `{PropertyName}ObserverAsync`
+
+### External Model Observers
+
+Allow external services to observe model changes using `[ObservableModelObserver]`:
+
+```csharp
+public class NotificationService
+{
+    public NotificationService(UserModel userModel)
+    {
+        // Service is injected into model constructor
+    }
+
+    [ObservableModelObserver(nameof(UserModel.UnreadCount))]
+    private void OnUnreadCountChanged(UserModel model)
+    {
+        UpdateBadge(model.UnreadCount);
+    }
+
+    [ObservableModelObserver(nameof(UserModel.Status))]
+    private async Task OnStatusChangedAsync(UserModel model, CancellationToken ct)
+    {
+        await SyncStatusAsync(model.Status, ct);
+    }
 }
 ```
 
@@ -277,19 +312,18 @@ public partial class FormModel : ObservableModel
 
 ## Key Attributes
 
-| Attribute | Target | Description |
-|-----------|--------|-------------|
-| `[ObservableModelScope]` | Class | DI lifetime (Singleton, Scoped, Transient) |
-| `[ObservableComponent]` | Class | Generate component base class |
-| `[ObservableCommand]` | Property | Link command to implementation method |
-| `[ObservableComponentTrigger]` | Property | Generate component hook (sync) |
-| `[ObservableComponentTriggerAsync]` | Property | Generate component hook (async) |
-| `[ObservableTrigger]` | Property | Execute method on change (sync) |
-| `[ObservableTriggerAsync]` | Property | Execute method on change (async) |
-| `[ObservableCallbackTrigger]` | Property | Generate callback registration (sync) |
-| `[ObservableCallbackTriggerAsync]` | Property | Generate callback registration (async) |
-| `[ObservableCommandTrigger]` | Property | Auto-execute command on property change |
-| `[ObservableBatch]` | Property | Group for batched notifications |
+| Attribute                        | Target   | Description                                       |
+|----------------------------------|----------|---------------------------------------------------|
+| `[ObservableModelScope]`         | Class    | DI lifetime (Singleton, Scoped, Transient)        |
+| `[ObservableComponent]`          | Class    | Generate component base class                     |
+| `[ObservableCommand]`            | Property | Link command to implementation method             |
+| `[ObservableComponentTrigger]`   | Property | Generate component hook (sync)                    |
+| `[ObservableComponentTriggerAsync]` | Property | Generate component hook (async)                |
+| `[ObservableTrigger]`            | Property | Execute method on change (sync)                   |
+| `[ObservableTriggerAsync]`       | Property | Execute method on change (async)                  |
+| `[ObservableCommandTrigger]`     | Property | Auto-execute command on property change           |
+| `[ObservableModelObserver]`      | Method   | Subscribe service method to model property changes |
+| `[ObservableBatch]`              | Property | Group for batched notifications                   |
 
 ## Architecture
 
@@ -298,6 +332,57 @@ public partial class FormModel : ObservableModel
 - **Consumer Level**: Batched, chunked updates for UI performance
 - **No Runtime Reflection**: All code generated at compile time
 - **Type Safety**: Full IntelliSense and compile-time checking
+
+## Breaking Changes
+
+### Version 1.0.4
+
+**Removed: Generic `[ObservableTrigger<T>]` and `[ObservableTriggerAsync<T>]` attributes**
+
+The generic trigger attributes have been removed. Use these alternatives instead:
+
+| Removed                                  | Replacement                                                   |
+|------------------------------------------|---------------------------------------------------------------|
+| `[ObservableTrigger<T>(method, param)]`  | `[ObservableModelObserver]` on service methods                |
+| `[ObservableTriggerAsync<T>(method, param)]` | `[ObservableModelObserver]` with async signature          |
+
+> **Note**: The non-generic `[ObservableTrigger]` and `[ObservableTriggerAsync]` attributes for internal method execution are still available.
+
+For internal model observers that react to referenced model changes, use the new **auto-detection pattern**:
+
+```csharp
+[ObservableModelScope(ModelScope.Scoped)]
+public partial class MyModel : ObservableModel
+{
+    public partial MyModel(SettingsModel settings);
+
+    // Auto-detected: private void method accessing Settings properties
+    private void OnThemeChanged()
+    {
+        // Automatically subscribed to Settings.Theme changes
+        ApplyTheme(Settings.Theme);
+    }
+
+    // Async version with CancellationToken
+    private async Task OnLanguageChangedAsync(CancellationToken ct)
+    {
+        await LoadLocalizationAsync(Settings.Language, ct);
+    }
+}
+```
+
+For external services, use `[ObservableModelObserver]`:
+
+```csharp
+public class ThemeService
+{
+    [ObservableModelObserver(nameof(SettingsModel.Theme))]
+    private void OnThemeChanged(SettingsModel model)
+    {
+        ApplyGlobalTheme(model.Theme);
+    }
+}
+```
 
 ## Requirements
 
@@ -309,23 +394,24 @@ public partial class FormModel : ObservableModel
 
 See the **RxBlazorV2Sample** project for comprehensive, interactive examples:
 
-| Sample | Description |
-|--------|-------------|
-| **BasicCommands** | Sync/async commands and observable properties |
-| **BasicCommandWithReturn** | Commands that return values |
-| **ParameterizedCommands** | Commands with type-safe parameters |
-| **CommandsWithCanExecute** | Conditional command execution |
-| **CommandsWithCancellation** | Long-running async with cancellation |
-| **CommandTriggers** | Auto-execute commands on property changes |
-| **ComponentTriggers** | Component hooks for property changes |
-| **PropertyTriggers** | Internal method execution on changes |
-| **CallbackTriggers** | External service subscriptions |
-| **ModelReferences** | Cross-model reactive subscriptions |
-| **ModelPatterns** | Partial constructor pattern examples |
-| **GenericModels** | Generic observable models with DI |
-| **ObservableBatches** | Batched property notifications |
-| **ValueEquality** | Automatic value equality |
-| **CrossComponentCommunication** | Share models across components |
+| Sample                          | Description                                                        |
+|---------------------------------|--------------------------------------------------------------------|
+| **BasicCommands**               | Sync/async commands and observable properties                      |
+| **BasicCommandWithReturn**      | Commands that return values                                        |
+| **ParameterizedCommands**       | Commands with type-safe parameters                                 |
+| **CommandsWithCanExecute**      | Conditional command execution                                      |
+| **CommandsWithCancellation**    | Long-running async with cancellation                               |
+| **CommandTriggers**             | Auto-execute commands on property changes                          |
+| **ComponentTriggers**           | Component hooks for property changes                               |
+| **PropertyTriggers**            | Internal method execution on changes                               |
+| **ModelObservers**              | External and internal service subscriptions                        |
+| **ModelReferences**             | Cross-model reactive subscriptions                                 |
+| **ModelPatterns**               | Partial constructor pattern examples                               |
+| **GenericModels**               | Generic observable models with DI                                  |
+| **ObservableBatches**           | Batched property notifications                                     |
+| **ValueEquality**               | Automatic value equality                                           |
+| **CrossComponentCommunication** | Share models across components                                     |
+| **InternalModelObservers**      | Auto-detected private methods reacting to referenced model changes |
 
 Run the sample application:
 ```bash
@@ -342,7 +428,16 @@ dotnet run --project RxBlazorV2Sample
 
 ## Diagnostics
 
-The generator provides comprehensive diagnostics (RXBG001-RXBG072) with code fixes. See the [Diagnostics Help](RxBlazorV2Generator/Diagnostics/Help/) folder for detailed documentation.
+The generator provides comprehensive diagnostics (RXBG001-RXBG082) with code fixes. See the [Diagnostics Help](RxBlazorV2Generator/Diagnostics/Help/) folder for detailed documentation.
+
+Key diagnostic ranges:
+- **RXBG001-RXBG019**: Core model and property diagnostics
+- **RXBG020-RXBG029**: DI and service registration diagnostics
+- **RXBG030-RXBG049**: Command diagnostics
+- **RXBG050-RXBG059**: Service scope and cross-assembly diagnostics
+- **RXBG060-RXBG069**: Component generation diagnostics
+- **RXBG070-RXBG079**: Generic model diagnostics
+- **RXBG080-RXBG082**: Model observer diagnostics
 
 ## Contributing
 
