@@ -348,4 +348,18 @@ public static class DiagnosticDescriptors
         description: "Methods that access properties from injected ObservableModel references can be auto-detected as internal observers. To be auto-detected, a method must: (1) be private, (2) return void (sync) or Task/ValueTask (async), and (3) take no parameters (sync) or optionally a CancellationToken (async). If this method is not intended to be an internal observer, you can ignore this warning.",
         helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG082.md",
         customTags: ["Fix method signature"]);
+
+    // ============================================================================
+    // RXBG090-RXBG099: Observable Property Usage
+    // ============================================================================
+
+    public static readonly DiagnosticDescriptor DirectObservableAccessWarning = new(
+        id: "RXBG090",
+        title: "Direct access to Observable property",
+        messageFormat: "Direct access to 'Observable' property in '{0}'. Use [ObservableTrigger], [ObservableCommand], or [ObservableComponentTrigger] attributes instead for reactive patterns.",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "Direct access to the Observable property bypasses the framework's reactive patterns. Use attributes like [ObservableTrigger] for property change reactions, [ObservableCommand] for command triggers, or [ObservableComponentTrigger] for component hooks. The Observable property should only be accessed in generated code.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG090.md");
 }

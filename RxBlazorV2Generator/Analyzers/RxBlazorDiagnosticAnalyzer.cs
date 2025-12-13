@@ -40,6 +40,9 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
         // RXBG080 (ObservableModelObserverInvalidSignatureError), RXBG081 (ObservableModelObserverPropertyNotFoundError),
         // and RXBG082 (InternalModelObserverInvalidSignatureWarning)
         // are reported by generator, not analyzer (require cross-model/cross-type analysis)
+        //
+        // NOTE: RXBG090 (DirectObservableAccessWarning) is handled by separate ObservableUsageAnalyzer
+        // as it operates on MemberAccessExpressionSyntax, not ClassDeclarationSyntax
     ];
 
     /// <summary>
