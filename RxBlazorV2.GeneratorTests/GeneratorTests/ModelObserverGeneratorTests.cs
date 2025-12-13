@@ -93,6 +93,35 @@ public class ModelObserverGeneratorTests
                 Subscriptions.Add(Referenced.Observable.Where(p => p.Intersect(["Model.Counter"]).Any())
                     .Subscribe(_ => OnCounterChanged()));
             }
+            private bool _contextReadyInternCalled;
+
+            protected override void OnContextReadyIntern()
+            {
+                if (_contextReadyInternCalled)
+                {
+                    return;
+                }
+                _contextReadyInternCalled = true;
+
+                // Initialize referenced ObservableModel dependencies
+                Referenced.ContextReady();
+
+            }
+
+            private bool _contextReadyInternAsyncCalled;
+
+            protected override async Task OnContextReadyInternAsync()
+            {
+                if (_contextReadyInternAsyncCalled)
+                {
+                    return;
+                }
+                _contextReadyInternAsyncCalled = true;
+
+                // Initialize referenced ObservableModel dependencies (async)
+                await Referenced.ContextReadyAsync();
+            }
+
         }
 
         """;
@@ -191,6 +220,35 @@ public class ModelObserverGeneratorTests
                 Subscriptions.Add(Referenced.Observable.Where(p => p.Intersect(["Model.Name"]).Any())
                     .SubscribeAwait(async (_, ct) => await OnNameChangedAsync(ct), AwaitOperation.Switch));
             }
+            private bool _contextReadyInternCalled;
+        
+            protected override void OnContextReadyIntern()
+            {
+                if (_contextReadyInternCalled)
+                {
+                    return;
+                }
+                _contextReadyInternCalled = true;
+
+                // Initialize referenced ObservableModel dependencies
+                Referenced.ContextReady();
+
+            }
+
+            private bool _contextReadyInternAsyncCalled;
+
+            protected override async Task OnContextReadyInternAsync()
+            {
+                if (_contextReadyInternAsyncCalled)
+                {
+                    return;
+                }
+                _contextReadyInternAsyncCalled = true;
+
+                // Initialize referenced ObservableModel dependencies (async)
+                await Referenced.ContextReadyAsync();
+            }
+
         }
 
         """;
@@ -287,6 +345,35 @@ public class ModelObserverGeneratorTests
                 Subscriptions.Add(Referenced.Observable.Where(p => p.Intersect(["Model.IsActive"]).Any())
                     .SubscribeAwait(async (_, _) => await OnIsActiveChangedAsync(), AwaitOperation.Switch));
             }
+            private bool _contextReadyInternCalled;
+        
+            protected override void OnContextReadyIntern()
+            {
+                if (_contextReadyInternCalled)
+                {
+                    return;
+                }
+                _contextReadyInternCalled = true;
+
+                // Initialize referenced ObservableModel dependencies
+                Referenced.ContextReady();
+
+            }
+
+            private bool _contextReadyInternAsyncCalled;
+
+            protected override async Task OnContextReadyInternAsync()
+            {
+                if (_contextReadyInternAsyncCalled)
+                {
+                    return;
+                }
+                _contextReadyInternAsyncCalled = true;
+
+                // Initialize referenced ObservableModel dependencies (async)
+                await Referenced.ContextReadyAsync();
+            }
+        
         }
 
         """;
@@ -381,6 +468,35 @@ public class ModelObserverGeneratorTests
                 Subscriptions.Add(Referenced.Observable.Where(p => p.Intersect(["Model.Count", "Model.Status"]).Any())
                     .Subscribe(_ => OnDataChanged()));
             }
+            private bool _contextReadyInternCalled;
+
+            protected override void OnContextReadyIntern()
+            {
+                if (_contextReadyInternCalled)
+                {
+                    return;
+                }
+                _contextReadyInternCalled = true;
+
+                // Initialize referenced ObservableModel dependencies
+                Referenced.ContextReady();
+
+            }
+
+            private bool _contextReadyInternAsyncCalled;
+
+            protected override async Task OnContextReadyInternAsync()
+            {
+                if (_contextReadyInternAsyncCalled)
+                {
+                    return;
+                }
+                _contextReadyInternAsyncCalled = true;
+
+                // Initialize referenced ObservableModel dependencies (async)
+                await Referenced.ContextReadyAsync();
+            }
+
         }
 
         """;
@@ -472,6 +588,35 @@ public class ModelObserverGeneratorTests
                     .Select(props => props.Select(p => p.Replace("Model.", "Model.Referenced.")).ToArray())
                     .Subscribe(props => StateHasChanged(props)));
             }
+            private bool _contextReadyInternCalled;
+
+            protected override void OnContextReadyIntern()
+            {
+                if (_contextReadyInternCalled)
+                {
+                    return;
+                }
+                _contextReadyInternCalled = true;
+
+                // Initialize referenced ObservableModel dependencies
+                Referenced.ContextReady();
+
+            }
+
+            private bool _contextReadyInternAsyncCalled;
+
+            protected override async Task OnContextReadyInternAsync()
+            {
+                if (_contextReadyInternAsyncCalled)
+                {
+                    return;
+                }
+                _contextReadyInternAsyncCalled = true;
+
+                // Initialize referenced ObservableModel dependencies (async)
+                await Referenced.ContextReadyAsync();
+            }
+        
         }
 
         """;
@@ -571,8 +716,17 @@ public class ModelObserverGeneratorTests
             {
                 Service = service;
             }
+            private bool _contextReadyInternCalled;
+        
             protected override void OnContextReadyIntern()
             {
+                if (_contextReadyInternCalled)
+                {
+                    return;
+                }
+                _contextReadyInternCalled = true;
+
+                // Subscribe to model observers in services
                 Subscriptions.Add(Observable.Where(p => p.Intersect(["Model.Name"]).Any())
                     .Subscribe(_ => Service.OnNameChanged(this)));
 
@@ -675,8 +829,17 @@ public class ModelObserverGeneratorTests
             {
                 Service = service;
             }
+            private bool _contextReadyInternCalled;
+
             protected override void OnContextReadyIntern()
             {
+                if (_contextReadyInternCalled)
+                {
+                    return;
+                }
+                _contextReadyInternCalled = true;
+        
+                // Subscribe to model observers in services
                 Subscriptions.Add(Observable.Where(p => p.Intersect(["Model.Count"]).Any())
                     .SubscribeAwait(async (_, ct) =>
                     {
@@ -781,8 +944,17 @@ public class ModelObserverGeneratorTests
             {
                 Service = service;
             }
+            private bool _contextReadyInternCalled;
+
             protected override void OnContextReadyIntern()
             {
+                if (_contextReadyInternCalled)
+                {
+                    return;
+                }
+                _contextReadyInternCalled = true;
+        
+                // Subscribe to model observers in services
                 Subscriptions.Add(Observable.Where(p => p.Intersect(["Model.Status"]).Any())
                     .SubscribeAwait(async (_, _) =>
                     {
@@ -894,8 +1066,17 @@ public class ModelObserverGeneratorTests
             {
                 Service = service;
             }
+            private bool _contextReadyInternCalled;
+
             protected override void OnContextReadyIntern()
             {
+                if (_contextReadyInternCalled)
+                {
+                    return;
+                }
+                _contextReadyInternCalled = true;
+
+                // Subscribe to model observers in services
                 Subscriptions.Add(Observable.Where(p => p.Intersect(["Model.Value"]).Any())
                     .Subscribe(_ => Service.OnValueChangedSync(this)));
 
@@ -1017,8 +1198,17 @@ public class ModelObserverGeneratorTests
             {
                 Service = service;
             }
+            private bool _contextReadyInternCalled;
+
             protected override void OnContextReadyIntern()
             {
+                if (_contextReadyInternCalled)
+                {
+                    return;
+                }
+                _contextReadyInternCalled = true;
+
+                // Subscribe to model observers in services
                 Subscriptions.Add(Observable.Where(p => p.Intersect(["Model.Name"]).Any())
                     .Subscribe(_ => Service.OnDataChanged(this)));
 

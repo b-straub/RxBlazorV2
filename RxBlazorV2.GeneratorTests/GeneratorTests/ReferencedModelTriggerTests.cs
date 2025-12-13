@@ -147,6 +147,35 @@ public class ReferencedModelTriggerTests
                     .Select(props => props.Select(p => p.Replace("Model.", "Model.Settings.")).ToArray())
                     .Subscribe(props => StateHasChanged(props)));
             }
+            private bool _contextReadyInternCalled;
+
+            protected override void OnContextReadyIntern()
+            {
+                if (_contextReadyInternCalled)
+                {
+                    return;
+                }
+                _contextReadyInternCalled = true;
+
+                // Initialize referenced ObservableModel dependencies
+                Settings.ContextReady();
+
+            }
+
+            private bool _contextReadyInternAsyncCalled;
+
+            protected override async Task OnContextReadyInternAsync()
+            {
+                if (_contextReadyInternAsyncCalled)
+                {
+                    return;
+                }
+                _contextReadyInternAsyncCalled = true;
+
+                // Initialize referenced ObservableModel dependencies (async)
+                await Settings.ContextReadyAsync();
+            }
+
         }
 
         """;
@@ -336,6 +365,35 @@ public class ReferencedModelTriggerTests
                     .Select(props => props.Select(p => p.Replace("Model.", "Model.Settings.")).ToArray())
                     .Subscribe(props => StateHasChanged(props)));
             }
+            private bool _contextReadyInternCalled;
+
+            protected override void OnContextReadyIntern()
+            {
+                if (_contextReadyInternCalled)
+                {
+                    return;
+                }
+                _contextReadyInternCalled = true;
+
+                // Initialize referenced ObservableModel dependencies
+                Settings.ContextReady();
+
+            }
+
+            private bool _contextReadyInternAsyncCalled;
+
+            protected override async Task OnContextReadyInternAsync()
+            {
+                if (_contextReadyInternAsyncCalled)
+                {
+                    return;
+                }
+                _contextReadyInternAsyncCalled = true;
+
+                // Initialize referenced ObservableModel dependencies (async)
+                await Settings.ContextReadyAsync();
+            }
+
         }
 
         """;
@@ -535,6 +593,35 @@ public class ReferencedModelTriggerTests
                     .Select(props => props.Select(p => p.Replace("Model.", "Model.Settings.")).ToArray())
                     .Subscribe(props => StateHasChanged(props)));
             }
+            private bool _contextReadyInternCalled;
+
+            protected override void OnContextReadyIntern()
+            {
+                if (_contextReadyInternCalled)
+                {
+                    return;
+                }
+                _contextReadyInternCalled = true;
+
+                // Initialize referenced ObservableModel dependencies
+                Settings.ContextReady();
+
+            }
+
+            private bool _contextReadyInternAsyncCalled;
+
+            protected override async Task OnContextReadyInternAsync()
+            {
+                if (_contextReadyInternAsyncCalled)
+                {
+                    return;
+                }
+                _contextReadyInternAsyncCalled = true;
+
+                // Initialize referenced ObservableModel dependencies (async)
+                await Settings.ContextReadyAsync();
+            }
+
         }
 
         """;
@@ -749,6 +836,35 @@ public class ReferencedModelTriggerTests
                     .Select(props => props.Select(p => p.Replace("Model.", "Model.Settings.")).ToArray())
                     .Subscribe(props => StateHasChanged(props)));
             }
+            private bool _contextReadyInternCalled;
+
+            protected override void OnContextReadyIntern()
+            {
+                if (_contextReadyInternCalled)
+                {
+                    return;
+                }
+                _contextReadyInternCalled = true;
+
+                // Initialize referenced ObservableModel dependencies
+                Settings.ContextReady();
+
+            }
+
+            private bool _contextReadyInternAsyncCalled;
+
+            protected override async Task OnContextReadyInternAsync()
+            {
+                if (_contextReadyInternAsyncCalled)
+                {
+                    return;
+                }
+                _contextReadyInternAsyncCalled = true;
+
+                // Initialize referenced ObservableModel dependencies (async)
+                await Settings.ContextReadyAsync();
+            }
+
         }
 
         """;
