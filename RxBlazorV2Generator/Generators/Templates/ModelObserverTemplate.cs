@@ -4,22 +4,28 @@ using System.Text;
 namespace RxBlazorV2Generator.Generators.Templates;
 
 /// <summary>
-/// Generates OnContextReadyIntern() method for subscribing to model observer methods in services.
-/// Model observers are methods in service classes decorated with [ObservableModelObserver] that
-/// automatically subscribe to property changes in the model.
+/// Generates OnContextReadyIntern() and OnContextReadyInternAsync() methods for:
+/// 1. Calling ContextReady()/ContextReadyAsync() on referenced ObservableModel dependencies
+/// 2. Subscribing to model observer methods in services decorated with [ObservableModelObserver]
 /// </summary>
 public static class ModelObserverTemplate
 {
     /// <summary>
-    /// Generates the OnContextReadyIntern() override method with subscriptions for all model observers.
+    /// Generates the OnContextReadyIntern() override method that:
+    /// 1. Calls ContextReady() on all referenced ObservableModel dependencies
+    /// 2. Sets up subscriptions for model observers in services
     /// </summary>
+    /// <param name="modelReferences">Collection of referenced ObservableModel dependencies.</param>
     /// <param name="modelObservers">Collection of model observer information from service classes.</param>
-    /// <returns>Generated OnContextReadyIntern() method code, or empty string if no observers.</returns>
-    public static string GenerateOnContextReadyIntern(IEnumerable<ModelObserverInfo> modelObservers)
+    /// <returns>Generated OnContextReadyIntern() method code, or empty string if nothing to generate.</returns>
+    public static string GenerateOnContextReadyIntern(
+        IEnumerable<ModelReferenceInfo> modelReferences,
+        IEnumerable<ModelObserverInfo> modelObservers)
     {
+        var referencesList = modelReferences.ToList();
         var observersList = modelObservers.ToList();
 
-        if (!observersList.Any())
+        if (!referencesList.Any() && !observersList.Any())
         {
             return string.Empty;
         }
@@ -27,34 +33,97 @@ public static class ModelObserverTemplate
         var sb = new StringBuilder();
 
         sb.AppendLine();
+        sb.AppendLine("    private bool _contextReadyInternCalled;");
+        sb.AppendLine();
         sb.AppendLine("    protected override void OnContextReadyIntern()");
         sb.AppendLine("    {");
+        sb.AppendLine("        if (_contextReadyInternCalled)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            return;");
+        sb.AppendLine("        }");
+        sb.AppendLine("        _contextReadyInternCalled = true;");
+        sb.AppendLine();
 
-        // Group observers by property name for comments
-        var observersByProperty = observersList.GroupBy(o => o.PropertyName).ToList();
-
-        foreach (var propertyGroup in observersByProperty)
+        // Call ContextReady() on all referenced ObservableModel dependencies
+        if (referencesList.Any())
         {
-            var propertyName = propertyGroup.Key;
-            var qualifiedPropertyName = $"Model.{propertyName}";
-            var propertyNameArray = $"[\"{qualifiedPropertyName}\"]";
-
-            foreach (var observer in propertyGroup)
+            sb.AppendLine("        // Initialize referenced ObservableModel dependencies");
+            foreach (var reference in referencesList)
             {
-                if (observer.IsAsync)
-                {
-                    GenerateAsyncObserverSubscription(sb, observer, propertyNameArray);
-                }
-                else
-                {
-                    GenerateSyncObserverSubscription(sb, observer, propertyNameArray);
-                }
+                sb.AppendLine($"        {reference.PropertyName}.ContextReady();");
+            }
+            sb.AppendLine();
+        }
 
-                sb.AppendLine();
+        // Generate subscriptions for model observers
+        if (observersList.Any())
+        {
+            sb.AppendLine("        // Subscribe to model observers in services");
+            var observersByProperty = observersList.GroupBy(o => o.PropertyName).ToList();
+
+            foreach (var propertyGroup in observersByProperty)
+            {
+                var propertyName = propertyGroup.Key;
+                var qualifiedPropertyName = $"Model.{propertyName}";
+                var propertyNameArray = $"[\"{qualifiedPropertyName}\"]";
+
+                foreach (var observer in propertyGroup)
+                {
+                    if (observer.IsAsync)
+                    {
+                        GenerateAsyncObserverSubscription(sb, observer, propertyNameArray);
+                    }
+                    else
+                    {
+                        GenerateSyncObserverSubscription(sb, observer, propertyNameArray);
+                    }
+
+                    sb.AppendLine();
+                }
             }
         }
 
         // Close method
+        sb.AppendLine("    }");
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Generates the OnContextReadyInternAsync() override method that calls ContextReadyAsync()
+    /// on all referenced ObservableModel dependencies.
+    /// </summary>
+    /// <param name="modelReferences">Collection of referenced ObservableModel dependencies.</param>
+    /// <returns>Generated OnContextReadyInternAsync() method code, or empty string if no references.</returns>
+    public static string GenerateOnContextReadyInternAsync(IEnumerable<ModelReferenceInfo> modelReferences)
+    {
+        var referencesList = modelReferences.ToList();
+
+        if (!referencesList.Any())
+        {
+            return string.Empty;
+        }
+
+        var sb = new StringBuilder();
+
+        sb.AppendLine();
+        sb.AppendLine("    private bool _contextReadyInternAsyncCalled;");
+        sb.AppendLine();
+        sb.AppendLine("    protected override async Task OnContextReadyInternAsync()");
+        sb.AppendLine("    {");
+        sb.AppendLine("        if (_contextReadyInternAsyncCalled)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            return;");
+        sb.AppendLine("        }");
+        sb.AppendLine("        _contextReadyInternAsyncCalled = true;");
+        sb.AppendLine();
+        sb.AppendLine("        // Initialize referenced ObservableModel dependencies (async)");
+
+        foreach (var reference in referencesList)
+        {
+            sb.AppendLine($"        await {reference.PropertyName}.ContextReadyAsync();");
+        }
+
         sb.AppendLine("    }");
 
         return sb.ToString();
@@ -102,12 +171,25 @@ public static class ModelObserverTemplate
     }
 
     /// <summary>
-    /// Checks if any model observers are present that would require generating OnContextReadyIntern().
+    /// Checks if OnContextReadyIntern() generation is needed.
     /// </summary>
+    /// <param name="modelReferences">Collection of referenced ObservableModel dependencies.</param>
     /// <param name="modelObservers">Collection of model observer information.</param>
-    /// <returns>True if there are observers to generate subscriptions for.</returns>
-    public static bool HasModelObservers(IEnumerable<ModelObserverInfo> modelObservers)
+    /// <returns>True if there are references or observers requiring generation.</returns>
+    public static bool RequiresOnContextReadyIntern(
+        IEnumerable<ModelReferenceInfo> modelReferences,
+        IEnumerable<ModelObserverInfo> modelObservers)
     {
-        return modelObservers.Any();
+        return modelReferences.Any() || modelObservers.Any();
+    }
+
+    /// <summary>
+    /// Checks if OnContextReadyInternAsync() generation is needed.
+    /// </summary>
+    /// <param name="modelReferences">Collection of referenced ObservableModel dependencies.</param>
+    /// <returns>True if there are references requiring async generation.</returns>
+    public static bool RequiresOnContextReadyInternAsync(IEnumerable<ModelReferenceInfo> modelReferences)
+    {
+        return modelReferences.Any();
     }
 }

@@ -113,11 +113,20 @@ public static class ObservableModelCodeGenerator
                 sb.Append(constructorCode);
             }
 
-            // Generate OnContextReadyIntern() for model observers in services
-            var onContextReadyCode = ModelObserverTemplate.GenerateOnContextReadyIntern(modelInfo.ModelObservers);
+            // Generate OnContextReadyIntern() for referenced models and model observers in services
+            var onContextReadyCode = ModelObserverTemplate.GenerateOnContextReadyIntern(
+                modelInfo.ModelReferences,
+                modelInfo.ModelObservers);
             if (!string.IsNullOrEmpty(onContextReadyCode))
             {
                 sb.Append(onContextReadyCode);
+            }
+
+            // Generate OnContextReadyInternAsync() for referenced models
+            var onContextReadyAsyncCode = ModelObserverTemplate.GenerateOnContextReadyInternAsync(modelInfo.ModelReferences);
+            if (!string.IsNullOrEmpty(onContextReadyAsyncCode))
+            {
+                sb.Append(onContextReadyAsyncCode);
             }
 
             sb.AppendLine();
