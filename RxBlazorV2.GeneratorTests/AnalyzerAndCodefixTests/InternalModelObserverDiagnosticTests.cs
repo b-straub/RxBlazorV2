@@ -1,5 +1,7 @@
 using RxBlazorV2Generator.Diagnostics;
 using GeneratorVerifier = RxBlazorV2.GeneratorTests.Helpers.RxBlazorGeneratorVerifier;
+using AnalyzerVerifier = RxBlazorV2.GeneratorTests.Helpers.CSharpCodeFixVerifier<RxBlazorV2Generator.Analyzers.RxBlazorDiagnosticAnalyzer,
+        RxBlazorV2CodeFix.CodeFix.CircularTriggerReferenceCodeFixProvider>;
 
 namespace RxBlazorV2.GeneratorTests.AnalyzerAndCodefixTests;
 
@@ -303,6 +305,111 @@ public class InternalModelObserverDiagnosticTests
         }
         """;
 
+        await GeneratorVerifier.VerifyGeneratorDiagnosticsAsync(test);
+    }
+
+    [Fact]
+    public async Task InternalObserverModifiesSameProperty_CircularReferenceErrorExpected()
+    {
+        // Diagnostic is now reported by analyzer (through Verify()) for IDE code fix support
+        // lang=csharp
+        var test = $$"""
+        using RxBlazorV2.Model;
+
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Scoped)]
+            public partial class TimerModel : ObservableModel
+            {
+                public partial bool IsRunning { get; set; }
+            }
+
+            [ObservableModelScope(ModelScope.Scoped)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial TestModel(TimerModel timer);
+
+                // This method observes Timer.IsRunning and also modifies it - circular reference!
+                private void {|{{DiagnosticDescriptors.CircularTriggerReferenceError.Id}}:OnTimerStateChanged|}()
+                {
+                    Timer.IsRunning = false; // Modifies the observed property
+                    var state = Timer.IsRunning ? "Running" : "Stopped";
+                }
+            }
+        }
+        """;
+
+        await AnalyzerVerifier.VerifyAnalyzerAsync(test);
+    }
+
+    [Fact]
+    public async Task InternalObserverReadsButDoesNotModify_NoCircularReferenceError()
+    {
+        // lang=csharp
+        var test = """
+        using RxBlazorV2.Model;
+
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Scoped)]
+            public partial class TimerModel : ObservableModel
+            {
+                public partial bool IsRunning { get; set; }
+                public partial int TickCount { get; set; }
+            }
+
+            [ObservableModelScope(ModelScope.Scoped)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Message { get; set; } = "";
+                public partial TestModel(TimerModel timer);
+
+                // This method only reads Timer.IsRunning, doesn't modify it - no circular reference
+                private void OnTimerStateChanged()
+                {
+                    var state = Timer.IsRunning ? "Running" : "Stopped";
+                    Message = state; // Modifies a different property
+                }
+            }
+        }
+        """;
+
+        // No diagnostics expected
+        await GeneratorVerifier.VerifyGeneratorDiagnosticsAsync(test);
+    }
+
+    [Fact]
+    public async Task InternalObserverReadsButOnlyModifiesLocalProperty_NoCircularReferenceError()
+    {
+        // lang=csharp
+        var test = """
+        using RxBlazorV2.Model;
+
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Scoped)]
+            public partial class TimerModel : ObservableModel
+            {
+                public partial bool IsRunning { get; set; }
+            }
+
+            [ObservableModelScope(ModelScope.Scoped)]
+            public partial class TestModel : ObservableModel
+            {
+                public partial string Message { get; set; } = "";
+                public partial TestModel(TimerModel timer);
+
+                // Observes Timer.IsRunning but only modifies local Message
+                // This should NOT be a circular reference
+                private void OnIsRunningChanged()
+                {
+                    Message = Timer.IsRunning ? "Running" : "Stopped";
+                }
+            }
+        }
+        """;
+
+        // No diagnostics expected - only reads Timer.IsRunning, modifies local property
         await GeneratorVerifier.VerifyGeneratorDiagnosticsAsync(test);
     }
 }

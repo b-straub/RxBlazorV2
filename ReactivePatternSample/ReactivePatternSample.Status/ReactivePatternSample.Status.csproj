@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <LangVersion>preview</LangVersion>
+        <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <SupportedPlatform Include="browser" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="MudBlazor" Version="8.15.0"/>
+    </ItemGroup>
+
+    <!-- Debug: Use local project references -->
+    <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+        <ProjectReference Include="..\..\RxBlazorV2\RxBlazorV2.csproj"/>
+        <ProjectReference Include="..\..\RxBlazorV2Generator\RxBlazorV2Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
+        <ProjectReference Include="..\..\RxBlazorV2CodeFix\RxBlazorV2CodeFix.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
+        <ProjectReference Include="..\..\RxBlazorV2.MudBlazor\RxBlazorV2.MudBlazor.csproj"/>
+    </ItemGroup>
+
+    <!-- Release: Use NuGet packages -->
+    <ItemGroup Condition="'$(Configuration)' == 'Release'">
+        <PackageReference Include="RxBlazorV2" Version="$(RxBlazorV2Version)"/>
+        <PackageReference Include="RxBlazorV2.MudBlazor" Version="$(RxBlazorV2Version)"/>
+    </ItemGroup>
+
+</Project>

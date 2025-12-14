@@ -1,0 +1,65 @@
+@page "/todo"
+@inherits TodoListModelComponent
+
+@*
+    Todo Page - Orchestrates todo components from the MainApp assembly.
+
+    Demonstrates:
+    - Inherits from TodoListModelComponent for reactive updates
+    - Renders domain components (TodoList, AddTodoForm, TodoItemRow) from MainApp
+      to avoid RXBG061 (components cannot render each other in same assembly)
+    - ShareDialog rendered here (independent from ShareButton, connected via Model)
+    - All components are independent, connected via shared Singleton models
+*@
+
+<PageTitle>Todo List</PageTitle>
+
+<MudStack Spacing="4">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+        <MudText Typo="Typo.h4">Todo List</MudText>
+
+        @if (Model.Auth.IsAuthenticated)
+        {
+            <ShareButton />
+        }
+    </MudStack>
+
+    @if (!Model.Auth.IsAuthenticated)
+    {
+        <MudAlert Severity="Severity.Warning" Icon="@Icons.Material.Filled.Lock">
+            Please <MudLink Href="/">login</MudLink> to access your todo list.
+        </MudAlert>
+    }
+    else
+    {
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudStack Spacing="3">
+                @* TodoList provides stats and filters *@
+                <TodoList />
+
+                @* AddTodoForm - independent component *@
+                <AddTodoForm />
+
+                @* Todo items list - rendered here from MainApp *@
+                @if (Model.UserItems.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true">
+                        No items to show. Add your first todo above!
+                    </MudAlert>
+                }
+                else
+                {
+                    <MudList T="TodoItem" Dense="true">
+                        @foreach (var item in Model.UserItems)
+                        {
+                            <TodoItemRow Item="@item" />
+                        }
+                    </MudList>
+                }
+            </MudStack>
+        </MudPaper>
+    }
+</MudStack>
+
+@* ShareDialog - independent from ShareButton, connected via ShareModel *@
+<ShareDialog />

@@ -1,4 +1,3 @@
-using RxBlazorV2Generator.Diagnostics;
 using AnalyzerVerifier = RxBlazorV2.GeneratorTests.Helpers.CSharpAnalyzerVerifier<RxBlazorV2Generator.Analyzers.ObservableUsageAnalyzer>;
 
 namespace RxBlazorV2.GeneratorTests.AnalyzerAndCodefixTests;

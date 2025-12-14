@@ -1,0 +1,36 @@
+@inherits SettingsModelComponent
+
+@*
+    SettingsPanel - Panel for viewing and editing application settings.
+
+    Patterns demonstrated:
+    - Inherits from SettingsModelComponent for reactive updates
+    - Export format dropdown with persistence to Storage
+    - MudBlazor Card layout
+*@
+
+<MudCard Elevation="2">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.Settings" />
+                <MudText Typo="Typo.h6">Settings</MudText>
+            </MudStack>
+        </CardHeaderContent>
+    </MudCardHeader>
+
+    <MudCardContent>
+        <MudStack Spacing="3">
+            @* Export Format Setting *@
+            <MudSelect T="ExportFormat"
+                       @bind-Value="Model.PreferredExportFormat"
+                       Label="Preferred Export Format"
+                       Variant="Variant.Outlined"
+                       HelperText="Default format when sharing todo lists">
+                <MudSelectItem Value="ExportFormat.Plain">Plain Text</MudSelectItem>
+                <MudSelectItem Value="ExportFormat.Markdown">Markdown</MudSelectItem>
+                <MudSelectItem Value="ExportFormat.Json">JSON</MudSelectItem>
+            </MudSelect>
+        </MudStack>
+    </MudCardContent>
+</MudCard>

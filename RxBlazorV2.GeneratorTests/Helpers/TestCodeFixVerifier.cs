@@ -7,7 +7,6 @@ using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Testing;
 using Microsoft.CodeAnalysis.Text;
 using RxBlazorV2Generator;
-using RxBlazorV2Generator.Diagnostics;
 
 namespace RxBlazorV2.GeneratorTests.Helpers;
 
@@ -38,7 +37,6 @@ internal static class CSharpCodeFixVerifier<TAnalyzer, TCodeFix>
         test.TestState.Sources.Add(("GlobalUsings.cs", SourceText.From(TestShared.GlobalUsing, Encoding.UTF8)));
         test.TestBehaviors |= TestBehaviors.SkipGeneratedSourcesCheck;
         test.ExpectedDiagnostics.AddRange(expected);
-        test.DisabledDiagnostics.Add(DiagnosticDescriptors.GeneratorDiagnosticError.Id);
         return test.RunAsync();
     }
 
@@ -63,7 +61,6 @@ internal static class CSharpCodeFixVerifier<TAnalyzer, TCodeFix>
         test.FixedState.Sources.Add(("GlobalUsings.cs", SourceText.From(TestShared.GlobalUsing, Encoding.UTF8)));
         test.TestBehaviors |= TestBehaviors.SkipGeneratedSourcesCheck;
         test.ExpectedDiagnostics.AddRange(expected);
-        test.DisabledDiagnostics.Add(DiagnosticDescriptors.GeneratorDiagnosticError.Id);
 
         return test.RunAsync();
     }

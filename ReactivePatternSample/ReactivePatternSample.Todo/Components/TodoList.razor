@@ -1,0 +1,54 @@
+@inherits TodoListModelComponent
+
+@*
+    TodoList - Stats and filter controls for the todo list.
+
+    Patterns demonstrated:
+    - Inherits from generated TodoListModelComponent for reactive updates
+    - Stats (CompletedCount, PendingCount) auto-update via Model
+    - Filter buttons change CurrentFilter
+    - Does NOT render child components (AddTodoForm, TodoItemRow) - they are
+      rendered separately in MainApp to avoid RXBG061 (same-assembly rendering)
+*@
+
+<MudStack Spacing="3">
+    @* Header with stats *@
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+        <MudText Typo="Typo.h5">My Tasks</MudText>
+        <MudStack Row="true" Spacing="2">
+            <MudChip T="string" Color="Color.Success" Size="Size.Small">
+                @Model.CompletedCount completed
+            </MudChip>
+            <MudChip T="string" Color="Color.Warning" Size="Size.Small">
+                @Model.PendingCount pending
+            </MudChip>
+        </MudStack>
+    </MudStack>
+
+    @* Filter buttons *@
+    <MudButtonGroup Variant="Variant.Outlined" Size="Size.Small">
+        <MudButton Color="@(Model.CurrentFilter == TodoFilter.All ? Color.Primary : Color.Default)"
+                   OnClick="@(() => Model.SetFilter(TodoFilter.All))">
+            All
+        </MudButton>
+        <MudButton Color="@(Model.CurrentFilter == TodoFilter.Pending ? Color.Primary : Color.Default)"
+                   OnClick="@(() => Model.SetFilter(TodoFilter.Pending))">
+            Pending
+        </MudButton>
+        <MudButton Color="@(Model.CurrentFilter == TodoFilter.Completed ? Color.Primary : Color.Default)"
+                   OnClick="@(() => Model.SetFilter(TodoFilter.Completed))">
+            Completed
+        </MudButton>
+    </MudButtonGroup>
+
+    @* Clear completed button *@
+    @if (Model.CompletedCount > 0)
+    {
+        <MudButtonAsyncRx Command="@Model.ClearCompletedCommand"
+                          Variant="Variant.Text"
+                          Color="Color.Secondary"
+                          StartIcon="@Icons.Material.Filled.ClearAll">
+            Clear @Model.CompletedCount completed
+        </MudButtonAsyncRx>
+    }
+</MudStack>

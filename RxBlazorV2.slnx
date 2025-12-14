@@ -8,5 +8,14 @@
   <Project Path="RxBlazorV2ExternalModel/RxBlazorV2ExternalModel.csproj" />
   <Project Path="RxBlazorVSSampleComponents/RxBlazorVSSampleComponents.csproj" />
   <Project Path="RxBlazorV2.GeneratorTests/RxBlazorV2.GeneratorTests.csproj" />
+  <Folder Name="/ReactivePatternSample/">
+    <Project Path="ReactivePatternSample/ReactivePatternSample.Auth/ReactivePatternSample.Auth.csproj" />
+    <Project Path="ReactivePatternSample/ReactivePatternSample.Settings/ReactivePatternSample.Settings.csproj" />
+    <Project Path="ReactivePatternSample/ReactivePatternSample.Share/ReactivePatternSample.Share.csproj" />
+    <Project Path="ReactivePatternSample/ReactivePatternSample.Status/ReactivePatternSample.Status.csproj" />
+    <Project Path="ReactivePatternSample/ReactivePatternSample.Storage/ReactivePatternSample.Storage.csproj" />
+    <Project Path="ReactivePatternSample/ReactivePatternSample.Todo/ReactivePatternSample.Todo.csproj" />
+    <Project Path="ReactivePatternSample/ReactivePatternSample/ReactivePatternSample.csproj" />
+  </Folder>
   <Project Path="RxBlazorV2.CoreTests/RxBlazorV2.CoreTests.csproj" />
 </Solution>

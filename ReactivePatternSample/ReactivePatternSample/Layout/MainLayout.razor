@@ -1,0 +1,78 @@
+@inherits RxBlazorV2LayoutBase
+
+@*
+    MainLayout - Application shell with MudBlazor layout.
+
+    Patterns demonstrated:
+    - MudBlazor AppBar, Drawer, and MainContent
+    - Integrates domain components (UserBadge, StatusBar, StatusPanel)
+    - Theme management via SettingsModel.IsDay
+    - Inherits from SettingsModelComponent for reactive theme updates
+*@
+
+<MudThemeProvider IsDarkMode="@(!Model.Settings.IsDay)" />
+<MudDialogProvider />
+<MudSnackbarProvider /> 
+<MudPopoverProvider />
+
+<MudLayout>
+    @* AppBar with user badge *@
+    <MudAppBar Elevation="1">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                       Color="Color.Inherit"
+                       Edge="Edge.Start"
+                       OnClick="@ToggleDrawer" />
+
+        <MudText Typo="Typo.h6">Reactive Pattern Sample</MudText>
+
+        <MudSpacer />
+
+        @* Theme toggle button *@
+        <MudTooltip Text="@(Model.Settings.IsDay ? "Switch to dark mode" : "Switch to light mode")">
+            <MudIconButton Icon="@(Model.Settings.IsDay ? Icons.Material.Filled.DarkMode : Icons.Material.Filled.LightMode)"
+                           Color="Color.Inherit"
+                           OnClick="@(() => Model.Settings.ToggleThemeCommand.Execute())" />
+        </MudTooltip>
+
+        @* User badge from Auth domain *@
+        <UserBadge />
+    </MudAppBar>
+
+    @* Navigation drawer *@
+    <MudDrawer @bind-Open="@_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
+        <MudDrawerHeader>
+            <MudText Typo="Typo.h6">Navigation</MudText>
+        </MudDrawerHeader>
+        <MudNavMenu>
+            <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">
+                Home
+            </MudNavLink>
+            <MudNavLink Href="/todo" Icon="@Icons.Material.Filled.CheckBox">
+                Todo List
+            </MudNavLink>
+            <MudNavLink Href="/settings" Icon="@Icons.Material.Filled.Settings">
+                Settings
+            </MudNavLink>
+        </MudNavMenu>
+    </MudDrawer>
+
+    @* Main content *@
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.Large" Class="py-4">
+            @Body
+        </MudContainer>
+
+        @* Status panel and bar from Status domain *@
+        <StatusPanel />
+        <StatusBar />
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool _drawerOpen = true;
+
+    private void ToggleDrawer()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+}

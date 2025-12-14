@@ -1,0 +1,16 @@
+@inherits ShareModelComponent
+
+@*
+    ShareButton - Button to trigger share dialog.
+
+    Patterns demonstrated:
+    - Inherits from ShareModelComponent for reactive updates
+    - Sets IsDialogOpen - ShareDialog reacts via shared model
+*@
+
+<MudButton Variant="Variant.Outlined"
+           Color="Color.Primary"
+           StartIcon="@Icons.Material.Filled.Share"
+           OnClick="@(() => Model.IsDialogOpen = true)">
+    Share
+</MudButton>

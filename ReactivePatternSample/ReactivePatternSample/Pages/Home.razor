@@ -1,0 +1,108 @@
+@page "/"
+
+@*
+    Home Page - Landing page with login form and pattern explanation.
+
+    Demonstrates:
+    - Conditional rendering based on auth state
+    - Cross-domain component usage (LoginForm from Auth domain)
+*@
+
+<PageTitle>Reactive Pattern Sample</PageTitle>
+
+@inject AuthModel AuthModel
+
+<MudStack Spacing="4">
+    <MudText Typo="Typo.h4">Reactive Pattern Sample</MudText>
+    <MudText Typo="Typo.body1" Color="Color.Secondary">
+        A demonstration of RxBlazorV2 reactive patterns with domain separation.
+    </MudText>
+
+    @if (!AuthModel.IsAuthenticated)
+    {
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <LoginForm />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudText Typo="Typo.h6" Class="mb-2">Patterns Demonstrated</MudText>
+                    <MudList T="string" Dense="true">
+                        <MudListItem Icon="@Icons.Material.Filled.Storage">
+                            <b>Storage Domain</b> - UI-less ObservableModel with reactive collections
+                        </MudListItem>
+                        <MudListItem Icon="@Icons.Material.Filled.Info">
+                            <b>Status Domain</b> - Global status bar with ObservableComponentTrigger
+                        </MudListItem>
+                        <MudListItem Icon="@Icons.Material.Filled.Person">
+                            <b>Auth Domain</b> - Authentication with ObservableTrigger validation
+                        </MudListItem>
+                        <MudListItem Icon="@Icons.Material.Filled.CheckBox">
+                            <b>Todo Domain</b> - Internal observers reacting to auth changes
+                        </MudListItem>
+                        <MudListItem Icon="@Icons.Material.Filled.Share">
+                            <b>Share Domain</b> - Independent components sharing Singleton model
+                        </MudListItem>
+                    </MudList>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Success" Icon="@Icons.Material.Filled.Check">
+            Welcome, @(AuthModel.CurrentUser?.DisplayName ?? AuthModel.CurrentUser?.Username)!
+            Navigate to the <MudLink Href="/todo">Todo List</MudLink> to start managing your tasks.
+        </MudAlert>
+
+        <MudPaper Class="pa-4" Elevation="1">
+            <MudText Typo="Typo.h6" Class="mb-2">Domain Architecture</MudText>
+            <MudText Typo="Typo.body2" Class="mb-3">
+                This application demonstrates proper domain separation using RxBlazorV2.
+                Each domain is a separate project with its own models, components, and reactive subscriptions.
+            </MudText>
+            <MudSimpleTable Dense="true" Hover="true">
+                <thead>
+                    <tr>
+                        <th>Domain</th>
+                        <th>Scope</th>
+                        <th>Has UI</th>
+                        <th>Key Pattern</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Storage</td>
+                        <td>Singleton</td>
+                        <td>No</td>
+                        <td>ObservableList&lt;T&gt; for reactive collections</td>
+                    </tr>
+                    <tr>
+                        <td>Status</td>
+                        <td>Singleton</td>
+                        <td>Yes</td>
+                        <td>[ObservableComponentTrigger] for real-time updates</td>
+                    </tr>
+                    <tr>
+                        <td>Auth</td>
+                        <td>Singleton</td>
+                        <td>Yes</td>
+                        <td>[ObservableTrigger] for validation</td>
+                    </tr>
+                    <tr>
+                        <td>Todo</td>
+                        <td>Singleton</td>
+                        <td>Yes</td>
+                        <td>Internal observers (auto-detected)</td>
+                    </tr>
+                    <tr>
+                        <td>Share</td>
+                        <td>Singleton</td>
+                        <td>Yes</td>
+                        <td>Independent components sharing reactive state</td>
+                    </tr>
+                </tbody>
+            </MudSimpleTable>
+        </MudPaper>
+    }
+</MudStack>

@@ -1,0 +1,31 @@
+@inherits TodoListModelComponent
+
+@*
+    AddTodoForm - Form to add new todo items.
+
+    Patterns demonstrated:
+    - Inherits from TodoListModelComponent for reactive updates
+    - Connected to TodoList via shared Singleton model
+*@
+
+<MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+    <MudTextField @bind-Value="Model.NewItemTitle"
+                  Label="New todo"
+                  Variant="Variant.Outlined"
+                  Immediate="true"
+                  Class="flex-grow-1"
+                  Placeholder="What needs to be done?" />
+
+    <MudTextField @bind-Value="Model.NewItemDescription"
+                  Label="Description (optional)"
+                  Variant="Variant.Outlined"
+                  Immediate="true"
+                  Style="max-width: 200px;" />
+
+    <MudButtonRx Command="@Model.AddCommand"
+                 Variant="Variant.Filled"
+                 Color="Color.Primary"
+                 StartIcon="@Icons.Material.Filled.Add">
+        Add
+    </MudButtonRx>
+</MudStack>

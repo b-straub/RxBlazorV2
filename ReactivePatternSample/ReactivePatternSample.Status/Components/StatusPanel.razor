@@ -1,0 +1,64 @@
+@inherits StatusModelComponent
+
+@*
+    StatusPanel - Expandable panel showing all status messages.
+
+    Patterns demonstrated:
+    - Inherits from generated StatusModelComponent for reactive updates
+    - ObservableList<StatusMessage> triggers UI updates automatically
+    - MudBlazor collapse animation
+*@
+
+<MudCollapse Expanded="@Model.IsPanelExpanded">
+    <MudPaper Class="pa-2" Elevation="0" Style="max-height: 200px; overflow-y: auto;">
+        @if (Model.Messages.Count == 0)
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="text-center pa-2">
+                No messages
+            </MudText>
+        }
+        else
+        {
+            <MudList T="StatusMessage" Dense="true">
+                @foreach (var message in Model.Messages.AsEnumerable().Reverse())
+                {
+                    <MudListItem T="StatusMessage" Icon="@GetIcon(message.Severity)" IconColor="@GetColor(message.Severity)">
+                        <div class="d-flex align-center gap-2">
+                            <MudText Typo="Typo.body2">@message.Message</MudText>
+                            <MudSpacer />
+                            @if (message.Source is not null)
+                            {
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                                    @message.Source
+                                </MudChip>
+                            }
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                @message.Timestamp.ToLocalTime().ToString("HH:mm:ss")
+                            </MudText>
+                        </div>
+                    </MudListItem>
+                }
+            </MudList>
+        }
+    </MudPaper>
+</MudCollapse>
+
+@code {
+    private static string GetIcon(StatusSeverity severity) => severity switch
+    {
+        StatusSeverity.Info => Icons.Material.Filled.Info,
+        StatusSeverity.Success => Icons.Material.Filled.CheckCircle,
+        StatusSeverity.Warning => Icons.Material.Filled.Warning,
+        StatusSeverity.Error => Icons.Material.Filled.Error,
+        _ => Icons.Material.Filled.Info
+    };
+
+    private static Color GetColor(StatusSeverity severity) => severity switch
+    {
+        StatusSeverity.Info => Color.Info,
+        StatusSeverity.Success => Color.Success,
+        StatusSeverity.Warning => Color.Warning,
+        StatusSeverity.Error => Color.Error,
+        _ => Color.Default
+    };
+}

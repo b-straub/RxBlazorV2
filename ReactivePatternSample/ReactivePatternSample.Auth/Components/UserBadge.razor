@@ -1,0 +1,38 @@
+@inherits AuthModelComponent
+
+@*
+    UserBadge - Displays current user info in AppBar.
+
+    Patterns demonstrated:
+    - Inherits from generated AuthModelComponent for reactive updates
+    - [ObservableComponentTrigger] on IsAuthenticated/CurrentUser auto-refreshes
+    - Conditional rendering based on auth state
+*@
+
+@if (Model.IsAuthenticated && Model.CurrentUser is not null)
+{
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudAvatar Color="Color.Secondary" Size="Size.Small">
+            @(Model.CurrentUser.DisplayName?.Substring(0, 1).ToUpperInvariant()
+              ?? Model.CurrentUser.Username.Substring(0, 1).ToUpperInvariant())
+        </MudAvatar>
+
+        <MudText Typo="Typo.body2">
+            @(Model.CurrentUser.DisplayName ?? Model.CurrentUser.Username)
+        </MudText>
+
+        <MudButtonRx Command="@Model.LogoutCommand"
+                     Variant="Variant.Text"
+                     Color="Color.Inherit"
+                     Size="Size.Small"
+                     StartIcon="@Icons.Material.Filled.Logout">
+            Logout
+        </MudButtonRx>
+    </MudStack>
+}
+else
+{
+    <MudText Typo="Typo.body2" Color="Color.Inherit">
+        Not logged in
+    </MudText>
+}

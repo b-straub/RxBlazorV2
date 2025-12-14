@@ -1,0 +1,95 @@
+@inherits TodoListModelComponent
+
+@*
+    TodoItemRow - Individual todo item with actions.
+
+    Patterns demonstrated:
+    - Inherits from TodoListModelComponent for reactive updates
+    - Parameter for the specific item
+    - Connected to TodoList via shared Singleton model
+*@
+
+<MudListItem T="TodoItem">
+    @if (Model.EditingItem?.Id == Item.Id)
+    {
+        @* Edit mode *@
+        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="flex-grow-1">
+            <MudTextField @bind-Value="_editTitle"
+                          Label="Title"
+                          Variant="Variant.Outlined"
+                          Class="flex-grow-1" />
+
+            <MudTextField @bind-Value="_editDescription"
+                          Label="Description"
+                          Variant="Variant.Outlined"
+                          Style="max-width: 200px;" />
+
+            <MudIconButton Icon="@Icons.Material.Filled.Save"
+                           Color="Color.Success"
+                           Size="Size.Small"
+                           OnClick="@SaveEdit" />
+
+            <MudIconButton Icon="@Icons.Material.Filled.Cancel"
+                           Color="Color.Default"
+                           Size="Size.Small"
+                           OnClick="@(() => Model.CancelEdit())" />
+        </MudStack>
+    }
+    else
+    {
+        @* View mode *@
+        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="flex-grow-1">
+            <MudCheckBox T="bool"
+                         Value="@Item.IsCompleted"
+                         ValueChanged="@(_ => Model.ToggleItem(Item.Id))"
+                         Color="Color.Primary" />
+
+            <MudStack Spacing="0" Class="flex-grow-1">
+                <MudText Typo="Typo.body1"
+                         Style="@(Item.IsCompleted ? "text-decoration: line-through; opacity: 0.6;" : "")">
+                    @Item.Title
+                </MudText>
+
+                @if (!string.IsNullOrEmpty(Item.Description))
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        @Item.Description
+                    </MudText>
+                }
+            </MudStack>
+
+            <MudText Typo="Typo.caption" Color="Color.Tertiary">
+                @Item.CreatedAt.ToLocalTime().ToString("MMM dd")
+            </MudText>
+
+            <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                           Size="Size.Small"
+                           OnClick="@StartEdit" />
+
+            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                           Color="Color.Error"
+                           Size="Size.Small"
+                           OnClick="@(() => Model.RemoveItem(Item.Id))" />
+        </MudStack>
+    }
+</MudListItem>
+
+@code {
+    [Parameter, EditorRequired]
+    public TodoItem Item { get; set; } = default!;
+
+    private string _editTitle = string.Empty;
+    private string? _editDescription;
+
+    private void StartEdit()
+    {
+        _editTitle = Item.Title;
+        _editDescription = Item.Description;
+        Model.StartEdit(Item);
+    }
+
+    private void SaveEdit()
+    {
+        Model.SaveEdit(_editTitle, _editDescription);
+    }
+}

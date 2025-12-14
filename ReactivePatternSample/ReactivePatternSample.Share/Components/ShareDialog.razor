@@ -1,0 +1,85 @@
+@inherits ShareModelComponent
+
+@*
+    ShareDialog - Dialog for exporting and sharing todo items.
+
+    Patterns demonstrated:
+    - Inherits from ShareModelComponent for reactive updates
+    - Rendered from MainApp (different assembly) to avoid RXBG061
+    - Export format dropdown bound to Settings.PreferredExportFormat
+    - Auto-export on dialog open via property trigger
+    - Auto-export on format change via ValueChanged event
+    - MudButtonAsyncRx for async commands
+*@
+
+<MudDialog @bind-Visible="Model.IsDialogOpen">
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.Share" />
+            <MudText Typo="Typo.h6">Share Todo List</MudText>
+        </MudStack>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="3">
+            @* Format selection - bound to Settings, auto-exports on change *@
+            <MudSelect T="ExportFormat"
+                       Value="Model.Settings.PreferredExportFormat"
+                       ValueChanged="OnFormatChanged"
+                       Label="Export Format"
+                       Variant="Variant.Outlined"
+                       Disabled="Model.IsExporting">
+                <MudSelectItem Value="ExportFormat.Plain">Plain Text</MudSelectItem>
+                <MudSelectItem Value="ExportFormat.Markdown">Markdown</MudSelectItem>
+                <MudSelectItem Value="ExportFormat.Json">JSON</MudSelectItem>
+            </MudSelect>
+
+            @* Loading indicator while exporting *@
+            @if (Model.IsExporting)
+            {
+                <MudStack Row="true" Justify="Justify.Center" AlignItems="AlignItems.Center">
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                    <MudText Typo="Typo.body2" Class="ml-2">Exporting...</MudText>
+                </MudStack>
+            }
+
+            @* Exported text preview *@
+            @if (!string.IsNullOrEmpty(Model.ExportedText))
+            {
+                <MudTextField @bind-Value="Model.ExportedText"
+                              Label="Exported Content"
+                              Variant="Variant.Outlined"
+                              Lines="10"
+                              ReadOnly="true" />
+
+                <MudStack Row="true" Spacing="2">
+                    <MudButtonAsyncRx Command="@Model.CopyCommand"
+                                      Variant="Variant.Outlined"
+                                      Color="@(Model.CopySuccess ? Color.Success : Color.Primary)"
+                                      StartIcon="@(Model.CopySuccess ? Icons.Material.Filled.Check : Icons.Material.Filled.ContentCopy)">
+                        @(Model.CopySuccess ? "Copied!" : "Copy to Clipboard")
+                    </MudButtonAsyncRx>
+                </MudStack>
+            }
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton Variant="Variant.Text"
+                   OnClick="@(() => Model.IsDialogOpen = false)">
+            Close
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    /// <summary>
+    /// Called when format dropdown selection changes.
+    /// Updates the Settings property and triggers re-export.
+    /// </summary>
+    private void OnFormatChanged(ExportFormat newFormat)
+    {
+        Model.Settings.PreferredExportFormat = newFormat;
+        _ = Model.PerformExportAsync(CancellationToken.None);
+    }
+}

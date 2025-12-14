@@ -1,0 +1,56 @@
+@inherits StatusModelComponent
+
+@*
+    StatusBar - Bottom status bar showing current status indicators.
+
+    Patterns demonstrated:
+    - Inherits from generated StatusModelComponent for reactive updates
+    - [ObservableComponentTrigger] properties auto-refresh this component
+    - MudBlazor theming (no custom CSS)
+*@
+
+<MudPaper Class="d-flex align-center gap-2 pa-2" Elevation="0" Square="true"
+          Style="border-top: 1px solid var(--mud-palette-divider);">
+
+    @* Error indicator *@
+    @if (Model.HasErrors)
+    {
+        <MudChip T="string" Color="Color.Error" Size="Size.Small" Icon="@Icons.Material.Filled.Error"
+                 OnClick="@(() => Model.TogglePanelCommand.Execute())">
+            @Model.LastError
+        </MudChip>
+    }
+    else if (Model.HasWarnings)
+    {
+        <MudChip T="string" Color="Color.Warning" Size="Size.Small" Icon="@Icons.Material.Filled.Warning"
+                 OnClick="@(() => Model.TogglePanelCommand.Execute())">
+            Warning
+        </MudChip>
+    }
+    else
+    {
+        <MudChip T="string" Color="Color.Success" Size="Size.Small" Icon="@Icons.Material.Filled.CheckCircle">
+            Ready
+        </MudChip>
+    }
+
+    <MudSpacer />
+
+    @* Message count and toggle *@
+    @if (Model.MessageCount > 0)
+    {
+        <MudBadge Content="@Model.MessageCount" Color="Color.Primary" Overlap="true">
+            <MudIconButton Icon="@(Model.IsPanelExpanded ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ExpandLess)"
+                           Size="Size.Small"
+                           OnClick="@(() => Model.TogglePanelCommand.Execute())"
+                           aria-label="@(Model.IsPanelExpanded ? "Hide messages" : "Show messages")" />
+        </MudBadge>
+
+        <MudButtonRx Command="@Model.ClearCommand"
+                     Size="Size.Small"
+                     Variant="Variant.Text"
+                     StartIcon="@Icons.Material.Filled.Clear">
+            Clear
+        </MudButtonRx>
+    }
+</MudPaper>

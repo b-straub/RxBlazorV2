@@ -1,0 +1,59 @@
+@inherits AuthModelComponent
+
+@*
+    LoginForm - Login form with username/password validation.
+
+    Patterns demonstrated:
+    - Inherits from generated AuthModelComponent for reactive updates
+    - [ObservableTrigger] triggers validation on Username change
+    - MudButtonAsyncRx for async login command with loading state
+    - Two-way binding with MudTextField
+*@
+
+<MudPaper Class="pa-4" Elevation="2" MaxWidth="400px">
+    <MudStack Spacing="3">
+        <MudText Typo="Typo.h5">Login</MudText>
+
+        <MudTextField @bind-Value="Model.Username"
+                      Label="Username"
+                      Variant="Variant.Outlined"
+                      Error="@(Model.UsernameError is not null)"
+                      ErrorText="@Model.UsernameError"
+                      Immediate="true"
+                      Disabled="@Model.IsLoggingIn" />
+
+        <MudTextField @bind-Value="Model.Password"
+                      Label="Password"
+                      Variant="Variant.Outlined"
+                      InputType="InputType.Password"
+                      Immediate="true"
+                      Disabled="@Model.IsLoggingIn" />
+
+        @if (Model.LoginError is not null)
+        {
+            <MudAlert Severity="Severity.Error" Dense="true">
+                @Model.LoginError
+            </MudAlert>
+        }
+
+        <MudButtonAsyncRx Command="@Model.LoginCommand"
+                          Variant="Variant.Filled"
+                          Color="Color.Primary"
+                          FullWidth="true"
+                          StartIcon="@Icons.Material.Filled.Login">
+            @if (Model.IsLoggingIn)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Logging in...</span>
+            }
+            else
+            {
+                <span>Login</span>
+            }
+        </MudButtonAsyncRx>
+
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
+            Demo credentials: demo / demo123 or admin / admin123
+        </MudText>
+    </MudStack>
+</MudPaper>
