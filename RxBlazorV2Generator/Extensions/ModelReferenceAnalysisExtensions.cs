@@ -39,7 +39,7 @@ public static class ModelReferenceAnalysisExtensions
         this ObservableModelInfo modelInfo,
         CommandPropertyInfo command,
         string referencedModelName,
-        SemanticModel semanticModel,
+        Compilation compilation,
         ITypeSymbol referencedModelType)
     {
         var usedProperties = new HashSet<string>();
@@ -47,7 +47,9 @@ public static class ModelReferenceAnalysisExtensions
         // Analyze execute method for model property usage
         if (command.ExecuteMethod != null && modelInfo.Methods.TryGetValue(command.ExecuteMethod, out var executeMethod))
         {
-            var executeProps = executeMethod.AnalyzeMethodForModelReferences(semanticModel,
+            // Get the correct semantic model for this method's syntax tree
+            var methodSemanticModel = compilation.GetSemanticModel(executeMethod.SyntaxTree);
+            var executeProps = executeMethod.AnalyzeMethodForModelReferences(methodSemanticModel,
                 referencedModelType);
             foreach (var prop in executeProps)
             {
@@ -58,7 +60,9 @@ public static class ModelReferenceAnalysisExtensions
         // Analyze canExecute method for model property usage
         if (command.CanExecuteMethod != null && modelInfo.Methods.TryGetValue(command.CanExecuteMethod, out var canExecuteMethod))
         {
-            var canExecuteProps = canExecuteMethod.AnalyzeMethodForModelReferences(semanticModel,
+            // Get the correct semantic model for this method's syntax tree
+            var methodSemanticModel = compilation.GetSemanticModel(canExecuteMethod.SyntaxTree);
+            var canExecuteProps = canExecuteMethod.AnalyzeMethodForModelReferences(methodSemanticModel,
                 referencedModelType);
             foreach (var prop in canExecuteProps)
             {
@@ -71,7 +75,7 @@ public static class ModelReferenceAnalysisExtensions
 
     public static List<ModelReferenceInfo> EnhanceModelReferencesWithCommandAnalysis(
         this ObservableModelInfo modelInfo,
-        SemanticModel semanticModel,
+        Compilation compilation,
         Dictionary<string, ITypeSymbol> modelSymbols)
     {
         var enhancedModelReferences = new List<ModelReferenceInfo>();
@@ -89,7 +93,7 @@ public static class ModelReferenceAnalysisExtensions
                     var cmdUsedProps = modelInfo.AnalyzeCommandMethodsForModelReferences(
                         cmd,
                         modelRef.ReferencedModelTypeName,
-                        semanticModel,
+                        compilation,
                         modelSymbol);
                     foreach (var prop in cmdUsedProps)
                     {

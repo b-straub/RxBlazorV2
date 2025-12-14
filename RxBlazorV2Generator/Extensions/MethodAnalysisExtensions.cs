@@ -103,26 +103,30 @@ public static class MethodAnalysisExtensions
     /// - Have no parameters (or only CancellationToken for async)
     /// - Access properties from referenced models
     /// - Return void (sync) or Task/ValueTask (async)
+    /// - Are NOT already used as command execute/canExecute methods or property trigger methods
     /// </summary>
     public static List<InternalModelObserverInfo> AnalyzeInternalModelObservers(
         this ClassDeclarationSyntax classDecl,
         SemanticModel semanticModel,
         List<ModelReferenceInfo> modelReferences,
-        Dictionary<string, ITypeSymbol> modelSymbols)
+        Dictionary<string, ITypeSymbol> modelSymbols,
+        HashSet<string>? excludedMethods = null)
     {
-        var (observers, _) = AnalyzeInternalModelObserversWithDiagnostics(classDecl, semanticModel, modelReferences, modelSymbols);
+        var (observers, _) = AnalyzeInternalModelObserversWithDiagnostics(classDecl, semanticModel, modelReferences, modelSymbols, excludedMethods);
         return observers;
     }
 
     /// <summary>
     /// Analyzes methods in the class for referenced model property access.
     /// Returns both valid observers and information about methods with invalid signatures.
+    /// Methods in excludedMethods are skipped (e.g., command execute/canExecute methods, trigger methods).
     /// </summary>
     public static (List<InternalModelObserverInfo> Observers, List<InvalidInternalModelObserverInfo> InvalidObservers) AnalyzeInternalModelObserversWithDiagnostics(
         this ClassDeclarationSyntax classDecl,
         SemanticModel semanticModel,
         List<ModelReferenceInfo> modelReferences,
-        Dictionary<string, ITypeSymbol> modelSymbols)
+        Dictionary<string, ITypeSymbol> modelSymbols,
+        HashSet<string>? excludedMethods = null)
     {
         var observers = new List<InternalModelObserverInfo>();
         var invalidObservers = new List<InvalidInternalModelObserverInfo>();
@@ -160,6 +164,13 @@ public static class MethodAnalysisExtensions
         {
             var methodName = member.Identifier.ValueText;
 
+            // Skip methods that are already used as command execute/canExecute or trigger methods
+            // These methods should not be auto-detected as internal observers
+            if (excludedMethods is not null && excludedMethods.Contains(methodName))
+            {
+                continue;
+            }
+
             // First, find which model properties this method accesses
             var propertiesByModelRef = FindAccessedModelProperties(member, modelReferences, propertyToModelRef);
 
@@ -175,6 +186,12 @@ public static class MethodAnalysisExtensions
 
             if (isPrivate && isValidSignature)
             {
+                // Check for circular references: method modifies a property it observes
+                // Pass known model reference names for pattern matching (generated properties aren't in semantic model)
+                var knownModelRefNames = new HashSet<string>(modelReferences.Select(mr => mr.PropertyName));
+                var modificationLocations = member.AnalyzePropertyModificationsWithLocations(semanticModel, knownModelRefNames);
+                var modifiedProperties = new HashSet<string>(modificationLocations.Keys);
+
                 // Valid internal observer
                 foreach (var kvp in propertiesByModelRef)
                 {
@@ -183,12 +200,38 @@ public static class MethodAnalysisExtensions
 
                     if (usedProperties.Count > 0)
                     {
-                        observers.Add(new InternalModelObserverInfo(
-                            modelRefName,
-                            methodName,
-                            usedProperties,
-                            isAsync,
-                            hasCancellationToken));
+                        // Check if any modified property matches an observed property
+                        var circularProperties = usedProperties
+                            .Where(prop => modifiedProperties.Contains($"{modelRefName}.{prop}"))
+                            .ToList();
+
+                        if (circularProperties.Count > 0)
+                        {
+                            // Circular reference detected - report as invalid
+                            // Get the location of the first circular property modification
+                            var firstCircularProp = $"{modelRefName}.{circularProperties[0]}";
+                            var modificationLocation = modificationLocations.TryGetValue(firstCircularProp, out var loc) ? loc : null;
+
+                            var circularPropList = string.Join(", ", circularProperties);
+                            invalidObservers.Add(new InvalidInternalModelObserverInfo(
+                                methodName,
+                                modelRefName,
+                                usedProperties,
+                                $"Circular reference: method modifies observed property '{circularPropList}' on '{modelRefName}'. This creates an infinite loop.",
+                                member.Identifier.GetLocation(),
+                                isCircularReference: true,
+                                circularProperties: circularProperties,
+                                modificationLocation: modificationLocation));
+                        }
+                        else
+                        {
+                            observers.Add(new InternalModelObserverInfo(
+                                modelRefName,
+                                methodName,
+                                usedProperties,
+                                isAsync,
+                                hasCancellationToken));
+                        }
                     }
                 }
             }

@@ -2,6 +2,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Models;
+using System.Collections.Immutable;
 
 namespace RxBlazorV2Generator.Extensions;
 
@@ -156,9 +157,15 @@ public static class PropertyAnalysisExtensions
             var modifiedProperties = methodSyntax.AnalyzePropertyModifications(semanticModel);
             if (modifiedProperties.Contains(member.Identifier.ValueText))
             {
+                // Pass properties for code fix access
+                var properties = ImmutableDictionary.CreateBuilder<string, string?>();
+                properties.Add("ExecuteMethod", executeMethod);
+                properties.Add("TriggerProperty", member.Identifier.ValueText);
+
                 var diagnostic = Diagnostic.Create(
                     Diagnostics.DiagnosticDescriptors.CircularTriggerReferenceError,
                     triggerAttr.GetLocation(),
+                    properties.ToImmutable(),
                     member.Identifier.ValueText, // Property name
                     member.Identifier.ValueText, // Trigger property (same as property for ObservableTrigger)
                     executeMethod); // Execute method name
@@ -394,6 +401,19 @@ public static class PropertyAnalysisExtensions
 
     public static List<string> AnalyzePropertyModifications(this MethodDeclarationSyntax method, SemanticModel semanticModel)
     {
+        return AnalyzePropertyModifications(method, semanticModel, knownModelReferenceNames: null);
+    }
+
+    /// <summary>
+    /// Analyzes property modifications in a method.
+    /// For generated properties (like model references from partial constructors), pass their names in knownModelReferenceNames
+    /// to enable pattern-based detection without relying on semantic analysis.
+    /// </summary>
+    public static List<string> AnalyzePropertyModifications(
+        this MethodDeclarationSyntax method,
+        SemanticModel semanticModel,
+        HashSet<string>? knownModelReferenceNames)
+    {
         var modifiedProperties = new HashSet<string>();
 
         try
@@ -419,11 +439,9 @@ public static class PropertyAnalysisExtensions
                     // Handle member access: this.MyProperty = value or model.MyProperty = value
                     else if (leftSide is MemberAccessExpressionSyntax memberAccess)
                     {
-                        var symbolInfo = semanticModel.GetSymbolInfo(memberAccess);
-                        if (symbolInfo.Symbol is IPropertySymbol)
+                        var qualifiedName = ExtractQualifiedPropertyName(memberAccess, semanticModel, knownModelReferenceNames);
+                        if (qualifiedName is not null)
                         {
-                            // Check if this is a referenced model property (e.g., ModelReferencesShared.NotificationsEnabled)
-                            var qualifiedName = ExtractQualifiedPropertyName(memberAccess, semanticModel);
                             modifiedProperties.Add(qualifiedName);
                         }
                     }
@@ -443,11 +461,9 @@ public static class PropertyAnalysisExtensions
                     }
                     else if (postfixUnary.Operand is MemberAccessExpressionSyntax memberAccess)
                     {
-                        var symbolInfo = semanticModel.GetSymbolInfo(memberAccess);
-                        if (symbolInfo.Symbol is IPropertySymbol)
+                        var qualifiedName = ExtractQualifiedPropertyName(memberAccess, semanticModel, knownModelReferenceNames);
+                        if (qualifiedName is not null)
                         {
-                            // Check if this is a referenced model property
-                            var qualifiedName = ExtractQualifiedPropertyName(memberAccess, semanticModel);
                             modifiedProperties.Add(qualifiedName);
                         }
                     }
@@ -466,11 +482,9 @@ public static class PropertyAnalysisExtensions
                     }
                     else if (prefixUnary.Operand is MemberAccessExpressionSyntax memberAccess)
                     {
-                        var symbolInfo = semanticModel.GetSymbolInfo(memberAccess);
-                        if (symbolInfo.Symbol is IPropertySymbol)
+                        var qualifiedName = ExtractQualifiedPropertyName(memberAccess, semanticModel, knownModelReferenceNames);
+                        if (qualifiedName is not null)
                         {
-                            // Check if this is a referenced model property
-                            var qualifiedName = ExtractQualifiedPropertyName(memberAccess, semanticModel);
                             modifiedProperties.Add(qualifiedName);
                         }
                     }
@@ -489,8 +503,12 @@ public static class PropertyAnalysisExtensions
     /// Extracts the qualified property name from a member access expression.
     /// For direct property access (this.MyProperty), returns just the property name.
     /// For referenced model property access (Model.Property), returns "Model.Property".
+    /// Returns null if the left side is not a property/field and not in knownModelReferenceNames.
     /// </summary>
-    private static string ExtractQualifiedPropertyName(MemberAccessExpressionSyntax memberAccess, SemanticModel semanticModel)
+    private static string? ExtractQualifiedPropertyName(
+        MemberAccessExpressionSyntax memberAccess,
+        SemanticModel semanticModel,
+        HashSet<string>? knownModelReferenceNames)
     {
         var propertyName = memberAccess.Name.Identifier.ValueText;
 
@@ -498,17 +516,104 @@ public static class PropertyAnalysisExtensions
         // e.g., ModelReferencesShared.NotificationsEnabled
         if (memberAccess.Expression is IdentifierNameSyntax identifierExpression)
         {
+            var identifierName = identifierExpression.Identifier.ValueText;
+
+            // First try semantic analysis
             var expressionSymbol = semanticModel.GetSymbolInfo(identifierExpression).Symbol;
 
             // If the left side is a property or field (not 'this'), return qualified name
             if (expressionSymbol is IPropertySymbol or IFieldSymbol)
             {
-                return $"{identifierExpression.Identifier.ValueText}.{propertyName}";
+                return $"{identifierName}.{propertyName}";
+            }
+
+            // For generated properties (model references), use pattern matching with known names
+            if (knownModelReferenceNames is not null && knownModelReferenceNames.Contains(identifierName))
+            {
+                return $"{identifierName}.{propertyName}";
             }
         }
 
-        // For 'this.Property' or direct access, just return the property name
-        return propertyName;
+        // For 'this.Property', try to get the property symbol
+        if (memberAccess.Expression is ThisExpressionSyntax)
+        {
+            var symbolInfo = semanticModel.GetSymbolInfo(memberAccess);
+            if (symbolInfo.Symbol is IPropertySymbol)
+            {
+                return propertyName;
+            }
+        }
+
+        // If we can't determine if this is a property modification, return null
+        return null;
+    }
+
+    /// <summary>
+    /// Analyzes property modifications and returns their locations.
+    /// Key: qualified property name (e.g., "ModelRef.Property")
+    /// Value: Location of the modification statement
+    /// </summary>
+    public static Dictionary<string, Location> AnalyzePropertyModificationsWithLocations(
+        this MethodDeclarationSyntax method,
+        SemanticModel semanticModel,
+        HashSet<string>? knownModelReferenceNames)
+    {
+        var modificationLocations = new Dictionary<string, Location>();
+
+        try
+        {
+            var descendants = method.DescendantNodes();
+            foreach (var node in descendants)
+            {
+                if (node is AssignmentExpressionSyntax assignment)
+                {
+                    if (assignment.Left is MemberAccessExpressionSyntax memberAccess)
+                    {
+                        var qualifiedName = ExtractQualifiedPropertyName(memberAccess, semanticModel, knownModelReferenceNames);
+                        if (qualifiedName is not null && !modificationLocations.ContainsKey(qualifiedName))
+                        {
+                            // Use the statement location for better code fix placement
+                            var statement = assignment.FirstAncestorOrSelf<StatementSyntax>();
+                            modificationLocations[qualifiedName] = statement?.GetLocation() ?? assignment.GetLocation();
+                        }
+                    }
+                }
+                else if (node is PostfixUnaryExpressionSyntax postfixUnary &&
+                         (postfixUnary.IsKind(SyntaxKind.PostIncrementExpression) ||
+                          postfixUnary.IsKind(SyntaxKind.PostDecrementExpression)))
+                {
+                    if (postfixUnary.Operand is MemberAccessExpressionSyntax memberAccess)
+                    {
+                        var qualifiedName = ExtractQualifiedPropertyName(memberAccess, semanticModel, knownModelReferenceNames);
+                        if (qualifiedName is not null && !modificationLocations.ContainsKey(qualifiedName))
+                        {
+                            var statement = postfixUnary.FirstAncestorOrSelf<StatementSyntax>();
+                            modificationLocations[qualifiedName] = statement?.GetLocation() ?? postfixUnary.GetLocation();
+                        }
+                    }
+                }
+                else if (node is PrefixUnaryExpressionSyntax prefixUnary &&
+                         (prefixUnary.IsKind(SyntaxKind.PreIncrementExpression) ||
+                          prefixUnary.IsKind(SyntaxKind.PreDecrementExpression)))
+                {
+                    if (prefixUnary.Operand is MemberAccessExpressionSyntax memberAccess)
+                    {
+                        var qualifiedName = ExtractQualifiedPropertyName(memberAccess, semanticModel, knownModelReferenceNames);
+                        if (qualifiedName is not null && !modificationLocations.ContainsKey(qualifiedName))
+                        {
+                            var statement = prefixUnary.FirstAncestorOrSelf<StatementSyntax>();
+                            modificationLocations[qualifiedName] = statement?.GetLocation() ?? prefixUnary.GetLocation();
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // Return empty dictionary on analysis error
+        }
+
+        return modificationLocations;
     }
 
     public static bool IsObservableCollectionProperty(this PropertyDeclarationSyntax property, SemanticModel semanticModel)

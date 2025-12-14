@@ -3,7 +3,6 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using RxBlazorV2Generator.Diagnostics;
-using RxBlazorV2Generator.Extensions;
 using System.Collections.Immutable;
 
 namespace RxBlazorV2Generator.Analyzers;

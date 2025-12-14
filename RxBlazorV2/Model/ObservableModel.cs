@@ -10,6 +10,7 @@ public abstract class ObservableModel : IObservableModel
     
     private bool _initialized;
     private bool _initializedAsync;
+    private readonly SemaphoreSlim _contextReadyAsyncLock = new(1, 1);
     private bool _suspendNotifications;
     private readonly HashSet<string> _pendingNotifications = new();
     private readonly Lock _suspenderLock = new();
@@ -41,19 +42,33 @@ public abstract class ObservableModel : IObservableModel
     
     public async Task ContextReadyAsync()
     {
-        if (!_initializedAsync)
+        await _contextReadyAsyncLock.WaitAsync();
+        try
         {
-            await OnContextReadyAsync();
-            _initializedAsync = true;
+            if (!_initializedAsync)
+            {
+                await OnContextReadyInternAsync();
+                await OnContextReadyAsync();
+                _initializedAsync = true;
+            }
+        }
+        finally
+        {
+            _contextReadyAsyncLock.Release();
         }
     }
     
     protected virtual void OnContextReadyIntern()
     {
     }
-
+    
     protected virtual void OnContextReady()
     {
+    }
+    
+    protected virtual Task OnContextReadyInternAsync()
+    {
+        return Task.CompletedTask;
     }
     
     protected virtual Task OnContextReadyAsync()

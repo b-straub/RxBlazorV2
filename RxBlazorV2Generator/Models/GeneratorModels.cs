@@ -449,8 +449,9 @@ public class InternalModelObserverInfo : IEquatable<InternalModelObserverInfo>
 }
 
 /// <summary>
-/// Information about a method that accesses referenced model properties but has an invalid signature.
-/// Used for reporting RXBG082 diagnostic.
+/// Information about a method that accesses referenced model properties but has an invalid signature
+/// or has a circular reference issue.
+/// Used for reporting RXBG082 (invalid signature) or RXBG031 (circular reference) diagnostics.
 /// </summary>
 public class InvalidInternalModelObserverInfo
 {
@@ -470,7 +471,7 @@ public class InvalidInternalModelObserverInfo
     public List<string> AccessedProperties { get; }
 
     /// <summary>
-    /// Description of why the signature is invalid
+    /// Description of why the signature is invalid or the circular reference issue
     /// </summary>
     public string InvalidReason { get; }
 
@@ -479,18 +480,40 @@ public class InvalidInternalModelObserverInfo
     /// </summary>
     public Location? Location { get; }
 
+    /// <summary>
+    /// Whether this is a circular reference issue (true) or an invalid signature issue (false)
+    /// </summary>
+    public bool IsCircularReference { get; }
+
+    /// <summary>
+    /// The properties that are involved in the circular reference (if IsCircularReference is true)
+    /// </summary>
+    public List<string> CircularProperties { get; }
+
+    /// <summary>
+    /// The location of the first circular property modification (for code fix placement).
+    /// This is where the diagnostic should be reported for circular references.
+    /// </summary>
+    public Location? ModificationLocation { get; }
+
     public InvalidInternalModelObserverInfo(
         string methodName,
         string modelReferenceName,
         List<string> accessedProperties,
         string invalidReason,
-        Location? location)
+        Location? location,
+        bool isCircularReference = false,
+        List<string>? circularProperties = null,
+        Location? modificationLocation = null)
     {
         MethodName = methodName;
         ModelReferenceName = modelReferenceName;
         AccessedProperties = accessedProperties;
         InvalidReason = invalidReason;
         Location = location;
+        IsCircularReference = isCircularReference;
+        CircularProperties = circularProperties ?? [];
+        ModificationLocation = modificationLocation;
     }
 }
 
@@ -679,5 +702,89 @@ public class ComponentTriggerInfo : IEquatable<ComponentTriggerInfo>
     public override int GetHashCode()
     {
         return HashCode.Combine(PropertyName, HookType, HookMethodName, ReferencedModelPropertyName, QualifiedPropertyPath, TriggerBehavior);
+    }
+}
+
+/// <summary>
+/// Information about a singleton ObservableModel discovered for aggregation.
+/// </summary>
+public class SingletonModelInfo : IEquatable<SingletonModelInfo>
+{
+    /// <summary>
+    /// Fully qualified type name (e.g., "ReactivePatternSample.Auth.Models.AuthModel")
+    /// </summary>
+    public string FullyQualifiedName { get; }
+
+    /// <summary>
+    /// Class name without namespace (e.g., "AuthModel")
+    /// </summary>
+    public string ClassName { get; }
+
+    /// <summary>
+    /// Namespace (e.g., "ReactivePatternSample.Auth.Models")
+    /// </summary>
+    public string Namespace { get; }
+
+    /// <summary>
+    /// Property name for the aggregator (e.g., "Auth" from "AuthModel")
+    /// </summary>
+    public string PropertyName { get; }
+
+    /// <summary>
+    /// Parameter name for the constructor (e.g., "auth" from "AuthModel")
+    /// </summary>
+    public string ParameterName { get; }
+
+    /// <summary>
+    /// Whether this model is from a referenced assembly (vs same assembly)
+    /// </summary>
+    public bool IsFromReferencedAssembly { get; }
+
+    public SingletonModelInfo(
+        string fullyQualifiedName,
+        string className,
+        string namespaceName,
+        bool isFromReferencedAssembly)
+    {
+        FullyQualifiedName = fullyQualifiedName;
+        ClassName = className;
+        Namespace = namespaceName;
+        IsFromReferencedAssembly = isFromReferencedAssembly;
+
+        // For generic types like "GenericModelsBaseModel<string, int>", extract base name
+        var baseName = className;
+        var genericIndex = className.IndexOf('<');
+        if (genericIndex > 0)
+        {
+            baseName = className.Substring(0, genericIndex);
+        }
+
+        // Derive property name: remove "Model" suffix if present
+        PropertyName = baseName.EndsWith("Model")
+            ? baseName.Substring(0, baseName.Length - 5)
+            : baseName;
+
+        // Derive parameter name: camelCase of property name
+        ParameterName = char.ToLowerInvariant(PropertyName[0]) + PropertyName.Substring(1);
+    }
+
+    public bool Equals(SingletonModelInfo? other)
+    {
+        if (other is null)
+        {
+            return false;
+        }
+
+        return FullyQualifiedName == other.FullyQualifiedName;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return Equals(obj as SingletonModelInfo);
+    }
+
+    public override int GetHashCode()
+    {
+        return FullyQualifiedName.GetHashCode();
     }
 }

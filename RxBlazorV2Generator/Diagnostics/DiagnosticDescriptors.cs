@@ -38,20 +38,6 @@ public static class DiagnosticDescriptors
         description: "A warning occurred while analyzing a method for property usage.",
         helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG003.md");
 
-    /// <summary>
-    /// Generic generator error that wraps analyzer diagnostics for compilation output.
-    /// Reports the original diagnostic's title and ID to help user find the issue.
-    /// This prevents duplicate code fixes in IDE while ensuring build fails with clear message.
-    /// </summary>
-    public static readonly DiagnosticDescriptor GeneratorDiagnosticError = new(
-        id: "RXBG004",
-        title: "Source generator encountered diagnostic errors",
-        messageFormat: "Source generator failed: {0} ({1}). Check IDE/analyzer output for details.",
-        category: "RxBlazorGenerator",
-        DiagnosticSeverity.Error,
-        isEnabledByDefault: true,
-        description: "The source generator encountered diagnostic errors during code generation. The diagnostic title and ID are included in the message. The compiler shows the location. Check the IDE analyzer output or previous build messages for detailed error information and available code fixes.");
-
     // ============================================================================
     // RXBG010-RXBG019: Model Structure & References
     // ============================================================================

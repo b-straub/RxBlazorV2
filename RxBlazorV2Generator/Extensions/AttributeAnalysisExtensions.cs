@@ -2,6 +2,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Models;
 using RxBlazorV2Generator.Diagnostics;
+using System.Collections.Immutable;
 
 namespace RxBlazorV2Generator.Extensions;
 
@@ -199,9 +200,15 @@ public static class AttributeAnalysisExtensions
                             var modifiedProperties = methodSyntax.AnalyzePropertyModifications(semanticModel);
                             if (modifiedProperties.Contains(triggerProperty!))
                             {
+                                // Pass properties for code fix access
+                                var properties = ImmutableDictionary.CreateBuilder<string, string?>();
+                                properties.Add("ExecuteMethod", executeMethod);
+                                properties.Add("TriggerProperty", triggerProperty);
+
                                 var diagnostic = Diagnostic.Create(
                                     DiagnosticDescriptors.CircularTriggerReferenceError,
                                     triggerAttr.GetLocation(),
+                                    properties.ToImmutable(),
                                     member.Identifier.ValueText, // Command property name
                                     triggerProperty!, // Trigger property name
                                     executeMethod!); // Execute method name

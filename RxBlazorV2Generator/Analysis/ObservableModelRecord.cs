@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Diagnostics;
 using RxBlazorV2Generator.Extensions;
 using RxBlazorV2Generator.Models;
+using System.Collections.Immutable;
 
 namespace RxBlazorV2Generator.Analysis;
 
@@ -28,6 +29,32 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
         ModelInfo = modelInfo;
         _diagnostics = diagnostics;
         ShouldGenerateCode = shouldGenerateCode;
+    }
+
+    /// <summary>
+    /// Creates an ObservableModelRecord by analyzing multiple partial class declarations.
+    /// Returns null if the class is not an ObservableModel or analysis fails.
+    /// This overload merges members from all partial class declarations.
+    /// </summary>
+    public static ObservableModelRecord? Create(
+        List<ClassDeclarationSyntax> classDeclarations,
+        SemanticModel semanticModel,
+        Compilation compilation,
+        ServiceInfoList? serviceClasses)
+    {
+        if (classDeclarations.Count == 0)
+        {
+            return null;
+        }
+
+        // If only one declaration, use the simpler single-declaration path
+        if (classDeclarations.Count == 1)
+        {
+            return Create(classDeclarations[0], semanticModel, compilation, serviceClasses);
+        }
+
+        // Multiple partial declarations - merge them
+        return CreateFromPartialDeclarations(classDeclarations, semanticModel, compilation, serviceClasses);
     }
 
     /// <summary>
@@ -174,7 +201,7 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
 
             // Enhance model references with command method analysis
             var enhancedModelReferences = modelInfo.EnhanceModelReferencesWithCommandAnalysis(
-                semanticModel,
+                compilation,
                 modelSymbolMap);
 
             // Check for unused model references and derived model issues (RXBG008, RXBG017)
@@ -184,12 +211,42 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                 compilation);
             diagnostics.AddRange(modelReferenceDiagnostics);
 
+            // Build set of methods that should NOT be auto-detected as internal observers
+            // These are methods already used as command execute/canExecute or trigger methods
+            var excludedMethods = BuildExcludedMethodsSet(commandProperties, partialProperties);
+
             // Analyze private methods for internal model observers (auto-detection)
             // These are methods that access referenced model properties and will generate subscriptions
             var (internalModelObservers, invalidInternalObservers) = classDecl.AnalyzeInternalModelObserversWithDiagnostics(
                 semanticModel,
                 enhancedModelReferences,
-                modelSymbolMap);
+                modelSymbolMap,
+                excludedMethods);
+
+            // Add RXBG031 (CircularTriggerReferenceError) for internal observers to diagnostics
+            // so the analyzer can report them (with code fix support in IDE)
+            foreach (var invalidObserver in invalidInternalObservers.Where(o => o.IsCircularReference))
+            {
+                if (invalidObserver.Location is not null)
+                {
+                    var circularProps = string.Join(", ", invalidObserver.CircularProperties
+                        .Select(p => $"{invalidObserver.ModelReferenceName}.{p}"));
+
+                    var properties = ImmutableDictionary.CreateBuilder<string, string?>();
+                    properties.Add("CircularProperty", circularProps);
+                    properties.Add("MethodName", invalidObserver.MethodName);
+                    properties.Add("IsInternalObserver", "true");
+
+                    var diagnostic = Diagnostic.Create(
+                        DiagnosticDescriptors.CircularTriggerReferenceError,
+                        invalidObserver.Location,
+                        properties.ToImmutable(),
+                        invalidObserver.MethodName,
+                        circularProps,
+                        invalidObserver.MethodName);
+                    diagnostics.Add(diagnostic);
+                }
+            }
 
             // NOTE: RXBG082 (InternalModelObserverInvalidSignatureWarning) is reported by generator
             // after cross-model analysis completes. Invalid observers are stored for later.
@@ -239,9 +296,340 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
 
             return record;
         }
-        catch (Exception)
+        catch (OperationCanceledException)
         {
-            // Silently skip models that fail analysis
+            // Cancellation is expected, just return null
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Creates an ObservableModelRecord by merging members from multiple partial class declarations.
+    /// </summary>
+    private static ObservableModelRecord? CreateFromPartialDeclarations(
+        List<ClassDeclarationSyntax> classDeclarations,
+        SemanticModel semanticModel,
+        Compilation compilation,
+        ServiceInfoList? serviceClasses)
+    {
+        try
+        {
+            // Find the "primary" declaration (the one with `: ObservableModel` or attributes)
+            var primaryDecl = classDeclarations.FirstOrDefault(d => d.BaseList?.Types.Any() == true)
+                ?? classDeclarations[0];
+
+            // Get the correct semantic model for the primary declaration's syntax tree
+            var primarySemanticModel = compilation.GetSemanticModel(primaryDecl.SyntaxTree);
+
+            var classSymbol = primarySemanticModel.GetDeclaredSymbol(primaryDecl);
+            if (classSymbol is not INamedTypeSymbol namedTypeSymbol)
+            {
+                return null;
+            }
+
+            // Check if class inherits from ObservableModel
+            if (!namedTypeSymbol.InheritsFromObservableModel())
+            {
+                return null;
+            }
+
+            var diagnostics = new List<Diagnostic>();
+            var shouldGenerateCode = true;
+
+            // Check if any declaration is missing 'partial' modifier (RXBG072)
+            foreach (var decl in classDeclarations)
+            {
+                var isPartial = decl.Modifiers.Any(m => m.IsKind(Microsoft.CodeAnalysis.CSharp.SyntaxKind.PartialKeyword));
+                if (!isPartial)
+                {
+                    var diagnostic = Diagnostic.Create(
+                        DiagnosticDescriptors.ObservableEntityMissingPartialModifierError,
+                        decl.Identifier.GetLocation(),
+                        "Class",
+                        namedTypeSymbol.Name,
+                        "inherits from ObservableModel",
+                        "class");
+                    diagnostics.Add(diagnostic);
+                    shouldGenerateCode = false;
+                }
+            }
+
+            if (!shouldGenerateCode)
+            {
+                var minimalModelInfo = new ObservableModelInfo(
+                    namedTypeSymbol.ContainingNamespace.ToDisplayString(),
+                    namedTypeSymbol.Name,
+                    namedTypeSymbol.ToDisplayString(),
+                    [],  // No partial properties
+                    [],  // No command properties
+                    [],  // No methods
+                    [],  // No model references
+                    "Singleton",  // Default scope
+                    [],  // No DI fields
+                    [],  // No interfaces
+                    string.Empty,  // No generic types
+                    string.Empty,  // No type constraints
+                    [],  // No using statements
+                    null,  // No base model
+                    "public",  // Default accessibility
+                    "public"   // Default class accessibility
+                );
+
+                return new ObservableModelRecord(minimalModelInfo, diagnostics, shouldGenerateCode: false);
+            }
+
+            // Merge methods from all declarations
+            var allMethods = new Dictionary<string, MethodDeclarationSyntax>();
+            foreach (var decl in classDeclarations)
+            {
+                var declMethods = decl.CollectMethods();
+                foreach (var kvp in declMethods)
+                {
+                    // Later declarations can override earlier ones
+                    allMethods[kvp.Key] = kvp.Value;
+                }
+            }
+
+            // Merge partial properties from all declarations
+            var allPartialProperties = new List<PartialPropertyInfo>();
+            var allPartialPropertyDiagnostics = new List<Diagnostic>();
+            foreach (var decl in classDeclarations)
+            {
+                // Get semantic model for this specific declaration's syntax tree
+                var declSemanticModel = compilation.GetSemanticModel(decl.SyntaxTree);
+                var (props, propDiags) = decl.ExtractPartialPropertiesWithDiagnostics(declSemanticModel);
+                allPartialProperties.AddRange(props);
+                allPartialPropertyDiagnostics.AddRange(propDiags);
+            }
+
+            // Merge command properties from all declarations
+            var allCommandProperties = new List<CommandPropertyInfo>();
+            var allCommandPropertyDiagnostics = new List<Diagnostic>();
+            foreach (var decl in classDeclarations)
+            {
+                var declSemanticModel = compilation.GetSemanticModel(decl.SyntaxTree);
+                var (cmds, cmdDiags) = decl.ExtractCommandPropertiesWithDiagnostics(allMethods, declSemanticModel);
+                allCommandProperties.AddRange(cmds);
+                allCommandPropertyDiagnostics.AddRange(cmdDiags);
+            }
+
+            // Extract model references, DI fields, and model observers from partial constructor parameters
+            // Only the primary declaration (with base type) should have the constructor
+            var modelReferences = new List<ModelReferenceInfo>();
+            var diFields = new List<DIFieldInfo>();
+            var unregisteredServices = new List<(string paramName, string paramType, ITypeSymbol? typeSymbol, Location? location)>();
+            var diFieldsWithScope = new List<(DIFieldInfo diField, string? serviceScope, Location? location)>();
+            var modelObservers = new List<ModelObserverInfo>();
+            var modelObserverDiagnostics = new List<Diagnostic>();
+
+            foreach (var decl in classDeclarations)
+            {
+                var declSemanticModel = compilation.GetSemanticModel(decl.SyntaxTree);
+                var (refs, fields, unreg, fieldsScope, observers, observerDiags) =
+                    decl.ExtractPartialConstructorDependencies(declSemanticModel, serviceClasses, namedTypeSymbol);
+                modelReferences.AddRange(refs);
+                diFields.AddRange(fields);
+                unregisteredServices.AddRange(unreg);
+                diFieldsWithScope.AddRange(fieldsScope);
+                modelObservers.AddRange(observers);
+                modelObserverDiagnostics.AddRange(observerDiags);
+
+                // Extract additional DI fields from private field declarations
+                var additionalDIFields = decl.ExtractDIFields(declSemanticModel, serviceClasses);
+                diFields.AddRange(additionalDIFields);
+            }
+
+            // Get model scope from the declaration that has the attribute
+            var modelScope = "Scoped";
+            var hasScopeAttribute = false;
+            ClassDeclarationSyntax? scopeAttributeDecl = null;
+            foreach (var decl in classDeclarations)
+            {
+                var declSemanticModel = compilation.GetSemanticModel(decl.SyntaxTree);
+                var (scope, hasAttr) = decl.ExtractModelScopeWithAttributeCheck(declSemanticModel);
+                if (hasAttr)
+                {
+                    modelScope = scope;
+                    hasScopeAttribute = true;
+                    scopeAttributeDecl = decl;
+                    break;
+                }
+            }
+
+            var implementedInterfaces = namedTypeSymbol.ExtractObservableModelInterfaces();
+            var genericTypes = namedTypeSymbol.ExtractObservableModelGenericTypes();
+
+            // Get type constraints from primary declaration
+            var typeConstrains = primaryDecl.ExtractTypeConstrains();
+
+            // Merge using statements from all declarations
+            var allUsingStatements = new HashSet<string>();
+            foreach (var decl in classDeclarations)
+            {
+                var usings = decl.ExtractUsingStatements();
+                foreach (var u in usings)
+                {
+                    allUsingStatements.Add(u);
+                }
+            }
+
+            var baseModelType = namedTypeSymbol.GetObservableModelBaseType();
+            var baseModelTypeName = baseModelType?.ToDisplayString();
+            var constructorAccessibility = primaryDecl.GetConstructorAccessibility();
+            var classAccessibility = primaryDecl.GetClassAccessibility();
+
+            // Add all diagnostics
+            diagnostics.AddRange(allPartialPropertyDiagnostics);
+            diagnostics.AddRange(allCommandPropertyDiagnostics);
+            diagnostics.AddRange(modelObserverDiagnostics);
+
+            // Check for missing ObservableModelScope attribute (RXBG070)
+            if (!hasScopeAttribute)
+            {
+                var diagnostic = Diagnostic.Create(
+                    DiagnosticDescriptors.MissingObservableModelScopeWarning,
+                    primaryDecl.Identifier.GetLocation(),
+                    namedTypeSymbol.Name);
+                diagnostics.Add(diagnostic);
+            }
+
+            // Check for non-public partial constructor with parameters (RXBG071)
+            var partialConstructor = primaryDecl.GetPartialConstructor();
+            if (partialConstructor is not null && partialConstructor.ParameterList.Parameters.Count > 0)
+            {
+                if (constructorAccessibility != "public")
+                {
+                    var diagnostic = Diagnostic.Create(
+                        DiagnosticDescriptors.NonPublicPartialConstructorError,
+                        partialConstructor.Identifier.GetLocation(),
+                        namedTypeSymbol.Name,
+                        constructorAccessibility);
+                    diagnostics.Add(diagnostic);
+                }
+            }
+
+            // Create model info
+            var modelInfo = new ObservableModelInfo(
+                namedTypeSymbol.ContainingNamespace.ToDisplayString(),
+                namedTypeSymbol.Name,
+                namedTypeSymbol.ToDisplayString(),
+                allPartialProperties,
+                allCommandProperties,
+                allMethods,
+                modelReferences,
+                modelScope,
+                diFields,
+                implementedInterfaces,
+                genericTypes,
+                typeConstrains,
+                allUsingStatements.ToList(),
+                baseModelTypeName,
+                constructorAccessibility,
+                classAccessibility);
+
+            // Build symbol map for model references
+            var modelSymbolMap = new Dictionary<string, ITypeSymbol>();
+            foreach (var modelRef in modelReferences)
+            {
+                if (modelRef.TypeSymbol is not null)
+                {
+                    modelSymbolMap[modelRef.PropertyName] = modelRef.TypeSymbol;
+                }
+            }
+
+            // Enhance model references with command method analysis
+            var enhancedModelReferences = modelInfo.EnhanceModelReferencesWithCommandAnalysis(
+                compilation,
+                modelSymbolMap);
+
+            // Check for unused model references and derived model issues (RXBG008, RXBG017)
+            var modelReferenceDiagnostics = enhancedModelReferences.CreateUnusedModelReferenceDiagnostics(
+                namedTypeSymbol,
+                primaryDecl,
+                compilation);
+            diagnostics.AddRange(modelReferenceDiagnostics);
+
+            // Build set of methods that should NOT be auto-detected as internal observers
+            // These are methods already used as command execute/canExecute or trigger methods
+            var excludedMethods = BuildExcludedMethodsSet(allCommandProperties, allPartialProperties);
+
+            // Analyze private methods from ALL declarations for internal model observers
+            var allInternalModelObservers = new List<InternalModelObserverInfo>();
+            var allInvalidInternalObservers = new List<InvalidInternalModelObserverInfo>();
+            foreach (var decl in classDeclarations)
+            {
+                var declSemanticModel = compilation.GetSemanticModel(decl.SyntaxTree);
+                var (observers, invalid) = decl.AnalyzeInternalModelObserversWithDiagnostics(
+                    declSemanticModel,
+                    enhancedModelReferences,
+                    modelSymbolMap,
+                    excludedMethods);
+                allInternalModelObservers.AddRange(observers);
+                allInvalidInternalObservers.AddRange(invalid);
+            }
+
+            // Add RXBG031 (CircularTriggerReferenceError) for internal observers to diagnostics
+            // so the analyzer can report them (with code fix support in IDE)
+            foreach (var invalidObserver in allInvalidInternalObservers.Where(o => o.IsCircularReference))
+            {
+                if (invalidObserver.Location is not null)
+                {
+                    var circularProps = string.Join(", ", invalidObserver.CircularProperties
+                        .Select(p => $"{invalidObserver.ModelReferenceName}.{p}"));
+
+                    var properties = ImmutableDictionary.CreateBuilder<string, string?>();
+                    properties.Add("CircularProperty", circularProps);
+                    properties.Add("MethodName", invalidObserver.MethodName);
+                    properties.Add("IsInternalObserver", "true");
+
+                    var diagnostic = Diagnostic.Create(
+                        DiagnosticDescriptors.CircularTriggerReferenceError,
+                        invalidObserver.Location,
+                        properties.ToImmutable(),
+                        invalidObserver.MethodName,
+                        circularProps,
+                        invalidObserver.MethodName);
+                    diagnostics.Add(diagnostic);
+                }
+            }
+
+            // Create the final record
+            var record = new ObservableModelRecord(
+                new ObservableModelInfo(
+                    namedTypeSymbol.ContainingNamespace.ToDisplayString(),
+                    namedTypeSymbol.Name,
+                    namedTypeSymbol.ToDisplayString(),
+                    allPartialProperties,
+                    allCommandProperties,
+                    allMethods,
+                    enhancedModelReferences,
+                    modelScope,
+                    diFields,
+                    implementedInterfaces,
+                    genericTypes,
+                    typeConstrains,
+                    allUsingStatements.ToList(),
+                    baseModelTypeName,
+                    constructorAccessibility,
+                    classAccessibility,
+                    modelObservers,
+                    allInternalModelObservers),
+                diagnostics,
+                shouldGenerateCode);
+
+            // Store unregistered services, DI scope info, and invalid observers for generator diagnostic reporting
+            record.UnregisteredServices = unregisteredServices;
+            record.DiFieldsWithScope = diFieldsWithScope;
+            record.InvalidInternalObservers = allInvalidInternalObservers;
+
+            // Extract component attribute data
+            ExtractComponentAttributeData(namedTypeSymbol, record);
+
+            return record;
+        }
+        catch (OperationCanceledException)
+        {
+            // Cancellation is expected, just return null
             return null;
         }
     }
@@ -653,6 +1041,64 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// Builds a set of method names that should be excluded from internal observer auto-detection.
+    /// These are methods already used as:
+    /// - Command execute methods
+    /// - Command canExecute methods
+    /// - Command trigger canTrigger methods
+    /// - Property trigger execute methods
+    /// - Property trigger canTrigger methods
+    /// </summary>
+    private static HashSet<string> BuildExcludedMethodsSet(
+        List<CommandPropertyInfo> commandProperties,
+        List<PartialPropertyInfo> partialProperties)
+    {
+        var excludedMethods = new HashSet<string>();
+
+        // Add command execute and canExecute methods
+        foreach (var cmd in commandProperties)
+        {
+            if (!string.IsNullOrEmpty(cmd.ExecuteMethod))
+            {
+                excludedMethods.Add(cmd.ExecuteMethod);
+            }
+
+            if (cmd.CanExecuteMethod is { Length: > 0 } canExecuteMethod)
+            {
+                excludedMethods.Add(canExecuteMethod);
+            }
+
+            // Add command trigger canTrigger methods
+            foreach (var trigger in cmd.Triggers)
+            {
+                if (trigger.CanTriggerMethod is { Length: > 0 } cmdCanTriggerMethod)
+                {
+                    excludedMethods.Add(cmdCanTriggerMethod);
+                }
+            }
+        }
+
+        // Add property trigger execute and canTrigger methods
+        foreach (var prop in partialProperties)
+        {
+            foreach (var trigger in prop.Triggers)
+            {
+                if (trigger.ExecuteMethod is { Length: > 0 } executeMethod)
+                {
+                    excludedMethods.Add(executeMethod);
+                }
+
+                if (trigger.CanTriggerMethod is { Length: > 0 } propCanTriggerMethod)
+                {
+                    excludedMethods.Add(propCanTriggerMethod);
+                }
+            }
+        }
+
+        return excludedMethods;
     }
 
     // IEquatable implementation for incremental generator caching

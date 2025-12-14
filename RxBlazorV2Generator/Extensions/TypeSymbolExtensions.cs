@@ -7,34 +7,74 @@ public static class TypeSymbolExtensions
 {
     public static bool IsObservableModelClass(this ClassDeclarationSyntax classDecl)
     {
-        // Only check classes with base types
-        if (classDecl.BaseList?.Types.Any() != true)
-            return false;
-
-        // Two-tier filter to minimize semantic analysis overhead:
-        // 1. Clear cases: Direct ObservableModel inheritance (fast path)
-        var hasDirect = classDecl.BaseList.Types.Any(t =>
+        // Check if class has a base list with types
+        if (classDecl.BaseList?.Types.Any() == true)
         {
-            var typeString = t.Type.ToString();
-            return typeString.Equals("ObservableModel") ||
-                   typeString.EndsWith(".ObservableModel");
-        });
+            // Two-tier filter to minimize semantic analysis overhead:
+            // 1. Clear cases: Direct ObservableModel inheritance (fast path)
+            var hasDirect = classDecl.BaseList.Types.Any(t =>
+            {
+                var typeString = t.Type.ToString();
+                return typeString.Equals("ObservableModel") ||
+                       typeString.EndsWith(".ObservableModel");
+            });
 
-        if (hasDirect)
-            return true;
+            if (hasDirect)
+            {
+                return true;
+            }
 
-        // 2. Candidates: Other partial classes with base types that could be derived ObservableModels
-        // Exclude obvious non-candidates to reduce semantic analysis load
-        var hasCandidate = classDecl.BaseList.Types.Any(t =>
+            // 2. Candidates: Other partial classes with base types that could be derived ObservableModels
+            // Exclude obvious non-candidates to reduce semantic analysis load
+            var hasCandidate = classDecl.BaseList.Types.Any(t =>
+            {
+                var typeString = t.Type.ToString();
+                // Exclude common non-ObservableModel base types
+                return !typeString.Contains("ComponentBase") &&
+                       !typeString.Contains("Exception") &&
+                       !typeString.Contains("Attribute");
+            });
+
+            if (hasCandidate)
+            {
+                return true;
+            }
+        }
+
+        // 3. Partial class declarations without base types - could be part of an ObservableModel
+        // These will be semantically verified later in ObservableModelRecord.Create
+        if (classDecl.Modifiers.Any(m => m.IsKind(Microsoft.CodeAnalysis.CSharp.SyntaxKind.PartialKeyword)))
         {
-            var typeString = t.Type.ToString();
-            // Exclude common non-ObservableModel base types
-            return !typeString.Contains("ComponentBase") &&
-                   !typeString.Contains("Exception") &&
-                   !typeString.Contains("Attribute");
-        });
+            // Include if it has RxBlazor-related attributes (fast heuristic)
+            var hasRxBlazorAttribute = classDecl.AttributeLists.Any(al =>
+                al.Attributes.Any(a =>
+                {
+                    var name = a.Name.ToString();
+                    return name.Contains("Observable") ||
+                           name.Contains("ObservableCommand") ||
+                           name.Contains("ObservableComponent") ||
+                           name.Contains("ObservableModelScope");
+                }));
 
-        return hasCandidate;
+            // Or if it has members with RxBlazor attributes
+            if (!hasRxBlazorAttribute)
+            {
+                hasRxBlazorAttribute = classDecl.Members.Any(m =>
+                    m is PropertyDeclarationSyntax prop &&
+                    prop.AttributeLists.Any(al =>
+                        al.Attributes.Any(a =>
+                        {
+                            var name = a.Name.ToString();
+                            return name.Contains("ObservableCommand") ||
+                                   name.Contains("ObservableTrigger") ||
+                                   name.Contains("ObservableComponentTrigger");
+                        })));
+            }
+
+            return hasRxBlazorAttribute;
+        }
+
+        return false;
     }
 
     public static bool InheritsFromObservableModel(this INamedTypeSymbol classSymbol)

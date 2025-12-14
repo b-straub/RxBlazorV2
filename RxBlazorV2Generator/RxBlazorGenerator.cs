@@ -94,15 +94,59 @@ public class RxBlazorGenerator : IIncrementalGenerator
                     }
                 }
 
-                // Analyze each class with proper semantic model from compilation
-                var records = new List<ObservableModelRecord?>();
+                // Group partial class declarations by their type symbol
+                // This ensures we process all parts of a partial class together
+                // IMPORTANT: Use DeclaringSyntaxReferences to find ALL partial declarations,
+                // not just those that passed the syntactic predicate (IsObservableModelClass).
+                // This handles partial files with only private methods (no RxBlazor attributes).
+                var groupedByType = new Dictionary<string, List<(ClassDeclarationSyntax ClassDecl, SyntaxTree Tree)>>();
+                var processedTypes = new HashSet<string>();
+
                 foreach (var (classDecl, syntaxTree) in classNodes)
                 {
-                    // Get semantic model for this specific syntax tree from the compilation
                     var semanticModel = compilation.GetSemanticModel(syntaxTree);
+                    var classSymbol = semanticModel.GetDeclaredSymbol(classDecl);
+                    if (classSymbol is INamedTypeSymbol namedType)
+                    {
+                        var key = namedType.ToDisplayString();
+
+                        // Skip if we've already processed this type
+                        if (processedTypes.Contains(key))
+                        {
+                            continue;
+                        }
+                        processedTypes.Add(key);
+
+                        // Use DeclaringSyntaxReferences to find ALL partial declarations
+                        // This includes partial files that didn't pass the syntactic predicate
+                        var list = new List<(ClassDeclarationSyntax, SyntaxTree)>();
+                        foreach (var syntaxRef in namedType.DeclaringSyntaxReferences)
+                        {
+                            if (syntaxRef.GetSyntax() is ClassDeclarationSyntax partialClassDecl)
+                            {
+                                list.Add((partialClassDecl, syntaxRef.SyntaxTree));
+                            }
+                        }
+
+                        if (list.Count > 0)
+                        {
+                            groupedByType[key] = list;
+                        }
+                    }
+                }
+
+                // Create a single record per type, passing all partial declarations
+                var records = new List<ObservableModelRecord?>();
+                foreach (var kvp in groupedByType)
+                {
+                    var declarations = kvp.Value;
+                    // Use the first declaration's semantic model (all point to the same type symbol)
+                    var firstDecl = declarations[0].ClassDecl;
+                    var firstTree = declarations[0].Tree;
+                    var semanticModel = compilation.GetSemanticModel(firstTree);
 
                     var record = ObservableModelRecord.Create(
-                        classDecl,
+                        declarations.Select(d => d.ClassDecl).ToList(),
                         semanticModel,
                         compilation,
                         mergedServices);
@@ -204,11 +248,14 @@ public class RxBlazorGenerator : IIncrementalGenerator
                         }
                     }
 
-                    // Report RXBG082 for methods that access referenced model properties but have invalid signatures
-                    foreach (var invalidObserver in record!.InvalidInternalObservers)
+                    // Report RXBG082 for invalid internal observers (invalid signatures only)
+                    // NOTE: RXBG031 (CircularTriggerReferenceError) for internal observers is now
+                    // included in Verify() and reported by the analyzer for IDE code fix support
+                    foreach (var invalidObserver in record.InvalidInternalObservers)
                     {
-                        if (invalidObserver.Location is not null)
+                        if (invalidObserver.Location is not null && !invalidObserver.IsCircularReference)
                         {
+                            // Report RXBG082 for methods that access referenced model properties but have invalid signatures
                             var propertiesDisplay = string.Join(", ", invalidObserver.AccessedProperties);
                             var diagnostic = Diagnostic.Create(
                                 DiagnosticDescriptors.InternalModelObserverInvalidSignatureWarning,
@@ -514,6 +561,88 @@ public class RxBlazorGenerator : IIncrementalGenerator
                 ObservableModelCodeGenerator.GenerateAddGenericObservableModelsExtension(spc, validModels,
                     config.RootNamespace);
             });
+
+        // Generate singleton aggregation for main app project
+        context.RegisterSourceOutput(observableModelRecords.Combine(msbuildProvider),
+            static (spc, combined) =>
+            {
+                var ((records, compilation), config) = combined;
+
+                // Build records dictionary for singleton discovery
+                var recordsByTypeName = new Dictionary<string, ObservableModelRecord>();
+                foreach (var record in records.Where(r => r != null))
+                {
+                    recordsByTypeName[record!.ModelInfo.FullyQualifiedName] = record;
+                }
+
+                // Discover all singleton models
+                var singletons = SingletonDiscovery.DiscoverSingletons(compilation, recordsByTypeName);
+
+                // Only generate aggregation if this is the main app project
+                // (has singletons from referenced assemblies)
+                if (!singletons.Any(s => s.IsFromReferencedAssembly))
+                {
+                    return;
+                }
+
+                // Generate RxBlazorV2 layout model
+                var aggregationCode = Generators.Templates.SingletonAggregatorTemplate.GenerateAggregationModel(
+                    singletons,
+                    config.RootNamespace);
+                spc.AddSource("Layout.RxBlazorV2LayoutModel.g.cs", aggregationCode);
+
+                // Generate RxBlazorV2 layout base component
+                var componentCode = Generators.Templates.SingletonLayoutTemplate.GenerateComponent(
+                    singletons,
+                    config.RootNamespace,
+                    config.UpdateFrequencyMs);
+                spc.AddSource("Layout.RxBlazorV2LayoutBase.g.cs", componentCode);
+
+                // Generate DI registration for the layout model
+                var diCode = GenerateLayoutModelDI(config.RootNamespace, singletons);
+                spc.AddSource("RxBlazorV2LayoutServiceCollectionExtension.g.cs", diCode);
+            });
+    }
+
+    /// <summary>
+    /// Generates the DI registration extension method for the RxBlazorV2 layout model.
+    /// </summary>
+    private static string GenerateLayoutModelDI(string rootNamespace, List<SingletonModelInfo> singletons)
+    {
+        var sb = new System.Text.StringBuilder();
+
+        sb.AppendLine("using Microsoft.Extensions.DependencyInjection;");
+
+        // Add using statements for singleton namespaces
+        var namespaces = singletons
+            .Select(s => s.Namespace)
+            .Distinct()
+            .Where(ns => !string.IsNullOrEmpty(ns) && ns != $"{rootNamespace}.Layout")
+            .OrderBy(ns => ns);
+
+        foreach (var ns in namespaces)
+        {
+            sb.AppendLine($"using {ns};");
+        }
+
+        sb.AppendLine($"using {rootNamespace}.Layout;");
+        sb.AppendLine();
+        sb.AppendLine($"namespace {rootNamespace};");
+        sb.AppendLine();
+        sb.AppendLine("public static partial class ObservableModels");
+        sb.AppendLine("{");
+        sb.AppendLine("    /// <summary>");
+        sb.AppendLine("    /// Initializes the RxBlazorV2 layout model with all singleton models.");
+        sb.AppendLine("    /// Call this AFTER all domain Initialize() calls in Program.cs.");
+        sb.AppendLine("    /// </summary>");
+        sb.AppendLine("    public static IServiceCollection InitializeLayout(this IServiceCollection services)");
+        sb.AppendLine("    {");
+        sb.AppendLine("        services.AddSingleton<RxBlazorV2LayoutModel>();");
+        sb.AppendLine("        return services;");
+        sb.AppendLine("    }");
+        sb.AppendLine("}");
+
+        return sb.ToString();
     }
 
     /// <summary>

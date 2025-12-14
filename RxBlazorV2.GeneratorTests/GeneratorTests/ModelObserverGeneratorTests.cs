@@ -628,6 +628,458 @@ public class ModelObserverGeneratorTests
             ["ReferencedModel", "TestModel"]);
     }
 
+    [Fact]
+    public async Task InternalModelObserver_CommandExecuteMethod_DoesNotGenerateSubscription()
+    {
+        // This test verifies the bug fix: command execute methods should NOT be auto-detected
+        // as internal observers even if they access referenced model properties.
+        // lang=csharp
+        const string referencedModel = """
+        using RxBlazorV2.Model;
+
+        namespace Test;
+
+        public partial class ReferencedModel : ObservableModel
+        {
+            public partial string CurrentUser { get; set; } = "";
+        }
+        """;
+
+        // lang=csharp
+        const string test = """
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+
+        namespace Test
+        {
+            public partial class TestModel : ObservableModel
+            {
+                public partial TestModel(ReferencedModel referenced);
+
+                // Command property
+                [ObservableCommand(nameof(AddItem))]
+                public partial IObservableCommand AddCommand { get; }
+
+                // Command execute method - accesses Referenced.CurrentUser but should NOT be an observer
+                private void AddItem()
+                {
+                    if (Referenced.CurrentUser is null) return;
+                    System.Console.WriteLine($"Adding item for {Referenced.CurrentUser}");
+                }
+
+                // Actual observer method - should be auto-detected
+                private void RefreshItems()
+                {
+                    System.Console.WriteLine($"Refreshing for {Referenced.CurrentUser}");
+                }
+            }
+        }
+        """;
+
+        // lang=csharp
+        const string expected = """
+        #nullable enable
+        using JetBrains.Annotations;
+        using Microsoft.Extensions.DependencyInjection;
+        using ObservableCollections;
+        using R3;
+        using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using System;
+        using System.Linq;
+
+        namespace Test;
+
+        public partial class TestModel
+        {
+            public override string ModelID => "Test.TestModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                var usedProps = new[] { "Model.Referenced.CurrentUser" };
+
+                return propertyNames.Intersect(usedProps).Any();
+            }
+
+            public Test.ReferencedModel Referenced { get; }
+
+
+            private ObservableCommand _addCommand;
+
+            public partial IObservableCommand AddCommand
+            {
+                get => _addCommand;
+            }
+
+            public partial TestModel(Test.ReferencedModel referenced) : base()
+            {
+                Referenced = referenced;
+
+                // Initialize commands
+                _addCommand = new ObservableCommandFactory(this, [""], AddItem);
+
+                // Subscribe to referenced model changes
+                // Transform referenced model property names: Model.X -> Model.{RefName}.X
+                // Filtering happens at component level via Filter() method
+                Subscriptions.Add(Referenced.Observable
+                    .Select(props => props.Select(p => p.Replace("Model.", "Model.Referenced.")).ToArray())
+                    .Subscribe(props => StateHasChanged(props)));
+
+                // Subscribe to internal model observers (auto-detected)
+                Subscriptions.Add(Referenced.Observable.Where(p => p.Intersect(["Model.CurrentUser"]).Any())
+                    .Subscribe(_ => RefreshItems()));
+            }
+            private bool _contextReadyInternCalled;
+
+            protected override void OnContextReadyIntern()
+            {
+                if (_contextReadyInternCalled)
+                {
+                    return;
+                }
+                _contextReadyInternCalled = true;
+
+                // Initialize referenced ObservableModel dependencies
+                Referenced.ContextReady();
+
+            }
+
+            private bool _contextReadyInternAsyncCalled;
+
+            protected override async Task OnContextReadyInternAsync()
+            {
+                if (_contextReadyInternAsyncCalled)
+                {
+                    return;
+                }
+                _contextReadyInternAsyncCalled = true;
+
+                // Initialize referenced ObservableModel dependencies (async)
+                await Referenced.ContextReadyAsync();
+            }
+
+        }
+
+        """;
+
+        await MultiModelGeneratorVerifier.VerifyMultiModelGeneratorAsync(
+            [referencedModel, test],
+            [("Test.ReferencedModel.g.cs", GenerateReferencedModelCodeWithCurrentUser()),
+             ("Test.TestModel.g.cs", expected)],
+            ["ReferencedModel", "TestModel"]);
+    }
+
+    [Fact]
+    public async Task InternalModelObserver_TriggerMethod_DoesNotGenerateSubscription()
+    {
+        // This test verifies: trigger methods should NOT be auto-detected as internal observers
+        // lang=csharp
+        const string referencedModel = """
+        using RxBlazorV2.Model;
+
+        namespace Test;
+
+        public partial class ReferencedModel : ObservableModel
+        {
+            public partial string Format { get; set; } = "";
+        }
+        """;
+
+        // lang=csharp
+        const string test = """
+        using RxBlazorV2.Model;
+
+        namespace Test
+        {
+            public partial class TestModel : ObservableModel
+            {
+                public partial TestModel(ReferencedModel referenced);
+
+                // Property with trigger
+                [ObservableTrigger(nameof(OnValueChanged))]
+                public partial int Value { get; set; }
+
+                // Trigger method - accesses Referenced.Format but should NOT be an observer
+                private void OnValueChanged()
+                {
+                    System.Console.WriteLine($"Value changed, format: {Referenced.Format}");
+                }
+
+                // Actual observer method - should be auto-detected
+                private void RefreshDisplay()
+                {
+                    System.Console.WriteLine($"Format changed: {Referenced.Format}");
+                }
+            }
+        }
+        """;
+
+        // lang=csharp
+        const string expected = """
+        #nullable enable
+        using JetBrains.Annotations;
+        using Microsoft.Extensions.DependencyInjection;
+        using ObservableCollections;
+        using R3;
+        using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using System;
+        using System.Linq;
+
+        namespace Test;
+
+        public partial class TestModel
+        {
+            public override string ModelID => "Test.TestModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                var usedProps = new[] { "Model.Referenced.Format" };
+
+                return propertyNames.Intersect(usedProps).Any();
+            }
+
+            public Test.ReferencedModel Referenced { get; }
+
+            public partial int Value
+            {
+                get => field;
+                [UsedImplicitly]
+                set
+                {
+                    if (field != value)
+                    {
+                        field = value;
+                        StateHasChanged("Model.Value");
+                    }
+                }
+            }
+
+
+            public partial TestModel(Test.ReferencedModel referenced) : base()
+            {
+                Referenced = referenced;
+
+                // Subscribe to referenced model changes
+                // Transform referenced model property names: Model.X -> Model.{RefName}.X
+                // Filtering happens at component level via Filter() method
+                Subscriptions.Add(Referenced.Observable
+                    .Select(props => props.Select(p => p.Replace("Model.", "Model.Referenced.")).ToArray())
+                    .Subscribe(props => StateHasChanged(props)));
+
+                // Subscribe property triggers
+
+                Subscriptions.Add(Observable.Where(p => p.Intersect(["Model.Value"]).Any())
+                    .Subscribe(_ => OnValueChanged()));
+
+                // Subscribe to internal model observers (auto-detected)
+                Subscriptions.Add(Referenced.Observable.Where(p => p.Intersect(["Model.Format"]).Any())
+                    .Subscribe(_ => RefreshDisplay()));
+            }
+            private bool _contextReadyInternCalled;
+
+            protected override void OnContextReadyIntern()
+            {
+                if (_contextReadyInternCalled)
+                {
+                    return;
+                }
+                _contextReadyInternCalled = true;
+
+                // Initialize referenced ObservableModel dependencies
+                Referenced.ContextReady();
+
+            }
+
+            private bool _contextReadyInternAsyncCalled;
+
+            protected override async Task OnContextReadyInternAsync()
+            {
+                if (_contextReadyInternAsyncCalled)
+                {
+                    return;
+                }
+                _contextReadyInternAsyncCalled = true;
+
+                // Initialize referenced ObservableModel dependencies (async)
+                await Referenced.ContextReadyAsync();
+            }
+
+        }
+
+        """;
+
+        await MultiModelGeneratorVerifier.VerifyMultiModelGeneratorAsync(
+            [referencedModel, test],
+            [("Test.ReferencedModel.g.cs", GenerateReferencedModelCodeWithFormat()),
+             ("Test.TestModel.g.cs", expected)],
+            ["ReferencedModel", "TestModel"]);
+    }
+
+    [Fact]
+    public async Task InternalModelObserver_InSeparatePartialFile_GeneratesSubscription()
+    {
+        // This test verifies the bug fix: internal observers in separate partial files
+        // should still be detected and generate subscriptions.
+        // lang=csharp
+        const string referencedModel = """
+        using RxBlazorV2.Model;
+
+        namespace Test;
+
+        public partial class AuthModel : ObservableModel
+        {
+            public partial string CurrentUser { get; set; } = "";
+        }
+        """;
+
+        // Main file with constructor and properties
+        // lang=csharp
+        const string mainFile = """
+        using RxBlazorV2.Model;
+
+        namespace Test
+        {
+            public partial class TestModel : ObservableModel
+            {
+                public partial TestModel(AuthModel auth);
+
+                public partial string Data { get; set; } = "";
+            }
+        }
+        """;
+
+        // Separate partial file with internal observer method
+        // lang=csharp
+        const string observersFile = """
+        namespace Test
+        {
+            public partial class TestModel
+            {
+                // Internal observer - accesses Auth.CurrentUser
+                // Should be auto-detected even though it's in a separate partial file
+                private void RefreshData()
+                {
+                    if (Auth.CurrentUser is not null)
+                    {
+                        Data = $"Data for {Auth.CurrentUser}";
+                    }
+                }
+            }
+        }
+        """;
+
+        // lang=csharp
+        const string expected = """
+        #nullable enable
+        using JetBrains.Annotations;
+        using Microsoft.Extensions.DependencyInjection;
+        using ObservableCollections;
+        using R3;
+        using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using System;
+        using System.Linq;
+
+        namespace Test;
+
+        public partial class TestModel
+        {
+            public override string ModelID => "Test.TestModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
+            public Test.AuthModel Auth { get; }
+
+            public partial string Data
+            {
+                get => field;
+                [UsedImplicitly]
+                set
+                {
+                    if (field != value)
+                    {
+                        field = value;
+                        StateHasChanged("Model.Data");
+                    }
+                }
+            }
+
+
+            public partial TestModel(Test.AuthModel auth) : base()
+            {
+                Auth = auth;
+
+                // Subscribe to referenced model changes
+                // Transform referenced model property names: Model.X -> Model.{RefName}.X
+                // Filtering happens at component level via Filter() method
+                Subscriptions.Add(Auth.Observable
+                    .Select(props => props.Select(p => p.Replace("Model.", "Model.Auth.")).ToArray())
+                    .Subscribe(props => StateHasChanged(props)));
+
+                // Subscribe to internal model observers (auto-detected)
+                Subscriptions.Add(Auth.Observable.Where(p => p.Intersect(["Model.CurrentUser"]).Any())
+                    .Subscribe(_ => RefreshData()));
+            }
+            private bool _contextReadyInternCalled;
+
+            protected override void OnContextReadyIntern()
+            {
+                if (_contextReadyInternCalled)
+                {
+                    return;
+                }
+                _contextReadyInternCalled = true;
+
+                // Initialize referenced ObservableModel dependencies
+                Auth.ContextReady();
+
+            }
+
+            private bool _contextReadyInternAsyncCalled;
+
+            protected override async Task OnContextReadyInternAsync()
+            {
+                if (_contextReadyInternAsyncCalled)
+                {
+                    return;
+                }
+                _contextReadyInternAsyncCalled = true;
+
+                // Initialize referenced ObservableModel dependencies (async)
+                await Auth.ContextReadyAsync();
+            }
+
+        }
+
+        """;
+
+        await MultiModelGeneratorVerifier.VerifyMultiModelGeneratorAsync(
+            [referencedModel, mainFile, observersFile],
+            [("Test.AuthModel.g.cs", GenerateAuthModelCode()),
+             ("Test.TestModel.g.cs", expected)],
+            ["AuthModel", "TestModel"]);
+    }
+
     #endregion
 
     #region External Model Observer Tests
@@ -1611,6 +2063,150 @@ public class ModelObserverGeneratorTests
                     {
                         field = value;
                         StateHasChanged("Model.Value");
+                    }
+                }
+            }
+
+        }
+
+        """;
+    }
+
+    private static string GenerateReferencedModelCodeWithCurrentUser()
+    {
+        return """
+        #nullable enable
+        using JetBrains.Annotations;
+        using Microsoft.Extensions.DependencyInjection;
+        using ObservableCollections;
+        using R3;
+        using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using System;
+
+        namespace Test;
+
+        public partial class ReferencedModel
+        {
+            public override string ModelID => "Test.ReferencedModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
+            public partial string CurrentUser
+            {
+                get => field;
+                [UsedImplicitly]
+                set
+                {
+                    if (field != value)
+                    {
+                        field = value;
+                        StateHasChanged("Model.CurrentUser");
+                    }
+                }
+            }
+
+        }
+
+        """;
+    }
+
+    private static string GenerateReferencedModelCodeWithFormat()
+    {
+        return """
+        #nullable enable
+        using JetBrains.Annotations;
+        using Microsoft.Extensions.DependencyInjection;
+        using ObservableCollections;
+        using R3;
+        using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using System;
+
+        namespace Test;
+
+        public partial class ReferencedModel
+        {
+            public override string ModelID => "Test.ReferencedModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
+            public partial string Format
+            {
+                get => field;
+                [UsedImplicitly]
+                set
+                {
+                    if (field != value)
+                    {
+                        field = value;
+                        StateHasChanged("Model.Format");
+                    }
+                }
+            }
+
+        }
+
+        """;
+    }
+
+    private static string GenerateAuthModelCode()
+    {
+        return """
+        #nullable enable
+        using JetBrains.Annotations;
+        using Microsoft.Extensions.DependencyInjection;
+        using ObservableCollections;
+        using R3;
+        using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using System;
+
+        namespace Test;
+
+        public partial class AuthModel
+        {
+            public override string ModelID => "Test.AuthModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
+            public partial string CurrentUser
+            {
+                get => field;
+                [UsedImplicitly]
+                set
+                {
+                    if (field != value)
+                    {
+                        field = value;
+                        StateHasChanged("Model.CurrentUser");
                     }
                 }
             }

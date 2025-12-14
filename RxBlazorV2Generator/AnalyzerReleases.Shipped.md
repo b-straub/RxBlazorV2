@@ -7,7 +7,6 @@
 | RXBG001 | RxBlazorGenerator | Error | Observable model analysis error |
 | RXBG002 | RxBlazorGenerator | Error | Code generation error |
 | RXBG003 | RxBlazorGenerator | Warning | Method analysis warning |
-| RXBG004 | RxBlazorGenerator | Error | Source generator encountered diagnostic errors |
 | RXBG010 | RxBlazorGenerator | Error | Circular model reference detected |
 | RXBG011 | RxBlazorGenerator | Error | Invalid model reference target |
 | RXBG012 | RxBlazorGenerator | Error | Referenced model has no used properties |
@@ -33,3 +32,4 @@
 | RXBG080 | RxBlazorGenerator | Error | ObservableModelObserver method has invalid signature |
 | RXBG081 | RxBlazorGenerator | Error | ObservableModelObserver property not found on model |
 | RXBG082 | RxBlazorGenerator | Warning | Internal model observer method has invalid signature |
+| RXBG090 | RxBlazorGenerator | Warning | Direct access to Observable property |
