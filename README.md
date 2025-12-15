@@ -229,24 +229,25 @@ public partial class SearchModel : ObservableModel
 
 ### Internal Model Observers (Auto-Detection)
 
-Private methods that access referenced model properties are automatically detected and subscribed:
+Private methods that **read** referenced model properties are automatically detected and subscribed. No special naming convention required - the generator analyzes which properties are actually accessed:
 
 ```csharp
 [ObservableModelScope(ModelScope.Scoped)]
-public partial class DashboardModel : ObservableModel
+public partial class ShoppingCartModel : ObservableModel
 {
-    public partial DashboardModel(SettingsModel settings, UserModel user);
+    public partial ShoppingCartModel(ProductCatalogModel catalog);
 
-    // Auto-detected: reacts to Settings.Theme changes
-    private void OnThemeChanged()
-    {
-        UpdateDashboardColors(Settings.Theme);
-    }
+    [ObservableTrigger(nameof(RecalculateTotal))]
+    public partial int Quantity { get; set; }
 
-    // Auto-detected: reacts to User.Preferences changes (async)
-    private async Task OnPreferencesChangedAsync(CancellationToken ct)
+    public partial decimal Total { get; set; }
+
+    // This method is BOTH a property trigger AND an internal observer:
+    // - Called when Quantity changes (via [ObservableTrigger])
+    // - Called when Catalog.Price changes (auto-detected read)
+    private void RecalculateTotal()
     {
-        await RefreshWidgetsAsync(User.Preferences, ct);
+        Total = Quantity * Catalog.Price;
     }
 }
 ```
@@ -255,10 +256,10 @@ public partial class DashboardModel : ObservableModel
 - Sync: `private void MethodName()`
 - Async: `private Task MethodName()` or `private Task MethodName(CancellationToken ct)`
 
-**Naming Conventions** (method name should match one of):
-- `On{PropertyName}Changed` / `On{PropertyName}ChangedAsync`
-- `Handle{PropertyName}` / `Handle{PropertyName}Async`
-- `{PropertyName}Observer` / `{PropertyName}ObserverAsync`
+**Key Points:**
+- Methods are detected by analyzing property **reads** (not writes)
+- A method can be both a local trigger AND a referenced model observer
+- No naming convention required - any private method reading referenced properties works
 
 ### External Model Observers
 
@@ -390,7 +391,9 @@ public class ThemeService
 - C# 14 (for partial constructors and `field` keyword)
 - R3 v1.3.0 or later
 
-## Sample Application
+## Sample Applications
+
+### RxBlazorV2Sample
 
 See the **RxBlazorV2Sample** project for comprehensive, interactive examples:
 
@@ -418,13 +421,40 @@ Run the sample application:
 dotnet run --project RxBlazorV2Sample
 ```
 
+### ReactivePatternSample
+
+The **ReactivePatternSample** is a multi-project Blazor application demonstrating all reactive patterns in a real-world scenario:
+
+| Project | Description |
+|---------|-------------|
+| **ReactivePatternSample** | Main Blazor WASM host application |
+| **ReactivePatternSample.Auth** | Authentication model with login/logout commands and triggers |
+| **ReactivePatternSample.Settings** | User preferences with component triggers for theme/language |
+| **ReactivePatternSample.Status** | Status bar model with internal observers and notifications |
+| **ReactivePatternSample.Storage** | Persistence layer with external model observers |
+| **ReactivePatternSample.Todo** | Todo list demonstrating commands, triggers, and cross-model reactivity |
+| **ReactivePatternSample.Share** | Sharing functionality with async commands and dialogs |
+
+**Key demonstrations:**
+- Cross-project model references via partial constructors
+- Internal model observers auto-detecting property reads
+- External model observers with `[ObservableModelObserver]`
+- Component triggers propagating from referenced models
+- Real-world reactive composition patterns
+
+Run the reactive pattern sample:
+```bash
+dotnet run --project ReactivePatternSample/ReactivePatternSample
+```
+
 ## Project Structure
 
 - **RxBlazorV2** - Core runtime library with base classes and interfaces
 - **RxBlazorV2Generator** - Roslyn source generator for code generation
 - **RxBlazorV2CodeFix** - Code analyzers and fixes for common issues
 - **RxBlazorV2.MudBlazor** - MudBlazor button components with command binding
-- **RxBlazorV2Sample** - Sample Blazor WebAssembly application
+- **RxBlazorV2Sample** - Sample Blazor WebAssembly application with isolated examples
+- **ReactivePatternSample** - Multi-project sample demonstrating all reactive patterns
 
 ## Diagnostics
 

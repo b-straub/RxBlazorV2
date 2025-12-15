@@ -318,7 +318,8 @@ public static class MethodAnalysisExtensions
     }
 
     /// <summary>
-    /// Finds model properties accessed in a method.
+    /// Finds model properties READ in a method (excludes writes/assignments).
+    /// Only property reads should trigger internal observer subscriptions.
     /// </summary>
     private static Dictionary<string, List<string>> FindAccessedModelProperties(
         MethodDeclarationSyntax method,
@@ -327,12 +328,20 @@ public static class MethodAnalysisExtensions
     {
         var propertiesByModelRef = new Dictionary<string, List<string>>();
 
-        // Search for member access expressions that access referenced model properties
+        // Search for member access expressions that READ referenced model properties
         // Pattern: {ModelRefName}.{PropertyName} (e.g., Settings.AutoRefresh)
         foreach (var node in method.DescendantNodes())
         {
             if (node is MemberAccessExpressionSyntax memberAccess)
             {
+                // Skip if this should be excluded from observation:
+                // - Direct assignment targets (writes)
+                // - Modify-in-place reads (X = X with {...})
+                if (ShouldExcludeFromObservation(memberAccess))
+                {
+                    continue;
+                }
+
                 // Check if the expression is a simple identifier (the model reference name)
                 if (memberAccess.Expression is IdentifierNameSyntax identifier)
                 {
@@ -363,6 +372,105 @@ public static class MethodAnalysisExtensions
         }
 
         return propertiesByModelRef;
+    }
+
+    /// <summary>
+    /// Checks if a member access expression should be excluded from observed properties.
+    /// This includes:
+    /// 1. Direct assignment targets: X = value
+    /// 2. Compound assignments: X += value
+    /// 3. Increment/decrement: X++, ++X
+    /// 4. Modify-in-place reads: X = X with {...}, X = X + value (read is part of self-assignment)
+    /// </summary>
+    private static bool ShouldExcludeFromObservation(MemberAccessExpressionSyntax memberAccess)
+    {
+        var parent = memberAccess.Parent;
+
+        // Direct assignment target: Storage.Settings = "text"
+        if (parent is AssignmentExpressionSyntax assignment && assignment.Left == memberAccess)
+        {
+            return true;
+        }
+
+        // Compound assignment: Storage.Count += 1
+        if (parent is AssignmentExpressionSyntax compoundAssignment &&
+            compoundAssignment.Left == memberAccess &&
+            compoundAssignment.Kind() != SyntaxKind.SimpleAssignmentExpression)
+        {
+            return true;
+        }
+
+        // Increment/decrement: Storage.Count++
+        if (parent is PostfixUnaryExpressionSyntax or PrefixUnaryExpressionSyntax)
+        {
+            return true;
+        }
+
+        // Modify-in-place pattern: X = X with {...} or X = X.Something()
+        // The read of X on the right side should be excluded because it's just
+        // reading the current value to create a modified copy
+        if (IsModifyInPlaceRead(memberAccess))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Checks if a member access is a read that's part of a modify-in-place pattern.
+    /// Pattern: X = X with {...} or X = X + value or X = X.Method()
+    /// The read of X on the right side is just to modify it, not to observe changes.
+    /// </summary>
+    private static bool IsModifyInPlaceRead(MemberAccessExpressionSyntax memberAccess)
+    {
+        // Find the containing assignment expression
+        var containingAssignment = memberAccess.FirstAncestorOrSelf<AssignmentExpressionSyntax>();
+        if (containingAssignment is null)
+        {
+            return false;
+        }
+
+        // Check if this member access is somewhere in the RIGHT side of the assignment
+        if (!containingAssignment.Right.Contains(memberAccess))
+        {
+            return false;
+        }
+
+        // Get the left side - must also be a member access
+        if (containingAssignment.Left is not MemberAccessExpressionSyntax leftMemberAccess)
+        {
+            return false;
+        }
+
+        // Compare the member access paths (e.g., "Storage.Settings" == "Storage.Settings")
+        var leftPath = GetMemberAccessPath(leftMemberAccess);
+        var rightPath = GetMemberAccessPath(memberAccess);
+
+        return leftPath == rightPath;
+    }
+
+    /// <summary>
+    /// Gets the full path of a member access expression (e.g., "Storage.Settings").
+    /// </summary>
+    private static string GetMemberAccessPath(MemberAccessExpressionSyntax memberAccess)
+    {
+        var parts = new List<string>();
+        ExpressionSyntax? current = memberAccess;
+
+        while (current is MemberAccessExpressionSyntax ma)
+        {
+            parts.Add(ma.Name.Identifier.ValueText);
+            current = ma.Expression;
+        }
+
+        if (current is IdentifierNameSyntax identifier)
+        {
+            parts.Add(identifier.Identifier.ValueText);
+        }
+
+        parts.Reverse();
+        return string.Join(".", parts);
     }
 
     /// <summary>

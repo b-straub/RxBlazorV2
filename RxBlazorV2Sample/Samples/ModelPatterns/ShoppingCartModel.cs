@@ -17,8 +17,13 @@ namespace RxBlazorV2Sample.Samples.ModelPatterns;
 [ObservableModelScope(ModelScope.Scoped)]
 public partial class ShoppingCartModel : ObservableModel
 {
+    [ObservableTrigger(nameof(RecalculateTotal))]
     public partial int LaptopQuantity { get; set; } = 0;
+    
+    [ObservableTrigger(nameof(RecalculateTotal))]
     public partial int MouseQuantity { get; set; } = 0;
+    
+    [ObservableTrigger(nameof(RecalculateTotal))]
     public partial int KeyboardQuantity { get; set; } = 0;
 
     // Total is calculated based on quantities and prices from ProductCatalogModel
@@ -26,30 +31,15 @@ public partial class ShoppingCartModel : ObservableModel
 
     // Declare partial constructor with ProductCatalogModel dependency
     public partial ShoppingCartModel(ProductCatalogModel productCatalog);
-
-    private CompositeDisposable? _localSubscriptions;
-
+    
     protected override void OnContextReady()
     {
-        // Subscribe to any property changes (quantities or prices) to recalculate total
-        // ProductCatalog.Observable is automatically merged via constructor injection
-        _localSubscriptions = new CompositeDisposable();
-        _localSubscriptions.Add(Observable.Subscribe(props => RecalculateTotal()));
-
         // Initial calculation
         RecalculateTotal();
     }
 
-    protected override void Dispose(bool disposing)
-    {
-        if (disposing)
-        {
-            _localSubscriptions?.Dispose();
-        }
-        base.Dispose(disposing);
-    }
-
-    // This method is called when quantities change OR when ProductCatalog prices change (via merged Observable)
+    // This method is called when quantities change OR when ProductCatalog prices change
+    // via ObservableTriggers and internal auto-generated observer to ProductCatalog
     private void RecalculateTotal()
     {
         Total = (LaptopQuantity * ProductCatalog.LaptopPrice) +

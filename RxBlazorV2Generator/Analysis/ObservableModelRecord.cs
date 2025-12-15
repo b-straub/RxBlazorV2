@@ -1049,8 +1049,9 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
     /// - Command execute methods
     /// - Command canExecute methods
     /// - Command trigger canTrigger methods
-    /// - Property trigger execute methods
     /// - Property trigger canTrigger methods
+    /// Note: Property trigger execute methods are NOT excluded - they can be both local triggers
+    /// AND internal observers for referenced model properties (orthogonal concerns).
     /// </summary>
     private static HashSet<string> BuildExcludedMethodsSet(
         List<CommandPropertyInfo> commandProperties,
@@ -1081,15 +1082,16 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
             }
         }
 
-        // Add property trigger execute and canTrigger methods
+        // Add property trigger canTrigger methods only (NOT execute methods)
+        // Execute methods can still be internal observers for REFERENCED model properties
+        // since property triggers handle LOCAL changes and internal observers handle REFERENCED changes
         foreach (var prop in partialProperties)
         {
             foreach (var trigger in prop.Triggers)
             {
-                if (trigger.ExecuteMethod is { Length: > 0 } executeMethod)
-                {
-                    excludedMethods.Add(executeMethod);
-                }
+                // Don't exclude execute methods - they can be both triggers AND internal observers
+                // A method like RecalculateTotal() can be triggered by local property changes
+                // AND also observe referenced model property changes
 
                 if (trigger.CanTriggerMethod is { Length: > 0 } propCanTriggerMethod)
                 {

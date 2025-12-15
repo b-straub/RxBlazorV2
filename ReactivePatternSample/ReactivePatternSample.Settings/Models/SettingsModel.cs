@@ -35,7 +35,9 @@ public partial class SettingsModel : ObservableModel
     /// <summary>
     /// Theme mode: true = light (day), false = dark (night).
     /// Changes are auto-saved to Storage via trigger.
+    /// ObservableComponentTrigger enables MainLayout to react to theme changes.
     /// </summary>
+    [ObservableComponentTrigger]
     [ObservableTrigger(nameof(SaveThemeMode))]
     public partial bool IsDay { get; set; } = true;
 

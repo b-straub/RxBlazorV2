@@ -775,9 +775,11 @@ public class ModelObserverGeneratorTests
     }
 
     [Fact]
-    public async Task InternalModelObserver_TriggerMethod_DoesNotGenerateSubscription()
+    public async Task InternalModelObserver_TriggerMethod_AlsoGeneratesSubscription()
     {
-        // This test verifies: trigger methods should NOT be auto-detected as internal observers
+        // This test verifies: trigger methods CAN also be internal observers
+        // A method can be triggered by local property changes AND observe referenced model properties
+        // These are orthogonal concerns - local triggers handle local changes, internal observers handle referenced changes
         // lang=csharp
         const string referencedModel = """
         using RxBlazorV2.Model;
@@ -804,7 +806,8 @@ public class ModelObserverGeneratorTests
                 [ObservableTrigger(nameof(OnValueChanged))]
                 public partial int Value { get; set; }
 
-                // Trigger method - accesses Referenced.Format but should NOT be an observer
+                // Trigger method - accesses Referenced.Format and SHOULD also be an observer
+                // It will be called when Value changes (trigger) AND when Format changes (observer)
                 private void OnValueChanged()
                 {
                     System.Console.WriteLine($"Value changed, format: {Referenced.Format}");
@@ -883,6 +886,8 @@ public class ModelObserverGeneratorTests
                     .Subscribe(_ => OnValueChanged()));
 
                 // Subscribe to internal model observers (auto-detected)
+                Subscriptions.Add(Referenced.Observable.Where(p => p.Intersect(["Model.Format"]).Any())
+                    .Subscribe(_ => OnValueChanged()));
                 Subscriptions.Add(Referenced.Observable.Where(p => p.Intersect(["Model.Format"]).Any())
                     .Subscribe(_ => RefreshDisplay()));
             }
@@ -1812,6 +1817,161 @@ public class ModelObserverGeneratorTests
             [referencedModel, test],
             [expected],
             ["ReferencedModel", "TestModel"]);
+    }
+
+    [Fact]
+    public async Task InternalModelObserver_ModifyInPlaceWithExpression_NotDetectedAsObserver()
+    {
+        // This tests the pattern: X = X with { ... }
+        // The read of X on the right side should NOT make this method an observer
+        // because it's just reading the current value to create a modified copy
+
+        // lang=csharp
+        const string storageModel = """
+        using RxBlazorV2.Model;
+
+        namespace Test;
+
+        public record AppSettings(int PreferredFormatIndex = 0, bool IsDayMode = true);
+
+        public partial class StorageModel : ObservableModel
+        {
+            public partial AppSettings Settings { get; set; } = new();
+        }
+        """;
+
+        // lang=csharp
+        const string test = """
+        using RxBlazorV2.Model;
+
+        namespace Test
+        {
+            public partial class SettingsModel : ObservableModel
+            {
+                public partial SettingsModel(StorageModel storage);
+
+                [ObservableTrigger(nameof(SavePreferredFormat))]
+                public partial int PreferredFormat { get; set; }
+
+                // This method is triggered by PreferredFormat changes.
+                // It reads Storage.Settings only to modify it with the 'with' expression.
+                // It should NOT be detected as an observer for Storage.Settings.
+                private void SavePreferredFormat()
+                {
+                    Storage.Settings = Storage.Settings with { PreferredFormatIndex = PreferredFormat };
+                }
+            }
+        }
+        """;
+
+        // No diagnostics expected - modify-in-place read should be excluded from observation
+        // and NOT report RXBG031 (circular reference)
+        await MultiModelGeneratorVerifierWithDiagnostics.VerifyAsync(
+            [storageModel, test],
+            [],
+            ["StorageModel", "SettingsModel"]);
+    }
+
+    [Fact]
+    public async Task InternalModelObserver_DirectPropertyRead_StillDetectedAsObserver()
+    {
+        // This tests that normal property reads are still detected as observers
+        // Only modify-in-place patterns should be excluded
+
+        // lang=csharp
+        const string referencedModel = """
+        using RxBlazorV2.Model;
+
+        namespace Test;
+
+        public partial class CatalogModel : ObservableModel
+        {
+            public partial decimal Price { get; set; }
+        }
+        """;
+
+        // lang=csharp
+        const string test = """
+        using RxBlazorV2.Model;
+
+        namespace Test
+        {
+            public partial class CartModel : ObservableModel
+            {
+                public partial CartModel(CatalogModel catalog);
+
+                [ObservableTrigger(nameof(RecalculateTotal))]
+                public partial int Quantity { get; set; }
+
+                public partial decimal Total { get; set; }
+
+                // This method reads Catalog.Price to calculate total.
+                // It should be detected as an observer for Catalog.Price
+                // because the read is used for calculation, not modify-in-place.
+                private void RecalculateTotal()
+                {
+                    Total = Quantity * Catalog.Price;
+                }
+            }
+        }
+        """;
+
+        // No diagnostics expected - this should correctly detect Price as an observed property
+        // and generate the internal observer subscription (not a circular reference)
+        await MultiModelGeneratorVerifierWithDiagnostics.VerifyAsync(
+            [referencedModel, test],
+            [],
+            ["CatalogModel", "CartModel"]);
+    }
+
+    [Fact]
+    public async Task InternalModelObserver_CompoundAssignmentRead_NotDetectedAsObserver()
+    {
+        // This tests compound assignment patterns: X += value
+        // The implicit read of X should NOT make this method an observer
+
+        // lang=csharp
+        const string referencedModel = """
+        using RxBlazorV2.Model;
+
+        namespace Test;
+
+        public partial class CounterModel : ObservableModel
+        {
+            public partial int Value { get; set; }
+        }
+        """;
+
+        // lang=csharp
+        const string test = """
+        using RxBlazorV2.Model;
+
+        namespace Test
+        {
+            public partial class TestModel : ObservableModel
+            {
+                public partial TestModel(CounterModel counter);
+
+                [ObservableTrigger(nameof(IncrementCounter))]
+                public partial bool ShouldIncrement { get; set; }
+
+                // This uses compound assignment - the read is part of modify-in-place
+                private void IncrementCounter()
+                {
+                    if (ShouldIncrement)
+                    {
+                        Counter.Value += 1;
+                    }
+                }
+            }
+        }
+        """;
+
+        // No diagnostics expected - compound assignment reads should be excluded
+        await MultiModelGeneratorVerifierWithDiagnostics.VerifyAsync(
+            [referencedModel, test],
+            [],
+            ["CounterModel", "TestModel"]);
     }
 
     #endregion

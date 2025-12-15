@@ -19,6 +19,8 @@ public abstract class ObservableModel : IObservableModel
 
     public Observable<string[]> Observable { get; }
     public CompositeDisposable Subscriptions { get; }
+    public bool Initialized => _initialized && _initializedAsync;
+    
     protected internal Subject<string[]> PropertyChangedSubject { get; } = new();
 
     protected ObservableModel()

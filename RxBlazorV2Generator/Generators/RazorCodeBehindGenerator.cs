@@ -81,15 +81,14 @@ public static class RazorCodeBehindGenerator
                 }
             }
 
-            // Validate against SSOT filterable properties (already have "Model." prefix)
+            // All extracted properties are valid - this code only runs for ObservableComponent<T> razor files
+            // where Model is the typed model property, so any Model.X usage is a legitimate property access
+            // Try to match against FilterableProperties for normalization, otherwise use extracted directly
             var usedProperties = new HashSet<string>();
             foreach (var extractedProp in extractedProperties)
             {
                 var matchedProperty = FindMatchingValidProperty(extractedProp, component.FilterableProperties);
-                if (matchedProperty is not null)
-                {
-                    usedProperties.Add(matchedProperty);
-                }
+                usedProperties.Add(matchedProperty ?? $"Model.{extractedProp}");
             }
 
             // Add component trigger properties to filter for automatic re-rendering

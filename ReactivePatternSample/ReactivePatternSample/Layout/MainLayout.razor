@@ -15,58 +15,68 @@
 <MudSnackbarProvider /> 
 <MudPopoverProvider />
 
-<MudLayout>
-    @* AppBar with user badge *@
-    <MudAppBar Elevation="1">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu"
-                       Color="Color.Inherit"
-                       Edge="Edge.Start"
-                       OnClick="@ToggleDrawer" />
-
-        <MudText Typo="Typo.h6">Reactive Pattern Sample</MudText>
-
-        <MudSpacer />
-
-        @* Theme toggle button *@
-        <MudTooltip Text="@(Model.Settings.IsDay ? "Switch to dark mode" : "Switch to light mode")">
-            <MudIconButton Icon="@(Model.Settings.IsDay ? Icons.Material.Filled.DarkMode : Icons.Material.Filled.LightMode)"
+@if (!Model.Initialized)
+{
+    <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Class="mud-height-full" Style="min-height: 100vh;">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+        <MudText Typo="Typo.body1" Color="Color.Secondary">Loading...</MudText>
+    </MudStack>
+}
+else
+{
+    <MudLayout>
+        @* AppBar with user badge *@
+        <MudAppBar Elevation="1">
+            <MudIconButton Icon="@Icons.Material.Filled.Menu"
                            Color="Color.Inherit"
-                           OnClick="@(() => Model.Settings.ToggleThemeCommand.Execute())" />
-        </MudTooltip>
+                           Edge="Edge.Start"
+                           OnClick="@ToggleDrawer"/>
 
-        @* User badge from Auth domain *@
-        <UserBadge />
-    </MudAppBar>
+            <MudText Typo="Typo.h6">Reactive Pattern Sample</MudText>
 
-    @* Navigation drawer *@
-    <MudDrawer @bind-Open="@_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
-        <MudDrawerHeader>
-            <MudText Typo="Typo.h6">Navigation</MudText>
-        </MudDrawerHeader>
-        <MudNavMenu>
-            <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">
-                Home
-            </MudNavLink>
-            <MudNavLink Href="/todo" Icon="@Icons.Material.Filled.CheckBox">
-                Todo List
-            </MudNavLink>
-            <MudNavLink Href="/settings" Icon="@Icons.Material.Filled.Settings">
-                Settings
-            </MudNavLink>
-        </MudNavMenu>
-    </MudDrawer>
+            <MudSpacer/>
 
-    @* Main content *@
-    <MudMainContent>
-        <MudContainer MaxWidth="MaxWidth.Large" Class="py-4">
-            @Body
-        </MudContainer>
+            @* Theme toggle button *@
+            <MudTooltip Text="@(Model.Settings.IsDay ? "Switch to dark mode" : "Switch to light mode")">
+                <MudIconButton Icon="@(Model.Settings.IsDay ? Icons.Material.Filled.DarkMode : Icons.Material.Filled.LightMode)"
+                               Color="Color.Inherit"
+                               OnClick="@(() => Model.Settings.ToggleThemeCommand.Execute())"/>
+            </MudTooltip>
 
-        @* Status panel and bar from Status domain *@
-        <StatusPanel />
-        <StatusBar />
-    </MudMainContent>
-</MudLayout>
+            @* User badge from Auth domain *@
+            <UserBadge/>
+        </MudAppBar>
+
+        @* Navigation drawer *@
+        <MudDrawer @bind-Open="@_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
+            <MudDrawerHeader>
+                <MudText Typo="Typo.h6">Navigation</MudText>
+            </MudDrawerHeader>
+            <MudNavMenu>
+                <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">
+                    Home
+                </MudNavLink>
+                <MudNavLink Href="/todo" Icon="@Icons.Material.Filled.CheckBox">
+                    Todo List
+                </MudNavLink>
+                <MudNavLink Href="/settings" Icon="@Icons.Material.Filled.Settings">
+                    Settings
+                </MudNavLink>
+            </MudNavMenu>
+        </MudDrawer>
+
+        @* Main content *@
+        <MudMainContent>
+            <MudContainer MaxWidth="MaxWidth.Large" Class="py-4">
+                @Body
+            </MudContainer>
+
+            @* Status panel and bar from Status domain *@
+            <StatusPanel/>
+            <StatusBar/>
+        </MudMainContent>
+    </MudLayout>
+}
 
 @code {
     private bool _drawerOpen = true;
