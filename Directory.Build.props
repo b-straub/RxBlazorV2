@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
     <!-- Central version for all RxBlazorV2 packages -->
-    <RxBlazorV2Version>1.0.5</RxBlazorV2Version>
+    <RxBlazorV2Version>1.0.6</RxBlazorV2Version>
   </PropertyGroup>
 </Project>
