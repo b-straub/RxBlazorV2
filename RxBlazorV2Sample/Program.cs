@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using MudBlazor.Services;
 using RxBlazorV2Sample;
 using RxBlazorV2Sample.Samples.ModelObservers;
+using RxBlazorV2Sample.Samples.ServiceModelInteraction;
 using RxBlazorV2Sample.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -28,5 +29,8 @@ ObservableModels.GenericModelsModel<string, int>(builder.Services);
 
 // Register model observers sample service
 builder.Services.AddScoped<ModelObserversService>();
+
+// Register service-model interaction sample service
+builder.Services.AddScoped<ProcessingService>();
 
 await builder.Build().RunAsync();

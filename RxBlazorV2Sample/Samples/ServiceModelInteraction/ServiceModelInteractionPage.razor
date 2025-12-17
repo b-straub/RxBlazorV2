@@ -1,0 +1,120 @@
+@page "/samples/service-model-interaction"
+@using RxBlazorV2Sample.Samples.Helpers
+@inherits ResultsModelComponent
+
+<PageTitle>Service-Model Interaction</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Service-Model Interaction Pattern</MudText>
+
+<MudText Typo="Typo.body1" Class="mb-4">
+    Demonstrates the correct pattern for service-model interaction:
+    Property → Command → Service → Status → Other Model Reacts
+</MudText>
+
+<MudGrid>
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.h6" Color="Color.Primary">ProcessingModel</MudText>
+            <MudText Typo="Typo.body2" Class="mb-3">
+                Setting InputToProcess triggers the command automatically via [ObservableCommandTrigger].
+            </MudText>
+
+            <MudTextField @bind-Value="Model.ProcessingModel.InputToProcess"
+                          Label="Input to Process"
+                          Variant="Variant.Outlined"
+                          Class="mb-2" 
+                          Immediate="true"/>
+
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       OnClick="@(() => Model.ProcessingModel.ProcessInputCommand.Cancel())"
+                       Disabled="@(!Model.ProcessingModel.ProcessInputCommand.Executing)"
+                       StartIcon="@Icons.Material.Filled.Cancel"
+                       FullWidth="true">
+                Cancel
+            </MudButton>
+
+            @if (Model.ProcessingModel.ProcessInputCommand.Executing)
+            {
+                <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mt-2" />
+                <MudAlert Severity="@Severity.Warning"
+                          Class="mt-2">
+                    Command running ...
+                </MudAlert>
+            }
+            else if (Model.ProcessingModel.Status is not null)
+            {
+                <MudAlert Severity="@(Model.ProcessingModel.Status.Severity == ProcessingSeverity.Success ? Severity.Success : Severity.Error)"
+                          Class="mt-2">
+                    @Model.ProcessingModel.Status.Message
+                </MudAlert>
+            }
+
+            @if (Model.ProcessingModel.ProcessInputCommand.LastCancellationReason != CancellationReason.NONE)
+            {
+                <MudChip T="string" Color="Color.Warning" Class="mt-2">
+                    Last Cancellation: @Model.ProcessingModel.ProcessInputCommand.LastCancellationReason
+                </MudChip>
+            }
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.h6" Color="Color.Secondary">ResultsModel (Reacting)</MudText>
+            <MudText Typo="Typo.body2" Class="mb-3">
+                Internal observer auto-detects ProcessingModel.Status access and reacts.
+            </MudText>
+
+            <MudStack Row="true" Class="mb-2">
+                <MudChip T="string" Color="Color.Success">
+                    Success Reactions: @Model.SuccessReactionCount
+                </MudChip>
+                <MudChip T="string" Color="Color.Error">
+                    Error Reactions: @Model.ErrorReactionCount
+                </MudChip>
+            </MudStack>
+
+            <MudText Typo="Typo.body2" Class="mb-2">
+                <strong>Loaded Data:</strong> @Model.LoadedData
+            </MudText>
+
+            <MudText Typo="Typo.subtitle2" Class="mt-3">Reaction Messages:</MudText>
+            <MudList T="string" Dense="true">
+                @foreach (var message in Model.ReactionMessages.TakeLast(5))
+                {
+                    <MudListItem T="string">
+                        <MudText Typo="Typo.caption">@message</MudText>
+                    </MudListItem>
+                }
+            </MudList>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<MudDivider Class="my-4" />
+
+<MudText Typo="Typo.h6" Class="mb-2">Processed Items</MudText>
+<MudSimpleTable Dense="true" Hover="true">
+    <thead>
+        <tr>
+            <th>Time</th>
+            <th>Input</th>
+            <th>Result</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.ProcessingModel.ProcessedItems.TakeLast(5).Reverse())
+        {
+            <tr>
+                <td>@item.ProcessedAt.ToString("HH:mm:ss")</td>
+                <td>@item.Input</td>
+                <td>@item.Result</td>
+            </tr>
+        }
+    </tbody>
+</MudSimpleTable>
+
+<MudDivider Class="my-4" />
+
+<UsageWithLogging LogEntries="Model.ProcessingModel.LogEntries" Usage="ProcessingModel Flow Log" Class="mt-4" />

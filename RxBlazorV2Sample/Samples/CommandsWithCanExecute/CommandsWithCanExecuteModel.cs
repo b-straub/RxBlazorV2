@@ -5,7 +5,6 @@ using RxBlazorV2Sample.Samples.Helpers;
 namespace RxBlazorV2Sample.Samples.CommandsWithCanExecute;
 
 [ObservableComponent]
-
 [ObservableModelScope(ModelScope.Singleton)]
 public partial class CommandsWithCanExecuteModel : SampleBaseModel
 {

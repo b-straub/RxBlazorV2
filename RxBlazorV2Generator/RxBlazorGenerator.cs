@@ -215,108 +215,120 @@ public class RxBlazorGenerator : IIncrementalGenerator
                     }
 
                     // Report RXBG050 for unregistered services (with suppression for well-known external services)
-                    foreach (var (paramName, _, typeSymbol, location) in record!.UnregisteredServices)
+                    // Skip during design-time builds to avoid duplicate diagnostics
+                    if (!config.IsDesignTimeBuild)
                     {
-                        if (location is not null && typeSymbol is not null)
+                        foreach (var (paramName, _, typeSymbol, location) in record!.UnregisteredServices)
                         {
-                            // Check if this is a well-known external service that should be suppressed
-                            if (ExternalServiceHelper.ShouldSuppressUnregisteredServiceWarning(typeSymbol, compilation))
+                            if (location is not null && typeSymbol is not null)
                             {
-                                continue;
+                                // Check if this is a well-known external service that should be suppressed
+                                if (ExternalServiceHelper.ShouldSuppressUnregisteredServiceWarning(typeSymbol, compilation))
+                                {
+                                    continue;
+                                }
+
+                                var simpleTypeName = typeSymbol.Name;
+                                var isInterface = typeSymbol.TypeKind == TypeKind.Interface;
+                                var registrationExample = isInterface
+                                    ? $"'services.AddScoped<{simpleTypeName}, YourImplementation>()'"
+                                    : $"'services.AddScoped<{simpleTypeName}>()' or 'services.AddScoped<IYourInterface, {simpleTypeName}>()'";
+
+                                var properties = ImmutableDictionary.CreateRange(new[]
+                                {
+                                    new KeyValuePair<string, string?>("TypeName", typeSymbol.ToDisplayString()),
+                                    new KeyValuePair<string, string?>("ParameterName", paramName)
+                                });
+
+                                var diagnostic = Diagnostic.Create(
+                                    DiagnosticDescriptors.UnregisteredServiceWarning,
+                                    location,
+                                    properties,
+                                    paramName,
+                                    simpleTypeName,
+                                    registrationExample);
+                                spc.ReportDiagnostic(diagnostic);
                             }
-
-                            var simpleTypeName = typeSymbol.Name;
-                            var isInterface = typeSymbol.TypeKind == TypeKind.Interface;
-                            var registrationExample = isInterface
-                                ? $"'services.AddScoped<{simpleTypeName}, YourImplementation>()'"
-                                : $"'services.AddScoped<{simpleTypeName}>()' or 'services.AddScoped<IYourInterface, {simpleTypeName}>()'";
-
-                            var properties = ImmutableDictionary.CreateRange(new[]
-                            {
-                                new KeyValuePair<string, string?>("TypeName", typeSymbol.ToDisplayString()),
-                                new KeyValuePair<string, string?>("ParameterName", paramName)
-                            });
-
-                            var diagnostic = Diagnostic.Create(
-                                DiagnosticDescriptors.UnregisteredServiceWarning,
-                                location,
-                                properties,
-                                paramName,
-                                simpleTypeName,
-                                registrationExample);
-                            spc.ReportDiagnostic(diagnostic);
                         }
                     }
 
                     // Report RXBG082 for invalid internal observers (invalid signatures only)
                     // NOTE: RXBG031 (CircularTriggerReferenceError) for internal observers is now
                     // included in Verify() and reported by the analyzer for IDE code fix support
-                    foreach (var invalidObserver in record.InvalidInternalObservers)
+                    // Skip during design-time builds to avoid duplicate diagnostics
+                    if (!config.IsDesignTimeBuild)
                     {
-                        if (invalidObserver.Location is not null && !invalidObserver.IsCircularReference)
+                        foreach (var invalidObserver in record.InvalidInternalObservers)
                         {
-                            // Report RXBG082 for methods that access referenced model properties but have invalid signatures
-                            var propertiesDisplay = string.Join(", ", invalidObserver.AccessedProperties);
-                            var diagnostic = Diagnostic.Create(
-                                DiagnosticDescriptors.InternalModelObserverInvalidSignatureWarning,
-                                invalidObserver.Location,
-                                invalidObserver.MethodName,
-                                propertiesDisplay,
-                                invalidObserver.ModelReferenceName,
-                                invalidObserver.InvalidReason);
-                            spc.ReportDiagnostic(diagnostic);
+                            if (invalidObserver.Location is not null && !invalidObserver.IsCircularReference)
+                            {
+                                // Report RXBG082 for methods that access referenced model properties but have invalid signatures
+                                var propertiesDisplay = string.Join(", ", invalidObserver.AccessedProperties);
+                                var diagnostic = Diagnostic.Create(
+                                    DiagnosticDescriptors.InternalModelObserverInvalidSignatureWarning,
+                                    invalidObserver.Location,
+                                    invalidObserver.MethodName,
+                                    propertiesDisplay,
+                                    invalidObserver.ModelReferenceName,
+                                    invalidObserver.InvalidReason);
+                                spc.ReportDiagnostic(diagnostic);
+                            }
                         }
                     }
 
-                    // Report RXBG021 for DI scope violations
-                    // First, calculate the minimum required scope for ALL violations in this class
-                    var violatingFields = record.DiFieldsWithScope
-                        .Where(tuple => tuple.serviceScope is not null && tuple.location is not null &&
-                                        CheckScopeViolation(record.ModelInfo.ModelScope, tuple.serviceScope!) is not
-                                            null)
-                        .ToList();
-
-                    if (violatingFields.Any())
+                    // Report RXBG051 for DI scope violations
+                    // Skip during design-time builds to avoid duplicate diagnostics
+                    if (!config.IsDesignTimeBuild)
                     {
-                        var modelScope = record.ModelInfo.ModelScope;
+                        // First, calculate the minimum required scope for ALL violations in this class
+                        var violatingFields = record.DiFieldsWithScope
+                            .Where(tuple => tuple.serviceScope is not null && tuple.location is not null &&
+                                            CheckScopeViolation(record.ModelInfo.ModelScope, tuple.serviceScope!) is not
+                                                null)
+                            .ToList();
 
-                        // Calculate minimum required scope based on all service scopes
-                        var hasTransient = violatingFields.Any(f => f.serviceScope == "Transient");
-                        var hasScoped = violatingFields.Any(f => f.serviceScope == "Scoped");
+                        if (violatingFields.Any())
+                        {
+                            var modelScope = record.ModelInfo.ModelScope;
 
-                        string requiredScope;
-                        if (hasTransient)
-                        {
-                            requiredScope = "Transient";
-                        }
-                        else if (hasScoped)
-                        {
-                            requiredScope = "Scoped";
-                        }
-                        else
-                        {
-                            requiredScope = "Singleton";
-                        }
+                            // Calculate minimum required scope based on all service scopes
+                            var hasTransient = violatingFields.Any(f => f.serviceScope == "Transient");
+                            var hasScoped = violatingFields.Any(f => f.serviceScope == "Scoped");
 
-                        // Report diagnostic for each violating field, but include the overall required scope in properties
-                        foreach (var (diField, serviceScope, location) in violatingFields)
-                        {
-                            var properties = ImmutableDictionary.CreateRange(new[]
+                            string requiredScope;
+                            if (hasTransient)
                             {
-                                new KeyValuePair<string, string?>("RequiredScope", requiredScope),
-                                new KeyValuePair<string, string?>("ClassName", record.ModelInfo.ClassName)
-                            });
+                                requiredScope = "Transient";
+                            }
+                            else if (hasScoped)
+                            {
+                                requiredScope = "Scoped";
+                            }
+                            else
+                            {
+                                requiredScope = "Singleton";
+                            }
 
-                            var diagnostic = Diagnostic.Create(
-                                DiagnosticDescriptors.DiServiceScopeViolationError,
-                                location,
-                                properties,
-                                record.ModelInfo.ClassName,
-                                modelScope,
-                                diField.FieldName,
-                                diField.FieldType,
-                                serviceScope);
-                            spc.ReportDiagnostic(diagnostic);
+                            // Report diagnostic for each violating field, but include the overall required scope in properties
+                            foreach (var (diField, serviceScope, location) in violatingFields)
+                            {
+                                var properties = ImmutableDictionary.CreateRange(new[]
+                                {
+                                    new KeyValuePair<string, string?>("RequiredScope", requiredScope),
+                                    new KeyValuePair<string, string?>("ClassName", record.ModelInfo.ClassName)
+                                });
+
+                                var diagnostic = Diagnostic.Create(
+                                    DiagnosticDescriptors.DiServiceScopeViolationError,
+                                    location,
+                                    properties,
+                                    record.ModelInfo.ClassName,
+                                    modelScope,
+                                    diField.FieldName,
+                                    diField.FieldType,
+                                    serviceScope);
+                                spc.ReportDiagnostic(diagnostic);
+                            }
                         }
                     }
                 }

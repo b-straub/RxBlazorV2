@@ -7,10 +7,12 @@ This document provides comprehensive guidance for implementing reactive patterns
 1. [Core Concepts](#core-concepts)
 2. [Quick Reference: Pattern Decision Matrix](#quick-reference-pattern-decision-matrix)
 3. [Pattern Catalog](#pattern-catalog)
-4. [Domain Architecture Patterns](#domain-architecture-patterns)
-5. [Multi-Assembly Considerations](#multi-assembly-considerations)
-6. [Anti-Patterns](#anti-patterns)
-7. [Diagnostic Reference](#diagnostic-reference)
+4. [File Organization Best Practices](#file-organization-best-practices)
+5. [Model Lifecycle](#model-lifecycle)
+6. [Domain Architecture Patterns](#domain-architecture-patterns)
+7. [Multi-Assembly Considerations](#multi-assembly-considerations)
+8. [Anti-Patterns](#anti-patterns)
+9. [Diagnostic Reference](#diagnostic-reference)
 
 ---
 
@@ -274,12 +276,15 @@ private bool CanSearch() => SearchText.Length >= 3;
 **Cross-Model Command Trigger:**
 ```csharp
 // Trigger command when referenced model's property changes
+// Use string with dot notation (nameof doesn't work for paths)
 [ObservableCommand(nameof(RefreshAsync))]
-[ObservableCommandTrigger(nameof(Settings.IsDay))]
+[ObservableCommandTrigger("Settings.IsDay")]
 public partial IObservableCommandAsync RefreshCommand { get; }
 
 public partial ModelName(SettingsModel settings);
 ```
+
+**Limitation:** Only ONE level of nesting is supported. Deep paths like `"PrfModel.InviteModel.Property"` don't work. Solution: Inject the model directly or use the Service-Model Interaction pattern (Section 9).
 
 **Cancellation Strategies:**
 
@@ -513,6 +518,308 @@ public void OnAppearanceChanged(UserModel model)
 | `void Method(Model model)` | Sync observer |
 | `Task Method(Model model)` | Async observer |
 | `Task Method(Model model, CancellationToken ct)` | Async with cancellation |
+
+---
+
+### 9. Service-Model Interaction Pattern
+
+**Purpose:** When a model needs to call an external service and other models need to react to completion.
+
+**The Correct Pattern:**
+```
+Property changes → [ObservableCommandTrigger] Command executes →
+Service called → Status property set → Other model's internal observer reacts
+```
+
+**Example - ProcessingModel (calls service):**
+```csharp
+[ObservableModelScope(ModelScope.Scoped)]
+public partial class ProcessingModel : ObservableModel
+{
+    public partial ProcessingModel(ProcessingService processingService);
+
+    /// <summary>
+    /// Input that triggers processing when set.
+    /// </summary>
+    public partial string? InputToProcess { get; set; }
+
+    /// <summary>
+    /// Status message - THIS IS THE COMPLETION SIGNAL.
+    /// Other models observe this to know when processing completes.
+    /// </summary>
+    public partial ProcessingStatus? Status { get; set; }
+
+    /// <summary>
+    /// Command auto-triggered when InputToProcess changes.
+    /// </summary>
+    [ObservableCommand(nameof(ProcessAsync))]
+    [ObservableCommandTrigger(nameof(InputToProcess))]
+    public partial IObservableCommandAsync ProcessCommand { get; }
+
+    private async Task ProcessAsync(CancellationToken ct)
+    {
+        try
+        {
+            var result = await ProcessingService.DoWorkAsync(InputToProcess!, ct);
+            Status = new ProcessingStatus(result, Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Status = new ProcessingStatus(ex.Message, Severity.Error);
+        }
+    }
+}
+```
+
+**Example - ResultsModel (reacts to completion):**
+```csharp
+[ObservableModelScope(ModelScope.Scoped)]
+public partial class ResultsModel : ObservableModel
+{
+    public partial ResultsModel(ProcessingModel processingModel);
+
+    /// <summary>
+    /// Internal observer - AUTO-DETECTED because it accesses ProcessingModel.Status.
+    /// Called automatically when Status changes.
+    /// </summary>
+    private void OnProcessingCompleted()
+    {
+        if (ProcessingModel.Status?.Severity == Severity.Success)
+        {
+            // React to successful completion, e.g., reload data
+            _ = LoadDataCommand.ExecuteAsync();
+        }
+    }
+}
+```
+
+**Key Points:**
+- Model owns the command, not an external service
+- Service is injected into model and called from command method
+- Status property carries semantic meaning (success/error)
+- Other models use internal observers (auto-detected) to react
+- NO toggle properties, NO callbacks, NO external observer orchestration
+
+**When to use External Observers (`[ObservableModelObserver]`):**
+External observers are for **fire-and-forget side effects** only:
+- Persistence (save to storage)
+- Logging/analytics
+- External notifications
+
+They should NOT orchestrate workflows or call back to models.
+
+---
+
+## File Organization Best Practices
+
+For larger models with many properties, commands, triggers, and observers, split the partial class across multiple files. This improves readability and maintainability.
+
+### Recommended File Structure
+
+```
+Models/
+├── MyModel.cs              # Properties, constructor, attributes
+├── MyModel.Commands.cs     # Command properties and implementations
+├── MyModel.Triggers.cs     # Trigger method implementations
+├── MyModel.Observers.cs    # Internal observer methods
+└── MyModel.Methods.cs      # Public API methods
+```
+
+### Example: TodoListModel Organization
+
+**TodoListModel.cs** - Properties and constructor:
+```csharp
+/// <summary>
+/// Todo list domain model - manages todo items.
+///
+/// File organization:
+/// - TodoListModel.cs: Constructor and properties
+/// - TodoListModel.Commands.cs: Commands with their implementations
+/// - TodoListModel.Observers.cs: Internal observer methods
+/// - TodoListModel.Methods.cs: Public API methods
+/// </summary>
+[ObservableComponent]
+[ObservableModelScope(ModelScope.Singleton)]
+public partial class TodoListModel : ObservableModel
+{
+    public partial TodoListModel(StorageModel storage, AuthModel auth, StatusModel status);
+
+    [ObservableComponentTrigger]
+    public partial ObservableList<TodoItem> UserItems { get; init; } = [];
+
+    public partial string NewItemTitle { get; set; } = string.Empty;
+    public partial int CompletedCount { get; set; }
+    public partial int PendingCount { get; set; }
+}
+```
+
+**TodoListModel.Commands.cs** - Commands:
+```csharp
+public partial class TodoListModel
+{
+    [ObservableCommand(nameof(AddItem), nameof(CanAddItem))]
+    public partial IObservableCommand AddCommand { get; }
+
+    [ObservableCommand(nameof(ClearCompletedAsync))]
+    public partial IObservableCommandAsync ClearCompletedCommand { get; }
+
+    private bool CanAddItem() =>
+        Auth.IsAuthenticated && !string.IsNullOrWhiteSpace(NewItemTitle);
+
+    private void AddItem()
+    {
+        // Implementation
+    }
+
+    private async Task ClearCompletedAsync(CancellationToken ct)
+    {
+        // Implementation
+    }
+}
+```
+
+**TodoListModel.Observers.cs** - Internal observers:
+```csharp
+public partial class TodoListModel
+{
+    /// <summary>
+    /// Internal observer - auto-detected because it accesses Auth.CurrentUser.
+    /// </summary>
+    private void RefreshItems()
+    {
+        UserItems.Clear();
+        if (Auth.CurrentUser is null)
+        {
+            return;
+        }
+        // Load items for user
+    }
+}
+```
+
+**TodoListModel.Methods.cs** - Public API:
+```csharp
+public partial class TodoListModel
+{
+    public void ToggleItem(Guid itemId)
+    {
+        // Implementation
+    }
+
+    public void RemoveItem(Guid itemId)
+    {
+        // Implementation
+    }
+}
+```
+
+### When to Split Files
+
+| Criteria | Single File | Multiple Files |
+|----------|-------------|----------------|
+| Properties | < 5 | ≥ 5 |
+| Commands | < 2 | ≥ 2 |
+| Has internal observers | No | Yes |
+| Has public API methods | No | Yes |
+| Total lines | < 100 | > 100 |
+
+---
+
+## Model Lifecycle
+
+### OnContextReady / OnContextReadyAsync
+
+Override these methods for initialization logic that runs after all DI dependencies are injected:
+
+```csharp
+[ObservableModelScope(ModelScope.Singleton)]
+public partial class StorageModel : ObservableModel
+{
+    /// <summary>
+    /// Sync initialization - runs first.
+    /// </summary>
+    protected override void OnContextReady()
+    {
+        SeedDemoData();
+    }
+
+    /// <summary>
+    /// Async initialization - runs after OnContextReady.
+    /// </summary>
+    protected override async Task OnContextReadyAsync()
+    {
+        var data = await LoadPersistedDataAsync();
+        // Apply data
+    }
+}
+```
+
+**Key Points:**
+- `OnContextReady()` is called synchronously first
+- `OnContextReadyAsync()` is called after, awaiting completion
+- Referenced models' lifecycle methods run before dependent models
+- Use for: seed data, loading persisted state, initial subscriptions
+
+### SuspendNotifications Pattern
+
+When making multiple property changes that should fire as a single notification:
+
+```csharp
+protected override async Task OnContextReadyAsync()
+{
+    // SuspendNotifications batches all changes into ONE notification
+    using (SuspendNotifications())
+    {
+        var (items, settings) = await LoadPersistedDataAsync();
+
+        if (settings is not null)
+        {
+            Settings = settings;  // No notification yet
+        }
+
+        if (items is { Count: > 0 })
+        {
+            Items.AddRange(items);  // No notification yet
+        }
+    }
+    // Single notification fires here when disposed
+}
+```
+
+**Use cases:**
+- Loading multiple properties from storage
+- Resetting form fields
+- Bulk updates that shouldn't trigger observers multiple times
+
+### UI-less ObservableModel (Backend Models)
+
+Models without `[ObservableComponent]` attribute are used for backend/data concerns:
+
+```csharp
+/// <summary>
+/// Storage domain - UI-less in-memory database.
+/// No [ObservableComponent] = no generated component base class.
+/// </summary>
+[ObservableModelScope(ModelScope.Singleton)]
+public partial class StorageModel : ObservableModel
+{
+    public partial StorageModel(StoragePersistenceObserver persistenceObserver);
+
+    public partial ObservableList<TodoItem> Items { get; init; } = [];
+    public partial ObservableList<User> Users { get; init; } = [];
+    public partial AppSettings Settings { get; set; } = new();
+
+    // CRUD methods
+    public void AddItem(TodoItem item) { /* ... */ }
+    public bool RemoveItem(Guid id) { /* ... */ }
+}
+```
+
+**When to use UI-less models:**
+- Data/repository layer
+- Shared state without direct UI binding
+- Backend services that other models observe
+- Models used only via injection, not components
 
 ---
 
@@ -948,7 +1255,78 @@ public partial string Name { get; set; }
 // In Razor: <input @bind="Model.Name" />
 ```
 
-### 6. Missing Partial Modifier (RXBG072)
+### 6. Dummy Property Access for Observer Detection
+
+```csharp
+// WRONG - external observer orchestrating workflow with callback
+[ObservableModelObserver(nameof(InviteModel.LastInviteVerified))]
+public async Task HandleInviteVerifiedAsync(InviteModel model, CancellationToken ct)
+{
+    var success = await _persistence.SaveAsync(...);
+    model.NotifyContactsModified();  // Callback anti-pattern!
+}
+
+// WRONG - toggle property as notification signal
+public void NotifyContactsModified()
+{
+    ContactsModifiedVersion = !ContactsModifiedVersion;  // Meaningless toggle!
+}
+
+// CORRECT - Model command owns workflow, sets Status
+[ObservableCommand(nameof(ProcessVerificationAsync))]
+[ObservableCommandTrigger(nameof(LastInviteVerified))]
+public partial IObservableCommandAsync ProcessVerificationCommand { get; }
+
+private async Task ProcessVerificationAsync(CancellationToken ct)
+{
+    var success = await _persistence.SaveAsync(LastInviteVerified, ct);
+    Status = success
+        ? new StatusMessage("Contact saved!", Severity.Success)
+        : new StatusMessage("Save failed", Severity.Error);
+}
+
+// CORRECT - Other model observes Status (auto-detected)
+private void OnInviteStatusChanged()
+{
+    if (InviteModel.Status?.Severity == Severity.Success)
+    {
+        _ = LoadContacts.ExecuteAsync();
+    }
+}
+```
+
+**Solution:** Use the Service-Model Interaction pattern (Section 9). Model commands own workflows, Status property signals completion, other models observe Status.
+
+### 7. Manual StateHasChanged Calls
+
+```csharp
+// WRONG - bypassing reactive system
+private void UpdateData()
+{
+    _data = LoadData();
+    StateHasChanged(); // Anti-pattern!
+}
+
+// CORRECT - use partial property, UI updates automatically
+public partial Data? CurrentData { get; set; }
+
+private void UpdateData()
+{
+    CurrentData = LoadData(); // Triggers StateHasChanged via generator
+}
+```
+
+**Manual `StateHasChanged()` almost always indicates:**
+- Property isn't partial (not observable)
+- Missing `[ObservableComponentTrigger]` for component hooks
+- Working around broken reactive flow
+- Field used instead of property
+
+**Audit rule:** Any `StateHasChanged()` call in user code should be investigated. The reactive framework should handle all UI updates through property changes.
+
+---
+
+### 8. Missing Partial Modifier (RXBG072)
 
 ```csharp
 // WRONG - missing partial

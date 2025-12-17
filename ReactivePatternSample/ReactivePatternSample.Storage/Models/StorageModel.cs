@@ -34,7 +34,7 @@ public partial class StorageModel : ObservableModel
     /// Reactive collection of todo items.
     /// Changes to this collection are automatically propagated to observers.
     /// </summary>
-    [ObservableTrigger("UpdateCounts")]
+    [ObservableTrigger(nameof(UpdateCounts))]
     public partial ObservableList<TodoItem> Items { get; init; } = [];
 
     /// <summary>
