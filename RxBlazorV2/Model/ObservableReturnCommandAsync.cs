@@ -77,6 +77,10 @@ public class ObservableCommandRAsyncCancelableFactory<T>(
 
         ResetCancellationToken(_externalCancellationToken);
         _externalCancellationToken = null;
+        if (Executing)
+        {
+            LastCancellationReason = CancellationReason.SWITCH;
+        }
         Executing = true;
 
         // If this is the first command in suspension, bypass suspension for immediate UI feedback
@@ -102,13 +106,25 @@ public class ObservableCommandRAsyncCancelableFactory<T>(
         {
             _model.AbortCurrentSuspension();
         }
+        catch (OperationCanceledException)
+        {
+            _model.AbortCurrentSuspension();
+        }
         catch (Exception e)
         {
             SetError(e);
         }
         finally
         {
-            Executing = false;
+            // For SWITCH cancellations, don't clear Executing - new command is starting
+            if (LastCancellationReason != CancellationReason.SWITCH)
+            {
+                Executing = false;
+            }
+            else
+            {
+                LastCancellationReason = CancellationReason.NONE;
+            }
             _model.StateHasChanged(_observedProperties);
         }
 
@@ -193,6 +209,10 @@ public class ObservableCommandRAsyncCancelableFactory<T1, T2>(
 
         ResetCancellationToken(_externalCancellationToken);
         _externalCancellationToken = null;
+        if (Executing)
+        {
+            LastCancellationReason = CancellationReason.SWITCH;
+        }
         Executing = true;
 
         // If this is the first command in suspension, bypass suspension for immediate UI feedback
@@ -218,13 +238,25 @@ public class ObservableCommandRAsyncCancelableFactory<T1, T2>(
         {
             _model.AbortCurrentSuspension();
         }
+        catch (OperationCanceledException)
+        {
+            _model.AbortCurrentSuspension();
+        }
         catch (Exception e)
         {
             SetError(e);
         }
         finally
         {
-            Executing = false;
+            // For SWITCH cancellations, don't clear Executing - new command is starting
+            if (LastCancellationReason != CancellationReason.SWITCH)
+            {
+                Executing = false;
+            }
+            else
+            {
+                LastCancellationReason = CancellationReason.NONE;
+            }
             _model.StateHasChanged(_observedProperties);
         }
 

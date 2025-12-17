@@ -245,4 +245,85 @@ public class ObservableCommandCancellationTests
         Assert.Equal(3, model.Value);
         _output.WriteLine("Multiple executions work correctly with token reset");
     }
+
+    /// <summary>
+    /// Verifies TaskCanceledException is caught (thrown by Task.Delay with token).
+    /// </summary>
+    [Fact]
+    public async Task CancelableCommand_TaskCanceledException_IsCaught()
+    {
+        // Arrange
+        var model = new TestCommandModel();
+
+        using var subscription = model.Observable.Subscribe(_ =>
+        {
+            if (model.CancelableCommand.Executing)
+            {
+                _output.WriteLine("Cancelling command (will throw TaskCanceledException from Task.Delay)");
+                model.CancelableCommand.Cancel();
+            }
+        });
+
+        // Act - Task.Delay throws TaskCanceledException
+        await model.CancelableCommand.ExecuteAsync();
+
+        // Assert
+        Assert.Equal(0, model.ExecuteCount);
+        Assert.False(model.CancelableCommand.Executing);
+        Assert.Null(model.CancelableCommand.Error); // Cancellation is not an error
+        _output.WriteLine("TaskCanceledException was properly caught");
+    }
+
+    /// <summary>
+    /// Verifies OperationCanceledException is caught (thrown by ThrowIfCancellationRequested).
+    /// </summary>
+    [Fact]
+    public async Task CancelableCommand_OperationCanceledException_IsCaught()
+    {
+        // Arrange
+        var model = new TestCommandModel();
+
+        using var subscription = model.Observable.Subscribe(_ =>
+        {
+            if (model.CancelableCommandWithThrowIfRequested.Executing)
+            {
+                _output.WriteLine("Cancelling command (will throw OperationCanceledException from ThrowIfCancellationRequested)");
+                model.CancelableCommandWithThrowIfRequested.Cancel();
+            }
+        });
+
+        // Act - ThrowIfCancellationRequested throws OperationCanceledException
+        await model.CancelableCommandWithThrowIfRequested.ExecuteAsync();
+
+        // Assert
+        Assert.Equal(0, model.ExecuteCount);
+        Assert.False(model.CancelableCommandWithThrowIfRequested.Executing);
+        Assert.Null(model.CancelableCommandWithThrowIfRequested.Error); // Cancellation is not an error
+        _output.WriteLine("OperationCanceledException was properly caught");
+    }
+
+    /// <summary>
+    /// Verifies LastCancellationReason is set to EXPLICIT when Cancel() is called.
+    /// </summary>
+    [Fact]
+    public async Task CancelableCommand_Cancel_SetsExplicitCancellationReason()
+    {
+        // Arrange
+        var model = new TestCommandModel();
+
+        using var subscription = model.Observable.Subscribe(_ =>
+        {
+            if (model.CancelableCommand.Executing)
+            {
+                model.CancelableCommand.Cancel();
+            }
+        });
+
+        // Act
+        await model.CancelableCommand.ExecuteAsync();
+
+        // Assert
+        Assert.Equal(CancellationReason.EXPLICIT, model.CancelableCommand.LastCancellationReason);
+        _output.WriteLine($"LastCancellationReason: {model.CancelableCommand.LastCancellationReason}");
+    }
 }

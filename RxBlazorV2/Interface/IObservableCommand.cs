@@ -1,18 +1,44 @@
 namespace RxBlazorV2.Interface;
 
+/// <summary>
+/// Reason for command cancellation.
+/// </summary>
+public enum CancellationReason
+{
+    /// <summary>
+    /// No cancellation occurred.
+    /// </summary>
+    NONE,
+
+    /// <summary>
+    /// Cancelled explicitly via Cancel() method.
+    /// </summary>
+    EXPLICIT,
+
+    /// <summary>
+    /// Cancelled implicitly by Switch operation (new trigger fired).
+    /// </summary>
+    SWITCH
+}
+
 public interface IObservableCommandBase
 {
     public bool CanExecute { get; }
-    
+
     public Exception? Error { get; }
-    
+
     public void ResetError();
 }
 
 public interface IObservableCommandAsyncBase : IObservableCommandBase
 {
     public bool Executing { get; }
-    
+
+    /// <summary>
+    /// Reason for the last cancellation. Reset to NONE when command starts.
+    /// </summary>
+    public CancellationReason LastCancellationReason { get; }
+
     public void Cancel();
 }
 

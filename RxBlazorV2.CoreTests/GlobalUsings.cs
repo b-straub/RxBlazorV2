@@ -6,3 +6,4 @@ global using System.Threading.Tasks;
 global using Xunit;
 global using Xunit.Sdk;
 global using R3;
+global using RxBlazorV2.Interface;

@@ -26,6 +26,12 @@ public partial class TestCommandModel : ObservableModel
     [ObservableCommand(nameof(ExecuteAsyncCancelableWithParam), nameof(CanExecute))]
     public partial IObservableCommandAsync<int> CancelableAsyncCommandWithParam { get; }
 
+    /// <summary>
+    /// Command that throws OperationCanceledException via ThrowIfCancellationRequested.
+    /// </summary>
+    [ObservableCommand(nameof(ExecuteAsyncWithThrowIfCancellationRequested), nameof(CanExecute))]
+    public partial IObservableCommandAsync CancelableCommandWithThrowIfRequested { get; }
+
     public int ExecuteCount { get; private set; }
     public int LastParameter { get; private set; }
     public bool ThrowException { get; set; }
@@ -100,6 +106,19 @@ public partial class TestCommandModel : ObservableModel
         ExecuteCount++;
         LastParameter = param;
         Value += param;
+    }
+
+    /// <summary>
+    /// Uses ThrowIfCancellationRequested which throws OperationCanceledException (not TaskCanceledException).
+    /// </summary>
+    private async Task ExecuteAsyncWithThrowIfCancellationRequested(CancellationToken token)
+    {
+        // First await without token to start execution
+        await Task.Delay(50, CancellationToken.None);
+        // Then check cancellation - throws OperationCanceledException
+        token.ThrowIfCancellationRequested();
+        ExecuteCount++;
+        Value++;
     }
 
     public void TriggerStateChanged(string propertyName)

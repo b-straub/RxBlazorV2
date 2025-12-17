@@ -7,11 +7,18 @@ public class ObservableCommandAsyncBase(ObservableModel model, string[] observed
 {
     public virtual bool Executing { get; protected set; }
 
+    /// <summary>
+    /// Reason for the last cancellation.
+    /// </summary>
+    public CancellationReason LastCancellationReason { get; protected set; }
+
     protected CancellationToken? CancellationToken => _cancellationTokenSource?.Token;
     private CancellationTokenSource? _cancellationTokenSource;
-
+  
     protected void ResetCancellationToken(CancellationToken? externalToken)
     {
+        LastCancellationReason = CancellationReason.NONE;
+
         if (_cancellationTokenSource is null || !_cancellationTokenSource.TryReset())
         {
             _cancellationTokenSource = externalToken is not null ? CancellationTokenSource.CreateLinkedTokenSource(externalToken.Value) : new();
@@ -21,6 +28,7 @@ public class ObservableCommandAsyncBase(ObservableModel model, string[] observed
     public virtual void Cancel()
     {
         ArgumentNullException.ThrowIfNull(_cancellationTokenSource);
+        LastCancellationReason = CancellationReason.EXPLICIT;
         _cancellationTokenSource.Cancel();
     }
 }
@@ -96,6 +104,10 @@ public class ObservableCommandAsyncCancelableFactory(
 
         ResetCancellationToken(_externalCancellationToken);
         _externalCancellationToken = null;
+        if (Executing)
+        {
+            LastCancellationReason = CancellationReason.SWITCH;
+        }
         Executing = true;
 
         // If this is the first command in suspension, bypass suspension for immediate UI feedback
@@ -121,13 +133,25 @@ public class ObservableCommandAsyncCancelableFactory(
         {
             _model.AbortCurrentSuspension();
         }
+        catch (OperationCanceledException)
+        {
+            _model.AbortCurrentSuspension();
+        }
         catch (Exception e)
         {
             SetError(e);
         }
         finally
         {
-            Executing = false;
+            // For SWITCH cancellations, don't clear Executing - new command is starting
+            if (LastCancellationReason != CancellationReason.SWITCH)
+            {
+                Executing = false;
+            }
+            else
+            {
+                LastCancellationReason = CancellationReason.NONE;
+            }
             _model.StateHasChanged(_observedProperties);
         }
     }
@@ -206,6 +230,10 @@ public class ObservableCommandAsyncCancelableFactory<T>(
 
         ResetCancellationToken(_externalCancellationToken);
         _externalCancellationToken = null;
+        if (Executing)
+        {
+            LastCancellationReason = CancellationReason.SWITCH;
+        }
         Executing = true;
 
         // If this is the first command in suspension, bypass suspension for immediate UI feedback
@@ -231,13 +259,25 @@ public class ObservableCommandAsyncCancelableFactory<T>(
         {
             _model.AbortCurrentSuspension();
         }
+        catch (OperationCanceledException)
+        {
+            _model.AbortCurrentSuspension();
+        }
         catch (Exception e)
         {
             SetError(e);
         }
         finally
         {
-            Executing = false;
+            // For SWITCH cancellations, don't clear Executing - new command is starting
+            if (LastCancellationReason != CancellationReason.SWITCH)
+            {
+                Executing = false;
+            }
+            else
+            {
+                LastCancellationReason = CancellationReason.NONE;
+            }
             _model.StateHasChanged(_observedProperties);
         }
     }
