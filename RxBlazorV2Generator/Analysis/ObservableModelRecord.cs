@@ -1,4 +1,5 @@
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Diagnostics;
 using RxBlazorV2Generator.Extensions;
@@ -123,8 +124,11 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
             var (partialProperties, partialPropertyDiagnostics) = classDecl.ExtractPartialPropertiesWithDiagnostics(semanticModel);
             var (commandProperties, commandPropertiesDiagnostics) = classDecl.ExtractCommandPropertiesWithDiagnostics(methods, semanticModel);
 
+            // Extract non-partial IObservableCollection properties (getter-only)
+            var observableCollectionProperties = classDecl.ExtractObservableCollectionProperties(semanticModel);
+
             // Extract model references, DI fields, and model observers from partial constructor parameters
-            var (modelReferences, diFields, unregisteredServices, diFieldsWithScope, modelObservers, modelObserverDiagnostics) = classDecl.ExtractPartialConstructorDependencies(semanticModel, serviceClasses, namedTypeSymbol);
+            var (modelReferences, diFields, unregisteredServices, diFieldsWithScope, modelObservers, modelObserverDiagnostics, errorModelFieldName) = classDecl.ExtractPartialConstructorDependencies(semanticModel, serviceClasses, namedTypeSymbol);
 
             // Extract additional DI fields from private field declarations
             var additionalDIFields = classDecl.ExtractDIFields(semanticModel, serviceClasses);
@@ -275,7 +279,9 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                     constructorAccessibility,
                     classAccessibility,
                     modelObservers,
-                    internalModelObservers),
+                    internalModelObservers,
+                    errorModelFieldName,
+                    observableCollectionProperties),
                 diagnostics,
                 shouldGenerateCode);
 
@@ -413,6 +419,15 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                 allCommandPropertyDiagnostics.AddRange(cmdDiags);
             }
 
+            // Extract non-partial IObservableCollection properties from all declarations
+            var allObservableCollectionProperties = new List<ObservableCollectionPropertyInfo>();
+            foreach (var decl in classDeclarations)
+            {
+                var declSemanticModel = compilation.GetSemanticModel(decl.SyntaxTree);
+                var obsProps = decl.ExtractObservableCollectionProperties(declSemanticModel);
+                allObservableCollectionProperties.AddRange(obsProps);
+            }
+
             // Extract model references, DI fields, and model observers from partial constructor parameters
             // Only the primary declaration (with base type) should have the constructor
             var modelReferences = new List<ModelReferenceInfo>();
@@ -421,11 +436,12 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
             var diFieldsWithScope = new List<(DIFieldInfo diField, string? serviceScope, Location? location)>();
             var modelObservers = new List<ModelObserverInfo>();
             var modelObserverDiagnostics = new List<Diagnostic>();
+            string? errorModelFieldName = null;
 
             foreach (var decl in classDeclarations)
             {
                 var declSemanticModel = compilation.GetSemanticModel(decl.SyntaxTree);
-                var (refs, fields, unreg, fieldsScope, observers, observerDiags) =
+                var (refs, fields, unreg, fieldsScope, observers, observerDiags, errorField) =
                     decl.ExtractPartialConstructorDependencies(declSemanticModel, serviceClasses, namedTypeSymbol);
                 modelReferences.AddRange(refs);
                 diFields.AddRange(fields);
@@ -433,6 +449,9 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                 diFieldsWithScope.AddRange(fieldsScope);
                 modelObservers.AddRange(observers);
                 modelObserverDiagnostics.AddRange(observerDiags);
+
+                // Capture the first error model field name found
+                errorModelFieldName ??= errorField;
 
                 // Extract additional DI fields from private field declarations
                 var additionalDIFields = decl.ExtractDIFields(declSemanticModel, serviceClasses);
@@ -613,7 +632,9 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                     constructorAccessibility,
                     classAccessibility,
                     modelObservers,
-                    allInternalModelObservers),
+                    allInternalModelObservers,
+                    errorModelFieldName,
+                    allObservableCollectionProperties),
                 diagnostics,
                 shouldGenerateCode);
 
@@ -779,7 +800,10 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
         }
 
         // Extract component trigger properties with custom hook names, trigger behaviors, and locations
+        // We need to check both the symbol (for non-partial properties) and syntax tree (for partial properties)
         var componentTriggers = new Dictionary<string, (bool hasSync, string? syncHookName, int syncBehavior, bool hasAsync, string? asyncHookName, int asyncBehavior, Location location)>();
+
+        // First, check the symbol for non-partial property triggers
         foreach (var member in namedTypeSymbol.GetMembers())
         {
             if (member is IPropertySymbol propertySymbol)
@@ -845,6 +869,119 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                 }
             }
         }
+
+        // For partial properties, the attributes may not be visible through the symbol.
+        // Check the syntax tree for partial properties with component trigger attributes.
+        foreach (var syntaxRef in namedTypeSymbol.DeclaringSyntaxReferences)
+        {
+            if (syntaxRef.GetSyntax() is not ClassDeclarationSyntax classDecl)
+            {
+                continue;
+            }
+
+            foreach (var member in classDecl.Members.OfType<PropertyDeclarationSyntax>())
+            {
+                // Check if this is a partial property
+                if (!member.Modifiers.Any(SyntaxKind.PartialKeyword))
+                {
+                    continue;
+                }
+
+                var propertyName = member.Identifier.ValueText;
+
+                // Skip if we already found triggers via the symbol
+                if (componentTriggers.ContainsKey(propertyName))
+                {
+                    continue;
+                }
+
+                var hasSyncTrigger = false;
+                string? syncHookName = null;
+                var syncTriggerBehavior = 0;
+                var hasAsyncTrigger = false;
+                string? asyncHookName = null;
+                var asyncTriggerBehavior = 0;
+                Location? attributeLocation = null;
+
+                // Check attributes from the syntax tree
+                foreach (var attrList in member.AttributeLists)
+                {
+                    foreach (var attr in attrList.Attributes)
+                    {
+                        var attrName = attr.Name.ToString();
+
+                        // Handle both short and fully qualified attribute names
+                        if (attrName.EndsWith("ObservableComponentTrigger") || attrName.EndsWith("ObservableComponentTriggerAttribute"))
+                        {
+                            hasSyncTrigger = true;
+                            attributeLocation ??= attr.GetLocation();
+
+                            // Extract arguments from syntax
+                            if (attr.ArgumentList?.Arguments.Count > 0)
+                            {
+                                var firstArg = attr.ArgumentList.Arguments[0];
+                                // Try to parse ComponentTriggerType enum value
+                                var argText = firstArg.Expression.ToString();
+                                if (argText.Contains("RenderOnly") || argText.EndsWith("1"))
+                                {
+                                    syncTriggerBehavior = 1;
+                                }
+                                else if (argText.Contains("HookOnly") || argText.EndsWith("2"))
+                                {
+                                    syncTriggerBehavior = 2;
+                                }
+                            }
+                            if (attr.ArgumentList?.Arguments.Count > 1)
+                            {
+                                var secondArg = attr.ArgumentList.Arguments[1];
+                                var hookName = secondArg.Expression.ToString().Trim('"');
+                                if (!string.IsNullOrWhiteSpace(hookName))
+                                {
+                                    syncHookName = hookName;
+                                }
+                            }
+                        }
+                        // Handle both short and fully qualified attribute names
+                        else if (attrName.EndsWith("ObservableComponentTriggerAsync") || attrName.EndsWith("ObservableComponentTriggerAsyncAttribute"))
+                        {
+                            hasAsyncTrigger = true;
+                            attributeLocation ??= attr.GetLocation();
+
+                            // Extract arguments from syntax
+                            if (attr.ArgumentList?.Arguments.Count > 0)
+                            {
+                                var firstArg = attr.ArgumentList.Arguments[0];
+                                var argText = firstArg.Expression.ToString();
+                                if (argText.Contains("RenderOnly") || argText.EndsWith("1"))
+                                {
+                                    asyncTriggerBehavior = 1;
+                                }
+                                else if (argText.Contains("HookOnly") || argText.EndsWith("2"))
+                                {
+                                    asyncTriggerBehavior = 2;
+                                }
+                            }
+                            if (attr.ArgumentList?.Arguments.Count > 1)
+                            {
+                                var secondArg = attr.ArgumentList.Arguments[1];
+                                var hookName = secondArg.Expression.ToString().Trim('"');
+                                if (!string.IsNullOrWhiteSpace(hookName))
+                                {
+                                    asyncHookName = hookName;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (hasSyncTrigger || hasAsyncTrigger)
+                {
+                    var location = attributeLocation ?? member.Identifier.GetLocation();
+                    componentTriggers[propertyName] = (hasSyncTrigger, syncHookName, syncTriggerBehavior, hasAsyncTrigger, asyncHookName, asyncTriggerBehavior, location);
+                }
+            }
+        }
+
         record.ComponentTriggerProperties = componentTriggers;
     }
 
@@ -1082,17 +1219,17 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
             }
         }
 
-        // Add property trigger canTrigger methods only (NOT execute methods)
-        // Execute methods can still be internal observers for REFERENCED model properties
-        // since property triggers handle LOCAL changes and internal observers handle REFERENCED changes
+        // Add property trigger canTrigger methods (NOT execute methods)
+        // Execute methods CAN be both local triggers AND internal observers:
+        // - Local trigger: fires when local property changes
+        // - Internal observer: fires when referenced model property changes (READ access)
+        // Write access (assignments, mutating method calls like .Add()) are automatically
+        // excluded from observation detection in FindAccessedModelProperties()
         foreach (var prop in partialProperties)
         {
             foreach (var trigger in prop.Triggers)
             {
-                // Don't exclude execute methods - they can be both triggers AND internal observers
-                // A method like RecalculateTotal() can be triggered by local property changes
-                // AND also observe referenced model property changes
-
+                // Only exclude canTrigger methods - these are guard conditions, not handlers
                 if (trigger.CanTriggerMethod is { Length: > 0 } propCanTriggerMethod)
                 {
                     excludedMethods.Add(propCanTriggerMethod);

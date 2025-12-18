@@ -57,6 +57,10 @@ public partial class CounterModel : ObservableModel
     {
         await Task.Delay(200);
         Counter1++;
+        if (Counter1 > 20)
+        {
+            throw new InvalidOperationException("Counter 1 is extremely high");
+        }
     }
     
     private void AddCount2(int value)
@@ -91,17 +95,17 @@ public partial class CounterModel : ObservableModel
     {
         if (Counter1 > 5)
         {
-            ErrorModel.Message = "Counter 1 is to high";
+            ErrorModel.Errors.Add("Counter 1 is to high");
         }
     }
-    
+
     private async Task HighErrorAsync(CancellationToken token)
     {
         await Task.Delay(1000, token);
-        
+
         if (Counter1 > 10)
         {
-            ErrorModel.Message = "Counter 1 is extremely high";
+            ErrorModel.Errors.Add("Counter 1 is extremely high");
         }
     }
 

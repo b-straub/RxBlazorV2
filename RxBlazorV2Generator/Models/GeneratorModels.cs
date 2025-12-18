@@ -51,13 +51,26 @@ public class ObservableModelInfo
 
     public List<InternalModelObserverInfo> InternalModelObservers { get; }
 
+    /// <summary>
+    /// The field name of the injected IErrorModel, or null if not injected.
+    /// When an IErrorModel is injected, command errors are automatically delegated to it.
+    /// </summary>
+    public string? ErrorModelFieldName { get; }
+
+    /// <summary>
+    /// Non-partial IObservableCollection properties that are reactive through collection observation.
+    /// These are getter-only properties like: public ObservableList&lt;string&gt; Errors { get; }
+    /// </summary>
+    public List<ObservableCollectionPropertyInfo> ObservableCollectionProperties { get; }
+
     public ObservableModelInfo(string namespaceName, string className, string fullyQualifiedName,
         List<PartialPropertyInfo> partialProperties, List<CommandPropertyInfo> commandProperties,
         Dictionary<string, MethodDeclarationSyntax> methods, List<ModelReferenceInfo> modelReferences,
         string modelScope = "Singleton", List<DIFieldInfo>? diFields = null, List<string>? implementedInterfaces = null,
         string? genericTypes = null, string? typeConstrains = null, List<string>? usingStatements = null,
         string? baseModelTypeName = null, string constructorAccessibility = "public", string classAccessibility = "public",
-        List<ModelObserverInfo>? modelObservers = null, List<InternalModelObserverInfo>? internalModelObservers = null)
+        List<ModelObserverInfo>? modelObservers = null, List<InternalModelObserverInfo>? internalModelObservers = null,
+        string? errorModelFieldName = null, List<ObservableCollectionPropertyInfo>? observableCollectionProperties = null)
     {
         Namespace = namespaceName;
         ClassName = className;
@@ -77,6 +90,8 @@ public class ObservableModelInfo
         ClassAccessibility = classAccessibility;
         ModelObservers = modelObservers ?? [];
         InternalModelObservers = internalModelObservers ?? [];
+        ErrorModelFieldName = errorModelFieldName;
+        ObservableCollectionProperties = observableCollectionProperties ?? [];
     }
 }
 
@@ -103,6 +118,27 @@ public class PartialPropertyInfo
         HasInitAccessor = hasInitAccessor;
         Accessibility = accessibility;
         Triggers = triggers ?? [];
+    }
+}
+
+/// <summary>
+/// Information about a non-partial IObservableCollection property.
+/// These are getter-only properties that are reactive through collection observation.
+/// Example: public ObservableList&lt;string&gt; Errors { get; }
+/// </summary>
+public class ObservableCollectionPropertyInfo
+{
+    public string Name { get; }
+    public string Type { get; }
+    public string[]? BatchIds { get; }
+    public string Accessibility { get; }
+
+    public ObservableCollectionPropertyInfo(string name, string type, string[]? batchIds = null, string accessibility = "public")
+    {
+        Name = name;
+        Type = type;
+        BatchIds = batchIds;
+        Accessibility = accessibility;
     }
 }
 

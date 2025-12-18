@@ -18,7 +18,10 @@ public static class ConstructorTemplate
     public static string GenerateConstructor(ObservableModelInfo modelInfo,
         Func<ObservableModelInfo, CommandPropertyInfo, IEnumerable<string>> getObservedProperties)
     {
-        var hasObservableCollections = modelInfo.PartialProperties.Any(p => p.IsObservableCollection);
+        // Check for any observable collections (both partial and non-partial)
+        var hasPartialObservableCollections = modelInfo.PartialProperties.Any(p => p.IsObservableCollection);
+        var hasNonPartialObservableCollections = modelInfo.ObservableCollectionProperties.Any();
+        var hasObservableCollections = hasPartialObservableCollections || hasNonPartialObservableCollections;
         var hasPropertyTriggers = modelInfo.PartialProperties.Any(p => p.Triggers.Any());
 
         if (modelInfo.ModelReferences.Any() || modelInfo.DIFields.Any() || hasObservableCollections)
@@ -185,16 +188,26 @@ public static class ConstructorTemplate
 
     /// <summary>
     /// Generates observable collection initializations.
+    /// Handles both partial IObservableCollection properties and non-partial getter-only IObservableCollection properties.
     /// </summary>
     private static string GenerateObservableCollectionInitializations(ObservableModelInfo modelInfo)
     {
         var sb = new StringBuilder();
-        var observableCollectionProperties = modelInfo.PartialProperties.Where(p => p.IsObservableCollection).ToList();
 
-        if (observableCollectionProperties.Any())
+        // Partial IObservableCollection properties (with init accessor)
+        var partialObservableCollectionProperties = modelInfo.PartialProperties.Where(p => p.IsObservableCollection).ToList();
+
+        // Non-partial getter-only IObservableCollection properties
+        var nonPartialObservableCollectionProperties = modelInfo.ObservableCollectionProperties;
+
+        var hasAny = partialObservableCollectionProperties.Any() || nonPartialObservableCollectionProperties.Any();
+
+        if (hasAny)
         {
             sb.AppendLine("        // Initialize IObservableCollection properties");
-            foreach (var prop in observableCollectionProperties)
+
+            // Handle partial properties
+            foreach (var prop in partialObservableCollectionProperties)
             {
                 var batchIdsParam = "";
                 if (prop.BatchIds is not null && prop.BatchIds.Length > 0)
@@ -206,10 +219,22 @@ public static class ConstructorTemplate
                 sb.AppendLine($"        {prop.Name} = new();");
                 sb.AppendLine($"        Subscriptions.Add({prop.Name}.ObserveChanged()");
                 sb.AppendLine($"            .Subscribe(_ => StateHasChanged(\"Model.{prop.Name}\"{batchIdsParam})));");
-                if (prop != observableCollectionProperties.Last())
+                sb.AppendLine();
+            }
+
+            // Handle non-partial getter-only properties
+            foreach (var prop in nonPartialObservableCollectionProperties)
+            {
+                var batchIdsParam = "";
+                if (prop.BatchIds is not null && prop.BatchIds.Length > 0)
                 {
-                    sb.AppendLine();
+                    var quotedBatchIds = string.Join(", ", prop.BatchIds.Select(id => $"\"{id}\""));
+                    batchIdsParam = $", {quotedBatchIds}";
                 }
+
+                sb.AppendLine($"        Subscriptions.Add({prop.Name}.ObserveChanged()");
+                sb.AppendLine($"            .Subscribe(_ => StateHasChanged(\"Model.{prop.Name}\"{batchIdsParam})));");
+                sb.AppendLine();
             }
         }
 

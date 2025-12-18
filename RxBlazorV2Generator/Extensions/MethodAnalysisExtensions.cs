@@ -381,6 +381,7 @@ public static class MethodAnalysisExtensions
     /// 2. Compound assignments: X += value
     /// 3. Increment/decrement: X++, ++X
     /// 4. Modify-in-place reads: X = X with {...}, X = X + value (read is part of self-assignment)
+    /// 5. Mutating method calls: X.Add(), X.Remove(), X.Clear(), etc. (collection mutations)
     /// </summary>
     private static bool ShouldExcludeFromObservation(MemberAccessExpressionSyntax memberAccess)
     {
@@ -412,6 +413,66 @@ public static class MethodAnalysisExtensions
         if (IsModifyInPlaceRead(memberAccess))
         {
             return true;
+        }
+
+        // Mutating method calls: ErrorModel.Errors.Add(...), list.Remove(...), etc.
+        // Pattern: {Model}.{Property}.{MutatingMethod}(...)
+        // The access to {Model}.{Property} is a write, not a read
+        if (IsMutatingMethodCall(memberAccess))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Known method names that mutate collections/objects.
+    /// These are common mutating methods on ICollection, IList, ObservableList, etc.
+    /// </summary>
+    private static readonly HashSet<string> MutatingMethodNames =
+    [
+        // ICollection<T> / IList<T>
+        "Add",
+        "AddRange",
+        "Remove",
+        "RemoveAt",
+        "RemoveAll",
+        "RemoveRange",
+        "Clear",
+        "Insert",
+        "InsertRange",
+        // ObservableCollections specific
+        "Move",
+        "ReplaceRange",
+        "Reset",
+        // Dictionary
+        "TryAdd",
+        // Stack/Queue
+        "Push",
+        "Pop",
+        "Enqueue",
+        "Dequeue",
+        // General setters
+        "Set",
+        "SetValue",
+        "Update"
+    ];
+
+    /// <summary>
+    /// Checks if the member access is part of a mutating method call.
+    /// Pattern: {Expression}.{Property}.{MutatingMethod}(...)
+    /// Example: ErrorModel.Errors.Add("message")
+    /// </summary>
+    private static bool IsMutatingMethodCall(MemberAccessExpressionSyntax memberAccess)
+    {
+        // Check if parent is another MemberAccessExpression (the method name)
+        // and grandparent is InvocationExpression
+        if (memberAccess.Parent is MemberAccessExpressionSyntax methodAccess &&
+            methodAccess.Parent is InvocationExpressionSyntax)
+        {
+            var methodName = methodAccess.Name.Identifier.ValueText;
+            return MutatingMethodNames.Contains(methodName);
         }
 
         return false;

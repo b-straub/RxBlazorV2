@@ -124,7 +124,7 @@ public static class TypeSymbolExtensions
             // For interfaces, check if it inherits from IObservableModel
             if (typeSymbol.Name == "IObservableModel")
                 return true;
-                
+
             foreach (var interfaceType in typeSymbol.Interfaces)
             {
                 if (interfaceType.Name == "IObservableModel" || interfaceType.InheritsFromIObservableModel())
@@ -140,7 +140,26 @@ public static class TypeSymbolExtensions
                     return true;
             }
         }
-        
+
+        return false;
+    }
+
+    /// <summary>
+    /// Checks if the type implements IErrorModel interface (directly or through inheritance).
+    /// IErrorModel is used for centralized command error handling.
+    /// </summary>
+    public static bool ImplementsIErrorModel(this INamedTypeSymbol typeSymbol)
+    {
+        // Check all implemented interfaces for IErrorModel
+        foreach (var interfaceType in typeSymbol.AllInterfaces)
+        {
+            if (interfaceType.Name == "IErrorModel" &&
+                interfaceType.ContainingNamespace?.ToDisplayString() == "RxBlazorV2.Interface")
+            {
+                return true;
+            }
+        }
+
         return false;
     }
     

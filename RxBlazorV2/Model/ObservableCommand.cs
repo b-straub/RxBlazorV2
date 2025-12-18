@@ -3,7 +3,7 @@ using RxBlazorV2.Interface;
 
 namespace RxBlazorV2.Model;
 
-public class ObservableCommandBase(ObservableModel model, string[] observedProperties)
+public class ObservableCommandBase(ObservableModel model, string[] observedProperties, IErrorModel? errorModel = null)
     : Observable<string[]>, IObservableCommandBase
 {
     public virtual bool CanExecute => true;
@@ -16,7 +16,16 @@ public class ObservableCommandBase(ObservableModel model, string[] observedPrope
 
     protected void SetError(Exception? exception = null)
     {
-        Error = exception;
+        if (exception is not null && errorModel is not null)
+        {
+            // Delegate error to error model and reset command error
+            errorModel.HandleError(exception);
+            Error = null;
+        }
+        else
+        {
+            Error = exception;
+        }
     }
 
     protected override IDisposable SubscribeCore(Observer<string[]> observer)
@@ -27,8 +36,8 @@ public class ObservableCommandBase(ObservableModel model, string[] observedPrope
     }
 }
 
-public abstract class ObservableCommand(ObservableModel model, string[] observedProperties)
-    : ObservableCommandBase(model, observedProperties), IObservableCommand
+public abstract class ObservableCommand(ObservableModel model, string[] observedProperties, IErrorModel? errorModel = null)
+    : ObservableCommandBase(model, observedProperties, errorModel), IObservableCommand
 {
     public abstract void Execute();
 }
@@ -37,8 +46,9 @@ public class ObservableCommandFactory(
     ObservableModel model,
     string[] observedProperties,
     Action execute,
-    Func<bool>? canExecute = null) :
-    ObservableCommand(model, observedProperties)
+    Func<bool>? canExecute = null,
+    IErrorModel? errorModel = null) :
+    ObservableCommand(model, observedProperties, errorModel)
 {
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;
@@ -61,8 +71,8 @@ public class ObservableCommandFactory(
     public override bool CanExecute => canExecute?.Invoke() ?? true;
 }
 
-public abstract class ObservableCommand<T>(ObservableModel model, string[] observedProperties)
-    : ObservableCommandBase(model, observedProperties), IObservableCommand<T>
+public abstract class ObservableCommand<T>(ObservableModel model, string[] observedProperties, IErrorModel? errorModel = null)
+    : ObservableCommandBase(model, observedProperties, errorModel), IObservableCommand<T>
 {
     public abstract void Execute(T parameter);
 }
@@ -71,8 +81,9 @@ public class ObservableCommandFactory<T>(
     ObservableModel model,
     string[] observedProperties,
     Action<T> execute,
-    Func<bool>? canExecute = null) :
-    ObservableCommand<T>(model, observedProperties)
+    Func<bool>? canExecute = null,
+    IErrorModel? errorModel = null) :
+    ObservableCommand<T>(model, observedProperties, errorModel)
 {
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;

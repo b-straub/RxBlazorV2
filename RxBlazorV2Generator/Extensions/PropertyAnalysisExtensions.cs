@@ -104,6 +104,63 @@ public static class PropertyAnalysisExtensions
         return properties;
     }
 
+    /// <summary>
+    /// Extracts non-partial getter-only IObservableCollection properties.
+    /// These are reactive through collection observation, not property setter.
+    /// Example: public ObservableList&lt;string&gt; Errors { get; }
+    /// </summary>
+    public static List<ObservableCollectionPropertyInfo> ExtractObservableCollectionProperties(
+        this ClassDeclarationSyntax classDecl,
+        SemanticModel semanticModel)
+    {
+        var properties = new List<ObservableCollectionPropertyInfo>();
+
+        foreach (var member in classDecl.Members.OfType<PropertyDeclarationSyntax>())
+        {
+            // Skip partial properties - they are handled separately
+            if (member.Modifiers.Any(SyntaxKind.PartialKeyword))
+            {
+                continue;
+            }
+
+            // Must have only getter (no set/init)
+            var hasGetter = member.AccessorList?.Accessors.Any(a => a.IsKind(SyntaxKind.GetAccessorDeclaration)) == true;
+            var hasSetter = member.AccessorList?.Accessors.Any(a => a.IsKind(SyntaxKind.SetAccessorDeclaration)) == true;
+            var hasInit = member.AccessorList?.Accessors.Any(a => a.IsKind(SyntaxKind.InitAccessorDeclaration)) == true;
+
+            if (!hasGetter || hasSetter || hasInit)
+            {
+                continue;
+            }
+
+            // Check if it's an IObservableCollection type
+            if (!member.IsObservableCollectionProperty(semanticModel))
+            {
+                continue;
+            }
+
+            // Extract accessibility modifier
+            var accessibility = member.Modifiers
+                .Where(m => m.IsKind(SyntaxKind.PublicKeyword) ||
+                            m.IsKind(SyntaxKind.PrivateKeyword) ||
+                            m.IsKind(SyntaxKind.ProtectedKeyword) ||
+                            m.IsKind(SyntaxKind.InternalKeyword))
+                .Select(m => m.ValueText)
+                .FirstOrDefault() ?? "public";
+
+            // Extract batch IDs if any
+            var batchIds = member.GetObservableBatchIds(semanticModel);
+
+            properties.Add(new ObservableCollectionPropertyInfo(
+                member.Identifier.ValueText,
+                member.Type!.ToString(),
+                batchIds,
+                accessibility));
+        }
+
+        return properties;
+    }
+
     private static PropertyTriggerInfo? ExtractTriggerInfo(
         AttributeSyntax triggerAttr,
         PropertyDeclarationSyntax member,

@@ -13,9 +13,9 @@ public static class ConstructorAnalysisExtensions
     /// <summary>
     /// Extracts model references and DI fields from partial constructor parameters.
     /// Parameters that are ObservableModels become ModelReferenceInfo, others become DIFieldInfo.
-    /// Returns unregistered services, scope information, model observers, and diagnostics.
+    /// Returns unregistered services, scope information, model observers, error model field name, and diagnostics.
     /// </summary>
-    public static (List<ModelReferenceInfo> modelReferences, List<DIFieldInfo> diFields, List<(string parameterName, string parameterType, ITypeSymbol? typeSymbol, Location? location)> unregisteredServices, List<(DIFieldInfo diField, string? serviceScope, Location? location)> diFieldsWithScope, List<ModelObserverInfo> modelObservers, List<Diagnostic> modelObserverDiagnostics) ExtractPartialConstructorDependencies(
+    public static (List<ModelReferenceInfo> modelReferences, List<DIFieldInfo> diFields, List<(string parameterName, string parameterType, ITypeSymbol? typeSymbol, Location? location)> unregisteredServices, List<(DIFieldInfo diField, string? serviceScope, Location? location)> diFieldsWithScope, List<ModelObserverInfo> modelObservers, List<Diagnostic> modelObserverDiagnostics, string? errorModelFieldName) ExtractPartialConstructorDependencies(
         this ClassDeclarationSyntax classDecl,
         SemanticModel semanticModel,
         ServiceInfoList? serviceClasses = null,
@@ -27,6 +27,7 @@ public static class ConstructorAnalysisExtensions
         var diFieldsWithScope = new List<(DIFieldInfo diField, string? serviceScope, Location? location)>();
         var modelObservers = new List<ModelObserverInfo>();
         var modelObserverDiagnostics = new List<Diagnostic>();
+        string? errorModelFieldName = null;
 
         // Find all partial constructors
         var partialConstructors = classDecl.Members
@@ -36,7 +37,7 @@ public static class ConstructorAnalysisExtensions
 
         if (!partialConstructors.Any())
         {
-            return (modelReferences, diFields, unregisteredServices, diFieldsWithScope, modelObservers, modelObserverDiagnostics);
+            return (modelReferences, diFields, unregisteredServices, diFieldsWithScope, modelObservers, modelObserverDiagnostics, errorModelFieldName);
         }
 
         // Use the first partial constructor (there should only be one)
@@ -81,6 +82,13 @@ public static class ConstructorAnalysisExtensions
                     baseTypeName,
                     namedType));
 
+                // Check if this ObservableModel also implements IErrorModel
+                // If so, store the field name for command error delegation
+                if (namedType.ImplementsIErrorModel())
+                {
+                    errorModelFieldName = propertyName;
+                }
+
                 // Also track scope for ObservableModel dependencies (for scope violation checking)
                 var diField = new DIFieldInfo(propertyName, parameterTypeName);
                 var serviceScope = GetServiceScope(parameterTypeName, serviceClasses, namedType);
@@ -88,23 +96,51 @@ public static class ConstructorAnalysisExtensions
             }
             else if (parameterType is INamedTypeSymbol namedTypeSymbol && namedTypeSymbol.InheritsFromIObservableModel())
             {
-                // This is an IObservableModel interface - analyze usage to determine which properties are accessed
-                var usedProperties = classDecl.AnalyzeModelReferenceUsage(namedTypeSymbol);
+                // Check if this is specifically IErrorModel
+                if (namedTypeSymbol.Name == "IErrorModel" &&
+                    namedTypeSymbol.ContainingNamespace?.ToDisplayString() == "RxBlazorV2.Interface")
+                {
+                    // This is an IErrorModel - store the field name for error delegation
+                    errorModelFieldName = propertyName;
 
-                modelReferences.Add(new ModelReferenceInfo(
-                    parameterTypeName,
-                    namedTypeSymbol.ContainingNamespace.ToDisplayString(),
-                    propertyName,
-                    usedProperties,
-                    parameter.Type?.GetLocation(),
-                    false,
-                    null,
-                    namedTypeSymbol));
+                    // Also add it as a model reference for proper subscription handling
+                    var usedProperties = classDecl.AnalyzeModelReferenceUsage(namedTypeSymbol);
 
-                // Also track scope for IObservableModel dependencies (for scope violation checking)
-                var diField = new DIFieldInfo(propertyName, parameterTypeName);
-                var serviceScope = GetServiceScope(parameterTypeName, serviceClasses, namedTypeSymbol);
-                diFieldsWithScope.Add((diField, serviceScope, parameter.Type?.GetLocation()));
+                    modelReferences.Add(new ModelReferenceInfo(
+                        parameterTypeName,
+                        namedTypeSymbol.ContainingNamespace.ToDisplayString(),
+                        propertyName,
+                        usedProperties,
+                        parameter.Type?.GetLocation(),
+                        false,
+                        null,
+                        namedTypeSymbol));
+
+                    // Also track scope for IErrorModel dependencies (for scope violation checking)
+                    var diField = new DIFieldInfo(propertyName, parameterTypeName);
+                    var serviceScope = GetServiceScope(parameterTypeName, serviceClasses, namedTypeSymbol);
+                    diFieldsWithScope.Add((diField, serviceScope, parameter.Type?.GetLocation()));
+                }
+                else
+                {
+                    // This is an IObservableModel interface - analyze usage to determine which properties are accessed
+                    var usedProperties = classDecl.AnalyzeModelReferenceUsage(namedTypeSymbol);
+
+                    modelReferences.Add(new ModelReferenceInfo(
+                        parameterTypeName,
+                        namedTypeSymbol.ContainingNamespace?.ToDisplayString() ?? string.Empty,
+                        propertyName,
+                        usedProperties,
+                        parameter.Type?.GetLocation(),
+                        false,
+                        null,
+                        namedTypeSymbol));
+
+                    // Also track scope for IObservableModel dependencies (for scope violation checking)
+                    var diField = new DIFieldInfo(propertyName, parameterTypeName);
+                    var serviceScope = GetServiceScope(parameterTypeName, serviceClasses, namedTypeSymbol);
+                    diFieldsWithScope.Add((diField, serviceScope, parameter.Type?.GetLocation()));
+                }
             }
             else
             {
@@ -138,7 +174,7 @@ public static class ConstructorAnalysisExtensions
             }
         }
 
-        return (modelReferences, diFields, unregisteredServices, diFieldsWithScope, modelObservers, modelObserverDiagnostics);
+        return (modelReferences, diFields, unregisteredServices, diFieldsWithScope, modelObservers, modelObserverDiagnostics, errorModelFieldName);
     }
 
     /// <summary>

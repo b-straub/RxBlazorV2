@@ -1,12 +1,12 @@
 @using MudBlazor
 @inherits ErrorModelComponent
 
-@if (Model.Message.Length > 0)
+@if (Model.Errors.Count > 0)
 {
     <MudStack Row="true" AlignItems="AlignItems.Center">
         <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error"></MudIcon>
-        <MudText>Last error: @Model.Message</MudText>
-        @if (Model.Message.Length > 0)
+        <MudText>Last error: @Model.Errors.Last()</MudText>
+        @if (Model.Errors.Count > 0)
         {
             <MudIconButton Icon="@Icons.Material.Filled.Clear" @onclick="ClearError" Color="Color.Inherit" />
         }
@@ -20,19 +20,22 @@
 
     private string? _lastMessage;
 
-    protected override void OnMessageChanged()
+    protected override void OnErrorsChanged()
     {
         if (_lastMessage is not null)
         {
             Snackbar.RemoveByKey(_lastMessage);
         }
 
-        Snackbar.Add(Model.Message, Severity.Error);
-        _lastMessage = Model.Message;
+        if (Model.Errors.Count > 0)
+        {
+            Snackbar.Add(Model.Errors.Last(), Severity.Error);
+            _lastMessage = Model.Errors.Last();
+        }
     }
     
     private void ClearError()
     {
-        Model.Message = string.Empty;
+        Model.Errors.Clear();
     }
 }

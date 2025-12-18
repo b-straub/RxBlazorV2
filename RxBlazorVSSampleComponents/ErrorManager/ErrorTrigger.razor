@@ -22,6 +22,6 @@ else
     
     private void SetError()
     {
-        Model.Message = !string.IsNullOrEmpty(Error) ? Error : $"The error {Random.Shared.Next()} has occurred.";
+        Model.Errors.Add(!string.IsNullOrEmpty(Error) ? Error : $"The error {Random.Shared.Next()} has occurred.");
     }
 }

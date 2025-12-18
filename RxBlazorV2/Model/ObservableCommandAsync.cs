@@ -2,8 +2,8 @@ using RxBlazorV2.Interface;
 
 namespace RxBlazorV2.Model;
 
-public class ObservableCommandAsyncBase(ObservableModel model, string[] observedProperties)
-    : ObservableCommandBase(model, observedProperties), IObservableCommandAsyncBase
+public class ObservableCommandAsyncBase(ObservableModel model, string[] observedProperties, IErrorModel? errorModel = null)
+    : ObservableCommandBase(model, observedProperties, errorModel), IObservableCommandAsyncBase
 {
     public virtual bool Executing { get; protected set; }
 
@@ -33,8 +33,8 @@ public class ObservableCommandAsyncBase(ObservableModel model, string[] observed
     }
 }
 
-public abstract class ObservableCommandAsync(ObservableModel model, string[] observedProperties)
-    : ObservableCommandAsyncBase(model, observedProperties), IObservableCommandAsync
+public abstract class ObservableCommandAsync(ObservableModel model, string[] observedProperties, IErrorModel? errorModel = null)
+    : ObservableCommandAsyncBase(model, observedProperties, errorModel), IObservableCommandAsync
 {
     public abstract Task ExecuteAsync(CancellationToken? externalCancellationToken);
     public abstract Task ExecuteAsync();
@@ -44,8 +44,9 @@ public class ObservableCommandAsyncFactory(
     ObservableModel model,
     string[] observedProperties,
     Func<Task> execute,
-    Func<bool>? canExecute = null) :
-    ObservableCommandAsync(model, observedProperties)
+    Func<bool>? canExecute = null,
+    IErrorModel? errorModel = null) :
+    ObservableCommandAsync(model, observedProperties, errorModel)
 {
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;
@@ -81,8 +82,9 @@ public class ObservableCommandAsyncCancelableFactory(
     ObservableModel model,
     string[] observedProperties,
     Func<CancellationToken, Task> execute,
-    Func<bool>? canExecute = null) :
-    ObservableCommandAsync(model, observedProperties)
+    Func<bool>? canExecute = null,
+    IErrorModel? errorModel = null) :
+    ObservableCommandAsync(model, observedProperties, errorModel)
 {
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;
@@ -159,8 +161,8 @@ public class ObservableCommandAsyncCancelableFactory(
     public override bool CanExecute => canExecute?.Invoke() ?? true;
 }
 
-public abstract class ObservableCommandAsync<T>(ObservableModel model, string[] observedProperties)
-    : ObservableCommandAsyncBase(model, observedProperties), IObservableCommandAsync<T>
+public abstract class ObservableCommandAsync<T>(ObservableModel model, string[] observedProperties, IErrorModel? errorModel = null)
+    : ObservableCommandAsyncBase(model, observedProperties, errorModel), IObservableCommandAsync<T>
 {
     public abstract Task ExecuteAsync(T parameter, CancellationToken? externalCancellationToken);
     public abstract Task ExecuteAsync(T parameter);
@@ -170,8 +172,9 @@ public class ObservableCommandAsyncFactory<T>(
     ObservableModel model,
     string[] observedProperties,
     Func<T, Task> execute,
-    Func<bool>? canExecute = null) :
-    ObservableCommandAsync<T>(model, observedProperties)
+    Func<bool>? canExecute = null,
+    IErrorModel? errorModel = null) :
+    ObservableCommandAsync<T>(model, observedProperties, errorModel)
 {
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;
@@ -207,8 +210,9 @@ public class ObservableCommandAsyncCancelableFactory<T>(
     ObservableModel model,
     string[] observedProperties,
     Func<T, CancellationToken, Task> execute,
-    Func<bool>? canExecute = null) :
-    ObservableCommandAsync<T>(model, observedProperties)
+    Func<bool>? canExecute = null,
+    IErrorModel? errorModel = null) :
+    ObservableCommandAsync<T>(model, observedProperties, errorModel)
 {
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;
