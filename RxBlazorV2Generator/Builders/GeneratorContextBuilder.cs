@@ -621,10 +621,12 @@ public static class GeneratorContextBuilder
         }
 
         // Analyze each parameter
+        var parameterIndex = 0;
         foreach (var parameter in constructor.Parameters)
         {
             if (parameter.Type is not INamedTypeSymbol paramType)
             {
+                parameterIndex++;
                 continue;
             }
 
@@ -647,8 +649,11 @@ public static class GeneratorContextBuilder
                     null,
                     isDerivedModel,
                     baseTypeName,
-                    paramType));
+                    paramType,
+                    parameterIndex));
             }
+
+            parameterIndex++;
         }
 
         return modelReferences;

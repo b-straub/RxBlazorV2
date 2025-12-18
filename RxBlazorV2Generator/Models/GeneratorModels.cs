@@ -195,6 +195,7 @@ public class ModelReferenceInfo : IEquatable<ModelReferenceInfo>
     public bool IsDerivedModel { get; }
     public string? BaseObservableModelType { get; }
     public ITypeSymbol? TypeSymbol { get; }
+    public int OriginalIndex { get; }
 
     public ModelReferenceInfo(
         string referencedModelTypeName,
@@ -204,7 +205,8 @@ public class ModelReferenceInfo : IEquatable<ModelReferenceInfo>
         Location? attributeLocation = null,
         bool isDerivedModel = false,
         string? baseObservableModelType = null,
-        ITypeSymbol? typeSymbol = null)
+        ITypeSymbol? typeSymbol = null,
+        int originalIndex = 0)
     {
         ReferencedModelTypeName = referencedModelTypeName;
         ReferencedModelNamespace = referencedModelNamespace;
@@ -214,6 +216,7 @@ public class ModelReferenceInfo : IEquatable<ModelReferenceInfo>
         IsDerivedModel = isDerivedModel;
         BaseObservableModelType = baseObservableModelType;
         TypeSymbol = typeSymbol;
+        OriginalIndex = originalIndex;
     }
 
     public bool Equals(ModelReferenceInfo? other)
@@ -234,7 +237,8 @@ public class ModelReferenceInfo : IEquatable<ModelReferenceInfo>
                PropertyName == other.PropertyName &&
                UsedPropertiesEqual(other.UsedProperties) &&
                IsDerivedModel == other.IsDerivedModel &&
-               BaseObservableModelType == other.BaseObservableModelType;
+               BaseObservableModelType == other.BaseObservableModelType &&
+               OriginalIndex == other.OriginalIndex;
     }
 
     private bool UsedPropertiesEqual(List<string> other)
@@ -274,6 +278,7 @@ public class ModelReferenceInfo : IEquatable<ModelReferenceInfo>
 
         hash.Add(IsDerivedModel);
         hash.Add(BaseObservableModelType);
+        hash.Add(OriginalIndex);
 
         return hash.ToHashCode();
     }
@@ -284,12 +289,14 @@ public class DIFieldInfo : IEquatable<DIFieldInfo>
     public string FieldName { get; }
     public string FieldType { get; }
     public bool HasModelObservers { get; }
+    public int OriginalIndex { get; }
 
-    public DIFieldInfo(string fieldName, string fieldType, bool hasModelObservers = false)
+    public DIFieldInfo(string fieldName, string fieldType, bool hasModelObservers = false, int originalIndex = 0)
     {
         FieldName = fieldName;
         FieldType = fieldType;
         HasModelObservers = hasModelObservers;
+        OriginalIndex = originalIndex;
     }
 
     public bool Equals(DIFieldInfo? other)
@@ -306,7 +313,8 @@ public class DIFieldInfo : IEquatable<DIFieldInfo>
 
         return FieldName == other.FieldName &&
                FieldType == other.FieldType &&
-               HasModelObservers == other.HasModelObservers;
+               HasModelObservers == other.HasModelObservers &&
+               OriginalIndex == other.OriginalIndex;
     }
 
     public override bool Equals(object? obj)
@@ -316,7 +324,7 @@ public class DIFieldInfo : IEquatable<DIFieldInfo>
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(FieldName, FieldType, HasModelObservers);
+        return HashCode.Combine(FieldName, FieldType, HasModelObservers, OriginalIndex);
     }
 }
 

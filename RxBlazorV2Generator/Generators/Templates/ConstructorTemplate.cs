@@ -46,16 +46,14 @@ public static class ConstructorTemplate
     {
         var sb = new StringBuilder();
 
-        // Generate constructor parameters
-        var constructorParams = new List<string>();
-
-        // Add model reference parameters
-        constructorParams.AddRange(modelInfo.ModelReferences.Select(mr =>
-            $"{mr.ReferencedModelTypeName} {mr.PropertyName.ToCamelCase()}"));
-
-        // Add DI field parameters (FieldName is now a PascalCase property name)
-        constructorParams.AddRange(modelInfo.DIFields.Select(df =>
-            $"{df.FieldType} {df.FieldName.ToCamelCase()}"));
+        // Generate constructor parameters in original declaration order
+        var constructorParams = modelInfo.ModelReferences
+            .Select(mr => (Index: mr.OriginalIndex, Param: $"{mr.ReferencedModelTypeName} {mr.PropertyName.ToCamelCase()}"))
+            .Concat(modelInfo.DIFields
+                .Select(df => (Index: df.OriginalIndex, Param: $"{df.FieldType} {df.FieldName.ToCamelCase()}")))
+            .OrderBy(p => p.Index)
+            .Select(p => p.Param)
+            .ToList();
 
         var allParams = string.Join(", ", constructorParams);
 

@@ -110,7 +110,8 @@ public static class ModelReferenceAnalysisExtensions
                 modelRef.AttributeLocation,
                 modelRef.IsDerivedModel,
                 modelRef.BaseObservableModelType,
-                modelRef.TypeSymbol));
+                modelRef.TypeSymbol,
+                modelRef.OriginalIndex));
         }
 
         return enhancedModelReferences;

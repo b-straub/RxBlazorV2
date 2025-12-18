@@ -43,22 +43,26 @@ public static class ConstructorAnalysisExtensions
         // Use the first partial constructor (there should only be one)
         var constructor = partialConstructors.First();
 
+        var parameterIndex = 0;
         foreach (var parameter in constructor.ParameterList.Parameters)
         {
             if (parameter.Type is null)
             {
+                parameterIndex++;
                 continue;
             }
 
             var parameterType = semanticModel.GetTypeInfo(parameter.Type).Type;
             if (parameterType is null)
             {
+                parameterIndex++;
                 continue;
             }
 
             var parameterName = parameter.Identifier.ValueText;
             var parameterTypeName = parameterType.ToDisplayString();
             var propertyName = ToPascalCase(parameterName);
+            var currentIndex = parameterIndex;
 
             // Check if this parameter is an ObservableModel
             if (parameterType is INamedTypeSymbol namedType && namedType.InheritsFromObservableModel())
@@ -80,7 +84,8 @@ public static class ConstructorAnalysisExtensions
                     parameter.Type?.GetLocation(),
                     isDerivedModel,
                     baseTypeName,
-                    namedType));
+                    namedType,
+                    currentIndex));
 
                 // Check if this ObservableModel also implements IErrorModel
                 // If so, store the field name for command error delegation
@@ -114,10 +119,11 @@ public static class ConstructorAnalysisExtensions
                         parameter.Type?.GetLocation(),
                         false,
                         null,
-                        namedTypeSymbol));
+                        namedTypeSymbol,
+                        currentIndex));
 
                     // Also track scope for IErrorModel dependencies (for scope violation checking)
-                    var diField = new DIFieldInfo(propertyName, parameterTypeName);
+                    var diField = new DIFieldInfo(propertyName, parameterTypeName, false, currentIndex);
                     var serviceScope = GetServiceScope(parameterTypeName, serviceClasses, namedTypeSymbol);
                     diFieldsWithScope.Add((diField, serviceScope, parameter.Type?.GetLocation()));
                 }
@@ -134,10 +140,11 @@ public static class ConstructorAnalysisExtensions
                         parameter.Type?.GetLocation(),
                         false,
                         null,
-                        namedTypeSymbol));
+                        namedTypeSymbol,
+                        currentIndex));
 
                     // Also track scope for IObservableModel dependencies (for scope violation checking)
-                    var diField = new DIFieldInfo(propertyName, parameterTypeName);
+                    var diField = new DIFieldInfo(propertyName, parameterTypeName, false, currentIndex);
                     var serviceScope = GetServiceScope(parameterTypeName, serviceClasses, namedTypeSymbol);
                     diFieldsWithScope.Add((diField, serviceScope, parameter.Type?.GetLocation()));
                 }
@@ -158,7 +165,7 @@ public static class ConstructorAnalysisExtensions
                     modelObserverDiagnostics.AddRange(diagnostics);
                 }
 
-                var diField = new DIFieldInfo(propertyName, parameterTypeName, hasObservers);
+                var diField = new DIFieldInfo(propertyName, parameterTypeName, hasObservers, currentIndex);
                 diFields.Add(diField);
 
                 // Check if this service is registered in DI - if not, track it for a warning
@@ -172,6 +179,8 @@ public static class ConstructorAnalysisExtensions
                 var serviceScope = GetServiceScope(parameterTypeName, serviceClasses, parameterType);
                 diFieldsWithScope.Add((diField, serviceScope, parameter.Type?.GetLocation()));
             }
+
+            parameterIndex++;
         }
 
         return (modelReferences, diFields, unregisteredServices, diFieldsWithScope, modelObservers, modelObserverDiagnostics, errorModelFieldName);
