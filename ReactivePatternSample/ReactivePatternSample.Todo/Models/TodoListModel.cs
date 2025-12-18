@@ -29,7 +29,7 @@ public partial class TodoListModel : ObservableModel
     /// <summary>
     /// Partial constructor - generator creates DI injection for referenced models.
     /// </summary>
-    public partial TodoListModel(StorageModel storage, AuthModel auth, StatusModel status);
+    public partial TodoListModel(StorageModel storage, AuthModel auth, AppStatusModel status);
 
     /// <summary>
     /// Filtered reactive collection of items for the current user.

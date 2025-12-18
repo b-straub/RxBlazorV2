@@ -16,6 +16,9 @@ public static class SingletonAggregatorTemplate
     /// <returns>Generated C# code for the layout model</returns>
     public static string GenerateAggregationModel(List<SingletonModelInfo> singletons, string rootNamespace)
     {
+        // Disambiguate duplicate property names before generating code
+        var singletonsWithUniqueNames = DisambiguatePropertyNames(singletons);
+
         var sb = new StringBuilder();
 
         // Header - use fully qualified names for singleton types to avoid ambiguity
@@ -51,7 +54,7 @@ public static class SingletonAggregatorTemplate
 
         // Generate properties for each singleton (public for access from razor components)
         // Use fully qualified names to avoid ambiguity when multiple namespaces have same type names
-        foreach (var singleton in singletons)
+        foreach (var singleton in singletonsWithUniqueNames)
         {
             sb.AppendLine($"    /// <summary>Reference to {singleton.ClassName}</summary>");
             sb.AppendLine($"    public {singleton.FullyQualifiedName} {singleton.PropertyName} {{ get; }}");
@@ -60,20 +63,20 @@ public static class SingletonAggregatorTemplate
         sb.AppendLine();
 
         // Generate constructor
-        GenerateConstructor(sb, singletons);
+        GenerateConstructor(sb, singletonsWithUniqueNames);
 
         // Generate OnContextReadyIntern
-        GenerateOnContextReadyIntern(sb, singletons);
+        GenerateOnContextReadyIntern(sb, singletonsWithUniqueNames);
 
         // Generate OnContextReadyInternAsync
-        GenerateOnContextReadyInternAsync(sb, singletons);
+        GenerateOnContextReadyInternAsync(sb, singletonsWithUniqueNames);
 
         sb.AppendLine("}");
 
         return sb.ToString();
     }
 
-    private static void GenerateConstructor(StringBuilder sb, List<SingletonModelInfo> singletons)
+    private static void GenerateConstructor(StringBuilder sb, List<DisambiguatedSingletonInfo> singletons)
     {
         // Constructor signature - use fully qualified names for parameter types
         sb.Append("    public RxBlazorV2LayoutModel(");
@@ -105,7 +108,7 @@ public static class SingletonAggregatorTemplate
         sb.AppendLine();
     }
 
-    private static void GenerateOnContextReadyIntern(StringBuilder sb, List<SingletonModelInfo> singletons)
+    private static void GenerateOnContextReadyIntern(StringBuilder sb, List<DisambiguatedSingletonInfo> singletons)
     {
         sb.AppendLine("    private bool _contextReadyInternCalled;");
         sb.AppendLine();
@@ -127,7 +130,7 @@ public static class SingletonAggregatorTemplate
         sb.AppendLine();
     }
 
-    private static void GenerateOnContextReadyInternAsync(StringBuilder sb, List<SingletonModelInfo> singletons)
+    private static void GenerateOnContextReadyInternAsync(StringBuilder sb, List<DisambiguatedSingletonInfo> singletons)
     {
         sb.AppendLine("    private bool _contextReadyInternAsyncCalled;");
         sb.AppendLine();
@@ -147,4 +150,70 @@ public static class SingletonAggregatorTemplate
 
         sb.AppendLine("    }");
     }
+
+    /// <summary>
+    /// Detects duplicate property names and disambiguates them by appending namespace parts.
+    /// E.g., two "StatusModel" classes from different namespaces get unique property names:
+    /// - ReactivePatternSample.Status.Models.StatusModel → "ModelsStatus"
+    /// - RxBlazorV2.MudBlazor.Components.StatusModel → "ComponentsStatus"
+    /// </summary>
+    private static List<DisambiguatedSingletonInfo> DisambiguatePropertyNames(List<SingletonModelInfo> singletons)
+    {
+        // Group by property name to find duplicates
+        var duplicateGroups = singletons
+            .GroupBy(s => s.PropertyName)
+            .Where(g => g.Count() > 1)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        var result = new List<DisambiguatedSingletonInfo>();
+
+        foreach (var singleton in singletons)
+        {
+            if (duplicateGroups.TryGetValue(singleton.PropertyName, out var duplicates))
+            {
+                // This property name has duplicates - disambiguate using last namespace segment
+                var lastNamespacePart = GetLastNamespacePart(singleton.Namespace);
+                var uniquePropertyName = $"{lastNamespacePart}{singleton.PropertyName}";
+                var uniqueParameterName = char.ToLowerInvariant(uniquePropertyName[0]) + uniquePropertyName.Substring(1);
+
+                result.Add(new DisambiguatedSingletonInfo(
+                    singleton.FullyQualifiedName,
+                    singleton.ClassName,
+                    singleton.Namespace,
+                    uniquePropertyName,
+                    uniqueParameterName));
+            }
+            else
+            {
+                // No duplicates - use original names
+                result.Add(new DisambiguatedSingletonInfo(
+                    singleton.FullyQualifiedName,
+                    singleton.ClassName,
+                    singleton.Namespace,
+                    singleton.PropertyName,
+                    singleton.ParameterName));
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Gets the last segment of a namespace (e.g., "Models" from "ReactivePatternSample.Status.Models")
+    /// </summary>
+    private static string GetLastNamespacePart(string namespaceName)
+    {
+        var parts = namespaceName.Split('.');
+        return parts.Length > 0 ? parts[parts.Length - 1] : namespaceName;
+    }
 }
+
+/// <summary>
+/// Holds singleton info with disambiguated property/parameter names.
+/// </summary>
+internal record DisambiguatedSingletonInfo(
+    string FullyQualifiedName,
+    string ClassName,
+    string Namespace,
+    string PropertyName,
+    string ParameterName);

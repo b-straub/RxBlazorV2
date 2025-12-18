@@ -1,9 +1,9 @@
 namespace ReactivePatternSample.Status.Models;
 
 /// <summary>
-/// Public API methods for StatusModel.
+/// Public API methods for AppStatusModel.
 /// </summary>
-public partial class StatusModel
+public partial class AppStatusModel
 {
     /// <summary>
     /// Adds an info message.

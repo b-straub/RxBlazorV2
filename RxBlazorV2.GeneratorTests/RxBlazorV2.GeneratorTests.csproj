@@ -28,7 +28,9 @@
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
         <PackageReference Include="xunit.v3" Version="3.2.1" />
-        <PackageReference Include="xunit.v3.assert" Version="3.2.1" />
+        <PackageReference Include="xunit.v3.assert" Version="3.2.1">
+            <Aliases>xunitv3</Aliases>
+        </PackageReference>
     </ItemGroup>
 
     <ItemGroup>

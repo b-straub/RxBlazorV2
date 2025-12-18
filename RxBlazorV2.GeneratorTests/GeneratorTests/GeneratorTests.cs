@@ -301,7 +301,7 @@ public class GeneratorTests
         testRunner.TestState.ReferenceAssemblies = TestShared.ReferenceAssemblies();
         testRunner.TestState.AdditionalReferences.Add(typeof(Model.ObservableModel).Assembly);
 
-        await testRunner.RunAsync();
+        await testRunner.RunAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]

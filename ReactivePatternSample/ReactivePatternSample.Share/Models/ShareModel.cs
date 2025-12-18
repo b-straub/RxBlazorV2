@@ -28,7 +28,7 @@ public partial class ShareModel : ObservableModel
     /// Partial constructor - generator creates DI injection for referenced models.
     /// Settings reference allows auto-export when format changes.
     /// </summary>
-    public partial ShareModel(TodoListModel todo, StatusModel status, SettingsModel settings);
+    public partial ShareModel(TodoListModel todo, AppStatusModel status, SettingsModel settings);
 
     /// <summary>
     /// Whether the share dialog is open.

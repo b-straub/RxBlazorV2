@@ -4,9 +4,9 @@ using RxBlazorV2.Model;
 namespace ReactivePatternSample.Status.Models;
 
 /// <summary>
-/// Commands and their implementations for StatusModel.
+/// Commands and their implementations for AppStatusModel.
 /// </summary>
-public partial class StatusModel
+public partial class AppStatusModel
 {
     /// <summary>
     /// Command to clear all messages.

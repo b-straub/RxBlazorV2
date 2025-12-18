@@ -24,9 +24,9 @@ public partial class AuthModel : ObservableModel
 {
     /// <summary>
     /// Partial constructor - generator creates DI injection for referenced models.
-    /// StorageModel for user validation, StatusModel for error reporting.
+    /// StorageModel for user validation, AppStatusModel for error reporting.
     /// </summary>
-    public partial AuthModel(StorageModel storage, StatusModel status);
+    public partial AuthModel(StorageModel storage, AppStatusModel status);
 
     /// <summary>
     /// Whether the user is currently authenticated.

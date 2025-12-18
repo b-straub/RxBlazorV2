@@ -4,7 +4,7 @@ using RxBlazorV2.Model;
 namespace ReactivePatternSample.Status.Models;
 
 /// <summary>
-/// Status domain model - consolidated status and error management.
+/// Application status domain model - consolidated status and error management.
 ///
 /// Patterns demonstrated:
 /// - Singleton scope for global status aggregation
@@ -13,13 +13,15 @@ namespace ReactivePatternSample.Status.Models;
 /// - ObservableList for reactive message collection
 ///
 /// File organization:
-/// - StatusModel.cs: Properties
-/// - StatusModel.Commands.cs: Commands with their implementations
-/// - StatusModel.Methods.cs: Public API (AddInfo, AddSuccess, etc.)
+/// - AppStatusModel.cs: Properties
+/// - AppStatusModel.Commands.cs: Commands with their implementations
+/// - AppStatusModel.Methods.cs: Public API (AddInfo, AddSuccess, etc.)
+///
+/// Note: Named AppStatusModel to avoid conflict with RxBlazorV2.MudBlazor.Components.StatusModel
 /// </summary>
 [ObservableComponent]
 [ObservableModelScope(ModelScope.Singleton)]
-public partial class StatusModel : ObservableModel
+public partial class AppStatusModel : ObservableModel
 {
     /// <summary>
     /// Reactive collection of status messages.
