@@ -24,6 +24,84 @@ dotnet add package RxBlazorV2.MudBlazor
 | `MudFabAsyncRx` | Async FAB with progress |
 | `MudFabRxOf<T>` | Parameterized sync FAB |
 | `MudFabAsyncRxOf<T>` | Parameterized async FAB |
+| `StatusDisplay` | Error and message display with snackbar/icon |
+
+## StatusDisplay Component
+
+The `StatusDisplay` component provides reactive error and status message handling with configurable display modes.
+
+### Setup
+
+Add the `StatusDisplay` component to your layout (e.g., in the AppBar):
+
+```razor
+@using RxBlazorV2.MudBlazor.Components
+
+<MudAppBar>
+    <MudSpacer />
+    <StatusDisplay />
+</MudAppBar>
+```
+
+### StatusModel
+
+Inject `StatusModel` into your models to report errors and messages:
+
+```csharp
+public partial class MyModel : ObservableModel
+{
+    public partial MyModel(StatusModel statusModel);
+
+    private void DoSomething()
+    {
+        StatusModel.AddMessage("Operation completed");
+    }
+
+    private void HandleError()
+    {
+        // Errors are automatically captured from commands via IErrorModel
+        // Or add manually:
+        StatusModel.HandleError(new Exception("Something went wrong"));
+    }
+}
+```
+
+### Display Modes
+
+| Mode | Description |
+|------|-------------|
+| `SNACKBAR` | Show only snackbar notification |
+| `ICON` | Show only icon with badge and tooltip |
+| `SNACKBAR_AND_ICON` | Show both snackbar and icon |
+
+### Message Modes
+
+| Mode | Description |
+|------|-------------|
+| `AGGREGATE` | Collect all messages (default for errors) |
+| `SINGLE` | Clear previous before adding new (default for messages) |
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `ErrorDisplayMode` | `StatusDisplayMode` | `SNACKBAR_AND_ICON` | How errors are displayed |
+| `ErrorMode` | `StatusMessageMode` | `AGGREGATE` | Error accumulation mode |
+| `ErrorSnackbarOptions` | `Action<SnackbarOptions>?` | Hide close icon | Snackbar configuration |
+| `MessageDisplayMode` | `StatusDisplayMode` | `SNACKBAR` | How messages are displayed |
+| `MessageMode` | `StatusMessageMode` | `SINGLE` | Message accumulation mode |
+| `MessageSnackbarOptions` | `Action<SnackbarOptions>?` | Hide close icon | Snackbar configuration |
+| `SnackbarPositionClass` | `string` | `TopEnd` | Snackbar position |
+
+### Customization Example
+
+```razor
+<StatusDisplay ErrorDisplayMode="StatusDisplayMode.ICON"
+               MessageDisplayMode="StatusDisplayMode.SNACKBAR_AND_ICON"
+               ErrorMode="StatusMessageMode.AGGREGATE"
+               MessageMode="StatusMessageMode.SINGLE"
+               SnackbarPositionClass="@Defaults.Classes.Position.BottomCenter" />
+```
 
 ## Usage
 

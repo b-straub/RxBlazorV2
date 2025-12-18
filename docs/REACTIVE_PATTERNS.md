@@ -521,7 +521,91 @@ public void OnAppearanceChanged(UserModel model)
 
 ---
 
-### 9. Service-Model Interaction Pattern
+### 9. Automatic Error Handling (`IErrorModel`)
+
+**Purpose:** Centralized error handling for all command exceptions without manual try/catch.
+
+**How It Works:**
+When a model injects `IErrorModel` via partial constructor, all command exceptions are automatically captured and routed to the `HandleError` method.
+
+**Error Model Implementation:**
+```csharp
+using ObservableCollections;
+using RxBlazorV2.Interface;
+using RxBlazorV2.Model;
+
+[ObservableComponent]
+[ObservableModelScope(ModelScope.Singleton)]
+public partial class ErrorModel : ObservableModel, IErrorModel
+{
+    [ObservableComponentTrigger]
+    public ObservableList<string> Errors { get; } = [];
+
+    public void HandleError(Exception error)
+    {
+        Errors.Add(error.Message);
+    }
+}
+```
+
+**Model with Automatic Error Capture:**
+```csharp
+[ObservableModelScope(ModelScope.Scoped)]
+public partial class OrderModel : ObservableModel
+{
+    // Inject IErrorModel to enable automatic error capture
+    public partial OrderModel(IErrorModel errorModel, IOrderService orderService);
+
+    [ObservableCommand(nameof(SubmitOrderAsync))]
+    public partial IObservableCommandAsync SubmitCommand { get; }
+
+    private async Task SubmitOrderAsync(CancellationToken ct)
+    {
+        // No try/catch needed - exceptions automatically go to ErrorModel.HandleError()
+        await OrderService.SubmitAsync(CurrentOrder, ct);
+    }
+}
+```
+
+**Generated Error Handling Code:**
+```csharp
+// The generator wraps command execution with error handling:
+public partial OrderModel
+{
+    // In constructor, commands are created with error handler:
+    SubmitCommand = ObservableCommandAsyncFactory.Create(
+        async ct => await SubmitOrderAsync(ct),
+        canExecute: null,
+        errorHandler: _errorModel);  // Auto-injected error handler
+}
+```
+
+**Key Points:**
+- Inject `IErrorModel` via partial constructor (generates `_errorModel` field)
+- All command exceptions are automatically routed to `HandleError(Exception)`
+- No manual try/catch needed in command methods
+- Works with both sync and async commands
+- Use `RxBlazorV2.MudBlazor.StatusDisplay` for UI integration
+
+**UI Integration with StatusDisplay:**
+```razor
+@using RxBlazorV2.MudBlazor.Components
+
+<MudAppBar>
+    <MudSpacer />
+    <StatusDisplay />  @* Shows errors automatically *@
+</MudAppBar>
+```
+
+**When to Use:**
+- Any application that needs centralized error handling
+- Applications with many commands that could throw
+- When you want consistent error UI feedback
+- To avoid repetitive try/catch blocks in command methods
+
+---
+
+### 10. Service-Model Interaction Pattern
 
 **Purpose:** When a model needs to call an external service and other models need to react to completion.
 

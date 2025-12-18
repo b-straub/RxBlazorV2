@@ -16,6 +16,7 @@ A reactive programming framework for Blazor applications built on top of [R3 (Re
 - **Source Generation**: Zero runtime reflection - all code generated at compile time
 - **Command Pattern**: Declarative observable commands with automatic CanExecute support
 - **Return Commands**: Commands that return values (sync and async)
+- **Automatic Error Handling**: Commands automatically capture exceptions via `IErrorModel`
 - **Model References**: Automatic cross-model reactive subscriptions via partial constructors
 - **DI Integration**: Automatic service registration with configurable lifetimes
 - **Observable Collections**: Built-in support for reactive collections with batch updates
@@ -102,6 +103,48 @@ private async Task Save() { /* ... */ }
 private bool CanSave() => !string.IsNullOrEmpty(Name);
 private int Calculate() => Count * 2;
 ```
+
+### Automatic Error Handling (`IErrorModel`)
+
+Commands automatically capture exceptions and route them to an `IErrorModel` implementation for centralized error handling:
+
+```csharp
+// Implement IErrorModel in your error handling model
+[ObservableModelScope(ModelScope.Singleton)]
+public partial class ErrorModel : ObservableModel, IErrorModel
+{
+    [ObservableComponentTrigger]
+    public ObservableList<string> Errors { get; } = [];
+
+    public void HandleError(Exception error)
+    {
+        Errors.Add(error.Message);
+    }
+}
+
+// Any model that injects IErrorModel gets automatic error capture
+[ObservableModelScope(ModelScope.Scoped)]
+public partial class MyModel : ObservableModel
+{
+    public partial MyModel(IErrorModel errorModel);
+
+    [ObservableCommand(nameof(DoRiskyOperation))]
+    public partial IObservableCommandAsync RiskyCommand { get; }
+
+    private async Task DoRiskyOperation()
+    {
+        // If this throws, the exception is automatically
+        // captured and sent to ErrorModel.HandleError()
+        await _service.DoSomethingAsync();
+    }
+}
+```
+
+**Key Points:**
+- Inject `IErrorModel` via partial constructor to enable automatic error capture
+- All command exceptions are routed to `HandleError(Exception)` method
+- No try/catch needed in command methods - errors are handled centrally
+- Use with `RxBlazorV2.MudBlazor.StatusDisplay` for automatic UI feedback
 
 ### Model References (Partial Constructor Pattern)
 
@@ -404,6 +447,7 @@ See the **RxBlazorV2Sample** project for comprehensive, interactive examples:
 | **ParameterizedCommands**       | Commands with type-safe parameters                                 |
 | **CommandsWithCanExecute**      | Conditional command execution                                      |
 | **CommandsWithCancellation**    | Long-running async with cancellation                               |
+| **ErrorHandling**               | Automatic error capture via IErrorModel                            |
 | **CommandTriggers**             | Auto-execute commands on property changes                          |
 | **ComponentTriggers**           | Component hooks for property changes                               |
 | **PropertyTriggers**            | Internal method execution on changes                               |
