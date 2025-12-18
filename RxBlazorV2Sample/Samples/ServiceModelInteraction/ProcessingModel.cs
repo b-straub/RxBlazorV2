@@ -2,6 +2,7 @@ using ObservableCollections;
 using RxBlazorV2.Interface;
 using RxBlazorV2.Model;
 using RxBlazorV2Sample.Samples.Helpers;
+using RxBlazorVSSampleComponents.ErrorManager;
 
 namespace RxBlazorV2Sample.Samples.ServiceModelInteraction;
 
@@ -32,7 +33,7 @@ public record ProcessingStatus(string Message, ProcessingSeverity Severity);
 [ObservableModelScope(ModelScope.Scoped)]
 public partial class ProcessingModel : ObservableModel
 {
-    public partial ProcessingModel(ProcessingService processingService);
+    public partial ProcessingModel(ProcessingService processingService, ErrorModel errorModel);
 
     /// <summary>
     /// Log entries for debugging the flow.
@@ -79,9 +80,10 @@ public partial class ProcessingModel : ObservableModel
         
         try
         {
+            ArgumentNullException.ThrowIfNull(InputToProcess);
             // Call injected service
             LogEntries.Add(new LogEntry("Calling service...", DateTime.Now));
-            var result = await ProcessingService.ProcessAsync(InputToProcess!, ct);
+            var result = await ProcessingService.ProcessAsync(InputToProcess, ct);
             LogEntries.Add(new LogEntry("Service returned", DateTime.Now));
 
             // Store result
@@ -106,6 +108,7 @@ public partial class ProcessingModel : ObservableModel
         {
             Status = new ProcessingStatus($"Error: {ex.Message}", ProcessingSeverity.Error);
             LogEntries.Add(new LogEntry($"Command failed: {ex.Message}", DateTime.Now));
+            throw; // pass to internal command handling
         }
     }
 }

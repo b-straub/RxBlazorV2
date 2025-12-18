@@ -13,7 +13,7 @@ public class ProcessingService
     public async Task<ProcessedItem> ProcessAsync(string input, CancellationToken ct = default)
     {
         // Simulate async work (e.g., API call, database operation)
-        await Task.Delay(2000, ct);
+        await Task.Delay(1000, ct);
 
         if (input.Equals("error", StringComparison.InvariantCultureIgnoreCase))
         {

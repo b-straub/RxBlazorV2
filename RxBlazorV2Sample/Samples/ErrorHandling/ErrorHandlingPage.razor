@@ -1,0 +1,109 @@
+@page "/samples/error-handling"
+@using RxBlazorV2Sample.Samples.Helpers
+@using RxBlazorVSSampleComponents.ErrorManager
+@inherits ErrorHandlingModelComponent
+
+<PageTitle>Error Handling</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium">
+    <MudText Typo="Typo.h3" GutterBottom="true">Automatic Error Handling</MudText>
+    <MudText Typo="Typo.body1" Class="mb-4">
+        Demonstrates automatic error capture via <code>IErrorModel</code>. Command exceptions are automatically
+        routed to the error handler - no try/catch blocks needed in your command methods.
+    </MudText>
+
+    <MudCard>
+        <MudCardContent>
+            <MudStack Spacing="4">
+                <MudAlert Severity="Severity.Info">
+                    Counter: @Model.Counter
+                </MudAlert>
+
+                <ErrorDisplay />
+
+                <UsageWithLogging Usage=@Model.Usage LogEntries=@Model.LogEntries />
+
+                <MudStack Row="true" Spacing="2">
+                    <MudButton
+                        Variant="Variant.Filled"
+                        Color="Color.Primary"
+                        OnClick="@(() => Model.IncrementCommand.Execute())"
+                        StartIcon="@Icons.Material.Filled.Add">
+                        Safe Increment
+                    </MudButton>
+
+                    <MudButton
+                        Variant="Variant.Filled"
+                        Color="Color.Warning"
+                        OnClick="@(() => Model.RiskyIncrementCommand.Execute())"
+                        StartIcon="@Icons.Material.Filled.Warning">
+                        Risky Increment (throws at 5-10)
+                    </MudButton>
+
+                    <MudButton
+                        Variant="Variant.Filled"
+                        Color="Color.Error"
+                        Disabled="@Model.RiskyOperationCommand.Executing"
+                        OnClick="@(() => Model.RiskyOperationCommand.ExecuteAsync())"
+                        StartIcon="@Icons.Material.Filled.Error">
+                        @(Model.RiskyOperationCommand.Executing ? "Running..." : "Async Error Demo")
+                    </MudButton>
+                </MudStack>
+            </MudStack>
+        </MudCardContent>
+    </MudCard>
+
+    <MudPaper Class="pa-4 mt-4">
+        <MudText Typo="Typo.h6" GutterBottom="true">Key Concepts</MudText>
+        <MudList T="string">
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                <strong>IErrorModel injection</strong> - enables automatic error capture for all commands
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                <strong>No try/catch needed</strong> - exceptions are routed to HandleError() automatically
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                <strong>Works with sync and async</strong> - both command types support error capture
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                <strong>ErrorDisplay component</strong> - shows captured errors with badge and tooltip
+            </MudListItem>
+        </MudList>
+    </MudPaper>
+
+    <MudPaper Class="pa-4 mt-4">
+        <MudText Typo="Typo.h6" GutterBottom="true">Implementation</MudText>
+        <MudText Typo="Typo.body2" Class="mb-2">
+            <strong>1. Create an ErrorModel implementing IErrorModel:</strong>
+        </MudText>
+        <pre class="mud-typography-body2" style="background: var(--mud-palette-background-gray); padding: 1rem; border-radius: 4px; overflow-x: auto;">
+[ObservableModelScope(ModelScope.Singleton)]
+public partial class ErrorModel : ObservableModel, IErrorModel
+{
+    public ObservableList&lt;string&gt; Errors { get; } = [];
+
+    public void HandleError(Exception error)
+    {
+        Errors.Add(error.Message);
+    }
+}</pre>
+
+        <MudText Typo="Typo.body2" Class="mb-2 mt-4">
+            <strong>2. Inject IErrorModel in your model:</strong>
+        </MudText>
+        <pre class="mud-typography-body2" style="background: var(--mud-palette-background-gray); padding: 1rem; border-radius: 4px; overflow-x: auto;">
+public partial class MyModel : ObservableModel
+{
+    public partial MyModel(IErrorModel errorModel);
+
+    [ObservableCommand(nameof(DoWork))]
+    public partial IObservableCommand WorkCommand { get; }
+
+    private void DoWork()
+    {
+        // No try/catch - errors go to errorModel.HandleError()
+        throw new Exception("This is automatically captured!");
+    }
+}</pre>
+    </MudPaper>
+</MudContainer>
