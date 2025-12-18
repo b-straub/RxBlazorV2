@@ -1,0 +1,148 @@
+@inherits StatusModelComponent
+
+@if (ShowErrorIcon && Model.Errors.Count > 0)
+{
+    <MudTooltip Placement="Placement.Left" RootStyle="max-width: none;" Class="border-0 pa-0">
+        <ChildContent>
+            <MudStack Row="true" AlignItems="AlignItems.Center">
+                <MudBadge Content="@Model.Errors.Distinct().Count()" Color="Color.Error" Overlap="true" Class="d-flex align-center">
+                    <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" />
+                </MudBadge>
+                <MudIconButton Icon="@Icons.Material.Filled.Clear" OnClick="ClearErrors" Color="Color.Inherit" />
+            </MudStack>
+        </ChildContent>
+        <TooltipContent>
+            <MudPaper Class="mud-theme-error px-5 py-3 rounded border-0" Elevation="0">
+                @foreach (var error in Model.Errors.Distinct())
+                {
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Color="Color.Inherit" Size="Size.Small" />
+                        <MudText Typo="Typo.body2" Class="text-nowrap" Color="Color.Inherit">@error</MudText>
+                    </MudStack>
+                }
+            </MudPaper>
+        </TooltipContent>
+    </MudTooltip>
+}
+
+@if (ShowMessageIcon && Model.Messages.Count > 0)
+{
+    <MudTooltip Placement="Placement.Left" RootStyle="max-width: none;" Class="border-0 pa-0">
+        <ChildContent>
+            <MudStack Row="true" AlignItems="AlignItems.Center">
+                <MudBadge Content="@Model.Messages.Distinct().Count()" Color="Color.Info" Overlap="true" Class="d-flex align-center">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Info" />
+                </MudBadge>
+                <MudIconButton Icon="@Icons.Material.Filled.Clear" OnClick="ClearMessages" Color="Color.Inherit" />
+            </MudStack>
+        </ChildContent>
+        <TooltipContent>
+            <MudPaper Class="mud-theme-info px-5 py-3 rounded border-0" Elevation="0">
+                @foreach (var message in Model.Messages.Distinct())
+                {
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Outlined.Info" Color="Color.Inherit" Size="Size.Small" />
+                        <MudText Typo="Typo.body2" Class="text-nowrap" Color="Color.Inherit">@message</MudText>
+                    </MudStack>
+                }
+            </MudPaper>
+        </TooltipContent>
+    </MudTooltip>
+}
+
+@code
+{
+    [Parameter]
+    public StatusDisplayMode ErrorDisplayMode { get; set; } = StatusDisplayMode.SNACKBAR_AND_ICON;
+
+    [Parameter]
+    public StatusMessageMode ErrorMode { get; set; } = StatusMessageMode.AGGREGATE;
+
+    [Parameter]
+    public Action<SnackbarOptions>? ErrorSnackbarOptions { get; set; } = options => options.ShowCloseIcon = false;
+
+    [Parameter]
+    public StatusDisplayMode MessageDisplayMode { get; set; } = StatusDisplayMode.SNACKBAR;
+
+    [Parameter]
+    public StatusMessageMode MessageMode { get; set; } = StatusMessageMode.SINGLE;
+
+    [Parameter]
+    public Action<SnackbarOptions>? MessageSnackbarOptions { get; set; } = options => options.ShowCloseIcon = false;
+
+    [Parameter]
+    public string SnackbarPositionClass { get; set; } = Defaults.Classes.Position.TopEnd;
+
+    [Inject]
+    public required ISnackbar Snackbar { get; init; }
+
+    private Snackbar? _errorSnackbar;
+    private Snackbar? _messageSnackbar;
+
+    private bool ShowErrorIcon => ErrorDisplayMode is StatusDisplayMode.ICON or StatusDisplayMode.SNACKBAR_AND_ICON;
+    private bool ShowErrorSnackbar => ErrorDisplayMode is StatusDisplayMode.SNACKBAR or StatusDisplayMode.SNACKBAR_AND_ICON;
+    private bool ShowMessageIcon => MessageDisplayMode is StatusDisplayMode.ICON or StatusDisplayMode.SNACKBAR_AND_ICON;
+    private bool ShowMessageSnackbar => MessageDisplayMode is StatusDisplayMode.SNACKBAR or StatusDisplayMode.SNACKBAR_AND_ICON;
+
+    protected override void OnParametersSet()
+    {
+        Snackbar.Configuration.PositionClass = SnackbarPositionClass;
+        Model.ErrorMode = ErrorMode;
+        Model.MessageMode = MessageMode;
+        base.OnParametersSet();
+    }
+
+    protected override void OnErrorsChanged()
+    {
+        if (_errorSnackbar is not null)
+        {
+            Snackbar.Remove(_errorSnackbar);
+            _errorSnackbar = null;
+        }
+
+        if (ShowErrorSnackbar && Model.Errors.Count > 0)
+        {
+            var errors = Model.Errors.Distinct().ToList();
+            var errorMessage = errors.Count == 1
+                ? new MarkupString(errors[0])
+                : new MarkupString("<ul class=\"pl-4 ma-0\">" + string.Join("", errors.Select(e => $"<li>{e}</li>")) + "</ul>");
+            _errorSnackbar = Snackbar.Add(errorMessage, Severity.Error, ErrorSnackbarOptions);
+            if (ErrorMode is StatusMessageMode.SINGLE)
+            {
+                _errorSnackbar = null; // default dismiss
+            }
+        }
+    }
+
+    protected override void OnMessagesChanged()
+    {
+        if (_messageSnackbar is not null)
+        {
+            Snackbar.Remove(_messageSnackbar);
+            _messageSnackbar = null;
+        }
+
+        if (ShowMessageSnackbar && Model.Messages.Count > 0)
+        {
+            var messages = Model.Messages.Distinct().ToList();
+            var statusMessage = messages.Count == 1
+                ? new MarkupString(messages[0])
+                : new MarkupString("<ul class=\"pl-4 ma-0\">" + string.Join("", messages.Select(m => $"<li>{m}</li>")) + "</ul>");
+            _messageSnackbar = Snackbar.Add(statusMessage, Severity.Info, MessageSnackbarOptions);
+            if (MessageMode is StatusMessageMode.SINGLE)
+            {
+                _messageSnackbar = null; // default dismiss
+            }
+        }
+    }
+
+    private void ClearErrors()
+    {
+        Model.Errors.Clear();
+    }
+
+    private void ClearMessages()
+    {
+        Model.Messages.Clear();
+    }
+}

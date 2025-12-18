@@ -1,16 +1,27 @@
+@using System.Linq
 @using MudBlazor
 @inherits ErrorModelComponent
 
 @if (Model.Errors.Count > 0)
 {
-    <MudStack Row="true" AlignItems="AlignItems.Center">
-        <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error"></MudIcon>
-        <MudText>Last error: @Model.Errors.Last()</MudText>
-        @if (Model.Errors.Count > 0)
-        {
-            <MudIconButton Icon="@Icons.Material.Filled.Clear" @onclick="ClearError" Color="Color.Inherit" />
-        }
-    </MudStack>
+    <MudTooltip>
+        <ChildContent>
+            <MudStack Row="true" AlignItems="AlignItems.Center">
+                <MudBadge Content="@Model.Errors.Distinct().Count()" Color="Color.Error" Overlap="true">
+                    <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" />
+                </MudBadge>
+                <MudIconButton Icon="@Icons.Material.Filled.Clear" OnClick="ClearError" Color="Color.Inherit" />
+            </MudStack>
+        </ChildContent>
+        <TooltipContent>
+            <MudList T="string" Dense="true">
+                @foreach (var error in Model.Errors.Distinct())
+                {
+                    <MudListItem T="string" Text="@error" Icon="@Icons.Material.Filled.ErrorOutline" IconColor="Color.Error" />
+                }
+            </MudList>
+        </TooltipContent>
+    </MudTooltip>
 }
 
 @code
@@ -18,19 +29,20 @@
     [Inject]
     public required ISnackbar Snackbar { get; init; }
 
-    private string? _lastMessage;
+    private Snackbar? _snackbar;
 
     protected override void OnErrorsChanged()
     {
-        if (_lastMessage is not null)
+        if (_snackbar is not null)
         {
-            Snackbar.RemoveByKey(_lastMessage);
+            Snackbar.Remove(_snackbar);
+            _snackbar = null;
         }
 
-        if (Model.Errors.Count > 0)
+       if (Model.Errors.Count > 0)
         {
-            Snackbar.Add(Model.Errors.Last(), Severity.Error);
-            _lastMessage = Model.Errors.Last();
+            var errorMessage = new MarkupString("<ul style=\"padding-left: 1.5rem; margin: 0;\">" + string.Join("", Model.Errors.Distinct().Select(e => $"<li>{e}</li>")) + "</ul>");
+            _snackbar = Snackbar.Add(errorMessage, Severity.Error);
         }
     }
     

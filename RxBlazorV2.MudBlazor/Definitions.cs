@@ -21,3 +21,22 @@ public enum IconVariant
     SHARP,
     TWO_TONE
 }
+
+/// <summary>
+/// Specifies how status messages are displayed.
+/// </summary>
+public enum StatusDisplayMode
+{
+    SNACKBAR,
+    ICON,
+    SNACKBAR_AND_ICON
+}
+
+/// <summary>
+/// Specifies how messages are accumulated.
+/// </summary>
+public enum StatusMessageMode
+{
+    AGGREGATE,
+    SINGLE
+}

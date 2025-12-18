@@ -1,3 +1,4 @@
+@using RxBlazorV2.MudBlazor.Components.Razor
 @inherits LayoutComponentBase
 
 <MudThemeProvider />
@@ -11,6 +12,7 @@
         <MudSpacer />
         <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit"
                        Href="https://github.com/b-straub/RxBlazorV2" Target="_blank" />
+        <StatusDisplay />
     </MudAppBar>
     <MudMainContent Class="pa-4">
         @Body
