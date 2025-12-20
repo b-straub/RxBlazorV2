@@ -35,11 +35,11 @@ internal static class SyntaxHelpers
         var firstNode = node.Equals(list.First());
         var lastNode = node.Equals(list.Last());
 
-        var newList = list.Remove(node!);
+        var newList = list.Remove(node);
 
         if (firstNode)
         {
-            var newFirst = newList.FirstOrDefault()?.WithLeadingTrivia(node!.GetLeadingTrivia());
+            var newFirst = newList.FirstOrDefault()?.WithLeadingTrivia(node.GetLeadingTrivia());
             if (newFirst is not null)
             {
                 newList = newList.Replace(newList.First(), newFirst);
@@ -48,7 +48,7 @@ internal static class SyntaxHelpers
 
         if (lastNode)
         {
-            var newLast = newList.LastOrDefault()?.WithTrailingTrivia(node!.GetTrailingTrivia());
+            var newLast = newList.LastOrDefault()?.WithTrailingTrivia(node.GetTrailingTrivia());
             if (newLast is not null)
             {
                 newList = newList.Replace(newList.Last(), newLast);
@@ -64,11 +64,11 @@ internal static class SyntaxHelpers
         var firstNode = node.Equals(list.First());
         var lastNode = node.Equals(list.Last());
 
-        var newList = list.Remove(node!);
+        var newList = list.Remove(node);
 
         if (firstNode)
         {
-            var newFirst = newList.FirstOrDefault()?.WithLeadingTrivia(node!.GetLeadingTrivia());
+            var newFirst = newList.FirstOrDefault()?.WithLeadingTrivia(node.GetLeadingTrivia());
             if (newFirst is not null)
             {
                 newList = newList.Replace(newList.First(), newFirst);
@@ -77,7 +77,7 @@ internal static class SyntaxHelpers
 
         if (lastNode)
         {
-            var newLast = newList.LastOrDefault()?.WithTrailingTrivia(node!.GetTrailingTrivia());
+            var newLast = newList.LastOrDefault()?.WithTrailingTrivia(node.GetTrailingTrivia());
             if (newLast is not null)
             {
                 newList = newList.Replace(newList.Last(), newLast);

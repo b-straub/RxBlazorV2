@@ -1,3 +1,4 @@
+using System;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
@@ -7,6 +8,7 @@ using RxBlazorV2Generator.Diagnostics;
 using System.Collections.Immutable;
 using System.Threading;
 using System.Threading.Tasks;
+using RxBlazorV2Generator.Helpers;
 
 namespace RxBlazorV2CodeFix.CodeFix;
 
@@ -61,7 +63,8 @@ public class InvalidInitPropertyCodeFixProvider : CodeFixProvider
         CancellationToken cancellationToken)
     {
         // Convert init accessor to set accessor (preserve all modifiers including required)
-        var newAccessors = property.AccessorList!.Accessors.Select(accessor =>
+        property.AccessorList.ThrowIfNull();
+        var newAccessors = property.AccessorList.Accessors.Select(accessor =>
         {
             if (accessor.IsKind(SyntaxKind.InitAccessorDeclaration))
             {

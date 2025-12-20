@@ -1,3 +1,6 @@
+using StatusMessage = RxBlazorV2.Model.StatusMessage;
+using StatusSeverity = RxBlazorV2.Model.StatusSeverity;
+
 namespace ReactivePatternSample.Status.Models;
 
 /// <summary>
@@ -42,13 +45,7 @@ public partial class AppStatusModel
     /// </summary>
     private void AddMessage(string message, StatusSeverity severity, string? source)
     {
-        var statusMessage = new StatusMessage
-        {
-            Message = message,
-            Severity = severity,
-            Source = source
-        };
-
+        var statusMessage = new StatusMessage(message, severity, source);
         Messages.Add(statusMessage);
         UpdateStatus();
     }

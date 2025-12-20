@@ -1,5 +1,6 @@
 using ObservableCollections;
 using RxBlazorV2.Model;
+using StatusMessage = RxBlazorV2.Model.StatusMessage;
 
 namespace ReactivePatternSample.Status.Models;
 

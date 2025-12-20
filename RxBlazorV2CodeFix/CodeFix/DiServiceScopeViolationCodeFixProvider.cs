@@ -29,13 +29,7 @@ public class DiServiceScopeViolationCodeFixProvider : CodeFixProvider
         {
             return;
         }
-
-        var semanticModel = await context.Document.GetSemanticModelAsync(context.CancellationToken).ConfigureAwait(false);
-        if (semanticModel is null)
-        {
-            return;
-        }
-
+        
         // Group diagnostics by class to avoid duplicate code fixes
         var diagnosticsByClass = new Dictionary<string, List<Diagnostic>>();
 

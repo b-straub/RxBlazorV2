@@ -4,7 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    
     <!-- NuGet Package Configuration -->
     <PackageId>RxBlazorV2.MudBlazor</PackageId>
     <Version>$(RxBlazorV2Version)</Version>

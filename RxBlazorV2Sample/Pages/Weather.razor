@@ -121,18 +121,6 @@
                         </MudStack>
                     }
 
-                    <!-- Error Display -->
-                    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
-                    {
-                        <MudAlert Severity="Severity.Error"
-                                  Variant="Variant.Filled"
-                                  ShowCloseIcon="true"
-                                  CloseIconClicked="() => Model.ErrorMessage = null"
-                                  Class="mb-4">
-                            @Model.ErrorMessage
-                        </MudAlert>
-                    }
-
                     <!-- Weather Data -->
                     @if (Model.Forecasts != null && !Model.IsLoading)
                     {

@@ -64,6 +64,33 @@ internal static class CSharpCodeFixVerifier<TAnalyzer, TCodeFix>
 
         return test.RunAsync();
     }
+
+    /// <summary>
+    /// Verifies code fix with separate expected diagnostics for initial and fixed states.
+    /// Use when the fix removes all diagnostics related to the fixed location.
+    /// </summary>
+    public static Task VerifyCodeFixAsync(string source, DiagnosticResult[] expectedInitial, string fixedSource, DiagnosticResult[] expectedFixed, int? codeActionIndex = null, params string[] skippedDiagnosticIds)
+    {
+        var test = new CodeFixTest<TAnalyzer, TCodeFix>
+        {
+            TestCode = source,
+            FixedCode = fixedSource,
+            CodeActionIndex = codeActionIndex,
+            SkippedDiagnosticIds = skippedDiagnosticIds,
+            CodeFixTestBehaviors = codeActionIndex is not null ? CodeFixTestBehaviors.SkipFixAllCheck : CodeFixTestBehaviors.None
+        };
+
+        test.TestState.Sources.Add(("GlobalUsings.cs", SourceText.From(TestShared.GlobalUsing, Encoding.UTF8)));
+        test.FixedState.Sources.Add(("GlobalUsings.cs", SourceText.From(TestShared.GlobalUsing, Encoding.UTF8)));
+        test.TestBehaviors |= TestBehaviors.SkipGeneratedSourcesCheck;
+        test.ExpectedDiagnostics.AddRange(expectedInitial);
+
+        // Use explicit inheritance mode to prevent inheriting diagnostics from initial state
+        test.FixedState.InheritanceMode = StateInheritanceMode.Explicit;
+        test.FixedState.ExpectedDiagnostics.AddRange(expectedFixed);
+
+        return test.RunAsync();
+    }
 }
 
 internal class CodeFixTest<TAnalyzer, TCodeFix> : CSharpCodeFixTest<TAnalyzer, TCodeFix, DefaultVerifier>

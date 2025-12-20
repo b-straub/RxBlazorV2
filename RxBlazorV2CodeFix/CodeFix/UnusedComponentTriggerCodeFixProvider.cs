@@ -56,7 +56,7 @@ public class UnusedComponentTriggerCodeFixProvider : CodeFixProvider
 
             // Code fix 1: Add [ObservableComponent] attribute to the class
             var addObservableComponentAction = CodeAction.Create(
-                title: diagnostic.Descriptor.CodeFixMessage(0),
+                title: diagnostic.Descriptor.CodeFixMessage(),
                 createChangedDocument: c => AddObservableComponentAttribute(
                     context.Document, root, classDeclaration, c),
                 equivalenceKey: diagnostic.Descriptor.Id);

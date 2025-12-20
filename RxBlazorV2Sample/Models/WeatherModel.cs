@@ -1,6 +1,7 @@
 using R3;
 using RxBlazorV2.Interface;
 using RxBlazorV2.Model;
+using RxBlazorV2.MudBlazor.Components;
 using RxBlazorV2Sample.Services;
 
 namespace RxBlazorV2Sample.Models;
@@ -10,13 +11,12 @@ namespace RxBlazorV2Sample.Models;
 public partial class WeatherModel : ObservableModel
 {
     // Declare partial constructor with dependencies
-    public partial WeatherModel(SettingsModel settings, OpenMeteoApiClient openMeteoClient);
+    public partial WeatherModel(SettingsModel settings, OpenMeteoApiClient openMeteoClient, StatusModel statusModel);
 
     private IDisposable? _autoRefreshSubscription;
     
     public bool NotInComponentObservation => Settings.NotInComponentObservation;
     public partial bool IsLoading { get; set; }
-    public partial string? ErrorMessage { get; set; }
     public partial WeatherForecast[]? Forecasts { get; set; }
     public partial string CurrentLocation { get; set; } = "Berlin";
     public partial DateTime LastRefresh { get; set; }
@@ -93,7 +93,6 @@ public partial class WeatherModel : ObservableModel
         try
         {
             IsLoading = true;
-            ErrorMessage = null;
 
             var forecasts = await OpenMeteoClient.GetWeatherForecastAsync(CurrentLocation);
 
@@ -102,21 +101,23 @@ public partial class WeatherModel : ObservableModel
                 Forecasts = forecasts;
                 LastRefresh = DateTime.Now;
                 UpdateAutoRefreshTimer();
+                StatusModel.ClearErrorMessages();
+                StatusModel.AddSuccess("New weather forecast loaded");
             }
             else
             {
-                ErrorMessage = "No weather data available";
+                StatusModel.AddError("No weather data available");
                 Forecasts = null;
             }
         }
         catch (WeatherApiException ex)
         {
-            ErrorMessage = ex.Message;
+            StatusModel.AddError(ex);
             Forecasts = null;
         }
-        catch (Exception ex)
+        catch // we do or own error handling overwriting build in command one
         {
-            ErrorMessage = $"Failed to load weather data: {ex.Message}";
+            StatusModel.AddError($"Failed to load weather data for: {CurrentLocation}");
             Forecasts = null;
         }
         finally
@@ -151,7 +152,7 @@ public partial class WeatherModel : ObservableModel
     {
         if (string.IsNullOrWhiteSpace(newLocation))
         {
-            ErrorMessage = "Location cannot be empty";
+            StatusModel.AddError("Location cannot be empty");
             return;
         }
 
@@ -161,7 +162,7 @@ public partial class WeatherModel : ObservableModel
 
     private void SimulateError()
     {
-        ErrorMessage = "Simulated error: Weather service temporarily unavailable";
+        StatusModel.AddError("Simulated error: Weather service temporarily unavailable");
         Forecasts = null;
     }
 }

@@ -12,52 +12,13 @@ namespace RxBlazorV2Generator.Analyzers;
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
 {
-    public static readonly DiagnosticDescriptor[] AllDiagnostics =
-    [
-        DiagnosticDescriptors.ObservableModelAnalysisError,
-        DiagnosticDescriptors.CodeGenerationError,
-        DiagnosticDescriptors.MethodAnalysisWarning,
-        DiagnosticDescriptors.CircularModelReferenceError,
-        DiagnosticDescriptors.InvalidModelReferenceTargetError,
-        DiagnosticDescriptors.UnusedModelReferenceError,
-        DiagnosticDescriptors.TriggerTypeArgumentsMismatchError,
-        DiagnosticDescriptors.CircularTriggerReferenceError,
-        DiagnosticDescriptors.CommandMethodReturnsValueError,
-        DiagnosticDescriptors.CommandMethodMissingReturnValueError,
-        DiagnosticDescriptors.GenericArityMismatchError,
-        DiagnosticDescriptors.TypeConstraintMismatchError,
-        DiagnosticDescriptors.InvalidOpenGenericReferenceError,
-        DiagnosticDescriptors.InvalidInitPropertyError,
-        DiagnosticDescriptors.DerivedModelReferenceError,
-        DiagnosticDescriptors.MissingObservableModelScopeWarning,
-        DiagnosticDescriptors.NonPublicPartialConstructorError,
-        DiagnosticDescriptors.ObservableEntityMissingPartialModifierError,
-        DiagnosticDescriptors.ObservableModelObserverInvalidSignatureError,
-        DiagnosticDescriptors.ObservableModelObserverPropertyNotFoundError
-        // NOTE: RXBG041 (UnusedObservableComponentTriggerWarning), RXBG050 (UnregisteredServiceWarning),
-        // RXBG051 (DiServiceScopeViolationError), RXBG052 (ReferencedModelDifferentAssemblyError),
-        // RXBG060 (DirectObservableComponentInheritanceError), RXBG014 (SharedModelNotSingletonError),
-        // RXBG080 (ObservableModelObserverInvalidSignatureError), RXBG081 (ObservableModelObserverPropertyNotFoundError),
-        // and RXBG082 (InternalModelObserverInvalidSignatureWarning)
-        // are reported by generator, not analyzer (require cross-model/cross-type analysis)
-        //
-        // NOTE: RXBG090 (DirectObservableAccessWarning) is handled by separate ObservableUsageAnalyzer
-        // as it operates on MemberAccessExpressionSyntax, not ClassDeclarationSyntax
-    ];
+    // Use unified registry from DiagnosticDescriptors - Single Source of Truth
+    private static readonly HashSet<string> GeneratorReportedIds = DiagnosticDescriptors.GetGeneratorReportedIds();
 
-    /// <summary>
-    /// Additional diagnostics that are reported by the generator but need code fix support.
-    /// These are not in AllDiagnostics because the generator handles reporting them,
-    /// but they're included in SupportedDiagnostics so code fixes can work.
-    /// </summary>
-    private static readonly DiagnosticDescriptor[] GeneratorReportedDiagnosticsWithCodeFix =
-    [
-        DiagnosticDescriptors.InternalModelObserverInvalidSignatureWarning,  // RXBG082
-        DiagnosticDescriptors.UnregisteredServiceWarning  // RXBG050
-    ];
-
+    // All diagnostics must be in SupportedDiagnostics for code fixes to work,
+    // but only analyzer-reported ones are actually reported by this analyzer
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-        ImmutableArray.Create([..AllDiagnostics, ..GeneratorReportedDiagnosticsWithCodeFix]);
+        ImmutableArray.Create(DiagnosticDescriptors.AllDefinitions.Select(d => d.Descriptor).ToArray());
 
     public override void Initialize(AnalysisContext context)
     {
@@ -84,6 +45,22 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
             if (!namedTypeSymbol.InheritsFromObservableModel())
                 return;
 
+            // Deduplicate: Only analyze on the FIRST partial declaration to avoid duplicate diagnostics
+            // For multi-partial classes, the analyzer runs for each ClassDeclarationSyntax,
+            // but ObservableModelRecord.Create analyzes ALL partials. Without this check,
+            // diagnostics would be reported multiple times (once per partial file).
+            // Note: Use location-based comparison since GetSyntax() creates new objects
+            var firstRef = namedTypeSymbol.DeclaringSyntaxReferences.FirstOrDefault();
+            if (firstRef is not null)
+            {
+                var currentLocation = classDecl.GetLocation();
+                var firstLocation = firstRef.GetSyntax().GetLocation();
+                if (!currentLocation.Equals(firstLocation))
+                {
+                    return; // Skip secondary partial declarations
+                }
+            }
+
             // Create ObservableModelRecord - single source of truth for analysis
             // Note: Passing null for serviceClasses is acceptable for analyzer -
             // it will report RXBG020 for unregistered services as expected
@@ -96,10 +73,13 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
             if (record == null)
                 return;
 
-            // Report all diagnostics found
+            // Report only analyzer-designated diagnostics (SSOT pattern from DiagnosticDescriptors)
             foreach (var diagnostic in record.Verify())
             {
-                context.ReportDiagnostic(diagnostic);
+                if (!GeneratorReportedIds.Contains(diagnostic.Id))
+                {
+                    context.ReportDiagnostic(diagnostic);
+                }
             }
         }
         catch (Exception ex)

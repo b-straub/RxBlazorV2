@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Models;
 using System.Collections.Immutable;
+using RxBlazorV2Generator.Helpers;
 
 namespace RxBlazorV2Generator.Extensions;
 
@@ -10,11 +11,7 @@ public static class PropertyAnalysisExtensions
 {
     public static (List<PartialPropertyInfo>, List<Diagnostic>) ExtractPartialPropertiesWithDiagnostics(this ClassDeclarationSyntax classDecl, SemanticModel semanticModel)
     {
-        if (semanticModel is null)
-        {
-            throw new ArgumentNullException(nameof(semanticModel), "SemanticModel cannot be null for property analysis");
-        }
-
+        semanticModel.ThrowIfNull();
         var partialProperties = new List<PartialPropertyInfo>();
         var diagnostics = new List<Diagnostic>();
 
@@ -32,6 +29,7 @@ public static class PropertyAnalysisExtensions
                 }
 
                 var hasRequiredModifier = member.Modifiers.Any(SyntaxKind.RequiredKeyword);
+                var isOverride = member.Modifiers.Any(SyntaxKind.OverrideKeyword);
                 var isObservableCollection = member.IsObservableCollectionProperty(semanticModel);
                 var isEquatable = member.IsEquatableProperty(semanticModel);
                 var batchIds = member.GetObservableBatchIds(semanticModel);
@@ -43,7 +41,7 @@ public static class PropertyAnalysisExtensions
                         Diagnostics.DiagnosticDescriptors.InvalidInitPropertyError,
                         member.Identifier.GetLocation(),
                         member.Identifier.ValueText,
-                        member.Type!.ToString());
+                        member.Type.ToString());
                     diagnostics.Add(diagnostic);
                 }
 
@@ -56,13 +54,14 @@ public static class PropertyAnalysisExtensions
                     .Select(m => m.ValueText)
                     .FirstOrDefault() ?? "public";
 
-                // Extract ObservableTrigger and ObservableTriggerAsync attributes
+                // Extract ObservableTrigger and ObservableTriggerAsync attributes from current property
                 var attributes = member.AttributeLists.SelectMany(al => al.Attributes).ToArray();
-                var syncTriggerAttrs = attributes.Where(a => a.IsObservableTrigger(semanticModel));
-                var asyncTriggerAttrs = attributes.Where(a => a.IsObservableTriggerAsync(semanticModel));
+                var syncTriggerAttrs = attributes.Where(a => a.IsObservableTrigger(semanticModel)).ToList();
+                var asyncTriggerAttrs = attributes.Where(a => a.IsObservableTriggerAsync(semanticModel)).ToList();
+
                 var triggers = new List<PropertyTriggerInfo>();
 
-                // Process sync triggers
+                // Process sync triggers from direct attributes
                 foreach (var triggerAttr in syncTriggerAttrs)
                 {
                     var trigger = ExtractTriggerInfo(triggerAttr, member, classDecl, semanticModel, isAsync: false, diagnostics);
@@ -72,7 +71,7 @@ public static class PropertyAnalysisExtensions
                     }
                 }
 
-                // Process async triggers
+                // Process async triggers from direct attributes
                 foreach (var triggerAttr in asyncTriggerAttrs)
                 {
                     var trigger = ExtractTriggerInfo(triggerAttr, member, classDecl, semanticModel, isAsync: true, diagnostics);
@@ -82,14 +81,38 @@ public static class PropertyAnalysisExtensions
                     }
                 }
 
+                // Process triggers transferred from abstract base property
+                if (isOverride)
+                {
+                    var propertySymbol = semanticModel.GetDeclaredSymbol(member) as IPropertySymbol;
+                    var baseProperty = propertySymbol?.OverriddenProperty;
+                    if (baseProperty?.IsAbstract == true)
+                    {
+                        foreach (var attr in baseProperty.GetAttributes())
+                        {
+                            var attrName = attr.AttributeClass?.Name;
+                            if (attrName == "ObservableTriggerAttribute" || attrName == "ObservableTriggerAsyncAttribute")
+                            {
+                                var trigger = ExtractTriggerInfoFromAttributeData(attr, member, classDecl, semanticModel,
+                                    isAsync: attrName == "ObservableTriggerAsyncAttribute", diagnostics);
+                                if (trigger is not null && !triggers.Any(t => t.ExecuteMethod == trigger.ExecuteMethod))
+                                {
+                                    triggers.Add(trigger);
+                                }
+                            }
+                        }
+                    }
+                }
+
                 partialProperties.Add(new PartialPropertyInfo(
                     member.Identifier.ValueText,
-                    member.Type!.ToString(),
+                    member.Type.ToString(),
                     isObservableCollection,
                     isEquatable,
                     batchIds,
                     hasRequiredModifier,
                     hasInitAccessor,
+                    isOverride,
                     accessibility,
                     triggers));
             }
@@ -153,7 +176,7 @@ public static class PropertyAnalysisExtensions
 
             properties.Add(new ObservableCollectionPropertyInfo(
                 member.Identifier.ValueText,
-                member.Type!.ToString(),
+                member.Type.ToString(),
                 batchIds,
                 accessibility));
         }
@@ -232,6 +255,78 @@ public static class PropertyAnalysisExtensions
         }
 
         var trigger = new PropertyTriggerInfo(executeMethod, canTriggerMethod, parameterArg, supportsCancellation, isAsync)
+        {
+            PropertyName = member.Identifier.ValueText
+        };
+        return trigger;
+    }
+
+    /// <summary>
+    /// Extracts trigger info from AttributeData (symbol-based) for attributes transferred from abstract base classes.
+    /// </summary>
+    private static PropertyTriggerInfo? ExtractTriggerInfoFromAttributeData(
+        AttributeData attr,
+        PropertyDeclarationSyntax member,
+        ClassDeclarationSyntax classDecl,
+        SemanticModel semanticModel,
+        bool isAsync,
+        List<Diagnostic> diagnostics)
+    {
+        // Extract method name from first constructor argument
+        string? executeMethod = null;
+        string? canTriggerMethod = null;
+        string? parameterArg = null;
+
+        if (attr.ConstructorArguments.Length > 0)
+        {
+            executeMethod = attr.ConstructorArguments[0].Value as string;
+        }
+
+        // Check if it's a generic trigger attribute (has type argument)
+        var isGeneric = attr.AttributeClass?.TypeArguments.Length > 0;
+
+        if (isGeneric && attr.ConstructorArguments.Length > 1)
+        {
+            // Generic trigger: second arg is parameter, third is canTrigger
+            var secondArg = attr.ConstructorArguments[1];
+            parameterArg = secondArg.Value?.ToString();
+
+            if (attr.ConstructorArguments.Length > 2)
+            {
+                canTriggerMethod = attr.ConstructorArguments[2].Value as string;
+            }
+        }
+        else if (attr.ConstructorArguments.Length > 1)
+        {
+            // Non-generic trigger: second arg is canTrigger
+            canTriggerMethod = attr.ConstructorArguments[1].Value as string;
+        }
+
+        if (executeMethod is not { Length: > 0 } validExecuteMethod)
+        {
+            return null;
+        }
+
+        // Analyze the execute method to determine if it supports cancellation
+        var supportsCancellation = classDecl.Members.OfType<MethodDeclarationSyntax>()
+            .FirstOrDefault(m => m.Identifier.ValueText == validExecuteMethod)
+            ?.HasCancellationTokenParameter(semanticModel) ?? false;
+
+        // Check for circular references: trigger method modifies the property it's attached to
+        var methodSyntax = classDecl.Members.OfType<MethodDeclarationSyntax>()
+            .FirstOrDefault(m => m.Identifier.ValueText == validExecuteMethod);
+
+        if (methodSyntax is not null)
+        {
+            var modifiedProperties = methodSyntax.AnalyzePropertyModifications(semanticModel);
+            if (modifiedProperties.Contains(member.Identifier.ValueText))
+            {
+                // Circular reference - skip this trigger (warning already reported on base class)
+                return null;
+            }
+        }
+
+        var trigger = new PropertyTriggerInfo(validExecuteMethod, canTriggerMethod, parameterArg, supportsCancellation, isAsync)
         {
             PropertyName = member.Identifier.ValueText
         };

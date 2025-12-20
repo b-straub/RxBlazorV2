@@ -1,38 +1,24 @@
 using ObservableCollections;
-using RxBlazorV2.Interface;
 using RxBlazorV2.Model;
 
 // ReSharper disable once CheckNamespace
 namespace RxBlazorV2.MudBlazor.Components;
 
+/// <summary>
+/// Concrete singleton StatusModel for MudBlazor applications.
+/// Inherits Messages, status methods, and component triggers from the abstract base.
+/// </summary>
 [ObservableComponent]
 [ObservableModelScope(ModelScope.Singleton)]
-public partial class StatusModel : ObservableModel, IErrorModel
+// ReSharper disable once ClassNeverInstantiated.Global
+public partial class StatusModel : StatusBaseModel
 {
-    [ObservableComponentTrigger]
-    public ObservableList<string> Errors { get; } = [];
-
-    [ObservableComponentTrigger]
-    public ObservableList<string> Messages { get; } = [];
-
-    public StatusMessageMode ErrorMode { get; set; } = StatusMessageMode.AGGREGATE;
-    public StatusMessageMode MessageMode { get; set; } = StatusMessageMode.SINGLE;
-
-    public void HandleError(Exception error)
-    {
-        if (ErrorMode is StatusMessageMode.SINGLE)
-        {
-            Errors.Clear();
-        }
-        Errors.Add(error.Message);
-    }
-
-    public void AddMessage(string message)
-    {
-        if (MessageMode is StatusMessageMode.SINGLE)
-        {
-            Messages.Clear();
-        }
-        Messages.Add(message);
-    }
+    // Inherits everything from base class:
+    // - Messages: ObservableList<StatusMessage> with [ObservableComponentTrigger]
+    // - MessageMode: StatusMessageMode (Aggregate or Single)
+    // - HandleError(Exception, commandName, methodName)
+    // - AddInfo, AddSuccess, AddWarning, AddError methods
+    // - HasErrors, HasWarnings, ErrorCount computed properties
+    // - ClearMessages()
+    public override ObservableList<StatusMessage> Messages { get; } = [];
 }

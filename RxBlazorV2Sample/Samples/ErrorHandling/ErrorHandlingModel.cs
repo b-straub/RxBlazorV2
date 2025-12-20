@@ -1,20 +1,21 @@
 using RxBlazorV2.Interface;
 using RxBlazorV2.Model;
 using RxBlazorV2Sample.Samples.Helpers;
+using RxBlazorVSSampleComponents.ErrorManager;
 
 namespace RxBlazorV2Sample.Samples.ErrorHandling;
 
 /// <summary>
-/// Demonstrates automatic error handling via IErrorModel.
-/// When IErrorModel is injected, all command exceptions are automatically
-/// captured and routed to the error handler - no try/catch needed.
+/// Demonstrates automatic error handling via StatusModel.
+/// When a StatusModel is injected, all command exceptions are automatically
+/// captured with source info (command name + method name) and routed to the status handler.
 /// </summary>
 [ObservableComponent]
 [ObservableModelScope(ModelScope.Singleton)]
 public partial class ErrorHandlingModel : SampleBaseModel
 {
-    // Inject IErrorModel to enable automatic error capture for all commands
-    public partial ErrorHandlingModel(IErrorModel errorModel);
+    // Inject StatusModel to enable automatic error capture for all commands
+    public partial ErrorHandlingModel(ErrorModel errorModel);
 
     public override string Usage => "Click buttons to trigger commands - errors are automatically captured";
 
@@ -28,14 +29,14 @@ public partial class ErrorHandlingModel : SampleBaseModel
 
     /// <summary>
     /// Command that throws when counter reaches certain values.
-    /// The exception is automatically captured by IErrorModel.
+    /// The exception is automatically captured by StatusModel with source: "RiskyIncrementCommand.RiskyIncrement".
     /// </summary>
     [ObservableCommand(nameof(RiskyIncrement))]
     public partial IObservableCommand RiskyIncrementCommand { get; }
 
     /// <summary>
     /// Async command that throws after a delay.
-    /// The exception is automatically captured by IErrorModel.
+    /// The exception is automatically captured by StatusModel with source: "RiskyOperationCommand.RiskyOperationAsync".
     /// </summary>
     [ObservableCommand(nameof(RiskyOperationAsync))]
     public partial IObservableCommandAsync RiskyOperationCommand { get; }

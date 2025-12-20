@@ -140,9 +140,9 @@ public static class RazorCodeBehindGenerator
                 var location = Location.Create(
                     razorFile.Path,
                     textSpan: default,
-                    lineSpan: new Microsoft.CodeAnalysis.Text.LinePositionSpan(
-                        new Microsoft.CodeAnalysis.Text.LinePosition(0, 0),
-                        new Microsoft.CodeAnalysis.Text.LinePosition(0, 0)));
+                    lineSpan: new LinePositionSpan(
+                        new LinePosition(0, 0),
+                        new LinePosition(0, 0)));
 
                 var diagnostic = Diagnostic.Create(
                     Diagnostics.DiagnosticDescriptors.NonReactiveComponentError,
@@ -261,20 +261,36 @@ public static class RazorCodeBehindGenerator
 
     /// <summary>
     /// Extracts using directives from razor file.
+    /// Skips using aliases (e.g., "@using X = Y.Z") as they cannot be copied to generated code.
     /// </summary>
     private static List<string> ExtractUsingDirectives(string razorContent)
     {
         var usings = new List<string>();
+
+        // Match @using followed by a namespace, but NOT followed by '=' (which indicates an alias)
+        // Pattern: @using Namespace (not @using Alias = Namespace)
         var usingMatches = System.Text.RegularExpressions.Regex.Matches(
             razorContent,
-            @"@using\s+([a-zA-Z_][a-zA-Z0-9_.]*)",
+            @"@using\s+([a-zA-Z_][a-zA-Z0-9_.]*)\s*(?!=)",
             System.Text.RegularExpressions.RegexOptions.Multiline);
 
         foreach (System.Text.RegularExpressions.Match match in usingMatches)
         {
             if (match.Success)
             {
-                usings.Add(match.Groups[1].Value);
+                var usingValue = match.Groups[1].Value;
+                // Double-check: skip if this is part of an alias (defensive check)
+                var fullMatch = match.Value;
+                var matchIndex = match.Index;
+                var afterMatch = matchIndex + match.Length < razorContent.Length
+                    ? razorContent.Substring(matchIndex + match.Length)
+                    : string.Empty;
+
+                // Skip if the next non-whitespace character is '=' (alias syntax)
+                if (!afterMatch.TrimStart().StartsWith("=", StringComparison.Ordinal))
+                {
+                    usings.Add(usingValue);
+                }
             }
         }
 

@@ -1,24 +1,30 @@
-﻿@using RxBlazorVSSampleComponents.ErrorManager
+﻿@using RxBlazorV2.MudBlazor.Components.Razor
+@using RxBlazorVSSampleComponents.ErrorManager
 @inherits SettingsModelComponent
 
-<MudThemeProvider Theme="@Model.CurrentTheme" IsDarkMode="@Model.IsDay" />
-<MudDialogProvider />
-<MudSnackbarProvider />
-<MudPopoverProvider />
+<MudThemeProvider Theme="@Model.CurrentTheme" IsDarkMode="@Model.IsDay"/>
+<MudDialogProvider/>
+<MudSnackbarProvider/>
+<MudPopoverProvider/>
 
 <MudLayout>
     <MudAppBar>
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@(_ => DrawerToggle())" />
-        <MudSpacer />
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
+                       OnClick="@(_ => DrawerToggle())"/>
+        <MudSpacer/>
         <MudText Typo="Typo.h6">RxBlazorV2 Sample</MudText>
-        <MudSpacer />
-        <ErrorDisplay />
-        <MudSpacer />
-        <MudIconButton Icon=@(Model.IsDay ? Icons.Material.Filled.DarkMode : Icons.Material.Filled.LightMode) Color="Color.Inherit" OnClick="@(() => Model.ToggleThemeCommand.Execute())" />
-        <MudIconButton Icon="@Icons.Material.Filled.Info" Color="Color.Inherit" Href="https://learn.microsoft.com/aspnet/core/" Target="_blank" />
+        <MudSpacer/>
+        <ErrorDisplay/>
+        <MudSpacer/>
+        <MudIconButton Icon=@(Model.IsDay ? Icons.Material.Filled.DarkMode : Icons.Material.Filled.LightMode)
+                       Color="Color.Inherit" OnClick="@(() => Model.ToggleThemeCommand.Execute())"/>
+        <MudIconButton Icon="@Icons.Material.Filled.Info" Color="Color.Inherit"
+                       Href="https://learn.microsoft.com/aspnet/core/" Target="_blank"/>
+        <StatusDisplay ShowMessageSource="false" GroupMessagesBySeverity="false"
+                       MessageMessageMode="StatusMessageMode.Single"/>
     </MudAppBar>
     <MudDrawer @bind-Open="@_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
-        <NavMenu />
+        <NavMenu/>
     </MudDrawer>
     <MudMainContent>
         <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">

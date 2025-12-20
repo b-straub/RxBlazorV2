@@ -10,12 +10,16 @@ using System.Threading.Tasks;
 
 namespace RxBlazorV2CodeFix.CodeFix;
 
-[ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(UnusedModelReferenceCodeFixProvider))]
-public class UnusedModelReferenceCodeFixProvider : CodeFixProvider
+/// <summary>
+/// Code fix provider for RXBG052 - Abstract class cannot be used in partial constructor.
+/// Provides a fix to remove the abstract class parameter from the constructor.
+/// </summary>
+[ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(AbstractClassInPartialConstructorCodeFixProvider))]
+public class AbstractClassInPartialConstructorCodeFixProvider : CodeFixProvider
 {
     public sealed override ImmutableArray<string> FixableDiagnosticIds =>
         [
-            DiagnosticDescriptors.UnusedModelReferenceError.Id
+            DiagnosticDescriptors.AbstractClassInPartialConstructorError.Id
         ];
 
     public sealed override FixAllProvider GetFixAllProvider() =>
@@ -24,7 +28,7 @@ public class UnusedModelReferenceCodeFixProvider : CodeFixProvider
     public sealed override async Task RegisterCodeFixesAsync(CodeFixContext context)
     {
         var root = await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false);
-        if (root == null)
+        if (root is null)
         {
             return;
         }
@@ -39,14 +43,14 @@ public class UnusedModelReferenceCodeFixProvider : CodeFixProvider
             var diagnosticSpan = diagnostic.Location.SourceSpan;
             var node = root.FindNode(diagnosticSpan);
 
-            // Find the constructor parameter that contains the unused reference
+            // Find the constructor parameter with the abstract class type
             var parameter = node.FirstAncestorOrSelf<ParameterSyntax>();
-            if (parameter == null)
+            if (parameter is null)
             {
                 continue;
             }
 
-            // Code Fix: Remove the model reference parameter
+            // Code Fix: Remove the abstract class parameter
             var removeParameterAction = CodeAction.Create(
                 title: diagnostic.Descriptor.CodeFixMessage(),
                 createChangedDocument: c => RemoveParameterAsync(context.Document, root, parameter, c),

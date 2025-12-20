@@ -36,7 +36,8 @@ public static class CommandTemplate
         foreach (var cmd in commandProperties)
         {
             var backingField = GetBackingFieldName(cmd.Name);
-            sb.AppendLine($"    {cmd.Accessibility} partial {cmd.Type} {cmd.Name}");
+            var overrideModifier = cmd.IsOverride ? "override " : "";
+            sb.AppendLine($"    {cmd.Accessibility} {overrideModifier}partial {cmd.Type} {cmd.Name}");
             sb.AppendLine("    {");
             sb.AppendLine($"        get => {backingField};");
             sb.AppendLine("    }");
@@ -61,7 +62,7 @@ public static class CommandTemplate
             var observedProps = getObservedProperties(modelInfo, cmd);
             var observedPropsArray = $"[\"{string.Join("\", \"", observedProps)}\"]";
 
-            var factoryCall = GetFactoryCall(cmd, observedPropsArray, modelInfo.ErrorModelFieldName);
+            var factoryCall = GetFactoryCall(cmd, observedPropsArray, modelInfo.StatusModelFieldName);
             var backingField = GetBackingFieldName(cmd.Name);
             sb.AppendLine($"        {backingField} = {factoryCall};");
         }
@@ -151,11 +152,15 @@ public static class CommandTemplate
     /// <summary>
     /// Gets the factory call for command initialization.
     /// </summary>
-    private static string GetFactoryCall(CommandPropertyInfo command, string observedPropsArray, string? errorModelFieldName)
+    private static string GetFactoryCall(CommandPropertyInfo command, string observedPropsArray, string? statusModelFieldName)
     {
-        var errorModelParam = errorModelFieldName is not null ? $", {errorModelFieldName}" : "";
-        // Only add null for canExecute when we need to pass errorModel parameter
-        var nullCanExecuteParam = errorModelFieldName is not null ? ", null" : "";
+        var statusModelParam = statusModelFieldName is not null ? $", {statusModelFieldName}" : "";
+        // Only add null for canExecute when we need to pass statusModel parameter
+        var nullCanExecuteParam = statusModelFieldName is not null ? ", null" : "";
+
+        // Command name and method name as string literals for error source tracking
+        var commandNameParam = $"\"{command.Name}\"";
+        var methodNameParam = $"\"{command.ExecuteMethod}\"";
 
         // Determine factory type based on command property type and method signature
         // IObservableCommandRAsync<T> or IObservableCommandRAsync<T1, T2>
@@ -167,19 +172,19 @@ public static class CommandTemplate
                 // Use cancelable factory for methods with CancellationToken
                 if (command.CanExecuteMethod is not null)
                 {
-                    return $"new ObservableCommandRAsyncCancelableFactory<{genericType}>(this, {observedPropsArray}, {command.ExecuteMethod}, {command.CanExecuteMethod}{errorModelParam})";
+                    return $"new ObservableCommandRAsyncCancelableFactory<{genericType}>(this, {observedPropsArray}, {commandNameParam}, {methodNameParam}, {command.ExecuteMethod}, {command.CanExecuteMethod}{statusModelParam})";
                 }
 
-                return $"new ObservableCommandRAsyncCancelableFactory<{genericType}>(this, {observedPropsArray}, {command.ExecuteMethod}{nullCanExecuteParam}{errorModelParam})";
+                return $"new ObservableCommandRAsyncCancelableFactory<{genericType}>(this, {observedPropsArray}, {commandNameParam}, {methodNameParam}, {command.ExecuteMethod}{nullCanExecuteParam}{statusModelParam})";
             }
 
             // Use regular async factory for methods without CancellationToken
             if (command.CanExecuteMethod is not null)
             {
-                return $"new ObservableCommandRAsyncFactory<{genericType}>(this, {observedPropsArray}, {command.ExecuteMethod}, {command.CanExecuteMethod}{errorModelParam})";
+                return $"new ObservableCommandRAsyncFactory<{genericType}>(this, {observedPropsArray}, {commandNameParam}, {methodNameParam}, {command.ExecuteMethod}, {command.CanExecuteMethod}{statusModelParam})";
             }
 
-            return $"new ObservableCommandRAsyncFactory<{genericType}>(this, {observedPropsArray}, {command.ExecuteMethod}{nullCanExecuteParam}{errorModelParam})";
+            return $"new ObservableCommandRAsyncFactory<{genericType}>(this, {observedPropsArray}, {commandNameParam}, {methodNameParam}, {command.ExecuteMethod}{nullCanExecuteParam}{statusModelParam})";
         }
 
         // IObservableCommandAsync<T>
@@ -191,19 +196,19 @@ public static class CommandTemplate
                 // Use cancelable factory for methods with CancellationToken
                 if (command.CanExecuteMethod is not null)
                 {
-                    return $"new ObservableCommandAsyncCancelableFactory<{genericType}>(this, {observedPropsArray}, {command.ExecuteMethod}, {command.CanExecuteMethod}{errorModelParam})";
+                    return $"new ObservableCommandAsyncCancelableFactory<{genericType}>(this, {observedPropsArray}, {commandNameParam}, {methodNameParam}, {command.ExecuteMethod}, {command.CanExecuteMethod}{statusModelParam})";
                 }
 
-                return $"new ObservableCommandAsyncCancelableFactory<{genericType}>(this, {observedPropsArray}, {command.ExecuteMethod}{nullCanExecuteParam}{errorModelParam})";
+                return $"new ObservableCommandAsyncCancelableFactory<{genericType}>(this, {observedPropsArray}, {commandNameParam}, {methodNameParam}, {command.ExecuteMethod}{nullCanExecuteParam}{statusModelParam})";
             }
 
             // Use regular async factory for methods without CancellationToken
             if (command.CanExecuteMethod is not null)
             {
-                return $"new ObservableCommandAsyncFactory<{genericType}>(this, {observedPropsArray}, {command.ExecuteMethod}, {command.CanExecuteMethod}{errorModelParam})";
+                return $"new ObservableCommandAsyncFactory<{genericType}>(this, {observedPropsArray}, {commandNameParam}, {methodNameParam}, {command.ExecuteMethod}, {command.CanExecuteMethod}{statusModelParam})";
             }
 
-            return $"new ObservableCommandAsyncFactory<{genericType}>(this, {observedPropsArray}, {command.ExecuteMethod}{nullCanExecuteParam}{errorModelParam})";
+            return $"new ObservableCommandAsyncFactory<{genericType}>(this, {observedPropsArray}, {commandNameParam}, {methodNameParam}, {command.ExecuteMethod}{nullCanExecuteParam}{statusModelParam})";
         }
 
         // IObservableCommandAsync (no parameters)
@@ -214,19 +219,19 @@ public static class CommandTemplate
                 // Use cancelable factory for methods with CancellationToken
                 if (command.CanExecuteMethod is not null)
                 {
-                    return $"new ObservableCommandAsyncCancelableFactory(this, {observedPropsArray}, {command.ExecuteMethod}, {command.CanExecuteMethod}{errorModelParam})";
+                    return $"new ObservableCommandAsyncCancelableFactory(this, {observedPropsArray}, {commandNameParam}, {methodNameParam}, {command.ExecuteMethod}, {command.CanExecuteMethod}{statusModelParam})";
                 }
 
-                return $"new ObservableCommandAsyncCancelableFactory(this, {observedPropsArray}, {command.ExecuteMethod}{nullCanExecuteParam}{errorModelParam})";
+                return $"new ObservableCommandAsyncCancelableFactory(this, {observedPropsArray}, {commandNameParam}, {methodNameParam}, {command.ExecuteMethod}{nullCanExecuteParam}{statusModelParam})";
             }
 
             // Use regular async factory for methods without CancellationToken
             if (command.CanExecuteMethod is not null)
             {
-                return $"new ObservableCommandAsyncFactory(this, {observedPropsArray}, {command.ExecuteMethod}, {command.CanExecuteMethod}{errorModelParam})";
+                return $"new ObservableCommandAsyncFactory(this, {observedPropsArray}, {commandNameParam}, {methodNameParam}, {command.ExecuteMethod}, {command.CanExecuteMethod}{statusModelParam})";
             }
 
-            return $"new ObservableCommandAsyncFactory(this, {observedPropsArray}, {command.ExecuteMethod}{nullCanExecuteParam}{errorModelParam})";
+            return $"new ObservableCommandAsyncFactory(this, {observedPropsArray}, {commandNameParam}, {methodNameParam}, {command.ExecuteMethod}{nullCanExecuteParam}{statusModelParam})";
         }
 
         // IObservableCommandR<T> or IObservableCommandR<T1, T2>
@@ -235,10 +240,10 @@ public static class CommandTemplate
             var genericType = ExtractGenericType(command.Type);
             if (command.CanExecuteMethod is not null)
             {
-                return $"new ObservableCommandRFactory<{genericType}>(this, {observedPropsArray}, {command.ExecuteMethod}, {command.CanExecuteMethod}{errorModelParam})";
+                return $"new ObservableCommandRFactory<{genericType}>(this, {observedPropsArray}, {commandNameParam}, {methodNameParam}, {command.ExecuteMethod}, {command.CanExecuteMethod}{statusModelParam})";
             }
 
-            return $"new ObservableCommandRFactory<{genericType}>(this, {observedPropsArray}, {command.ExecuteMethod}{nullCanExecuteParam}{errorModelParam})";
+            return $"new ObservableCommandRFactory<{genericType}>(this, {observedPropsArray}, {commandNameParam}, {methodNameParam}, {command.ExecuteMethod}{nullCanExecuteParam}{statusModelParam})";
         }
 
         // IObservableCommand<T>
@@ -247,19 +252,19 @@ public static class CommandTemplate
             var genericType = ExtractGenericType(command.Type);
             if (command.CanExecuteMethod is not null)
             {
-                return $"new ObservableCommandFactory<{genericType}>(this, {observedPropsArray}, {command.ExecuteMethod}, {command.CanExecuteMethod}{errorModelParam})";
+                return $"new ObservableCommandFactory<{genericType}>(this, {observedPropsArray}, {commandNameParam}, {methodNameParam}, {command.ExecuteMethod}, {command.CanExecuteMethod}{statusModelParam})";
             }
 
-            return $"new ObservableCommandFactory<{genericType}>(this, {observedPropsArray}, {command.ExecuteMethod}{nullCanExecuteParam}{errorModelParam})";
+            return $"new ObservableCommandFactory<{genericType}>(this, {observedPropsArray}, {commandNameParam}, {methodNameParam}, {command.ExecuteMethod}{nullCanExecuteParam}{statusModelParam})";
         }
 
         // IObservableCommand (no parameters, no return value)
         if (command.CanExecuteMethod is not null)
         {
-            return $"new ObservableCommandFactory(this, {observedPropsArray}, {command.ExecuteMethod}, {command.CanExecuteMethod}{errorModelParam})";
+            return $"new ObservableCommandFactory(this, {observedPropsArray}, {commandNameParam}, {methodNameParam}, {command.ExecuteMethod}, {command.CanExecuteMethod}{statusModelParam})";
         }
 
-        return $"new ObservableCommandFactory(this, {observedPropsArray}, {command.ExecuteMethod}{nullCanExecuteParam}{errorModelParam})";
+        return $"new ObservableCommandFactory(this, {observedPropsArray}, {commandNameParam}, {methodNameParam}, {command.ExecuteMethod}{nullCanExecuteParam}{statusModelParam})";
     }
 
     /// <summary>

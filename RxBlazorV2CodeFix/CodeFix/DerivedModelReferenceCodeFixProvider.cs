@@ -46,7 +46,7 @@ public class DerivedModelReferenceCodeFixProvider : CodeFixProvider
 
             // Code Fix: Remove the derived model reference parameter
             var removeParameterAction = CodeAction.Create(
-                title: diagnostic.Descriptor.CodeFixMessage(0),
+                title: diagnostic.Descriptor.CodeFixMessage(),
                 createChangedDocument: c => RemoveParameterAsync(context.Document, root, parameter, c),
                 equivalenceKey: diagnostic.Descriptor.Id);
 

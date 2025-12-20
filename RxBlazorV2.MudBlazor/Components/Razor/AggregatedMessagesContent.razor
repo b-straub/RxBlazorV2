@@ -1,0 +1,56 @@
+@using RxBlazorV2.Model
+
+<MudStack Spacing="1">
+    @foreach (var msg in OrderedMessages)
+    {
+        <MudAlert Severity="@ToMudSeverity(msg.Severity)" Variant="Variant.Filled" Dense="true" NoIcon="false">
+            @if (msg.Source is not null)
+            {
+                @msg.Message @:(@msg.Source)
+            }
+            else
+            {
+                @msg.Message
+            }
+        </MudAlert>
+    }
+    @if (OnClear.HasDelegate)
+    {
+        <MudButton Variant="Variant.Text" Color="Color.Default" StartIcon="@Icons.Material.Filled.ClearAll" OnClick="OnClear" FullWidth="true">
+            Clear All
+        </MudButton>
+    }
+</MudStack>
+
+@code {
+    [Parameter]
+    public required IEnumerable<StatusMessage> Messages { get; set; }
+
+    /// <summary>
+    /// When true, groups messages by severity (Warning first, then Success, then Info)
+    /// with newest on top within each group.
+    /// When false, shows all messages strictly by time with newest on top.
+    /// </summary>
+    [Parameter]
+    public bool GroupBySeverity { get; set; } = true;
+
+    /// <summary>
+    /// Callback invoked when the clear all button is clicked.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnClear { get; set; }
+
+    private IEnumerable<StatusMessage> OrderedMessages => GroupBySeverity
+        ? Messages.GroupBy(m => m.Severity)
+            .OrderByDescending(g => g.Key)
+            .SelectMany(g => g.Reverse())
+        : Messages.Reverse();
+
+    private static Severity ToMudSeverity(StatusSeverity severity) => severity switch
+    {
+        StatusSeverity.Error => Severity.Error,
+        StatusSeverity.Warning => Severity.Warning,
+        StatusSeverity.Success => Severity.Success,
+        _ => Severity.Info
+    };
+}

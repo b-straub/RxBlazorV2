@@ -1,84 +1,105 @@
+@using RxBlazorV2.Model
 @inherits StatusModelComponent
 
-@if (ShowErrorIcon && Model.Errors.Count > 0)
+@* Error Icon (separate from messages) *@
+@if (ShowErrorIcon && ErrorMessages.Count > 0)
 {
-    <MudTooltip Placement="Placement.Left" RootStyle="max-width: none;" Class="border-0 pa-0">
-        <ChildContent>
-            <MudStack Row="true" AlignItems="AlignItems.Center">
-                <MudBadge Content="@Model.Errors.Distinct().Count()" Color="Color.Error" Overlap="true" Class="d-flex align-center">
-                    <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" />
-                </MudBadge>
-                <MudIconButton Icon="@Icons.Material.Filled.Clear" OnClick="ClearErrors" Color="Color.Inherit" />
-            </MudStack>
-        </ChildContent>
-        <TooltipContent>
-            <MudPaper Class="mud-theme-error px-5 py-3 rounded border-0" Elevation="0">
-                @foreach (var error in Model.Errors.Distinct())
-                {
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                        <MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Color="Color.Inherit" Size="Size.Small" />
-                        <MudText Typo="Typo.body2" Class="text-nowrap" Color="Color.Inherit">@error</MudText>
-                    </MudStack>
-                }
-            </MudPaper>
-        </TooltipContent>
-    </MudTooltip>
+    <MudBadge Content="@ErrorMessages.Count" Color="Color.Error" Overlap="true" Class="d-flex align-center cursor-pointer" @onclick="ShowErrorSnackbarOnClick">
+        <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" />
+    </MudBadge>
 }
 
-@if (ShowMessageIcon && Model.Messages.Count > 0)
+@* Message Icon (Info, Success, Warning - separate from errors) *@
+@if (ShowMessageIcon && NonErrorMessages.Count > 0)
 {
-    <MudTooltip Placement="Placement.Left" RootStyle="max-width: none;" Class="border-0 pa-0">
-        <ChildContent>
-            <MudStack Row="true" AlignItems="AlignItems.Center">
-                <MudBadge Content="@Model.Messages.Distinct().Count()" Color="Color.Info" Overlap="true" Class="d-flex align-center">
-                    <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Info" />
-                </MudBadge>
-                <MudIconButton Icon="@Icons.Material.Filled.Clear" OnClick="ClearMessages" Color="Color.Inherit" />
-            </MudStack>
-        </ChildContent>
-        <TooltipContent>
-            <MudPaper Class="mud-theme-info px-5 py-3 rounded border-0" Elevation="0">
-                @foreach (var message in Model.Messages.Distinct())
-                {
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                        <MudIcon Icon="@Icons.Material.Outlined.Info" Color="Color.Inherit" Size="Size.Small" />
-                        <MudText Typo="Typo.body2" Class="text-nowrap" Color="Color.Inherit">@message</MudText>
-                    </MudStack>
-                }
-            </MudPaper>
-        </TooltipContent>
-    </MudTooltip>
+    <MudBadge Content="@NonErrorMessages.Count" Color="@GetMessageBadgeColor()" Overlap="true" Class="d-flex align-center cursor-pointer" @onclick="ShowMessageSnackbarOnClick">
+        <MudIcon Icon="@GetMessageIcon()" Color="@GetMessageIconColor()" />
+    </MudBadge>
 }
 
 @code
 {
+    #region Error Settings (StatusSeverity.Error only)
+
+    /// <summary>
+    /// How errors are displayed. Default: SNACKBAR_AND_ICON.
+    /// </summary>
     [Parameter]
     public StatusDisplayMode ErrorDisplayMode { get; set; } = StatusDisplayMode.SNACKBAR_AND_ICON;
 
+    /// <summary>
+    /// How errors are accumulated. Default: Aggregate.
+    /// </summary>
     [Parameter]
-    public StatusMessageMode ErrorMode { get; set; } = StatusMessageMode.AGGREGATE;
+    public StatusMessageMode ErrorMessageMode { get; set; } = StatusMessageMode.Aggregate;
 
+    /// <summary>
+    /// Whether to show the source (e.g., command name) in error messages. Default: true.
+    /// </summary>
     [Parameter]
-    public Action<SnackbarOptions>? ErrorSnackbarOptions { get; set; } = options => options.ShowCloseIcon = false;
+    public bool ShowErrorSource { get; set; } = true;
 
+    #endregion
+
+    #region Message Settings (Info, Success, Warning)
+
+    /// <summary>
+    /// How non-error messages are displayed. Default: SNACKBAR.
+    /// Note: SNACKBAR with Aggregate mode is auto-upgraded to SNACKBAR_AND_ICON.
+    /// </summary>
     [Parameter]
     public StatusDisplayMode MessageDisplayMode { get; set; } = StatusDisplayMode.SNACKBAR;
 
+    /// <summary>
+    /// How non-error messages are accumulated. Default: Aggregate.
+    /// </summary>
     [Parameter]
-    public StatusMessageMode MessageMode { get; set; } = StatusMessageMode.SINGLE;
+    public StatusMessageMode MessageMessageMode { get; set; } = StatusMessageMode.Aggregate;
 
+    /// <summary>
+    /// Whether to show the source in non-error messages. Default: true.
+    /// </summary>
     [Parameter]
-    public Action<SnackbarOptions>? MessageSnackbarOptions { get; set; } = options => options.ShowCloseIcon = false;
+    public bool ShowMessageSource { get; set; } = true;
 
+    /// <summary>
+    /// When true, groups non-error messages by severity (Warning first, then Success, then Info)
+    /// with newest on top within each group.
+    /// When false, shows all messages strictly by time with newest on top.
+    /// Default: true.
+    /// </summary>
+    [Parameter]
+    public bool GroupMessagesBySeverity { get; set; } = true;
+
+    #endregion
+
+    #region Snackbar Settings
+
+    /// <summary>
+    /// Position of the snackbar. Default: TopEnd.
+    /// </summary>
     [Parameter]
     public string SnackbarPositionClass { get; set; } = Defaults.Classes.Position.TopEnd;
+
+    #endregion
 
     [Inject]
     public required ISnackbar Snackbar { get; init; }
 
-    private Snackbar? _errorSnackbar;
-    private Snackbar? _messageSnackbar;
+    private Snackbar? _currentErrorSnackbar;
+    private Snackbar? _currentMessageSnackbar;
 
+    // Track previous state to detect changes (count + last message ID for Single mode)
+    private int _previousErrorCount;
+    private int _previousMessageCount;
+    private Guid? _previousLastErrorId;
+    private Guid? _previousLastMessageId;
+
+    // Computed properties for filtering
+    private List<StatusMessage> ErrorMessages => Model.Messages.Where(m => m.Severity == StatusSeverity.Error).ToList();
+    private List<StatusMessage> NonErrorMessages => Model.Messages.Where(m => m.Severity != StatusSeverity.Error).ToList();
+
+    // Display mode helpers
     private bool ShowErrorIcon => ErrorDisplayMode is StatusDisplayMode.ICON or StatusDisplayMode.SNACKBAR_AND_ICON;
     private bool ShowErrorSnackbar => ErrorDisplayMode is StatusDisplayMode.SNACKBAR or StatusDisplayMode.SNACKBAR_AND_ICON;
     private bool ShowMessageIcon => MessageDisplayMode is StatusDisplayMode.ICON or StatusDisplayMode.SNACKBAR_AND_ICON;
@@ -87,62 +108,228 @@
     protected override void OnParametersSet()
     {
         Snackbar.Configuration.PositionClass = SnackbarPositionClass;
-        Model.ErrorMode = ErrorMode;
-        Model.MessageMode = MessageMode;
+
+        // Sync parameters to model's modes
+        Model.ErrorMessageMode = ErrorMessageMode;
+        if (ErrorMessageMode is StatusMessageMode.Aggregate && ErrorDisplayMode is StatusDisplayMode.SNACKBAR)
+        {
+            ErrorDisplayMode = StatusDisplayMode.SNACKBAR_AND_ICON;
+        }
+        
+        Model.MessageMessageMode = MessageMessageMode;
+        if (MessageMessageMode is StatusMessageMode.Aggregate && MessageDisplayMode is StatusDisplayMode.SNACKBAR)
+        {
+            MessageDisplayMode = StatusDisplayMode.SNACKBAR_AND_ICON;
+        }
+        
         base.OnParametersSet();
-    }
-
-    protected override void OnErrorsChanged()
-    {
-        if (_errorSnackbar is not null)
-        {
-            Snackbar.Remove(_errorSnackbar);
-            _errorSnackbar = null;
-        }
-
-        if (ShowErrorSnackbar && Model.Errors.Count > 0)
-        {
-            var errors = Model.Errors.Distinct().ToList();
-            var errorMessage = errors.Count == 1
-                ? new MarkupString(errors[0])
-                : new MarkupString("<ul class=\"pl-4 ma-0\">" + string.Join("", errors.Select(e => $"<li>{e}</li>")) + "</ul>");
-            _errorSnackbar = Snackbar.Add(errorMessage, Severity.Error, ErrorSnackbarOptions);
-            if (ErrorMode is StatusMessageMode.SINGLE)
-            {
-                _errorSnackbar = null; // default dismiss
-            }
-        }
     }
 
     protected override void OnMessagesChanged()
     {
-        if (_messageSnackbar is not null)
+        var errors = ErrorMessages;
+        var messages = NonErrorMessages;
+        var lastErrorId = errors.LastOrDefault()?.Id;
+        var lastMessageId = messages.LastOrDefault()?.Id;
+
+        // Update error snackbar if errors changed (count or content in Single mode)
+        var errorsChanged = errors.Count != _previousErrorCount || lastErrorId != _previousLastErrorId;
+        if (ShowErrorSnackbar && errorsChanged)
         {
-            Snackbar.Remove(_messageSnackbar);
-            _messageSnackbar = null;
+            if (errors.Count > 0)
+            {
+                DisplayErrorSnackbar();
+            }
+            else
+            {
+                // Errors cleared - remove snackbar
+                if (_currentErrorSnackbar is not null)
+                {
+                    Snackbar.Remove(_currentErrorSnackbar);
+                    _currentErrorSnackbar = null;
+                }
+            }
         }
 
-        if (ShowMessageSnackbar && Model.Messages.Count > 0)
+        // Update message snackbar if messages changed (count or content in Single mode)
+        var messagesChanged = messages.Count != _previousMessageCount || lastMessageId != _previousLastMessageId;
+        if (ShowMessageSnackbar && messagesChanged)
         {
-            var messages = Model.Messages.Distinct().ToList();
-            var statusMessage = messages.Count == 1
-                ? new MarkupString(messages[0])
-                : new MarkupString("<ul class=\"pl-4 ma-0\">" + string.Join("", messages.Select(m => $"<li>{m}</li>")) + "</ul>");
-            _messageSnackbar = Snackbar.Add(statusMessage, Severity.Info, MessageSnackbarOptions);
-            if (MessageMode is StatusMessageMode.SINGLE)
+            if (messages.Count > 0)
             {
-                _messageSnackbar = null; // default dismiss
+                DisplayMessageSnackbar();
             }
+            else
+            {
+                // Messages cleared - remove snackbar
+                if (_currentMessageSnackbar is not null)
+                {
+                    Snackbar.Remove(_currentMessageSnackbar);
+                    _currentMessageSnackbar = null;
+                }
+            }
+        }
+
+        _previousErrorCount = errors.Count;
+        _previousMessageCount = messages.Count;
+        _previousLastErrorId = lastErrorId;
+        _previousLastMessageId = lastMessageId;
+    }
+
+    private void ShowErrorSnackbarOnClick()
+    {
+        DisplayErrorSnackbar(fromIconClick: true);
+    }
+
+    private void ShowMessageSnackbarOnClick()
+    {
+        DisplayMessageSnackbar(fromIconClick: true);
+    }
+
+    private void DisplayErrorSnackbar(bool fromIconClick = false)
+    {
+        if (_currentErrorSnackbar is not null)
+        {
+            Snackbar.Remove(_currentErrorSnackbar);
+            _currentErrorSnackbar = null;
+        }
+
+        var errors = ErrorMessages;
+        if (errors.Count == 0)
+        {
+            return;
+        }
+
+        // Use aggregated display when: from icon click OR multiple errors
+        var useAggregated = fromIconClick || errors.Count > 1;
+
+        if (useAggregated)
+        {
+            // Aggregated errors - use theme-aware background with filled alerts inside
+            var parameters = new Dictionary<string, object>
+            {
+                { "Messages", errors }
+            };
+            if (fromIconClick)
+            {
+                parameters.Add("OnClear", EventCallback.Factory.Create(this, ClearErrors));
+            }
+
+            _currentErrorSnackbar = Snackbar.Add<AggregatedMessagesContent>(
+                parameters,
+                Severity.Normal,
+                opts =>
+                {
+                    opts.SnackbarVariant = Variant.Text;
+                    if (fromIconClick)
+                    {
+                        opts.RequireInteraction = true;
+                    }
+                });
+        }
+        else
+        {
+            // Single error (not from icon) - use normal plain snackbar
+            var error = errors[0];
+            var text = error.Source is not null && ShowErrorSource ? $"{error.Message} ({error.Source})" : error.Message;
+            _currentErrorSnackbar = Snackbar.Add(text, Severity.Error);
+        }
+    }
+
+    private void DisplayMessageSnackbar(bool fromIconClick = false)
+    {
+        if (_currentMessageSnackbar is not null)
+        {
+            Snackbar.Remove(_currentMessageSnackbar);
+            _currentMessageSnackbar = null;
+        }
+
+        var messages = NonErrorMessages;
+        if (messages.Count == 0)
+        {
+            return;
+        }
+
+        // Use aggregated display when: from icon click OR multiple messages
+        var useAggregated = fromIconClick || messages.Count > 1;
+
+        if (useAggregated)
+        {
+            // Aggregated messages - use theme-aware background with filled alerts inside
+            var parameters = new Dictionary<string, object>
+            {
+                { "Messages", messages },
+                { "GroupBySeverity", GroupMessagesBySeverity }
+            };
+            if (fromIconClick)
+            {
+                parameters.Add("OnClear", EventCallback.Factory.Create(this, ClearNonErrors));
+            }
+
+            _currentMessageSnackbar = Snackbar.Add<AggregatedMessagesContent>(
+                parameters,
+                Severity.Normal,
+                opts =>
+                {
+                    opts.SnackbarVariant = Variant.Text;
+                    if (fromIconClick)
+                    {
+                        opts.RequireInteraction = true;
+                    }
+                });
+        }
+        else
+        {
+            // Single message (not from icon) - use normal plain snackbar
+            var msg = messages[0];
+            var text = msg.Source is not null && ShowMessageSource ? $"{msg.Message} ({msg.Source})" : msg.Message;
+            _currentMessageSnackbar = Snackbar.Add(text, ToMudSeverity(msg.Severity));
         }
     }
 
     private void ClearErrors()
     {
-        Model.Errors.Clear();
+        Model.ClearErrorMessages();
     }
 
-    private void ClearMessages()
+    private void ClearNonErrors()
     {
-        Model.Messages.Clear();
+        Model.ClearNonErrorMessages();
     }
+
+    private Color GetMessageBadgeColor()
+    {
+        if (NonErrorMessages.Any(m => m.Severity == StatusSeverity.Warning))
+        {
+            return Color.Warning;
+        }
+        if (NonErrorMessages.Any(m => m.Severity == StatusSeverity.Success))
+        {
+            return Color.Success;
+        }
+        return Color.Info;
+    }
+
+    private Color GetMessageIconColor() => GetMessageBadgeColor();
+
+    private string GetMessageIcon()
+    {
+        if (NonErrorMessages.Any(m => m.Severity == StatusSeverity.Warning))
+        {
+            return Icons.Material.Filled.Warning;
+        }
+        if (NonErrorMessages.Any(m => m.Severity == StatusSeverity.Success))
+        {
+            return Icons.Material.Filled.CheckCircle;
+        }
+        return Icons.Material.Filled.Info;
+    }
+
+    private static Severity ToMudSeverity(StatusSeverity severity) => severity switch
+    {
+        StatusSeverity.Error => Severity.Error,
+        StatusSeverity.Warning => Severity.Warning,
+        StatusSeverity.Success => Severity.Success,
+        _ => Severity.Info
+    };
 }

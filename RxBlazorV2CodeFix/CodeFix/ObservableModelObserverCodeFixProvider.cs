@@ -32,10 +32,6 @@ public class ObservableModelObserverCodeFixProvider : CodeFixProvider
         }
 
         var semanticModel = await context.Document.GetSemanticModelAsync(context.CancellationToken).ConfigureAwait(false);
-        if (semanticModel is null)
-        {
-            return;
-        }
 
         foreach (var diagnostic in context.Diagnostics.Where(d => FixableDiagnosticIds.Contains(d.Id)))
         {
@@ -54,7 +50,7 @@ public class ObservableModelObserverCodeFixProvider : CodeFixProvider
             var modelTypeName = diagnostic.Properties.TryGetValue("ModelTypeName", out var mtn) ? mtn : "ModelType";
 
             // Determine if this is an async method based on current return type
-            var methodSymbol = semanticModel.GetDeclaredSymbol(methodDeclaration);
+            var methodSymbol = semanticModel?.GetDeclaredSymbol(methodDeclaration);
             var isCurrentlyAsync = methodSymbol is not null &&
                 (methodSymbol.ReturnType.Name == "Task" || methodSymbol.ReturnType.Name == "ValueTask" ||
                  methodSymbol.IsAsync);

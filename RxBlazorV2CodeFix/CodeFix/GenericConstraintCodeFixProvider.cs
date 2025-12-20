@@ -9,6 +9,7 @@ using System.Collections.Immutable;
 using System.Composition;
 using System.Threading;
 using System.Threading.Tasks;
+using RxBlazorV2Generator.Helpers;
 
 namespace RxBlazorV2CodeFix.CodeFix;
 
@@ -38,10 +39,7 @@ public class GenericConstraintCodeFixProvider : CodeFixProvider
         }
 
         var semanticModel = await context.Document.GetSemanticModelAsync(context.CancellationToken).ConfigureAwait(false);
-        if (semanticModel is null)
-        {
-            return;
-        }
+        semanticModel.ThrowIfNull();
 
         foreach (var diagnostic in context.Diagnostics)
         {
@@ -68,7 +66,7 @@ public class GenericConstraintCodeFixProvider : CodeFixProvider
                 if (classDeclaration is not null)
                 {
                     var adjustTypeParametersAction = CodeAction.Create(
-                        title: diagnostic.Descriptor.CodeFixMessage(0),
+                        title: diagnostic.Descriptor.CodeFixMessage(),
                         createChangedDocument: c => AdjustTypeParametersAsync(context.Document, root, attribute, classDeclaration, semanticModel, c),
                         equivalenceKey: diagnostic.Descriptor.Id);
 
@@ -225,7 +223,7 @@ public class GenericConstraintCodeFixProvider : CodeFixProvider
 
     private static TypeParameterConstraintClauseSyntax CreateConstraintClause(ITypeParameterSymbol typeParameter, ClassDeclarationSyntax? sourceClass)
     {
-        var constraints = new System.Collections.Generic.List<TypeParameterConstraintSyntax>();
+        var constraints = new List<TypeParameterConstraintSyntax>();
 
         if (typeParameter.HasReferenceTypeConstraint)
         {

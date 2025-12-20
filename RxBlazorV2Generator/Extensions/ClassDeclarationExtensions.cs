@@ -27,6 +27,13 @@ public static class ClassDeclarationExtensions
         {
             foreach (var usingDirective in compilationUnit.Usings)
             {
+                // Skip using aliases (e.g., "using X = Y.Z;") - they cause CS0138 errors
+                // when copied to generated code because aliases are type-specific, not namespaces
+                if (usingDirective.Alias is not null)
+                {
+                    continue;
+                }
+
                 usingStatements.Add(usingDirective.Name?.ToString() ?? string.Empty);
             }
         }

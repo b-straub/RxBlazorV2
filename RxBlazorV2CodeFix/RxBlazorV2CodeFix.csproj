@@ -21,10 +21,15 @@
   
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.0.0" />
+    <PackageReference Include="Nullable" Version="1.3.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\RxBlazorV2Generator\RxBlazorV2Generator.csproj" />
+    <!-- PrivateAssets="all" prevents Generator's analyzers from being re-discovered when CodeFix is loaded -->
+    <ProjectReference Include="..\RxBlazorV2Generator\RxBlazorV2Generator.csproj" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>

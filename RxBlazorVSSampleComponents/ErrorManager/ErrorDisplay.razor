@@ -1,27 +1,16 @@
 @using System.Linq
 @using MudBlazor
+@using RxBlazorV2.Model
 @inherits ErrorModelComponent
 
-@if (Model.Errors.Count > 0)
+@if (Model.Messages.Count > 0)
 {
-    <MudTooltip>
-        <ChildContent>
-            <MudStack Row="true" AlignItems="AlignItems.Center">
-                <MudBadge Content="@Model.Errors.Distinct().Count()" Color="Color.Error" Overlap="true">
-                    <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" />
-                </MudBadge>
-                <MudIconButton Icon="@Icons.Material.Filled.Clear" OnClick="ClearError" Color="Color.Inherit" />
-            </MudStack>
-        </ChildContent>
-        <TooltipContent>
-            <MudList T="string" Dense="true">
-                @foreach (var error in Model.Errors.Distinct())
-                {
-                    <MudListItem T="string" Text="@error" Icon="@Icons.Material.Filled.ErrorOutline" IconColor="Color.Error" />
-                }
-            </MudList>
-        </TooltipContent>
-    </MudTooltip>
+    <MudStack Row="true" AlignItems="AlignItems.Center">
+        <MudBadge Content="@Model.Messages.Count" Color="@GetBadgeColor()" Overlap="true" Class="d-flex align-center cursor-pointer" @onclick="ShowSnackbar">
+            <MudIcon Icon="@GetIcon()" Color="@GetIconColor()" />
+        </MudBadge>
+        <MudIconButton Icon="@Icons.Material.Filled.Clear" OnClick="ClearMessages" Color="Color.Inherit" />
+    </MudStack>
 }
 
 @code
@@ -31,7 +20,7 @@
 
     private Snackbar? _snackbar;
 
-    protected override void OnErrorsChanged()
+    protected override void OnMessagesChanged()
     {
         if (_snackbar is not null)
         {
@@ -39,15 +28,84 @@
             _snackbar = null;
         }
 
-       if (Model.Errors.Count > 0)
+        if (Model.Messages.Count > 0)
         {
-            var errorMessage = new MarkupString("<ul style=\"padding-left: 1.5rem; margin: 0;\">" + string.Join("", Model.Errors.Distinct().Select(e => $"<li>{e}</li>")) + "</ul>");
-            _snackbar = Snackbar.Add(errorMessage, Severity.Error);
+            var latestMessage = Model.Messages[^1];
+            var messageText = latestMessage.Source is not null
+                ? $"{latestMessage.Message} ({latestMessage.Source})"
+                : latestMessage.Message;
+
+            if (Model.Messages.Count == 1)
+            {
+                _snackbar = Snackbar.Add(messageText, ToMudSeverity(latestMessage.Severity));
+            }
+            else
+            {
+                var groupedMessages = Model.Messages
+                    .GroupBy(m => m.Severity)
+                    .OrderByDescending(g => g.Key)
+                    .SelectMany(g => g.Select(m => m.Source is not null ? $"{m.Message} ({m.Source})" : m.Message));
+
+                var messageHtml = new MarkupString("<ul class=\"pl-4 ma-0\">" +
+                    string.Join("", groupedMessages.Select(m => $"<li>{m}</li>")) + "</ul>");
+
+                var highestSeverity = Model.Messages.Max(m => m.Severity);
+                _snackbar = Snackbar.Add(messageHtml, ToMudSeverity(highestSeverity));
+            }
         }
     }
-    
-    private void ClearError()
+
+    private void ShowSnackbar()
     {
-        Model.Errors.Clear();
+        OnMessagesChanged();
     }
+
+    private void ClearMessages()
+    {
+        Model.ClearMessages();
+    }
+
+    private Color GetBadgeColor()
+    {
+        if (Model.Messages.Any(m => m.Severity == StatusSeverity.Error))
+        {
+            return Color.Error;
+        }
+        if (Model.Messages.Any(m => m.Severity == StatusSeverity.Warning))
+        {
+            return Color.Warning;
+        }
+        if (Model.Messages.Any(m => m.Severity == StatusSeverity.Success))
+        {
+            return Color.Success;
+        }
+        return Color.Info;
+    }
+
+    private Color GetIconColor() => GetBadgeColor();
+
+    private string GetIcon()
+    {
+        if (Model.Messages.Any(m => m.Severity == StatusSeverity.Error))
+        {
+            return Icons.Material.Filled.Error;
+        }
+        if (Model.Messages.Any(m => m.Severity == StatusSeverity.Warning))
+        {
+            return Icons.Material.Filled.Warning;
+        }
+        if (Model.Messages.Any(m => m.Severity == StatusSeverity.Success))
+        {
+            return Icons.Material.Filled.CheckCircle;
+        }
+        return Icons.Material.Filled.Info;
+    }
+
+    private static Severity ToMudSeverity(StatusSeverity severity) => severity switch
+    {
+        StatusSeverity.Error => Severity.Error,
+        StatusSeverity.Warning => Severity.Warning,
+        StatusSeverity.Success => Severity.Success,
+        _ => Severity.Info
+    };
 }

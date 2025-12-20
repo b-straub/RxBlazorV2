@@ -2,8 +2,13 @@ using RxBlazorV2.Interface;
 
 namespace RxBlazorV2.Model;
 
-public abstract class ObservableCommandR<T>(ObservableModel model, string[] observedProperties, IErrorModel? errorModel = null)
-    : ObservableCommandBase(model, observedProperties, errorModel), IObservableCommandR<T>
+public abstract class ObservableCommandR<T>(
+    ObservableModel model,
+    string[] observedProperties,
+    string commandName,
+    string methodName,
+    StatusBaseModel? statusModel = null)
+    : ObservableCommandBase(model, observedProperties, commandName, methodName, statusModel), IObservableCommandR<T>
 {
     public abstract T? Execute();
 }
@@ -11,10 +16,12 @@ public abstract class ObservableCommandR<T>(ObservableModel model, string[] obse
 public class ObservableCommandRFactory<T>(
     ObservableModel model,
     string[] observedProperties,
+    string commandName,
+    string methodName,
     Func<T?> execute,
     Func<bool>? canExecute = null,
-    IErrorModel? errorModel = null) :
-    ObservableCommandR<T>(model, observedProperties, errorModel)
+    StatusBaseModel? statusModel = null) :
+    ObservableCommandR<T>(model, observedProperties, commandName, methodName, statusModel)
 {
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;
@@ -40,8 +47,13 @@ public class ObservableCommandRFactory<T>(
     public override bool CanExecute => canExecute?.Invoke() ?? true;
 }
 
-public abstract class ObservableCommandR<T1, T2>(ObservableModel model, string[] observedProperties, IErrorModel? errorModel = null)
-    : ObservableCommandBase(model, observedProperties, errorModel), IObservableCommandR<T1, T2>
+public abstract class ObservableCommandR<T1, T2>(
+    ObservableModel model,
+    string[] observedProperties,
+    string commandName,
+    string methodName,
+    StatusBaseModel? statusModel = null)
+    : ObservableCommandBase(model, observedProperties, commandName, methodName, statusModel), IObservableCommandR<T1, T2>
 {
     public abstract T2? Execute(T1 parameter);
 }
@@ -49,10 +61,12 @@ public abstract class ObservableCommandR<T1, T2>(ObservableModel model, string[]
 public class ObservableCommandRFactory<T1, T2>(
     ObservableModel model,
     string[] observedProperties,
+    string commandName,
+    string methodName,
     Func<T1, T2?> execute,
     Func<bool>? canExecute = null,
-    IErrorModel? errorModel = null) :
-    ObservableCommandR<T1, T2>(model, observedProperties, errorModel)
+    StatusBaseModel? statusModel = null) :
+    ObservableCommandR<T1, T2>(model, observedProperties, commandName, methodName, statusModel)
 {
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;

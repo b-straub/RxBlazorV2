@@ -57,8 +57,9 @@ public static class DIRegistrationTemplate
             .Distinct()
             .ToArray();
 
-        // Generate registrations for each model (excluding base models and generic models)
-        foreach (var model in models.Where(m => m.GenericTypes.Length == 0 && !baseModelTypeNames.Contains(m.FullyQualifiedName)))
+        // Generate registrations for each model (excluding abstract classes, base models, and generic models)
+        // Abstract classes cannot be instantiated by DI
+        foreach (var model in models.Where(m => !m.IsAbstract && m.GenericTypes.Length == 0 && !baseModelTypeNames.Contains(m.FullyQualifiedName)))
         {
             sb.AppendLine(GenerateModelRegistration(model));
 
@@ -125,7 +126,8 @@ public static class DIRegistrationTemplate
             .Distinct()
             .ToArray();
 
-        foreach (var model in models.Where(m => m.GenericTypes.Length > 0 && !baseModelTypeNames.Contains(m.FullyQualifiedName)))
+        // Exclude abstract classes from generic model registrations
+        foreach (var model in models.Where(m => !m.IsAbstract && m.GenericTypes.Length > 0 && !baseModelTypeNames.Contains(m.FullyQualifiedName)))
         {
             sb.AppendLine(GenerateGenericModelRegistrationMethod(model));
             sb.AppendLine();
@@ -144,8 +146,6 @@ public static class DIRegistrationTemplate
         var scope = GetModelScope(model);
         var registrationMethod = GetRegistrationMethod(scope);
 
-        // Simple registration - DI automatically resolves all constructor parameters
-        // (both model references and service dependencies)
         return $"        services.{registrationMethod}<{model.ClassName}>();";
     }
 

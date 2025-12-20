@@ -94,10 +94,13 @@ public static class PropertyTemplate
         // Handle required modifier
         var requiredModifier = prop.HasRequiredModifier ? "required " : "";
 
+        // Handle override modifier for abstract base class implementations
+        var overrideModifier = prop.IsOverride ? "override " : "";
+
         // Use Model. prefix for StateHasChanged (component context)
         var qualifiedPropertyName = $"Model.{prop.Name}";
 
-        sb.AppendLine($"    {prop.Accessibility} {requiredModifier}partial {prop.Type} {prop.Name}");
+        sb.AppendLine($"    {prop.Accessibility} {overrideModifier}{requiredModifier}partial {prop.Type} {prop.Name}");
         sb.AppendLine("    {");
         sb.AppendLine("        get => field;");
 

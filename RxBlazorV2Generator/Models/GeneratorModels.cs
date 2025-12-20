@@ -43,6 +43,11 @@ public class ObservableModelInfo
 
     public string? BaseModelTypeName { get; }
 
+    /// <summary>
+    /// Whether this model class is abstract. Abstract classes cannot be registered in DI.
+    /// </summary>
+    public bool IsAbstract { get; }
+
     public string ConstructorAccessibility { get; }
 
     public string ClassAccessibility { get; }
@@ -52,10 +57,10 @@ public class ObservableModelInfo
     public List<InternalModelObserverInfo> InternalModelObservers { get; }
 
     /// <summary>
-    /// The field name of the injected IErrorModel, or null if not injected.
-    /// When an IErrorModel is injected, command errors are automatically delegated to it.
+    /// The field name of the injected StatusModel, or null if not injected.
+    /// When a StatusModel is injected, command errors are automatically delegated to it.
     /// </summary>
-    public string? ErrorModelFieldName { get; }
+    public string? StatusModelFieldName { get; }
 
     /// <summary>
     /// Non-partial IObservableCollection properties that are reactive through collection observation.
@@ -68,9 +73,9 @@ public class ObservableModelInfo
         Dictionary<string, MethodDeclarationSyntax> methods, List<ModelReferenceInfo> modelReferences,
         string modelScope = "Singleton", List<DIFieldInfo>? diFields = null, List<string>? implementedInterfaces = null,
         string? genericTypes = null, string? typeConstrains = null, List<string>? usingStatements = null,
-        string? baseModelTypeName = null, string constructorAccessibility = "public", string classAccessibility = "public",
+        string? baseModelTypeName = null, bool isAbstract = false, string constructorAccessibility = "public", string classAccessibility = "public",
         List<ModelObserverInfo>? modelObservers = null, List<InternalModelObserverInfo>? internalModelObservers = null,
-        string? errorModelFieldName = null, List<ObservableCollectionPropertyInfo>? observableCollectionProperties = null)
+        string? statusModelFieldName = null, List<ObservableCollectionPropertyInfo>? observableCollectionProperties = null)
     {
         Namespace = namespaceName;
         ClassName = className;
@@ -86,11 +91,12 @@ public class ObservableModelInfo
         TypeConstrains = typeConstrains ?? string.Empty;
         UsingStatements = usingStatements ?? [];
         BaseModelTypeName = baseModelTypeName;
+        IsAbstract = isAbstract;
         ConstructorAccessibility = constructorAccessibility;
         ClassAccessibility = classAccessibility;
         ModelObservers = modelObservers ?? [];
         InternalModelObservers = internalModelObservers ?? [];
-        ErrorModelFieldName = errorModelFieldName;
+        StatusModelFieldName = statusModelFieldName;
         ObservableCollectionProperties = observableCollectionProperties ?? [];
     }
 }
@@ -104,10 +110,11 @@ public class PartialPropertyInfo
     public string[]? BatchIds { get; }
     public bool HasRequiredModifier { get; }
     public bool HasInitAccessor { get; }
+    public bool IsOverride { get; }
     public string Accessibility { get; }
     public List<PropertyTriggerInfo> Triggers { get; }
 
-    public PartialPropertyInfo(string name, string type, bool isObservableCollection = false, bool isEquatable = false, string[]? batchIds = null, bool hasRequiredModifier = false, bool hasInitAccessor = false, string accessibility = "public", List<PropertyTriggerInfo>? triggers = null)
+    public PartialPropertyInfo(string name, string type, bool isObservableCollection = false, bool isEquatable = false, string[]? batchIds = null, bool hasRequiredModifier = false, bool hasInitAccessor = false, bool isOverride = false, string accessibility = "public", List<PropertyTriggerInfo>? triggers = null)
     {
         Name = name;
         Type = type;
@@ -116,6 +123,7 @@ public class PartialPropertyInfo
         BatchIds = batchIds;
         HasRequiredModifier = hasRequiredModifier;
         HasInitAccessor = hasInitAccessor;
+        IsOverride = isOverride;
         Accessibility = accessibility;
         Triggers = triggers ?? [];
     }
@@ -149,16 +157,18 @@ public class CommandPropertyInfo
     public string ExecuteMethod { get; }
     public string? CanExecuteMethod { get; }
     public bool SupportsCancellation { get; }
+    public bool IsOverride { get; }
     public List<CommandTriggerInfo> Triggers { get; }
     public string Accessibility { get; }
 
-    public CommandPropertyInfo(string name, string type, string executeMethod, string? canExecuteMethod, bool supportsCancellation = false, List<CommandTriggerInfo>? triggers = null, string accessibility = "public")
+    public CommandPropertyInfo(string name, string type, string executeMethod, string? canExecuteMethod, bool supportsCancellation = false, bool isOverride = false, List<CommandTriggerInfo>? triggers = null, string accessibility = "public")
     {
         Name = name;
         Type = type;
         ExecuteMethod = executeMethod;
         CanExecuteMethod = canExecuteMethod;
         SupportsCancellation = supportsCancellation;
+        IsOverride = isOverride;
         Triggers = triggers ?? [];
         Accessibility = accessibility;
     }

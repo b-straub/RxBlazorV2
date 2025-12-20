@@ -86,9 +86,13 @@ public class RxBlazorGenerator : IIncrementalGenerator
 
                 // Merge service info
                 var mergedServices = new ServiceInfoList();
-                foreach (var serviceList in services.Where(s => s != null))
+                foreach (var serviceList in services)
                 {
-                    foreach (var service in serviceList!.Services)
+                    if (serviceList is null)
+                    {
+                        continue;
+                    }
+                    foreach (var service in serviceList.Services)
                     {
                         mergedServices.AddService(service);
                     }
@@ -165,21 +169,29 @@ public class RxBlazorGenerator : IIncrementalGenerator
                 var (records, compilation) = recordsWithCompilation;
                 // Build lookup dictionary by fully qualified type name
                 var recordsByTypeName = new Dictionary<string, ObservableModelRecord>();
-                foreach (var record in records.Where(r => r != null))
+                foreach (var record in records)
                 {
-                    recordsByTypeName[record!.ModelInfo.FullyQualifiedName] = record;
+                    if (record is null)
+                    {
+                        continue;
+                    }
+                    recordsByTypeName[record.ModelInfo.FullyQualifiedName] = record;
                 }
 
                 // Extract ComponentInfo for each record that has [ObservableComponent]
-                foreach (var record in records.Where(r => r != null))
+                foreach (var record in records)
                 {
+                    if (record is null)
+                    {
+                        continue;
+                    }
                     // Check if record needs ComponentInfo (has ObservableComponent attribute)
                     // This is indicated by ComponentInfo being null but model having the attribute
                     // We'll let ExtractComponentInfo check for the attribute
-                    var componentInfo = ObservableModelRecord.ExtractComponentInfo(record!, recordsByTypeName, compilation);
-                    if (componentInfo != null)
+                    var componentInfo = ObservableModelRecord.ExtractComponentInfo(record, recordsByTypeName, compilation);
+                    if (componentInfo is not null)
                     {
-                        record!.ComponentInfo = componentInfo;
+                        record.ComponentInfo = componentInfo;
                     }
                 }
 
@@ -197,18 +209,21 @@ public class RxBlazorGenerator : IIncrementalGenerator
             (spc, combined) =>
             {
                 var ((records, compilation), config) = combined;
-                foreach (var record in records.Where(r => r != null))
+                foreach (var record in records)
                 {
-                    // Report diagnostics from record (SSOT)
-                    foreach (var diagnostic in record!.Verify())
+                    if (record is null)
                     {
-                        // Check if this diagnostic is handled by the analyzer
-                        if (RxBlazorDiagnosticAnalyzer.AllDiagnostics.All(d => d.Id != diagnostic.Id))
+                        continue;
+                    }
+                    // Report only generator-designated diagnostics (SSOT pattern from DiagnosticDescriptors)
+                    var generatorReportedIds = DiagnosticDescriptors.GetGeneratorReportedIds();
+                    foreach (var diagnostic in record.Verify())
+                    {
+                        if (generatorReportedIds.Contains(diagnostic.Id))
                         {
                             // Skip diagnostic reporting during design-time builds
                             if (!config.IsDesignTimeBuild)
                             {
-                                // Not DesignTimeBuild, report directly
                                 spc.ReportDiagnostic(diagnostic);
                             }
                         }
@@ -218,7 +233,7 @@ public class RxBlazorGenerator : IIncrementalGenerator
                     // Skip during design-time builds to avoid duplicate diagnostics
                     if (!config.IsDesignTimeBuild)
                     {
-                        foreach (var (paramName, _, typeSymbol, location) in record!.UnregisteredServices)
+                        foreach (var (paramName, _, typeSymbol, location) in record.UnregisteredServices)
                         {
                             if (location is not null && typeSymbol is not null)
                             {
@@ -283,7 +298,7 @@ public class RxBlazorGenerator : IIncrementalGenerator
                         // First, calculate the minimum required scope for ALL violations in this class
                         var violatingFields = record.DiFieldsWithScope
                             .Where(tuple => tuple.serviceScope is not null && tuple.location is not null &&
-                                            CheckScopeViolation(record.ModelInfo.ModelScope, tuple.serviceScope!) is not
+                                            CheckScopeViolation(record.ModelInfo.ModelScope, tuple.serviceScope) is not
                                                 null)
                             .ToList();
 
@@ -338,9 +353,13 @@ public class RxBlazorGenerator : IIncrementalGenerator
         context.RegisterSourceOutput(processedRecords,
             static (spc, records) =>
             {
-                foreach (var record in records.Where(r => r != null && r!.ShouldGenerateCode))
+                foreach (var record in records)
                 {
-                    ObservableModelCodeGenerator.GenerateObservableModelPartials(spc, record!.ModelInfo);
+                    if (record is null || !record.ShouldGenerateCode)
+                    {
+                        continue;
+                    }
+                    ObservableModelCodeGenerator.GenerateObservableModelPartials(spc, record.ModelInfo);
                 }
             });
 
@@ -349,10 +368,13 @@ public class RxBlazorGenerator : IIncrementalGenerator
             static (spc, combined) =>
             {
                 var (records, config) = combined;
-                foreach (var record in records.Where(r =>
-                             r != null && r!.ShouldGenerateCode && r.ComponentInfo != null))
+                foreach (var record in records)
                 {
-                    ComponentCodeGenerator.GenerateComponent(spc, record!.ComponentInfo!, config.UpdateFrequencyMs);
+                    if (record is null || !record.ShouldGenerateCode || record.ComponentInfo is null)
+                    {
+                        continue;
+                    }
+                    ComponentCodeGenerator.GenerateComponent(spc, record.ComponentInfo, config.UpdateFrequencyMs);
                 }
             });
 
@@ -394,10 +416,9 @@ public class RxBlazorGenerator : IIncrementalGenerator
             {
                 var (records, razorFilesList) = combined;
 
-                foreach (var record in records.Where(r =>
-                             r != null && r!.ShouldGenerateCode && r.ComponentInfo != null))
+                foreach (var record in records)
                 {
-                    if (record is null || record.ComponentInfo is null)
+                    if (record is null || !record.ShouldGenerateCode || record.ComponentInfo is null)
                     {
                         continue;
                     }
@@ -462,7 +483,7 @@ public class RxBlazorGenerator : IIncrementalGenerator
                 var defaultLayoutComponent = RazorInheritanceDetector.DetectDefaultLayoutComponent(razorFilesList);
 
                 // Only check components we're generating (same-assembly by definition)
-                foreach (var record in records.Where(r => r is not null && r!.ComponentInfo is not null))
+                foreach (var record in records)
                 {
                     if (record is null || record.ComponentInfo is null)
                     {
@@ -566,7 +587,10 @@ public class RxBlazorGenerator : IIncrementalGenerator
             static (spc, combined) =>
             {
                 var (records, config) = combined;
-                var validModels = records.Where(r => r != null && r!.ShouldGenerateCode).Select(r => r!.ModelInfo)
+                var validModels = records
+                    .OfType<ObservableModelRecord>()
+                    .Where(r => r.ShouldGenerateCode)
+                    .Select(r => r.ModelInfo)
                     .ToArray();
                 ObservableModelCodeGenerator.GenerateAddObservableModelsExtension(spc, validModels,
                     config.RootNamespace);
@@ -582,9 +606,13 @@ public class RxBlazorGenerator : IIncrementalGenerator
 
                 // Build records dictionary for singleton discovery
                 var recordsByTypeName = new Dictionary<string, ObservableModelRecord>();
-                foreach (var record in records.Where(r => r != null))
+                foreach (var record in records)
                 {
-                    recordsByTypeName[record!.ModelInfo.FullyQualifiedName] = record;
+                    if (record is null)
+                    {
+                        continue;
+                    }
+                    recordsByTypeName[record.ModelInfo.FullyQualifiedName] = record;
                 }
 
                 // Discover all singleton models
@@ -672,10 +700,14 @@ public class RxBlazorGenerator : IIncrementalGenerator
         // Build a set of models that ARE referenced by a model with includeReferencedTriggers: true
         var modelsWithReferencedTriggers = new HashSet<string>();
 
-        foreach (var record in records.Where(r => r != null))
+        foreach (var record in records)
         {
+            if (record is null)
+            {
+                continue;
+            }
             // Check if this model has [ObservableComponent] with includeReferencedTriggers: true (default)
-            if (record!.HasObservableComponentAttribute && record.IncludeReferencedTriggers)
+            if (record.HasObservableComponentAttribute && record.IncludeReferencedTriggers)
             {
                 // Add all referenced models to the set
                 foreach (var modelRef in record.ModelInfo.ModelReferences)
@@ -686,10 +718,14 @@ public class RxBlazorGenerator : IIncrementalGenerator
         }
 
         // Now check each model for unused trigger attributes
-        foreach (var record in records.Where(r => r != null))
+        foreach (var record in records)
         {
+            if (record is null)
+            {
+                continue;
+            }
             // Skip if model has [ObservableComponent] - triggers are used
-            if (record!.HasObservableComponentAttribute)
+            if (record.HasObservableComponentAttribute)
             {
                 continue;
             }

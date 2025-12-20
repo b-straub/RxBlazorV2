@@ -3,6 +3,8 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Models;
 using RxBlazorV2Generator.Diagnostics;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
+using RxBlazorV2Generator.Helpers;
 
 namespace RxBlazorV2Generator.Extensions;
 
@@ -50,8 +52,9 @@ public static class AttributeAnalysisExtensions
         foreach (var member in classDecl.Members.OfType<PropertyDeclarationSyntax>())
         {
             var attributes = member.AttributeLists.SelectMany(al => al.Attributes).ToArray();
+            semanticModel.ThrowIfNull();
             var commandAttr = attributes.FirstOrDefault(a =>
-                a.IsObservableCommand(semanticModel!));
+                a.IsObservableCommand(semanticModel));
 
             if (commandAttr != null)
             {
@@ -78,16 +81,15 @@ public static class AttributeAnalysisExtensions
                 var executeMethod = executeMethodArg?.Replace("nameof(", "").Replace(")", "").Trim('"');
                 var canExecuteMethod = canExecuteMethodArg?.Replace("nameof(", "").Replace(")", "").Trim('"');
 
+                semanticModel.ThrowIfNull();
                 // Analyze the execute method to determine if it supports cancellation
                 var supportsCancellation = executeMethod is not null &&
                                            methods.TryGetValue(executeMethod, out var executeMethodSyntax) &&
-                                           executeMethodSyntax.HasCancellationTokenParameter(semanticModel!);
+                                           executeMethodSyntax.HasCancellationTokenParameter(semanticModel);
 
                 // Validate return value matches command type
                 if (executeMethod is not null &&
-                    methods.TryGetValue(executeMethod, out var methodDecl) &&
-                    semanticModel is not null &&
-                    member.Type is not null)
+                    methods.TryGetValue(executeMethod, out var methodDecl))
                 {
                     var methodSymbol = semanticModel.GetDeclaredSymbol(methodDecl) as IMethodSymbol;
                     var commandTypeString = member.Type.ToString();
@@ -148,8 +150,9 @@ public static class AttributeAnalysisExtensions
                 }
 
                 // Extract trigger attributes
+                semanticModel.ThrowIfNull();
                 var triggerAttrs = attributes.Where(a =>
-                    a.IsObservableCommandTrigger(semanticModel!));
+                    a.IsObservableCommandTrigger(semanticModel));
                 
                 var commandTypeArguments = member.Type.IsKind(Microsoft.CodeAnalysis.CSharp.SyntaxKind.GenericName) ?
                     ((GenericNameSyntax)member.Type).TypeArgumentList.Arguments
@@ -192,13 +195,13 @@ public static class AttributeAnalysisExtensions
                     var triggerProperty = triggerPropertyArg?.Replace("nameof(", "").Replace(")", "").Trim('"');
                     var canTriggerMethod = canTriggerMethodArg?.Replace("nameof(", "").Replace(")", "").Trim('"');
                     
-                    if (!string.IsNullOrEmpty(triggerProperty))
+                    if (!triggerProperty.IsNullOrEmpty())
                     {
                         // Check for circular references: command method modifies the trigger property
                         if (semanticModel != null && methods.TryGetValue(executeMethod!, out var methodSyntax))
                         {
                             var modifiedProperties = methodSyntax.AnalyzePropertyModifications(semanticModel);
-                            if (modifiedProperties.Contains(triggerProperty!))
+                            if (modifiedProperties.Contains(triggerProperty))
                             {
                                 // Pass properties for code fix access
                                 var properties = ImmutableDictionary.CreateBuilder<string, string?>();
@@ -210,14 +213,47 @@ public static class AttributeAnalysisExtensions
                                     triggerAttr.GetLocation(),
                                     properties.ToImmutable(),
                                     member.Identifier.ValueText, // Command property name
-                                    triggerProperty!, // Trigger property name
-                                    executeMethod!); // Execute method name
+                                    triggerProperty, // Trigger property name
+                                    executeMethod); // Execute method name
                                 diagnostics.Add(diagnostic);
                                 continue; // Skip adding this trigger
                             }
                         }
                         
-                        triggers.Add(new CommandTriggerInfo(triggerProperty!, canTriggerMethod, parameterArg));
+                        triggers.Add(new CommandTriggerInfo(triggerProperty, canTriggerMethod, parameterArg));
+                    }
+                }
+
+                // Transfer triggers from abstract base class when this is an override
+                var isOverride = member.Modifiers.Any(m => m.IsKind(Microsoft.CodeAnalysis.CSharp.SyntaxKind.OverrideKeyword));
+                if (isOverride)
+                {
+                    semanticModel.ThrowIfNull();
+                    var propertySymbol = semanticModel.GetDeclaredSymbol(member) as IPropertySymbol;
+                    var baseProperty = propertySymbol?.OverriddenProperty;
+                    if (baseProperty?.IsAbstract == true)
+                    {
+                        foreach (var attr in baseProperty.GetAttributes())
+                        {
+                            var attrName = attr.AttributeClass?.Name;
+                            if (attrName == "ObservableCommandTriggerAttribute")
+                            {
+                                // Extract trigger property from base attribute
+                                var baseTriggerProperty = attr.ConstructorArguments.FirstOrDefault().Value?.ToString();
+                                if (!string.IsNullOrEmpty(baseTriggerProperty) &&
+                                    !triggers.Any(t => t.TriggerProperty == baseTriggerProperty))
+                                {
+                                    // Extract optional canTriggerMethod (second argument)
+                                    string? baseCanTriggerMethod = null;
+                                    if (attr.ConstructorArguments.Length > 1)
+                                    {
+                                        baseCanTriggerMethod = attr.ConstructorArguments[1].Value?.ToString();
+                                    }
+
+                                    triggers.Add(new CommandTriggerInfo(baseTriggerProperty!, baseCanTriggerMethod));
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -232,10 +268,11 @@ public static class AttributeAnalysisExtensions
 
                 commandProperties.Add(new CommandPropertyInfo(
                     member.Identifier.ValueText,
-                    member.Type!.ToString(),
+                    member.Type.ToString(),
                     executeMethod!,
                     canExecuteMethod,
                     supportsCancellation,
+                    isOverride,
                     triggers,
                     accessibility));
             }

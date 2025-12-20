@@ -20,6 +20,7 @@ builder.Services.AddScoped<LocationService>();
 builder.Services.AddScoped<OpenMeteoApiClient>();
 
 ObservableModels.Initialize(builder.Services);
+RxBlazorV2.MudBlazor.ObservableModels.Initialize(builder.Services);
 RxBlazorV2ExternalModel.ObservableModels.Initialize(builder.Services);
 RxBlazorVSSampleComponents.ObservableModels.Initialize(builder.Services);
 

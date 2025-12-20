@@ -721,7 +721,7 @@ public class ModelObserverGeneratorTests
                 Referenced = referenced;
 
                 // Initialize commands
-                _addCommand = new ObservableCommandFactory(this, [""], AddItem);
+                _addCommand = new ObservableCommandFactory(this, [""], "AddCommand", "AddItem", AddItem);
 
                 // Subscribe to referenced model changes
                 // Transform referenced model property names: Model.X -> Model.{RefName}.X
@@ -2438,7 +2438,7 @@ internal class MultiModelGeneratorTest : Microsoft.CodeAnalysis.CSharp.Testing.C
             Microsoft.CodeAnalysis.Text.SourceText.From(GenerateGenericServiceExtension(), System.Text.Encoding.UTF8)));
 
         TestState.ReferenceAssemblies = TestShared.ReferenceAssemblies();
-        TestState.AdditionalReferences.Add(typeof(RxBlazorV2.Model.ObservableModel).Assembly);
+        TestState.AdditionalReferences.Add(typeof(Model.ObservableModel).Assembly);
 
         // Disable RXBG050 diagnostic for these tests (unregistered service warning)
         // We're not testing DI registration here
@@ -2545,7 +2545,7 @@ internal class MultiModelGeneratorDiagnosticTest : Microsoft.CodeAnalysis.CSharp
         TestBehaviors = Microsoft.CodeAnalysis.Testing.TestBehaviors.SkipGeneratedSourcesCheck;
 
         TestState.ReferenceAssemblies = TestShared.ReferenceAssemblies();
-        TestState.AdditionalReferences.Add(typeof(RxBlazorV2.Model.ObservableModel).Assembly);
+        TestState.AdditionalReferences.Add(typeof(Model.ObservableModel).Assembly);
 
         await base.RunAsync(CancellationToken.None);
     }

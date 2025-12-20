@@ -9,6 +9,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Diagnostics;
 using RxBlazorV2Generator.Extensions;
+using RxBlazorV2Generator.Helpers;
 
 namespace RxBlazorV2CodeFix.CodeFix;
 
@@ -29,11 +30,8 @@ public class CircularModelReferenceCodeFixProvider : CodeFixProvider
         }
 
         var semanticModel = await context.Document.GetSemanticModelAsync(context.CancellationToken).ConfigureAwait(false);
-        if (semanticModel is null)
-        {
-            return;
-        }
-
+        semanticModel.ThrowIfNull();
+        
         var diagnostic = context.Diagnostics.First();
         var diagnosticSpan = diagnostic.Location.SourceSpan;
 
@@ -53,7 +51,7 @@ public class CircularModelReferenceCodeFixProvider : CodeFixProvider
 
         // Register fix to remove this model's circular reference
         var removeSingleAction = CodeAction.Create(
-            title: diagnostic.Descriptor.CodeFixMessage(0),
+            title: diagnostic.Descriptor.CodeFixMessage(),
             createChangedDocument: c => RemoveAttributeAsync(context.Document, root, attribute, c),
             equivalenceKey: diagnostic.Descriptor.Id);
 

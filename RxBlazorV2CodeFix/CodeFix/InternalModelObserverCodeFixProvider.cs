@@ -32,10 +32,6 @@ public class InternalModelObserverCodeFixProvider : CodeFixProvider
         }
 
         var semanticModel = await context.Document.GetSemanticModelAsync(context.CancellationToken).ConfigureAwait(false);
-        if (semanticModel is null)
-        {
-            return;
-        }
 
         foreach (var diagnostic in context.Diagnostics.Where(d => FixableDiagnosticIds.Contains(d.Id)))
         {
@@ -51,7 +47,7 @@ public class InternalModelObserverCodeFixProvider : CodeFixProvider
             }
 
             // Determine the current state of the method
-            var methodSymbol = semanticModel.GetDeclaredSymbol(methodDeclaration);
+            var methodSymbol = semanticModel?.GetDeclaredSymbol(methodDeclaration);
             var isPrivate = methodDeclaration.Modifiers.Any(SyntaxKind.PrivateKeyword);
             var isCurrentlyAsync = methodSymbol is not null &&
                 (methodSymbol.ReturnType.Name == "Task" || methodSymbol.ReturnType.Name == "ValueTask" ||

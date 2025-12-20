@@ -71,9 +71,9 @@ public static class GeneratorContextBuilder
         Dictionary<string, ComponentMetadata> components,
         Dictionary<string, ModelMetadata> models)
     {
-        foreach (var record in records.Where(r => r is not null && r!.ShouldGenerateCode))
+        foreach (var record in records)
         {
-            if (record is null)
+            if (record is null || !record.ShouldGenerateCode)
             {
                 continue;
             }

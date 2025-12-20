@@ -212,7 +212,7 @@ public class GenericModelGeneratorTests
             public GenericModel() : base()
             {
                 // Initialize commands
-                _testCommand = new ObservableCommandFactory<T>(this, [""], ExecuteMethod);
+                _testCommand = new ObservableCommandFactory<T>(this, [""], "TestCommand", "ExecuteMethod", ExecuteMethod);
             }
         }
 

@@ -153,10 +153,11 @@ public class DerivedModelReferenceDiagnosticTests
     }
 
     [Fact]
-    public async Task ReferenceBaseModel_NoErrorsExpected()
+    public async Task ReferenceAbstractBaseModel_GetsRXBG052()
     {
+        // Referencing an abstract base model should give RXBG052 (abstract class cannot be instantiated by DI)
         // lang=csharp
-        var test = """
+        var test = $$"""
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
@@ -181,7 +182,7 @@ public class DerivedModelReferenceDiagnosticTests
             [ObservableModelScope(ModelScope.Transient)]
             public partial class ParentModel : ObservableModel
             {
-                public partial ParentModel(BaseModel baseModel);
+                public partial ParentModel({|{{DiagnosticDescriptors.AbstractClassInPartialConstructorError.Id}}:BaseModel|} baseModel);
 
                 public partial int Value { get; set; }
 

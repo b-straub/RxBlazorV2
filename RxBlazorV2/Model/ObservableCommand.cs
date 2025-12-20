@@ -3,7 +3,12 @@ using RxBlazorV2.Interface;
 
 namespace RxBlazorV2.Model;
 
-public class ObservableCommandBase(ObservableModel model, string[] observedProperties, IErrorModel? errorModel = null)
+public class ObservableCommandBase(
+    ObservableModel model,
+    string[] observedProperties,
+    string commandName,
+    string methodName,
+    StatusBaseModel? statusModel = null)
     : Observable<string[]>, IObservableCommandBase
 {
     public virtual bool CanExecute => true;
@@ -16,10 +21,10 @@ public class ObservableCommandBase(ObservableModel model, string[] observedPrope
 
     protected void SetError(Exception? exception = null)
     {
-        if (exception is not null && errorModel is not null)
+        if (exception is not null && statusModel is not null)
         {
-            // Delegate error to error model and reset command error
-            errorModel.HandleError(exception);
+            // Delegate error to status model with command source info
+            statusModel.HandleError(exception, commandName, methodName);
             Error = null;
         }
         else
@@ -36,8 +41,13 @@ public class ObservableCommandBase(ObservableModel model, string[] observedPrope
     }
 }
 
-public abstract class ObservableCommand(ObservableModel model, string[] observedProperties, IErrorModel? errorModel = null)
-    : ObservableCommandBase(model, observedProperties, errorModel), IObservableCommand
+public abstract class ObservableCommand(
+    ObservableModel model,
+    string[] observedProperties,
+    string commandName,
+    string methodName,
+    StatusBaseModel? statusModel = null)
+    : ObservableCommandBase(model, observedProperties, commandName, methodName, statusModel), IObservableCommand
 {
     public abstract void Execute();
 }
@@ -45,10 +55,12 @@ public abstract class ObservableCommand(ObservableModel model, string[] observed
 public class ObservableCommandFactory(
     ObservableModel model,
     string[] observedProperties,
+    string commandName,
+    string methodName,
     Action execute,
     Func<bool>? canExecute = null,
-    IErrorModel? errorModel = null) :
-    ObservableCommand(model, observedProperties, errorModel)
+    StatusBaseModel? statusModel = null) :
+    ObservableCommand(model, observedProperties, commandName, methodName, statusModel)
 {
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;
@@ -71,8 +83,13 @@ public class ObservableCommandFactory(
     public override bool CanExecute => canExecute?.Invoke() ?? true;
 }
 
-public abstract class ObservableCommand<T>(ObservableModel model, string[] observedProperties, IErrorModel? errorModel = null)
-    : ObservableCommandBase(model, observedProperties, errorModel), IObservableCommand<T>
+public abstract class ObservableCommand<T>(
+    ObservableModel model,
+    string[] observedProperties,
+    string commandName,
+    string methodName,
+    StatusBaseModel? statusModel = null)
+    : ObservableCommandBase(model, observedProperties, commandName, methodName, statusModel), IObservableCommand<T>
 {
     public abstract void Execute(T parameter);
 }
@@ -80,10 +97,12 @@ public abstract class ObservableCommand<T>(ObservableModel model, string[] obser
 public class ObservableCommandFactory<T>(
     ObservableModel model,
     string[] observedProperties,
+    string commandName,
+    string methodName,
     Action<T> execute,
     Func<bool>? canExecute = null,
-    IErrorModel? errorModel = null) :
-    ObservableCommand<T>(model, observedProperties, errorModel)
+    StatusBaseModel? statusModel = null) :
+    ObservableCommand<T>(model, observedProperties, commandName, methodName, statusModel)
 {
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;

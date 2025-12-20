@@ -48,47 +48,59 @@ public partial class ButtonDemoModel : ObservableModel
     private void IncrementSync()
     {
         Counter++;
-        StatusModel.AddMessage($"Incremented to {Counter}");
+        StatusModel.AddInfo($"Incremented to {Counter}");
     }
 
     private void AddValueSync(int value)
     {
         Counter += value;
-        if (Counter is >= 30 and <= 50)
+        switch (Counter)
         {
-            throw new InvalidOperationException("Counter is between 30 and 50!");
+            case > 50:
+                throw new InvalidOperationException("Counter is over 50!");
+            case >= 30:
+                StatusModel.AddWarning($"Added {value}, now {Counter}, approaching limit!", "AddValueSync");
+                break;
+            case >= 25:
+                StatusModel.AddWarning($"Added {value}, now {Counter}, still right but approaching limit!", "AddValueSync");
+                break;
+            case >= 15:
+                StatusModel.AddSuccess($"Added {value}, now {Counter}, just right!", "AddValueSync");
+                break;
+            default:
+                StatusModel.AddInfo($"Added {value}, now {Counter}, still below 15.", "AddValueSync");
+                break;
         }
-        StatusModel.AddMessage($"Added {value}, now {Counter}");
     }
 
     private async Task IncrementAsync()
     {
-        StatusModel.AddMessage("Processing...");
+        StatusModel.AddInfo("Processing...");
         await Task.Delay(1000);
         Counter++;
-        StatusModel.AddMessage($"Async increment to {Counter}");
+        StatusModel.AddInfo($"Async increment to {Counter}");
     }
 
     private async Task LongOperationAsync(CancellationToken ct)
     {
-        StatusModel.AddMessage("Long operation started...");
+        StatusModel.AddInfo("Long operation started...");
 
         for (var i = 1; i <= 5; i++)
         {
-            StatusModel.AddMessage($"Step {i} of 5...");
+            StatusModel.AddInfo($"Step {i} of 5...");
             await Task.Delay(1000, ct);
         }
 
         Counter += 10;
-        StatusModel.AddMessage($"Long operation completed! Counter: {Counter}");
+        StatusModel.AddInfo($"Long operation completed! Counter: {Counter}");
     }
 
     private async Task AddValueAsync(int value, CancellationToken ct)
     {
-        StatusModel.AddMessage($"Adding {value}...");
+        StatusModel.AddInfo($"Adding {value}...");
         await Task.Delay(1500, ct);
         Counter += value;
-        StatusModel.AddMessage($"Added {value}, now {Counter}");
+        StatusModel.AddInfo($"Added {value}, now {Counter}");
     }
 
     private bool CanIncrement() => Counter < 100;

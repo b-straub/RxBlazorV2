@@ -15,9 +15,8 @@ public static class ModelReferenceAnalysisExtensions
         var usedProperties = new HashSet<string>();
         var possibleProperties = referencedModelSymbol
             .GetMembers()
-            .Select(n => n as IPropertySymbol)
-            .Where(p => p is not null)
-            .Select(p => p!.Name)
+            .OfType<IPropertySymbol>()
+            .Select(p => p.Name)
             .ToList();
         
         // Use semantic model to find property access patterns
@@ -164,7 +163,8 @@ public static class ModelReferenceAnalysisExtensions
                 diagnostics.Add(diagnostic);
             }
             // Check for unused properties (RXBG008) only if not a derived model
-            else if (modelRef.UsedProperties.Count == 0)
+            // Skip check for StatusModel-derived references since their primary usage is via method calls
+            else if (modelRef.UsedProperties.Count == 0 && !IsStatusModelReference(modelRef))
             {
                 // Check if reference is used via includeReferencedTriggers
                 var isUsedViaTriggers = false;
@@ -210,5 +210,20 @@ public static class ModelReferenceAnalysisExtensions
         }
 
         return diagnostics;
+    }
+
+    /// <summary>
+    /// Checks if a model reference is derived from StatusModel.
+    /// StatusModel-derived types are used primarily via method calls (AddError, AddWarning, etc.)
+    /// rather than property access, so they should not be flagged as unused.
+    /// </summary>
+    private static bool IsStatusModelReference(ModelReferenceInfo modelRef)
+    {
+        if (modelRef.TypeSymbol is not INamedTypeSymbol namedTypeSymbol)
+        {
+            return false;
+        }
+
+        return namedTypeSymbol.InheritsFromStatusModel();
     }
 }

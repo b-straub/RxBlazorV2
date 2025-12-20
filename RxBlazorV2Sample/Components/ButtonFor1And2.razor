@@ -39,7 +39,7 @@
     
     @if (Model.IncrementAsync1.Error is not null)
     {
-        Model.ErrorModel.Errors.Add(Model.IncrementAsync1.Error.Message);
+        Model.ErrorModel.AddError(Model.IncrementAsync1.Error.Message);
         Model.IncrementAsync1.ResetError();
     }
 </MudStack>

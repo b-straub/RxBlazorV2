@@ -107,7 +107,15 @@ public static class TypeSymbolExtensions
             return null;
         }
 
+        // If the immediate base type is StatusBaseModel (abstract base), no intermediate base
+        // StatusBaseModel is intended to be inherited for custom status handling
+        if (baseType.Name == "StatusBaseModel" && baseType.IsAbstract)
+        {
+            return null;
+        }
+
         // Check if the base type inherits from ObservableModel
+        // If so, this class is a "derived" model (not directly inheriting from ObservableModel)
         if (baseType.InheritsFromObservableModel())
         {
             return baseType;
@@ -145,19 +153,22 @@ public static class TypeSymbolExtensions
     }
 
     /// <summary>
-    /// Checks if the type implements IErrorModel interface (directly or through inheritance).
-    /// IErrorModel is used for centralized command error handling.
+    /// Checks if the type inherits from StatusBaseModel class.
+    /// StatusBaseModel is used for centralized error and status message handling.
     /// </summary>
-    public static bool ImplementsIErrorModel(this INamedTypeSymbol typeSymbol)
+    public static bool InheritsFromStatusModel(this INamedTypeSymbol typeSymbol)
     {
-        // Check all implemented interfaces for IErrorModel
-        foreach (var interfaceType in typeSymbol.AllInterfaces)
+        // Check inheritance chain for StatusBaseModel
+        var baseType = typeSymbol.BaseType;
+        while (baseType is not null)
         {
-            if (interfaceType.Name == "IErrorModel" &&
-                interfaceType.ContainingNamespace?.ToDisplayString() == "RxBlazorV2.Interface")
+            if (baseType.Name == "StatusBaseModel" &&
+                baseType.ContainingNamespace?.ToDisplayString() == "RxBlazorV2.Model")
             {
                 return true;
             }
+
+            baseType = baseType.BaseType;
         }
 
         return false;

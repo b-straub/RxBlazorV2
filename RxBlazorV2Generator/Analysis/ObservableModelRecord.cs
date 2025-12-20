@@ -83,7 +83,7 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
             var shouldGenerateCode = true;
 
             // Check if class is missing 'partial' modifier (RXBG072)
-            var isPartial = classDecl.Modifiers.Any(m => m.IsKind(Microsoft.CodeAnalysis.CSharp.SyntaxKind.PartialKeyword));
+            var isPartial = classDecl.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword));
             if (!isPartial)
             {
                 var diagnostic = Diagnostic.Create(
@@ -110,10 +110,8 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                     [],  // No interfaces
                     string.Empty,  // No generic types
                     string.Empty,  // No type constraints
-                    [],  // No using statements
-                    null,  // No base model
-                    "public",  // Default accessibility
-                    "public"   // Default class accessibility
+                    [],  // No base model
+                    isAbstract: namedTypeSymbol.IsAbstract   // Default class accessibility
                 );
 
                 return new ObservableModelRecord(minimalModelInfo, diagnostics, shouldGenerateCode: false);
@@ -128,7 +126,7 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
             var observableCollectionProperties = classDecl.ExtractObservableCollectionProperties(semanticModel);
 
             // Extract model references, DI fields, and model observers from partial constructor parameters
-            var (modelReferences, diFields, unregisteredServices, diFieldsWithScope, modelObservers, modelObserverDiagnostics, errorModelFieldName) = classDecl.ExtractPartialConstructorDependencies(semanticModel, serviceClasses, namedTypeSymbol);
+            var (modelReferences, diFields, unregisteredServices, diFieldsWithScope, modelObservers, modelObserverDiagnostics, constructorDiagnostics, statusModelFieldName) = classDecl.ExtractPartialConstructorDependencies(semanticModel, serviceClasses, namedTypeSymbol);
 
             // Extract additional DI fields from private field declarations
             var additionalDIFields = classDecl.ExtractDIFields(semanticModel, serviceClasses);
@@ -144,9 +142,10 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
             var constructorAccessibility = classDecl.GetConstructorAccessibility();
             var classAccessibility = classDecl.GetClassAccessibility();
 
-            // Add diagnostics from partial properties, command properties, and model observer analysis
+            // Add diagnostics from partial properties, command properties, constructor, and model observer analysis
             diagnostics.AddRange(partialPropertyDiagnostics);
             diagnostics.AddRange(commandPropertiesDiagnostics);
+            diagnostics.AddRange(constructorDiagnostics);
             diagnostics.AddRange(modelObserverDiagnostics);
 
             // Check for missing ObservableModelScope attribute (RXBG070)
@@ -190,8 +189,9 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                 typeConstrains,
                 usingStatements,
                 baseModelTypeName,
-                constructorAccessibility,
-                classAccessibility);
+                isAbstract: namedTypeSymbol.IsAbstract,
+                constructorAccessibility: constructorAccessibility,
+                classAccessibility: classAccessibility);
 
             // Build symbol map for model references
             var modelSymbolMap = new Dictionary<string, ITypeSymbol>();
@@ -276,12 +276,13 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                     typeConstrains,
                     usingStatements,
                     baseModelTypeName,
-                    constructorAccessibility,
-                    classAccessibility,
-                    modelObservers,
-                    internalModelObservers,
-                    errorModelFieldName,
-                    observableCollectionProperties),
+                    isAbstract: namedTypeSymbol.IsAbstract,
+                    constructorAccessibility: constructorAccessibility,
+                    classAccessibility: classAccessibility,
+                    modelObservers: modelObservers,
+                    internalModelObservers: internalModelObservers,
+                    statusModelFieldName: statusModelFieldName,
+                    observableCollectionProperties: observableCollectionProperties),
                 diagnostics,
                 shouldGenerateCode);
 
@@ -345,7 +346,7 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
             // Check if any declaration is missing 'partial' modifier (RXBG072)
             foreach (var decl in classDeclarations)
             {
-                var isPartial = decl.Modifiers.Any(m => m.IsKind(Microsoft.CodeAnalysis.CSharp.SyntaxKind.PartialKeyword));
+                var isPartial = decl.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword));
                 if (!isPartial)
                 {
                     var diagnostic = Diagnostic.Create(
@@ -375,10 +376,8 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                     [],  // No interfaces
                     string.Empty,  // No generic types
                     string.Empty,  // No type constraints
-                    [],  // No using statements
-                    null,  // No base model
-                    "public",  // Default accessibility
-                    "public"   // Default class accessibility
+                    [],  // No base model
+                    isAbstract: namedTypeSymbol.IsAbstract   // Default class accessibility
                 );
 
                 return new ObservableModelRecord(minimalModelInfo, diagnostics, shouldGenerateCode: false);
@@ -436,12 +435,13 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
             var diFieldsWithScope = new List<(DIFieldInfo diField, string? serviceScope, Location? location)>();
             var modelObservers = new List<ModelObserverInfo>();
             var modelObserverDiagnostics = new List<Diagnostic>();
-            string? errorModelFieldName = null;
+            var constructorDiagnostics = new List<Diagnostic>();
+            string? statusModelFieldName = null;
 
             foreach (var decl in classDeclarations)
             {
                 var declSemanticModel = compilation.GetSemanticModel(decl.SyntaxTree);
-                var (refs, fields, unreg, fieldsScope, observers, observerDiags, errorField) =
+                var (refs, fields, unreg, fieldsScope, observers, observerDiags, ctorDiags, errorField) =
                     decl.ExtractPartialConstructorDependencies(declSemanticModel, serviceClasses, namedTypeSymbol);
                 modelReferences.AddRange(refs);
                 diFields.AddRange(fields);
@@ -449,9 +449,10 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                 diFieldsWithScope.AddRange(fieldsScope);
                 modelObservers.AddRange(observers);
                 modelObserverDiagnostics.AddRange(observerDiags);
+                constructorDiagnostics.AddRange(ctorDiags);
 
                 // Capture the first error model field name found
-                errorModelFieldName ??= errorField;
+                statusModelFieldName ??= errorField;
 
                 // Extract additional DI fields from private field declarations
                 var additionalDIFields = decl.ExtractDIFields(declSemanticModel, serviceClasses);
@@ -500,6 +501,7 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
             // Add all diagnostics
             diagnostics.AddRange(allPartialPropertyDiagnostics);
             diagnostics.AddRange(allCommandPropertyDiagnostics);
+            diagnostics.AddRange(constructorDiagnostics);
             diagnostics.AddRange(modelObserverDiagnostics);
 
             // Check for missing ObservableModelScope attribute (RXBG070)
@@ -543,8 +545,9 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                 typeConstrains,
                 allUsingStatements.ToList(),
                 baseModelTypeName,
-                constructorAccessibility,
-                classAccessibility);
+                isAbstract: namedTypeSymbol.IsAbstract,
+                constructorAccessibility: constructorAccessibility,
+                classAccessibility: classAccessibility);
 
             // Build symbol map for model references
             var modelSymbolMap = new Dictionary<string, ITypeSymbol>();
@@ -629,12 +632,13 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                     typeConstrains,
                     allUsingStatements.ToList(),
                     baseModelTypeName,
-                    constructorAccessibility,
-                    classAccessibility,
-                    modelObservers,
-                    allInternalModelObservers,
-                    errorModelFieldName,
-                    allObservableCollectionProperties),
+                    isAbstract: namedTypeSymbol.IsAbstract,
+                    constructorAccessibility: constructorAccessibility,
+                    classAccessibility: classAccessibility,
+                    modelObservers: modelObservers,
+                    internalModelObservers: allInternalModelObservers,
+                    statusModelFieldName: statusModelFieldName,
+                    observableCollectionProperties: allObservableCollectionProperties),
                 diagnostics,
                 shouldGenerateCode);
 
@@ -980,6 +984,81 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                     componentTriggers[propertyName] = (hasSyncTrigger, syncHookName, syncTriggerBehavior, hasAsyncTrigger, asyncHookName, asyncTriggerBehavior, location);
                 }
             }
+        }
+
+        // Also collect trigger properties from base ObservableModel classes (including abstract ones like StatusModel)
+        // Traverse the entire inheritance chain, not just concrete ObservableModels
+        var baseType = namedTypeSymbol.BaseType;
+        while (baseType is not null && baseType.Name != "ObservableModel" && baseType.Name != "Object")
+        {
+            // Only process types that inherit from ObservableModel
+            if (!baseType.InheritsFromObservableModel())
+            {
+                break;
+            }
+
+            // Check properties from base type for trigger attributes
+            foreach (var member in baseType.GetMembers())
+            {
+                if (member is IPropertySymbol propertySymbol)
+                {
+                    // Skip if already defined in derived class (override scenario)
+                    if (componentTriggers.ContainsKey(propertySymbol.Name))
+                    {
+                        continue;
+                    }
+
+                    var hasSyncTrigger = false;
+                    string? syncHookName = null;
+                    var syncTriggerBehavior = 0;
+                    var hasAsyncTrigger = false;
+                    string? asyncHookName = null;
+                    var asyncTriggerBehavior = 0;
+
+                    foreach (var attr in propertySymbol.GetAttributes())
+                    {
+                        if (attr.AttributeClass?.Name == "ObservableComponentTriggerAttribute")
+                        {
+                            hasSyncTrigger = true;
+                            if (attr.ConstructorArguments.Length > 0 &&
+                                attr.ConstructorArguments[0].Value is int enumValue)
+                            {
+                                syncTriggerBehavior = enumValue;
+                            }
+                            if (attr.ConstructorArguments.Length > 1 &&
+                                attr.ConstructorArguments[1].Value is string customName &&
+                                !string.IsNullOrWhiteSpace(customName))
+                            {
+                                syncHookName = customName;
+                            }
+                        }
+                        else if (attr.AttributeClass?.Name == "ObservableComponentTriggerAsyncAttribute")
+                        {
+                            hasAsyncTrigger = true;
+                            if (attr.ConstructorArguments.Length > 0 &&
+                                attr.ConstructorArguments[0].Value is int enumValue)
+                            {
+                                asyncTriggerBehavior = enumValue;
+                            }
+                            if (attr.ConstructorArguments.Length > 1 &&
+                                attr.ConstructorArguments[1].Value is string customNameAsync &&
+                                !string.IsNullOrWhiteSpace(customNameAsync))
+                            {
+                                asyncHookName = customNameAsync;
+                            }
+                        }
+                    }
+
+                    if (hasSyncTrigger || hasAsyncTrigger)
+                    {
+                        // Base class properties - use Location.None since they're not in current file
+                        componentTriggers[propertySymbol.Name] = (hasSyncTrigger, syncHookName, syncTriggerBehavior, hasAsyncTrigger, asyncHookName, asyncTriggerBehavior, Location.None);
+                    }
+                }
+            }
+
+            // Continue up the inheritance chain
+            baseType = baseType.BaseType;
         }
 
         record.ComponentTriggerProperties = componentTriggers;

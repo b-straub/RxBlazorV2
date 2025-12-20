@@ -95,7 +95,7 @@ public partial class CounterModel : ObservableModel
     {
         if (Counter1 > 5)
         {
-            ErrorModel.Errors.Add("Counter 1 is to high");
+            ErrorModel.AddError("Counter 1 is to high");
         }
     }
 
@@ -105,7 +105,7 @@ public partial class CounterModel : ObservableModel
 
         if (Counter1 > 10)
         {
-            ErrorModel.Errors.Add("Counter 1 is extremely high");
+            ErrorModel.AddError("Counter 1 is extremely high");
         }
     }
 

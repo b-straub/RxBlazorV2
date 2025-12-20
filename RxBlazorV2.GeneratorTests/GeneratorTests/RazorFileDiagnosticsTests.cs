@@ -3088,7 +3088,7 @@ public class RazorFileDiagnosticsTests
             public CommandModel() : base()
             {
                 // Initialize commands
-                _runCommand = new ObservableCommandFactory(this, ["Model.IsReady"], Execute, CanExecute);
+                _runCommand = new ObservableCommandFactory(this, ["Model.IsReady"], "RunCommand", "Execute", Execute, CanExecute);
             }
         }
 

@@ -2,6 +2,32 @@ using Microsoft.CodeAnalysis;
 
 namespace RxBlazorV2Generator.Diagnostics;
 
+/// <summary>
+/// Indicates where a diagnostic should be reported (SSOT pattern).
+/// Each diagnostic must be reported in exactly ONE place to avoid duplicates.
+/// </summary>
+public enum DiagnosticReporter
+{
+    /// <summary>
+    /// Reported by the analyzer during editing (live feedback in IDE).
+    /// Best for diagnostics that can be detected from a single file/class context.
+    /// </summary>
+    Analyzer,
+
+    /// <summary>
+    /// Reported by the generator during compilation.
+    /// Required for diagnostics that need cross-model/cross-assembly analysis.
+    /// </summary>
+    Generator
+}
+
+/// <summary>
+/// Wraps a DiagnosticDescriptor with metadata about who reports it.
+/// </summary>
+public readonly record struct DiagnosticDefinition(
+    DiagnosticDescriptor Descriptor,
+    DiagnosticReporter Reporter);
+
 public static class DiagnosticDescriptors
 {
     // ============================================================================
@@ -227,6 +253,17 @@ public static class DiagnosticDescriptors
         description: "Dependency injection scoping rules must be followed: Singleton services can only inject Singleton services. Scoped services can inject Singleton and Scoped services. Transient services can inject any scope. Violating these rules causes runtime DI container exceptions.",
         helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG051.md");
 
+    public static readonly DiagnosticDescriptor AbstractClassInPartialConstructorError = new(
+        id: "RXBG052",
+        title: "Abstract class cannot be used in partial constructor",
+        messageFormat: "Partial constructor parameter '{0}' of type '{1}' is an abstract class and cannot be instantiated by the dependency injection container. Use a concrete implementation instead.",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Abstract classes cannot be used as dependency injection parameters because they cannot be instantiated. Derive from the abstract class to create a concrete implementation, or use an interface if the abstract class serves as a service contract.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG052.md",
+        customTags: ["Remove abstract class parameter"]);
+
     // ============================================================================
     // RXBG060-RXBG069: Components
     // ============================================================================
@@ -348,4 +385,93 @@ public static class DiagnosticDescriptors
         isEnabledByDefault: true,
         description: "Direct access to the Observable property bypasses the framework's reactive patterns. Use attributes like [ObservableTrigger] for property change reactions, [ObservableCommand] for command triggers, or [ObservableComponentTrigger] for component hooks. The Observable property should only be accessed in generated code.",
         helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG090.md");
+
+    // ============================================================================
+    // UNIFIED DIAGNOSTIC REGISTRY - Single Source of Truth for who reports what
+    // ============================================================================
+
+    /// <summary>
+    /// All diagnostics with their designated reporter.
+    /// CRITICAL: Each diagnostic must be reported in exactly ONE place (SSOT pattern).
+    /// - Analyzer: Reports during editing for live IDE feedback
+    /// - Generator: Reports during compilation for cross-model/cross-assembly analysis
+    /// </summary>
+    public static readonly DiagnosticDefinition[] AllDefinitions =
+    [
+        // RXBG001-009: Internal errors - reported by analyzer (immediate feedback)
+        new(ObservableModelAnalysisError, DiagnosticReporter.Analyzer),
+        new(CodeGenerationError, DiagnosticReporter.Analyzer),
+        new(MethodAnalysisWarning, DiagnosticReporter.Analyzer),
+
+        // RXBG010-019: Model structure - mixed based on analysis requirements
+        new(CircularModelReferenceError, DiagnosticReporter.Analyzer),
+        new(InvalidModelReferenceTargetError, DiagnosticReporter.Analyzer),
+        new(UnusedModelReferenceError, DiagnosticReporter.Analyzer),
+        new(DerivedModelReferenceError, DiagnosticReporter.Analyzer),
+        new(SharedModelNotSingletonError, DiagnosticReporter.Generator),  // Requires cross-model analysis
+
+        // RXBG020-029: Generic types - reported by analyzer
+        new(GenericArityMismatchError, DiagnosticReporter.Analyzer),
+        new(TypeConstraintMismatchError, DiagnosticReporter.Analyzer),
+        new(InvalidOpenGenericReferenceError, DiagnosticReporter.Analyzer),
+
+        // RXBG030-039: Command triggers - reported by analyzer
+        new(TriggerTypeArgumentsMismatchError, DiagnosticReporter.Analyzer),
+        new(CircularTriggerReferenceError, DiagnosticReporter.Analyzer),
+        new(CommandMethodReturnsValueError, DiagnosticReporter.Analyzer),
+        new(CommandMethodMissingReturnValueError, DiagnosticReporter.Analyzer),
+
+        // RXBG040-049: Properties - mixed
+        new(InvalidInitPropertyError, DiagnosticReporter.Analyzer),
+        new(UnusedObservableComponentTriggerWarning, DiagnosticReporter.Generator),  // Requires cross-model analysis
+
+        // RXBG050-059: Dependency Injection - generator (requires service list analysis)
+        new(UnregisteredServiceWarning, DiagnosticReporter.Generator),
+        new(DiServiceScopeViolationError, DiagnosticReporter.Generator),
+        new(AbstractClassInPartialConstructorError, DiagnosticReporter.Generator),
+
+        // RXBG060-069: Components - generator (requires razor file analysis)
+        new(DirectObservableComponentInheritanceError, DiagnosticReporter.Generator),
+        new(SameAssemblyComponentCompositionError, DiagnosticReporter.Generator),
+        new(NonReactiveComponentError, DiagnosticReporter.Generator),
+
+        // RXBG070-079: Attributes - reported by analyzer
+        new(MissingObservableModelScopeWarning, DiagnosticReporter.Analyzer),
+        new(NonPublicPartialConstructorError, DiagnosticReporter.Analyzer),
+        new(ObservableEntityMissingPartialModifierError, DiagnosticReporter.Analyzer),
+
+        // RXBG080-089: Model observers - mixed
+        new(ObservableModelObserverInvalidSignatureError, DiagnosticReporter.Analyzer),
+        new(ObservableModelObserverPropertyNotFoundError, DiagnosticReporter.Analyzer),
+        new(InternalModelObserverInvalidSignatureWarning, DiagnosticReporter.Generator),  // Requires cross-model analysis
+
+        // RXBG090-099: Observable usage - separate analyzer (ObservableUsageAnalyzer)
+        new(DirectObservableAccessWarning, DiagnosticReporter.Analyzer)
+    ];
+
+    /// <summary>
+    /// Gets all diagnostics that should be reported by the analyzer.
+    /// </summary>
+    public static DiagnosticDescriptor[] GetAnalyzerReportedDiagnostics() =>
+        AllDefinitions
+            .Where(d => d.Reporter == DiagnosticReporter.Analyzer)
+            .Select(d => d.Descriptor)
+            .ToArray();
+
+    /// <summary>
+    /// Gets all diagnostics that should be reported by the generator.
+    /// </summary>
+    public static DiagnosticDescriptor[] GetGeneratorReportedDiagnostics() =>
+        AllDefinitions
+            .Where(d => d.Reporter == DiagnosticReporter.Generator)
+            .Select(d => d.Descriptor)
+            .ToArray();
+
+    /// <summary>
+    /// Gets the IDs of diagnostics reported by the generator (for filtering in analyzer).
+    /// </summary>
+    public static HashSet<string> GetGeneratorReportedIds() =>
+        new(AllDefinitions
+            .Where(d => d.Reporter == DiagnosticReporter.Generator)
+            .Select(d => d.Descriptor.Id));
 }
