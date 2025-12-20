@@ -7,12 +7,13 @@ This document provides comprehensive guidance for implementing reactive patterns
 1. [Core Concepts](#core-concepts)
 2. [Quick Reference: Pattern Decision Matrix](#quick-reference-pattern-decision-matrix)
 3. [Pattern Catalog](#pattern-catalog)
-4. [File Organization Best Practices](#file-organization-best-practices)
-5. [Model Lifecycle](#model-lifecycle)
-6. [Domain Architecture Patterns](#domain-architecture-patterns)
-7. [Multi-Assembly Considerations](#multi-assembly-considerations)
-8. [Anti-Patterns](#anti-patterns)
-9. [Diagnostic Reference](#diagnostic-reference)
+4. [Abstract Base Class Contracts](#11-abstract-base-class-contracts)
+5. [File Organization Best Practices](#file-organization-best-practices)
+6. [Model Lifecycle](#model-lifecycle)
+7. [Domain Architecture Patterns](#domain-architecture-patterns)
+8. [Multi-Assembly Considerations](#multi-assembly-considerations)
+9. [Anti-Patterns](#anti-patterns)
+10. [Diagnostic Reference](#diagnostic-reference)
 
 ---
 
@@ -63,6 +64,7 @@ Use this matrix to quickly determine which pattern fits your use case:
 | React to property changes in UI component | Component Trigger | `[ObservableComponentTrigger]` |
 | Have external service observe model changes | External Observer | `[ObservableModelObserver]` |
 | Share state between models | Model Reference | Partial constructor injection |
+| Define reusable reactive contracts | Abstract Base Class | `override partial` + attribute transfer |
 
 ### Pattern Selection by Property Location
 
@@ -691,6 +693,151 @@ External observers are for **fire-and-forget side effects** only:
 - External notifications
 
 They should NOT orchestrate workflows or call back to models.
+
+---
+
+### 11. Abstract Base Class Contracts
+
+**Purpose:** Define reusable reactive contracts in abstract base classes with automatic attribute transfer to concrete implementations.
+
+**When to use:**
+- Shared reactive patterns across multiple models
+- Cross-assembly base classes (e.g., library providing base, app providing concrete)
+- Standardizing reactive behavior (e.g., status handling, error patterns)
+- Separating contract definition from implementation
+
+**Abstract Base Class:**
+```csharp
+/// <summary>
+/// Abstract base class defining reactive contract.
+/// Concrete implementations get all reactive behavior automatically.
+/// </summary>
+public abstract class StatusBaseModel : ObservableModel
+{
+    /// <summary>
+    /// Messages collection - triggers component hook when changed.
+    /// </summary>
+    [ObservableComponentTrigger]
+    public abstract ObservableList<StatusMessage> Messages { get; }
+
+    /// <summary>
+    /// Guard property - triggers both component hook and method call.
+    /// </summary>
+    [ObservableComponentTrigger]
+    [ObservableTrigger(nameof(CanAddMessageTrigger))]
+    public abstract bool CanAddMessage { get; set; }
+
+    /// <summary>
+    /// Command - auto-executes when CanAddMessage changes.
+    /// </summary>
+    [ObservableCommandTrigger(nameof(CanAddMessage))]
+    public abstract IObservableCommand AddMessageCommand { get; }
+
+    protected abstract void CanAddMessageTrigger();
+
+    // Non-abstract members work as normal
+    public void AddError(string message) => Messages.Add(new StatusMessage(message, Severity.Error));
+    public void ClearMessages() => Messages.Clear();
+}
+```
+
+**Concrete Implementation:**
+```csharp
+[ObservableComponent]
+[ObservableModelScope(ModelScope.Singleton)]
+public partial class AppStatusModel : StatusBaseModel
+{
+    // Override abstract properties - attributes transfer automatically
+    public override ObservableList<StatusMessage> Messages { get; } = [];
+
+    // Use 'override partial' for properties that need code generation
+    public override partial bool CanAddMessage { get; set; }
+
+    // Command needs [ObservableCommand] attribute for implementation binding
+    [ObservableCommand(nameof(AddMessage))]
+    public override partial IObservableCommand AddMessageCommand { get; }
+
+    // Implement abstract trigger method
+    protected override void CanAddMessageTrigger()
+    {
+        // Called when CanAddMessage changes (from [ObservableTrigger] on base)
+    }
+
+    // Command implementation
+    private void AddMessage()
+    {
+        Messages.Add(new StatusMessage("New message", Severity.Info));
+    }
+}
+```
+
+**Generated Code:**
+```csharp
+public partial class AppStatusModel
+{
+    // Override modifier is included
+    public override partial bool CanAddMessage
+    {
+        get => field;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                StateHasChanged("Model.CanAddMessage");
+            }
+        }
+    }
+
+    private ObservableCommand _addMessageCommand;
+
+    public override partial IObservableCommand AddMessageCommand
+    {
+        get => _addMessageCommand;
+    }
+
+    public AppStatusModel() : base()
+    {
+        // Collection observation (from [ObservableComponentTrigger] on Messages)
+        Subscriptions.Add(Messages.ObserveChanged()
+            .Subscribe(_ => StateHasChanged("Model.Messages")));
+
+        // Command initialization
+        _addMessageCommand = new ObservableCommandFactory(this, [""], "AddMessageCommand", "AddMessage", AddMessage);
+
+        // Command trigger (from [ObservableCommandTrigger] on base)
+        Subscriptions.Add(Observable.Where(p => p.Intersect(["Model.CanAddMessage"]).Any())
+            .Subscribe(_ => _addMessageCommand.Execute()));
+
+        // Property trigger (from [ObservableTrigger] on base)
+        Subscriptions.Add(Observable.Where(p => p.Intersect(["Model.CanAddMessage"]).Any())
+            .Subscribe(_ => CanAddMessageTrigger()));
+    }
+}
+```
+
+**Transferred Attributes:**
+| Base Class Attribute | Transfer Behavior |
+|---------------------|-------------------|
+| `[ObservableComponentTrigger]` | Generates component hook subscription |
+| `[ObservableComponentTriggerAsync]` | Generates async component hook subscription |
+| `[ObservableTrigger]` | Generates property trigger subscription |
+| `[ObservableTriggerAsync]` | Generates async property trigger subscription |
+| `[ObservableCommandTrigger]` | Generates command auto-execute subscription |
+
+**Key Points:**
+- Abstract base class = reactive **contract** definition
+- Concrete class uses `override partial` = attribute **transfer** + code generation
+- Works **across assemblies** (base in library, concrete in app)
+- Generator produces `override` modifier automatically
+- Commands still need `[ObservableCommand]` on concrete class for method binding
+- Non-partial override properties (like `Messages`) don't get generated code but still trigger component hooks
+
+**Use Cases:**
+1. **Status/Error Handling**: `StatusBaseModel` → `AppStatusModel`, `ErrorModel`
+2. **Form Validation**: `FormBaseModel` → `ContactFormModel`, `LoginFormModel`
+3. **Data Repositories**: `RepositoryBaseModel<T>` → `ProductRepository`, `OrderRepository`
+4. **Settings Patterns**: `SettingsBaseModel` → `UserSettingsModel`, `AppSettingsModel`
 
 ---
 

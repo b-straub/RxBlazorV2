@@ -270,6 +270,50 @@ public partial class SearchModel : ObservableModel
 }
 ```
 
+### Abstract Base Class Contracts
+
+Define reactive contracts in abstract base classes with attribute transfer to concrete implementations:
+
+```csharp
+// Abstract base class defines the contract with reactive attributes
+public abstract class StatusBaseModel : ObservableModel
+{
+    [ObservableComponentTrigger]
+    public abstract ObservableList<StatusMessage> Messages { get; }
+
+    [ObservableComponentTrigger]
+    [ObservableTrigger(nameof(CanAddMessageTrigger))]
+    public abstract bool CanAddMessage { get; set; }
+
+    [ObservableCommandTrigger(nameof(CanAddMessage))]
+    public abstract IObservableCommand AddMessageCommand { get; }
+
+    protected abstract void CanAddMessageTrigger();
+}
+
+// Concrete class - attributes are automatically transferred from base
+[ObservableComponent]
+[ObservableModelScope(ModelScope.Singleton)]
+public partial class AppStatusModel : StatusBaseModel
+{
+    public override ObservableList<StatusMessage> Messages { get; } = [];
+    public override partial bool CanAddMessage { get; set; }
+
+    [ObservableCommand(nameof(AddMessage))]
+    public override partial IObservableCommand AddMessageCommand { get; }
+
+    protected override void CanAddMessageTrigger() { /* ... */ }
+    private void AddMessage() { /* ... */ }
+}
+```
+
+**Key Points:**
+- Abstract base class defines the **contract** with reactive attributes
+- Concrete class uses `override partial` - attributes are **automatically transferred**
+- `[ObservableComponentTrigger]`, `[ObservableTrigger]`, `[ObservableCommandTrigger]` all transfer
+- Generator produces `override` modifier in generated code
+- Enables reusable reactive base classes across your application
+
 ### Internal Model Observers (Auto-Detection)
 
 Private methods that **read** referenced model properties are automatically detected and subscribed. No special naming convention required - the generator analyzes which properties are actually accessed:
