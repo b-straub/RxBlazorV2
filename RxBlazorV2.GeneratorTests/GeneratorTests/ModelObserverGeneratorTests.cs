@@ -932,6 +932,168 @@ public class ModelObserverGeneratorTests
     }
 
     [Fact]
+    public async Task InternalModelObserver_CommandInvocation_DoesNotGenerateSubscription()
+    {
+        // This test verifies the bug fix: calling ExecuteAsync/Execute/Cancel on a command
+        // should NOT be detected as an observation. Only reading command state (IsExecuting, etc.)
+        // should create a subscription. This prevents false positive circular subscriptions.
+        // lang=csharp
+        const string referencedModel = """
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+
+        namespace Test;
+
+        public partial class ContactsModel : ObservableModel
+        {
+            [ObservableCommand(nameof(LoadContactsExecute))]
+            public partial IObservableCommandAsync LoadContacts { get; }
+
+            private async Task LoadContactsExecute() => await Task.Delay(100);
+        }
+        """;
+
+        // lang=csharp
+        const string statusModel = """
+        using RxBlazorV2.Model;
+        using ObservableCollections;
+
+        namespace Test;
+
+        public partial class StatusModel : ObservableModel
+        {
+            public ObservableList<string> Messages { get; } = [];
+        }
+        """;
+
+        // lang=csharp
+        const string test = """
+        using RxBlazorV2.Model;
+        using System.Threading.Tasks;
+        using System.Linq;
+
+        namespace Test
+        {
+            public partial class InviteModel : ObservableModel
+            {
+                public partial InviteModel(StatusModel statusModel, ContactsModel contactsModel);
+
+                // This method observes StatusModel.Messages (read for condition check)
+                // but INVOKES ContactsModel.LoadContacts.ExecuteAsync() - this is NOT an observation
+                // Only StatusModel should be subscribed, not ContactsModel
+                private async Task AutoSaveAsync()
+                {
+                    if (StatusModel.Messages.LastOrDefault() == "Success")
+                    {
+                        await ContactsModel.LoadContacts.ExecuteAsync();
+                    }
+                }
+            }
+        }
+        """;
+
+        // The generated code should only have internal observer subscription for StatusModel.Messages,
+        // NOT for ContactsModel.LoadContacts (since ExecuteAsync is an invocation, not observation)
+        // Note: usedProps still includes LoadContacts for component filtering purposes (separate concern)
+        // lang=csharp
+        const string expected = """
+        #nullable enable
+        using JetBrains.Annotations;
+        using Microsoft.Extensions.DependencyInjection;
+        using ObservableCollections;
+        using R3;
+        using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using System;
+        using System.Linq;
+        using System.Threading.Tasks;
+
+        namespace Test;
+
+        public partial class InviteModel
+        {
+            public override string ModelID => "Test.InviteModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                var usedProps = new[] { "Model.StatusModel.Messages", "Model.ContactsModel.LoadContacts" };
+
+                return propertyNames.Intersect(usedProps).Any();
+            }
+
+            public Test.StatusModel StatusModel { get; }
+            public Test.ContactsModel ContactsModel { get; }
+
+
+
+            public partial InviteModel(Test.StatusModel statusModel, Test.ContactsModel contactsModel) : base()
+            {
+                StatusModel = statusModel;
+                ContactsModel = contactsModel;
+
+                // Subscribe to referenced model changes
+                // Transform referenced model property names: Model.X -> Model.{RefName}.X
+                // Filtering happens at component level via Filter() method
+                Subscriptions.Add(StatusModel.Observable
+                    .Select(props => props.Select(p => p.Replace("Model.", "Model.StatusModel.")).ToArray())
+                    .Subscribe(props => StateHasChanged(props)));
+                Subscriptions.Add(ContactsModel.Observable
+                    .Select(props => props.Select(p => p.Replace("Model.", "Model.ContactsModel.")).ToArray())
+                    .Subscribe(props => StateHasChanged(props)));
+
+                // Subscribe to internal model observers (auto-detected)
+                Subscriptions.Add(StatusModel.Observable.Where(p => p.Intersect(["Model.Messages"]).Any())
+                    .SubscribeAwait(async (_, _) => await AutoSaveAsync(), AwaitOperation.Switch));
+            }
+            private bool _contextReadyInternCalled;
+
+            protected override void OnContextReadyIntern()
+            {
+                if (_contextReadyInternCalled)
+                {
+                    return;
+                }
+                _contextReadyInternCalled = true;
+
+                // Initialize referenced ObservableModel dependencies
+                StatusModel.ContextReady();
+                ContactsModel.ContextReady();
+
+            }
+
+            private bool _contextReadyInternAsyncCalled;
+
+            protected override async Task OnContextReadyInternAsync()
+            {
+                if (_contextReadyInternAsyncCalled)
+                {
+                    return;
+                }
+                _contextReadyInternAsyncCalled = true;
+
+                // Initialize referenced ObservableModel dependencies (async)
+                await StatusModel.ContextReadyAsync();
+                await ContactsModel.ContextReadyAsync();
+            }
+
+        }
+
+        """;
+
+        await MultiModelGeneratorVerifier.VerifyMultiModelGeneratorAsync(
+            [referencedModel, statusModel, test],
+            [("Test.ContactsModel.g.cs", GenerateContactsModelCode()),
+             ("Test.StatusModel.g.cs", GenerateStatusModelCode()),
+             ("Test.InviteModel.g.cs", expected)],
+            ["ContactsModel", "StatusModel", "InviteModel"]);
+    }
+
+    [Fact]
     public async Task InternalModelObserver_InSeparatePartialFile_GeneratesSubscription()
     {
         // This test verifies the bug fix: internal observers in separate partial files
@@ -2371,6 +2533,96 @@ public class ModelObserverGeneratorTests
                 }
             }
 
+        }
+
+        """;
+    }
+
+    private static string GenerateContactsModelCode()
+    {
+        return """
+        #nullable enable
+        using JetBrains.Annotations;
+        using Microsoft.Extensions.DependencyInjection;
+        using ObservableCollections;
+        using R3;
+        using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using System;
+
+        namespace Test;
+
+        public partial class ContactsModel
+        {
+            public override string ModelID => "Test.ContactsModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
+
+            private ObservableCommandAsync _loadContacts;
+
+            public partial IObservableCommandAsync LoadContacts
+            {
+                get => _loadContacts;
+            }
+
+            public ContactsModel() : base()
+            {
+                // Initialize commands
+                _loadContacts = new ObservableCommandAsyncFactory(this, [""], "LoadContacts", "LoadContactsExecute", LoadContactsExecute);
+            }
+        }
+
+        """;
+    }
+
+    private static string GenerateStatusModelCode()
+    {
+        return """
+        #nullable enable
+        using JetBrains.Annotations;
+        using Microsoft.Extensions.DependencyInjection;
+        using ObservableCollections;
+        using R3;
+        using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using System;
+
+        namespace Test;
+
+        public partial class StatusModel
+        {
+            public override string ModelID => "Test.StatusModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
+
+
+            public StatusModel() : base()
+            {
+
+                // Initialize IObservableCollection properties
+                Subscriptions.Add(Messages.ObserveChanged()
+                    .Subscribe(_ => StateHasChanged("Model.Messages")));
+            }
         }
 
         """;

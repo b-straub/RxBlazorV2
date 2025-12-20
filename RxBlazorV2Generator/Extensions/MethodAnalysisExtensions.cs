@@ -427,8 +427,9 @@ public static class MethodAnalysisExtensions
     }
 
     /// <summary>
-    /// Known method names that mutate collections/objects.
-    /// These are common mutating methods on ICollection, IList, ObservableList, etc.
+    /// Known method names that mutate collections/objects or invoke commands.
+    /// These are common mutating methods on ICollection, IList, ObservableList, IObservableCommand, etc.
+    /// Accessing a property only to invoke a method on it is not an observation.
     /// </summary>
     private static readonly HashSet<string> MutatingMethodNames =
     [
@@ -456,7 +457,11 @@ public static class MethodAnalysisExtensions
         // General setters
         "Set",
         "SetValue",
-        "Update"
+        "Update",
+        // IObservableCommand invocation methods (not observation)
+        "Execute",
+        "ExecuteAsync",
+        "Cancel"
     ];
 
     /// <summary>
