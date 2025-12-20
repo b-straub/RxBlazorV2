@@ -23,6 +23,8 @@
 
     /// <summary>
     /// How errors are displayed. Default: SNACKBAR_AND_ICON.
+    /// In SNACKBAR + Aggregate mode: errors accumulate while snackbar is visible,
+    /// cleared when snackbar closes.
     /// </summary>
     [Parameter]
     public StatusDisplayMode ErrorDisplayMode { get; set; } = StatusDisplayMode.SNACKBAR_AND_ICON;
@@ -45,7 +47,8 @@
 
     /// <summary>
     /// How non-error messages are displayed. Default: SNACKBAR.
-    /// Note: SNACKBAR with Aggregate mode is auto-upgraded to SNACKBAR_AND_ICON.
+    /// In SNACKBAR + Aggregate mode: messages accumulate while snackbar is visible,
+    /// cleared when snackbar closes.
     /// </summary>
     [Parameter]
     public StatusDisplayMode MessageDisplayMode { get; set; } = StatusDisplayMode.SNACKBAR;
@@ -89,6 +92,10 @@
     private Snackbar? _currentErrorSnackbar;
     private Snackbar? _currentMessageSnackbar;
 
+    // Prevent OnClose from clearing messages during programmatic removal
+    private bool _isUpdatingErrorSnackbar;
+    private bool _isUpdatingMessageSnackbar;
+
     // Track previous state to detect changes (count + last message ID for Single mode)
     private int _previousErrorCount;
     private int _previousMessageCount;
@@ -105,23 +112,18 @@
     private bool ShowMessageIcon => MessageDisplayMode is StatusDisplayMode.ICON or StatusDisplayMode.SNACKBAR_AND_ICON;
     private bool ShowMessageSnackbar => MessageDisplayMode is StatusDisplayMode.SNACKBAR or StatusDisplayMode.SNACKBAR_AND_ICON;
 
+    // Track if snackbar is auto-aggregating (Aggregate + SNACKBAR without icon)
+    private bool IsErrorAutoAggregate => ErrorMessageMode is StatusMessageMode.Aggregate && ErrorDisplayMode is StatusDisplayMode.SNACKBAR;
+    private bool IsMessageAutoAggregate => MessageMessageMode is StatusMessageMode.Aggregate && MessageDisplayMode is StatusDisplayMode.SNACKBAR;
+
     protected override void OnParametersSet()
     {
         Snackbar.Configuration.PositionClass = SnackbarPositionClass;
 
         // Sync parameters to model's modes
         Model.ErrorMessageMode = ErrorMessageMode;
-        if (ErrorMessageMode is StatusMessageMode.Aggregate && ErrorDisplayMode is StatusDisplayMode.SNACKBAR)
-        {
-            ErrorDisplayMode = StatusDisplayMode.SNACKBAR_AND_ICON;
-        }
-        
         Model.MessageMessageMode = MessageMessageMode;
-        if (MessageMessageMode is StatusMessageMode.Aggregate && MessageDisplayMode is StatusDisplayMode.SNACKBAR)
-        {
-            MessageDisplayMode = StatusDisplayMode.SNACKBAR_AND_ICON;
-        }
-        
+
         base.OnParametersSet();
     }
 
@@ -145,8 +147,10 @@
                 // Errors cleared - remove snackbar
                 if (_currentErrorSnackbar is not null)
                 {
+                    _isUpdatingErrorSnackbar = true;
                     Snackbar.Remove(_currentErrorSnackbar);
                     _currentErrorSnackbar = null;
+                    _isUpdatingErrorSnackbar = false;
                 }
             }
         }
@@ -164,8 +168,10 @@
                 // Messages cleared - remove snackbar
                 if (_currentMessageSnackbar is not null)
                 {
+                    _isUpdatingMessageSnackbar = true;
                     Snackbar.Remove(_currentMessageSnackbar);
                     _currentMessageSnackbar = null;
+                    _isUpdatingMessageSnackbar = false;
                 }
             }
         }
@@ -190,8 +196,10 @@
     {
         if (_currentErrorSnackbar is not null)
         {
+            _isUpdatingErrorSnackbar = true;
             Snackbar.Remove(_currentErrorSnackbar);
             _currentErrorSnackbar = null;
+            _isUpdatingErrorSnackbar = false;
         }
 
         var errors = ErrorMessages;
@@ -229,10 +237,16 @@
         }
         else
         {
-            // Single error (not from icon) - use normal plain snackbar
+            // Single error - use normal plain snackbar
             var error = errors[0];
             var text = error.Source is not null && ShowErrorSource ? $"{error.Message} ({error.Source})" : error.Message;
             _currentErrorSnackbar = Snackbar.Add(text, Severity.Error);
+        }
+
+        // In auto-aggregate mode, clear messages when snackbar closes (for both single and aggregated)
+        if (IsErrorAutoAggregate && !fromIconClick && _currentErrorSnackbar is not null)
+        {
+            _currentErrorSnackbar.OnClose += OnErrorSnackbarClosed;
         }
     }
 
@@ -240,8 +254,10 @@
     {
         if (_currentMessageSnackbar is not null)
         {
+            _isUpdatingMessageSnackbar = true;
             Snackbar.Remove(_currentMessageSnackbar);
             _currentMessageSnackbar = null;
+            _isUpdatingMessageSnackbar = false;
         }
 
         var messages = NonErrorMessages;
@@ -280,10 +296,16 @@
         }
         else
         {
-            // Single message (not from icon) - use normal plain snackbar
+            // Single message - use normal plain snackbar
             var msg = messages[0];
             var text = msg.Source is not null && ShowMessageSource ? $"{msg.Message} ({msg.Source})" : msg.Message;
             _currentMessageSnackbar = Snackbar.Add(text, ToMudSeverity(msg.Severity));
+        }
+
+        // In auto-aggregate mode, clear messages when snackbar closes (for both single and aggregated)
+        if (IsMessageAutoAggregate && !fromIconClick && _currentMessageSnackbar is not null)
+        {
+            _currentMessageSnackbar.OnClose += OnMessageSnackbarClosed;
         }
     }
 
@@ -295,6 +317,28 @@
     private void ClearNonErrors()
     {
         Model.ClearNonErrorMessages();
+    }
+
+    private void OnErrorSnackbarClosed(Snackbar snackbar)
+    {
+        // Don't clear messages if we're updating to show new aggregated content
+        if (_isUpdatingErrorSnackbar)
+        {
+            return;
+        }
+        _currentErrorSnackbar = null;
+        ClearErrors();
+    }
+
+    private void OnMessageSnackbarClosed(Snackbar snackbar)
+    {
+        // Don't clear messages if we're updating to show new aggregated content
+        if (_isUpdatingMessageSnackbar)
+        {
+            return;
+        }
+        _currentMessageSnackbar = null;
+        ClearNonErrors();
     }
 
     private Color GetMessageBadgeColor()

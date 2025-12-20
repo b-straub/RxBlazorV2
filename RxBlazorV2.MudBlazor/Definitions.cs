@@ -30,17 +30,17 @@ public enum IconVariant
 /// <item><description><c>Single + SNACKBAR</c>: Snackbar only, each message replaces previous</description></item>
 /// <item><description><c>Single + ICON</c>: Icon only, each message replaces previous</description></item>
 /// <item><description><c>Single + SNACKBAR_AND_ICON</c>: Both, each message replaces previous</description></item>
-/// <item><description><c>Aggregate + ICON</c>: Icon with badge showing count, messages accumulate</description></item>
-/// <item><description><c>Aggregate + SNACKBAR_AND_ICON</c>: Both with aggregated display, messages accumulate</description></item>
-/// <item><description><c>Aggregate + SNACKBAR</c>: <b>Not allowed</b> - automatically upgraded to SNACKBAR_AND_ICON</description></item>
+/// <item><description><c>Aggregate + ICON</c>: Icon with badge showing count, messages accumulate until cleared</description></item>
+/// <item><description><c>Aggregate + SNACKBAR_AND_ICON</c>: Both with aggregated display, messages accumulate until cleared</description></item>
+/// <item><description><c>Aggregate + SNACKBAR</c>: Auto-aggregation mode - messages accumulate while snackbar is visible, cleared when snackbar closes</description></item>
 /// </list>
 /// </para>
 /// </summary>
 public enum StatusDisplayMode
 {
     /// <summary>
-    /// Display messages via snackbar only. Only valid with <see cref="RxBlazorV2.Model.StatusMessageMode.Single"/>.
-    /// When used with Aggregate mode, automatically upgrades to <see cref="SNACKBAR_AND_ICON"/>.
+    /// Display messages via snackbar only.
+    /// With Aggregate mode: messages accumulate while snackbar is visible and are automatically cleared when snackbar closes (timeout or dismissal).
     /// </summary>
     SNACKBAR,
 
@@ -52,7 +52,7 @@ public enum StatusDisplayMode
 
     /// <summary>
     /// Display messages via both snackbar and icon with badge.
-    /// Works with both Single and Aggregate message modes. Required for Aggregate mode with snackbar.
+    /// Works with both Single and Aggregate message modes. Messages persist until manually cleared via icon click.
     /// </summary>
     SNACKBAR_AND_ICON
 }

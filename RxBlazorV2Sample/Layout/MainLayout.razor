@@ -20,8 +20,7 @@
                        Color="Color.Inherit" OnClick="@(() => Model.ToggleThemeCommand.Execute())"/>
         <MudIconButton Icon="@Icons.Material.Filled.Info" Color="Color.Inherit"
                        Href="https://learn.microsoft.com/aspnet/core/" Target="_blank"/>
-        <StatusDisplay ShowMessageSource="false" GroupMessagesBySeverity="false"
-                       MessageMessageMode="StatusMessageMode.Single"/>
+        <StatusDisplay />
     </MudAppBar>
     <MudDrawer @bind-Open="@_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
         <NavMenu/>
