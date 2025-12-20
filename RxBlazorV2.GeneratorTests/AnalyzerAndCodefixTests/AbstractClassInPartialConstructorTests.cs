@@ -52,11 +52,10 @@ public class AbstractClassInPartialConstructorTests
     }
 
     [Fact]
-    public async Task AbstractService_DiagnosticExpected()
+    public async Task AbstractObservableModel_DiagnosticExpected()
     {
         // lang=csharp
-        // Abstract non-ObservableModel class - reports RXBG052 (twice from analyzer+generator)
-        // and RXBG050 (unregistered service info)
+        // Abstract ObservableModel class - reports RXBG052
         var test = """
 
         using RxBlazorV2.Model;
@@ -64,7 +63,7 @@ public class AbstractClassInPartialConstructorTests
 
         namespace Test
         {
-            public abstract class AbstractService
+            public abstract partial class AbstractBaseModel : ObservableModel
             {
                 public abstract void DoWork();
             }
@@ -72,30 +71,74 @@ public class AbstractClassInPartialConstructorTests
             [ObservableModelScope(ModelScope.Transient)]
             public partial class ParentModel : ObservableModel
             {
-                public partial ParentModel(AbstractService service);
+                public partial ParentModel(AbstractBaseModel baseModel);
 
                 public partial int Value { get; set; }
             }
         }
         """;
 
-        // RXBG050 for unregistered service (info)
-        // RXBG052 for abstract class (error) - reported by generator only (SSOT pattern)
+        // RXBG052 for abstract ObservableModel class (error) - reported by generator only (SSOT pattern)
+        // Also RXBG070 (missing scope on abstract model) and RXBG012 (unused reference)
         var expected = new[]
         {
-            new DiagnosticResult(DiagnosticDescriptors.UnregisteredServiceWarning.Id, Microsoft.CodeAnalysis.DiagnosticSeverity.Info)
-                .WithSpan(15, 36, 15, 51)
-                .WithArguments("service", "AbstractService", "'services.AddScoped<AbstractService>()' or 'services.AddScoped<IYourInterface, AbstractService>()'"),
             DiagnosticResult.CompilerError(DiagnosticDescriptors.AbstractClassInPartialConstructorError.Id)
-                .WithSpan(15, 36, 15, 51)
-                .WithArguments("service", "Test.AbstractService")
+                .WithSpan(15, 36, 15, 53)
+                .WithArguments("baseModel", "Test.AbstractBaseModel"),
+            new DiagnosticResult(DiagnosticDescriptors.MissingObservableModelScopeWarning.Id, Microsoft.CodeAnalysis.DiagnosticSeverity.Warning)
+                .WithSpan(7, 35, 7, 52)
+                .WithArguments("AbstractBaseModel"),
+            DiagnosticResult.CompilerError(DiagnosticDescriptors.UnusedModelReferenceError.Id)
+                .WithSpan(15, 36, 15, 53)
+                .WithArguments("ParentModel", "Test.AbstractBaseModel")
         };
 
         await VerifyCS.VerifyAnalyzerAsync(test, expected);
     }
 
     [Fact]
-    public async Task AbstractService_CodeFixRemovesParameter()
+    public async Task AbstractNonObservableModel_NoDiagnosticExpected()
+    {
+        // lang=csharp
+        // Abstract non-ObservableModel class (like NavigationManager) - should NOT report RXBG052
+        // because the DI container may have concrete implementations registered
+        var test = """
+
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+
+        namespace Test
+        {
+            // Simulates NavigationManager - abstract class but not ObservableModel
+            public abstract class NavigationManagerLike
+            {
+                public abstract string Uri { get; }
+                public abstract void NavigateTo(string uri);
+            }
+
+            [ObservableModelScope(ModelScope.Transient)]
+            public partial class ParentModel : ObservableModel
+            {
+                public partial ParentModel(NavigationManagerLike navigation);
+
+                public partial int Value { get; set; }
+            }
+        }
+        """;
+
+        // Only RXBG050 expected - no RXBG052 since NavigationManagerLike is not an ObservableModel
+        var expected = new[]
+        {
+            new DiagnosticResult(DiagnosticDescriptors.UnregisteredServiceWarning.Id, Microsoft.CodeAnalysis.DiagnosticSeverity.Info)
+                .WithSpan(17, 36, 17, 57)
+                .WithArguments("navigation", "NavigationManagerLike", "'services.AddScoped<NavigationManagerLike>()' or 'services.AddScoped<IYourInterface, NavigationManagerLike>()'")
+        };
+
+        await VerifyCS.VerifyAnalyzerAsync(test, expected);
+    }
+
+    [Fact]
+    public async Task AbstractObservableModel_CodeFixRemovesParameter()
     {
         // lang=csharp
         var test = """
@@ -105,7 +148,7 @@ public class AbstractClassInPartialConstructorTests
 
         namespace Test
         {
-            public abstract class AbstractService
+            public abstract partial class AbstractBaseModel : ObservableModel
             {
                 public abstract void DoWork();
             }
@@ -113,7 +156,7 @@ public class AbstractClassInPartialConstructorTests
             [ObservableModelScope(ModelScope.Transient)]
             public partial class ParentModel : ObservableModel
             {
-                public partial ParentModel(AbstractService service);
+                public partial ParentModel(AbstractBaseModel baseModel);
 
                 public partial int Value { get; set; }
             }
@@ -128,7 +171,7 @@ public class AbstractClassInPartialConstructorTests
 
         namespace Test
         {
-            public abstract class AbstractService
+            public abstract partial class AbstractBaseModel : ObservableModel
             {
                 public abstract void DoWork();
             }
@@ -141,20 +184,29 @@ public class AbstractClassInPartialConstructorTests
         }
         """;
 
-        // Expected diagnostics: RXBG050 (info), RXBG052 (error, reported by generator only)
+        // Expected diagnostics: RXBG052 (error), RXBG070 (warning), RXBG012 (error)
         var expectedInitial = new[]
         {
-            new DiagnosticResult(DiagnosticDescriptors.UnregisteredServiceWarning.Id, Microsoft.CodeAnalysis.DiagnosticSeverity.Info)
-                .WithSpan(15, 36, 15, 51)
-                .WithArguments("service", "AbstractService", "'services.AddScoped<AbstractService>()' or 'services.AddScoped<IYourInterface, AbstractService>()'"),
             DiagnosticResult.CompilerError(DiagnosticDescriptors.AbstractClassInPartialConstructorError.Id)
-                .WithSpan(15, 36, 15, 51)
-                .WithArguments("service", "Test.AbstractService")
+                .WithSpan(15, 36, 15, 53)
+                .WithArguments("baseModel", "Test.AbstractBaseModel"),
+            new DiagnosticResult(DiagnosticDescriptors.MissingObservableModelScopeWarning.Id, Microsoft.CodeAnalysis.DiagnosticSeverity.Warning)
+                .WithSpan(7, 35, 7, 52)
+                .WithArguments("AbstractBaseModel"),
+            DiagnosticResult.CompilerError(DiagnosticDescriptors.UnusedModelReferenceError.Id)
+                .WithSpan(15, 36, 15, 53)
+                .WithArguments("ParentModel", "Test.AbstractBaseModel")
         };
 
-        // The fix removes the parameter entirely, which removes ALL associated diagnostics
-        // Fixed state should have no diagnostics
-        await VerifyCS.VerifyCodeFixAsync(test, expectedInitial, fixedCode, expectedFixed: [], codeActionIndex: 0);
+        // After fix, the parameter is removed but the abstract model still exists with RXBG070 warning
+        var expectedFixed = new[]
+        {
+            new DiagnosticResult(DiagnosticDescriptors.MissingObservableModelScopeWarning.Id, Microsoft.CodeAnalysis.DiagnosticSeverity.Warning)
+                .WithSpan(7, 35, 7, 52)
+                .WithArguments("AbstractBaseModel")
+        };
+
+        await VerifyCS.VerifyCodeFixAsync(test, expectedInitial, fixedCode, expectedFixed, codeActionIndex: 0);
     }
 
     [Fact]

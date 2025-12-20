@@ -66,9 +66,12 @@ public static class ConstructorAnalysisExtensions
             var propertyName = ToPascalCase(parameterName);
             var currentIndex = parameterIndex;
 
-            // Check if this parameter type is an abstract class (cannot be instantiated by DI)
+            // Check if this parameter type is an abstract ObservableModel (cannot be instantiated by DI)
+            // Only flag abstract classes that inherit from ObservableModel - other abstract classes like
+            // NavigationManager are valid because DI has concrete implementations registered.
             // Report diagnostic but don't skip - let generator create matching code so user sees the error clearly
-            if (parameterType is INamedTypeSymbol { IsAbstract: true, TypeKind: TypeKind.Class })
+            if (parameterType is INamedTypeSymbol { IsAbstract: true, TypeKind: TypeKind.Class } abstractType
+                && abstractType.InheritsFromObservableModel())
             {
                 var location = parameter.Type?.GetLocation() ?? parameter.GetLocation();
                 var diagnostic = Diagnostic.Create(

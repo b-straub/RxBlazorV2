@@ -255,12 +255,12 @@ public static class DiagnosticDescriptors
 
     public static readonly DiagnosticDescriptor AbstractClassInPartialConstructorError = new(
         id: "RXBG052",
-        title: "Abstract class cannot be used in partial constructor",
-        messageFormat: "Partial constructor parameter '{0}' of type '{1}' is an abstract class and cannot be instantiated by the dependency injection container. Use a concrete implementation instead.",
+        title: "Abstract ObservableModel cannot be used in partial constructor",
+        messageFormat: "Partial constructor parameter '{0}' of type '{1}' is an abstract ObservableModel and cannot be instantiated by the dependency injection container. Use a concrete implementation instead.",
         category: "RxBlazorGenerator",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "Abstract classes cannot be used as dependency injection parameters because they cannot be instantiated. Derive from the abstract class to create a concrete implementation, or use an interface if the abstract class serves as a service contract.",
+        description: "Abstract ObservableModel classes cannot be used as dependency injection parameters because they cannot be instantiated. Derive from the abstract class to create a concrete implementation. Note: Other abstract classes like NavigationManager are valid because the DI container has concrete implementations registered.",
         helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG052.md",
         customTags: ["Remove abstract class parameter"]);
 

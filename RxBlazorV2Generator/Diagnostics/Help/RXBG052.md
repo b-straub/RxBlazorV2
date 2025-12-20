@@ -1,14 +1,16 @@
-# RXBG052: Abstract Class Cannot Be Used in Partial Constructor
+# RXBG052: Abstract ObservableModel Cannot Be Used in Partial Constructor
 
 ## Description
 
-This diagnostic is reported when a partial constructor parameter uses an abstract class type. Abstract classes cannot be instantiated directly, so the dependency injection container cannot resolve them.
+This diagnostic is reported when a partial constructor parameter uses an abstract `ObservableModel` type. Abstract ObservableModel classes cannot be instantiated directly, so the dependency injection container cannot resolve them.
+
+**Note:** This diagnostic only applies to abstract classes that inherit from `ObservableModel`. Other abstract classes like `NavigationManager` are valid DI parameters because the container has concrete implementations registered for them.
 
 ## Cause
 
-Abstract classes are designed to be base classes that must be derived from. They cannot be instantiated directly, which means:
+Abstract ObservableModel classes are designed to be base classes that must be derived from. They cannot be instantiated directly, which means:
 
-1. The DI container cannot create an instance of the abstract class
+1. The DI container cannot create an instance of the abstract ObservableModel
 2. There is no default implementation to inject
 3. The runtime will fail when trying to resolve the dependency
 
@@ -147,7 +149,7 @@ The code fix removes the abstract class parameter from the partial constructor.
 
 ## Severity
 
-**Error** - This will cause a runtime exception when the DI container tries to resolve the abstract class.
+**Error** - This will cause a runtime exception when the DI container tries to resolve the abstract ObservableModel class.
 
 ## Related Diagnostics
 
