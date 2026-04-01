@@ -4,17 +4,13 @@
 @* Error Icon (separate from messages) *@
 @if (ShowErrorIcon && ErrorMessages.Count > 0)
 {
-    <MudBadge Content="@ErrorMessages.Count" Color="Color.Error" Overlap="true" Class="d-flex align-center cursor-pointer" @onclick="ShowErrorSnackbarOnClick">
-        <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" />
-    </MudBadge>
+    <MudFab Class=@(ShowMessageIcon && NonErrorMessages.Count > 0 ? "mr-2" : "") StartIcon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error" Label="@ErrorMessages.Count.ToString()" OnClick="ShowErrorSnackbarOnClick" />
 }
 
 @* Message Icon (Info, Success, Warning - separate from errors) *@
 @if (ShowMessageIcon && NonErrorMessages.Count > 0)
 {
-    <MudBadge Content="@NonErrorMessages.Count" Color="@GetMessageBadgeColor()" Overlap="true" Class="d-flex align-center cursor-pointer" @onclick="ShowMessageSnackbarOnClick">
-        <MudIcon Icon="@GetMessageIcon()" Color="@GetMessageIconColor()" />
-    </MudBadge>
+    <MudFab StartIcon="@GetMessageIcon()" Size="Size.Small" Color="@GetMessageIconColor()" Label="@NonErrorMessages.Count.ToString()" OnClick="ShowMessageSnackbarOnClick" />
 }
 
 @code
@@ -341,7 +337,7 @@
         ClearNonErrors();
     }
 
-    private Color GetMessageBadgeColor()
+    private Color GetMessageIconColor()
     {
         if (NonErrorMessages.Any(m => m.Severity == StatusSeverity.Warning))
         {
@@ -353,9 +349,7 @@
         }
         return Color.Info;
     }
-
-    private Color GetMessageIconColor() => GetMessageBadgeColor();
-
+    
     private string GetMessageIcon()
     {
         if (NonErrorMessages.Any(m => m.Severity == StatusSeverity.Warning))
