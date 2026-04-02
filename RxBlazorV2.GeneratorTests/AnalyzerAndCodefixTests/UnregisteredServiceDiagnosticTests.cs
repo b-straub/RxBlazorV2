@@ -426,10 +426,10 @@ public class UnregisteredServiceDiagnosticTests
     }
 
     [Fact]
-    public async Task ServiceRegisteredViaFactory_DiagnosticExpected()
+    public async Task ServiceRegisteredViaFactory_NoDiagnosticExpected()
     {
         // lang=csharp
-        var test = $$"""
+        var test = """
 
         using RxBlazorV2.Model;
         using RxBlazorV2.Interface;
@@ -446,7 +446,7 @@ public class UnregisteredServiceDiagnosticTests
             {
                 public static void ConfigureServices(IServiceCollection services)
                 {
-                    // Register via factory - may not be detected by static analysis
+                    // Factory registration with object creation is detected by static analysis
                     services.AddSingleton(sp => new DatabaseService("connection-string"));
                 }
             }
@@ -454,9 +454,7 @@ public class UnregisteredServiceDiagnosticTests
             [ObservableModelScope(ModelScope.Singleton)]
             public partial class DataModel : ObservableModel
             {
-                // Factory detection is complex and may not work in all cases
-                // This diagnostic can be safely ignored if the service is actually registered
-                public partial DataModel({|{{DiagnosticDescriptors.UnregisteredServiceWarning.Id}}:DatabaseService|} databaseService);
+                public partial DataModel(DatabaseService databaseService);
             }
         }
         """;
