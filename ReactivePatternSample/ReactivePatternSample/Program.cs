@@ -11,6 +11,7 @@ using ReactivePatternSampleSettingsModels = ReactivePatternSample.Settings.Obser
 using ReactivePatternSampleAuthModels = ReactivePatternSample.Auth.ObservableModels;
 using ReactivePatternSampleTodoModels = ReactivePatternSample.Todo.ObservableModels;
 using ReactivePatternSampleShareModels = ReactivePatternSample.Share.ObservableModels;
+using RxBlazorV2MudBlazorModels = RxBlazorV2.MudBlazor.ObservableModels;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -37,7 +38,6 @@ ReactivePatternSampleSettingsModels.Initialize(builder.Services); // Depends on 
 ReactivePatternSampleAuthModels.Initialize(builder.Services);     // Depends on Storage, Status
 ReactivePatternSampleTodoModels.Initialize(builder.Services);     // Depends on Storage, Auth, Status
 ReactivePatternSampleShareModels.Initialize(builder.Services);    // Depends on Todo, Status, Settings
+RxBlazorV2MudBlazorModels.Initialize(builder.Services);           // MudBlazor component models (StatusModel)
 
-// Initialize the auto-generated RxBlazorV2 layout model (ensures all singletons are instantiated together)
-builder.Services.InitializeLayout();
 await builder.Build().RunAsync();
