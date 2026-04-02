@@ -136,30 +136,6 @@ public static class MethodAnalysisExtensions
             return (observers, invalidObservers);
         }
 
-        // Build a map of property names to their owning model reference
-        // Key: property name (e.g., "AutoRefresh"), Value: model reference info
-        var propertyToModelRef = new Dictionary<string, (ModelReferenceInfo modelRef, string propertyName)>();
-        foreach (var modelRef in modelReferences)
-        {
-            if (!modelSymbols.TryGetValue(modelRef.PropertyName, out var modelSymbol))
-            {
-                continue;
-            }
-
-            // Get all property names from the referenced model type
-            foreach (var member in modelSymbol.GetMembers())
-            {
-                if (member is IPropertySymbol propertySymbol)
-                {
-                    // Only add if not already present (first model wins if multiple models have same property name)
-                    if (!propertyToModelRef.ContainsKey(propertySymbol.Name))
-                    {
-                        propertyToModelRef[propertySymbol.Name] = (modelRef, propertySymbol.Name);
-                    }
-                }
-            }
-        }
-
         foreach (var member in classDecl.Members.OfType<MethodDeclarationSyntax>())
         {
             var methodName = member.Identifier.ValueText;
@@ -172,7 +148,9 @@ public static class MethodAnalysisExtensions
             }
 
             // First, find which model properties this method accesses
-            var propertiesByModelRef = FindAccessedModelProperties(member, modelReferences, propertyToModelRef);
+            // Uses modelSymbols to verify properties directly on matched model types,
+            // avoiding false negatives when multiple models share the same property name
+            var propertiesByModelRef = FindAccessedModelProperties(member, modelReferences, modelSymbols);
 
             // If no model properties accessed, skip this method entirely
             if (!propertiesByModelRef.Any(kvp => kvp.Value.Count > 0))
@@ -324,7 +302,7 @@ public static class MethodAnalysisExtensions
     private static Dictionary<string, List<string>> FindAccessedModelProperties(
         MethodDeclarationSyntax method,
         List<ModelReferenceInfo> modelReferences,
-        Dictionary<string, (ModelReferenceInfo modelRef, string propertyName)> propertyToModelRef)
+        Dictionary<string, ITypeSymbol> modelSymbols)
     {
         var propertiesByModelRef = new Dictionary<string, List<string>>();
 
@@ -348,13 +326,17 @@ public static class MethodAnalysisExtensions
                     var modelRefName = identifier.Identifier.ValueText;
                     var propertyName = memberAccess.Name.Identifier.ValueText;
 
-                    // Check if this matches a model reference and property
+                    // Check if this matches a model reference
                     var matchingModelRef = modelReferences.FirstOrDefault(mr => mr.PropertyName == modelRefName);
-                    if (matchingModelRef is not null && propertyToModelRef.ContainsKey(propertyName))
+                    if (matchingModelRef is not null && modelSymbols.TryGetValue(modelRefName, out var modelSymbol))
                     {
-                        // Verify the property belongs to this model reference
-                        var (owningModelRef, _) = propertyToModelRef[propertyName];
-                        if (owningModelRef.PropertyName == modelRefName)
+                        // Verify the property exists on this specific model type
+                        // This avoids false negatives when multiple models share the same property name
+                        var hasProperty = modelSymbol.GetMembers(propertyName)
+                            .OfType<IPropertySymbol>()
+                            .Any();
+
+                        if (hasProperty)
                         {
                             if (!propertiesByModelRef.ContainsKey(modelRefName))
                             {

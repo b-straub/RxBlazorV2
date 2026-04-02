@@ -2136,6 +2136,156 @@ public class ModelObserverGeneratorTests
             ["CounterModel", "TestModel"]);
     }
 
+    [Fact]
+    public async Task InternalModelObserver_SharedPropertyNameAcrossModels_DetectsObserverOnSecondModel()
+    {
+        // Regression test: when two injected models share a property name (e.g., SuccessMessage),
+        // the observer must be detected regardless of constructor parameter order.
+        // Previously, a first-wins dictionary caused the second model's property to be silently skipped.
+
+        // lang=csharp
+        const string modelA = """
+        using RxBlazorV2.Model;
+
+        namespace Test;
+
+        public partial class ModelA : ObservableModel
+        {
+            public partial string? SuccessMessage { get; set; }
+        }
+        """;
+
+        // lang=csharp
+        const string modelB = """
+        using RxBlazorV2.Model;
+
+        namespace Test;
+
+        public partial class ModelB : ObservableModel
+        {
+            public partial string? SuccessMessage { get; set; }
+        }
+        """;
+
+        // lang=csharp
+        const string test = """
+        using RxBlazorV2.Model;
+
+        namespace Test
+        {
+            public partial class TestModel : ObservableModel
+            {
+                public partial TestModel(ModelA modelA, ModelB modelB);
+
+                // Observer accesses SuccessMessage on the SECOND model (ModelB)
+                private async Task OnProfileSavedAsync()
+                {
+                    if (ModelB.SuccessMessage is not null)
+                    {
+                        await Task.Delay(10);
+                    }
+                }
+            }
+        }
+        """;
+
+        // lang=csharp
+        const string expected = """
+        #nullable enable
+        using JetBrains.Annotations;
+        using Microsoft.Extensions.DependencyInjection;
+        using ObservableCollections;
+        using R3;
+        using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using System;
+        using System.Linq;
+
+        namespace Test;
+
+        public partial class TestModel
+        {
+            public override string ModelID => "Test.TestModel";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                var usedProps = new[] { "Model.ModelA.SuccessMessage", "Model.ModelB.SuccessMessage" };
+
+                return propertyNames.Intersect(usedProps).Any();
+            }
+
+            public Test.ModelA ModelA { get; }
+            public Test.ModelB ModelB { get; }
+
+
+
+            public partial TestModel(Test.ModelA modelA, Test.ModelB modelB) : base()
+            {
+                ModelA = modelA;
+                ModelB = modelB;
+
+                // Subscribe to referenced model changes
+                // Transform referenced model property names: Model.X -> Model.{RefName}.X
+                // Filtering happens at component level via Filter() method
+                Subscriptions.Add(ModelA.Observable
+                    .Select(props => props.Select(p => p.Replace("Model.", "Model.ModelA.")).ToArray())
+                    .Subscribe(props => StateHasChanged(props)));
+                Subscriptions.Add(ModelB.Observable
+                    .Select(props => props.Select(p => p.Replace("Model.", "Model.ModelB.")).ToArray())
+                    .Subscribe(props => StateHasChanged(props)));
+
+                // Subscribe to internal model observers (auto-detected)
+                Subscriptions.Add(ModelB.Observable.Where(p => p.Intersect(["Model.SuccessMessage"]).Any())
+                    .SubscribeAwait(async (_, _) => await OnProfileSavedAsync(), AwaitOperation.Switch));
+            }
+            private bool _contextReadyInternCalled;
+
+            protected override void OnContextReadyIntern()
+            {
+                if (_contextReadyInternCalled)
+                {
+                    return;
+                }
+                _contextReadyInternCalled = true;
+
+                // Initialize referenced ObservableModel dependencies
+                ModelA.ContextReady();
+                ModelB.ContextReady();
+
+            }
+
+            private bool _contextReadyInternAsyncCalled;
+
+            protected override async Task OnContextReadyInternAsync()
+            {
+                if (_contextReadyInternAsyncCalled)
+                {
+                    return;
+                }
+                _contextReadyInternAsyncCalled = true;
+
+                // Initialize referenced ObservableModel dependencies (async)
+                await ModelA.ContextReadyAsync();
+                await ModelB.ContextReadyAsync();
+            }
+
+        }
+
+        """;
+
+        await MultiModelGeneratorVerifier.VerifyMultiModelGeneratorAsync(
+            [modelA, modelB, test],
+            [("Test.ModelA.g.cs", GenerateModelWithSuccessMessage("ModelA")),
+             ("Test.ModelB.g.cs", GenerateModelWithSuccessMessage("ModelB")),
+             ("Test.TestModel.g.cs", expected)],
+            ["ModelA", "ModelB", "TestModel"]);
+    }
+
     #endregion
 
     #region Helper Methods for Expected Generated Code
@@ -2623,6 +2773,54 @@ public class ModelObserverGeneratorTests
                 Subscriptions.Add(Messages.ObserveChanged()
                     .Subscribe(_ => StateHasChanged("Model.Messages")));
             }
+        }
+
+        """;
+    }
+
+    private static string GenerateModelWithSuccessMessage(string modelName)
+    {
+        return $$"""
+        #nullable enable
+        using JetBrains.Annotations;
+        using Microsoft.Extensions.DependencyInjection;
+        using ObservableCollections;
+        using R3;
+        using RxBlazorV2.Interface;
+        using RxBlazorV2.Model;
+        using System;
+
+        namespace Test;
+
+        public partial class {{modelName}}
+        {
+            public override string ModelID => "Test.{{modelName}}";
+
+            public override bool FilterUsedProperties(params string[] propertyNames)
+            {
+                if (propertyNames.Length == 0)
+                {
+                    return false;
+                }
+
+                // No filtering information available - pass through all
+                return true;
+            }
+
+            public partial string? SuccessMessage
+            {
+                get => field;
+                [UsedImplicitly]
+                set
+                {
+                    if (field != value)
+                    {
+                        field = value;
+                        StateHasChanged("Model.SuccessMessage");
+                    }
+                }
+            }
+
         }
 
         """;
