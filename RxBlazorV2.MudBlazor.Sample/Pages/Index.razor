@@ -156,7 +156,7 @@
 
     private async Task<bool> ConfirmActionAsync()
     {
-        var result = await DialogService.ShowMessageBox(
+        var result = await DialogService.ShowMessageBoxAsync(
             "Confirm Action",
             "Are you sure you want to proceed?",
             yesText: "Yes", cancelText: "Cancel");
