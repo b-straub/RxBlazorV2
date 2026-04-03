@@ -9,7 +9,7 @@ namespace RxBlazorV2Generator.Extensions;
 
 public static class PropertyAnalysisExtensions
 {
-    public static (List<PartialPropertyInfo>, List<Diagnostic>) ExtractPartialPropertiesWithDiagnostics(this ClassDeclarationSyntax classDecl, SemanticModel semanticModel)
+    public static (List<PartialPropertyInfo>, List<Diagnostic>) ExtractPartialPropertiesWithDiagnostics(this ClassDeclarationSyntax classDecl, SemanticModel semanticModel, Dictionary<string, MethodDeclarationSyntax>? allMethods = null)
     {
         semanticModel.ThrowIfNull();
         var partialProperties = new List<PartialPropertyInfo>();
@@ -64,7 +64,7 @@ public static class PropertyAnalysisExtensions
                 // Process sync triggers from direct attributes
                 foreach (var triggerAttr in syncTriggerAttrs)
                 {
-                    var trigger = ExtractTriggerInfo(triggerAttr, member, classDecl, semanticModel, isAsync: false, diagnostics);
+                    var trigger = ExtractTriggerInfo(triggerAttr, member, classDecl, semanticModel, isAsync: false, diagnostics, allMethods);
                     if (trigger is not null)
                     {
                         triggers.Add(trigger);
@@ -74,7 +74,7 @@ public static class PropertyAnalysisExtensions
                 // Process async triggers from direct attributes
                 foreach (var triggerAttr in asyncTriggerAttrs)
                 {
-                    var trigger = ExtractTriggerInfo(triggerAttr, member, classDecl, semanticModel, isAsync: true, diagnostics);
+                    var trigger = ExtractTriggerInfo(triggerAttr, member, classDecl, semanticModel, isAsync: true, diagnostics, allMethods);
                     if (trigger is not null)
                     {
                         triggers.Add(trigger);
@@ -94,7 +94,7 @@ public static class PropertyAnalysisExtensions
                             if (attrName == "ObservableTriggerAttribute" || attrName == "ObservableTriggerAsyncAttribute")
                             {
                                 var trigger = ExtractTriggerInfoFromAttributeData(attr, member, classDecl, semanticModel,
-                                    isAsync: attrName == "ObservableTriggerAsyncAttribute", diagnostics);
+                                    isAsync: attrName == "ObservableTriggerAsyncAttribute", diagnostics, allMethods);
                                 if (trigger is not null && !triggers.Any(t => t.ExecuteMethod == trigger.ExecuteMethod))
                                 {
                                     triggers.Add(trigger);
@@ -190,7 +190,8 @@ public static class PropertyAnalysisExtensions
         ClassDeclarationSyntax classDecl,
         SemanticModel semanticModel,
         bool isAsync,
-        List<Diagnostic> diagnostics)
+        List<Diagnostic> diagnostics,
+        Dictionary<string, MethodDeclarationSyntax>? allMethods = null)
     {
         var executeMethodArg = triggerAttr.ArgumentList?.Arguments.FirstOrDefault()?.Expression.ToString();
 
@@ -223,17 +224,21 @@ public static class PropertyAnalysisExtensions
             throw new InvalidOperationException($"Execute method name was unexpectedly null for trigger on property {member.Identifier.ValueText}");
         }
 
-        // Analyze the execute method to determine if it supports cancellation
-        var supportsCancellation = classDecl.Members.OfType<MethodDeclarationSyntax>()
-            .FirstOrDefault(m => m.Identifier.ValueText == executeMethod)
-            ?.HasCancellationTokenParameter(semanticModel) ?? false;
-
-        // Check for circular references: trigger method modifies the property it's attached to
-        var methodSyntax = classDecl.Members.OfType<MethodDeclarationSyntax>()
+        // Find the execute method - search allMethods (cross-partial) first, fall back to classDecl
+        MethodDeclarationSyntax? methodSyntax = null;
+        if (allMethods is not null)
+        {
+            allMethods.TryGetValue(executeMethod, out methodSyntax);
+        }
+        methodSyntax ??= classDecl.Members.OfType<MethodDeclarationSyntax>()
             .FirstOrDefault(m => m.Identifier.ValueText == executeMethod);
+
+        // Analyze the execute method to determine if it supports cancellation
+        var supportsCancellation = methodSyntax?.HasCancellationTokenParameter() ?? false;
 
         if (methodSyntax is not null)
         {
+            // Check for circular references: trigger method modifies the property it's attached to
             var modifiedProperties = methodSyntax.AnalyzePropertyModifications(semanticModel);
             if (modifiedProperties.Contains(member.Identifier.ValueText))
             {
@@ -251,6 +256,28 @@ public static class PropertyAnalysisExtensions
                     executeMethod); // Execute method name
                 diagnostics.Add(diagnostic);
                 return null; // Skip this trigger
+            }
+
+            // Check if async trigger method should accept CancellationToken (RXBG034)
+            var isAsyncTrigger = isAsync || supportsCancellation || executeMethod.EndsWith("Async");
+            if (isAsyncTrigger && !supportsCancellation)
+            {
+                // Only warn if the method body calls methods that accept CancellationToken,
+                // using the method's own semantic model for cross-partial-file correctness
+                var methodSemanticModel = methodSyntax.SyntaxTree == semanticModel.SyntaxTree
+                    ? semanticModel
+                    : semanticModel.Compilation.GetSemanticModel(methodSyntax.SyntaxTree);
+
+                var calledMethod = methodSyntax.FindCalledMethodWithCancellationToken(methodSemanticModel);
+                if (calledMethod is not null)
+                {
+                    var diagnostic = Diagnostic.Create(
+                        Diagnostics.DiagnosticDescriptors.AsyncTriggerMissingCancellationTokenWarning,
+                        triggerAttr.GetLocation(),
+                        executeMethod,
+                        calledMethod);
+                    diagnostics.Add(diagnostic);
+                }
             }
         }
 
@@ -270,7 +297,8 @@ public static class PropertyAnalysisExtensions
         ClassDeclarationSyntax classDecl,
         SemanticModel semanticModel,
         bool isAsync,
-        List<Diagnostic> diagnostics)
+        List<Diagnostic> diagnostics,
+        Dictionary<string, MethodDeclarationSyntax>? allMethods = null)
     {
         // Extract method name from first constructor argument
         string? executeMethod = null;
@@ -307,22 +335,46 @@ public static class PropertyAnalysisExtensions
             return null;
         }
 
-        // Analyze the execute method to determine if it supports cancellation
-        var supportsCancellation = classDecl.Members.OfType<MethodDeclarationSyntax>()
-            .FirstOrDefault(m => m.Identifier.ValueText == validExecuteMethod)
-            ?.HasCancellationTokenParameter(semanticModel) ?? false;
-
-        // Check for circular references: trigger method modifies the property it's attached to
-        var methodSyntax = classDecl.Members.OfType<MethodDeclarationSyntax>()
+        // Find the execute method - search allMethods (cross-partial) first, fall back to classDecl
+        MethodDeclarationSyntax? methodSyntax = null;
+        if (allMethods is not null)
+        {
+            allMethods.TryGetValue(validExecuteMethod, out methodSyntax);
+        }
+        methodSyntax ??= classDecl.Members.OfType<MethodDeclarationSyntax>()
             .FirstOrDefault(m => m.Identifier.ValueText == validExecuteMethod);
+
+        // Analyze the execute method to determine if it supports cancellation
+        var supportsCancellation = methodSyntax?.HasCancellationTokenParameter() ?? false;
 
         if (methodSyntax is not null)
         {
+            // Check for circular references: trigger method modifies the property it's attached to
             var modifiedProperties = methodSyntax.AnalyzePropertyModifications(semanticModel);
             if (modifiedProperties.Contains(member.Identifier.ValueText))
             {
                 // Circular reference - skip this trigger (warning already reported on base class)
                 return null;
+            }
+
+            // Check if async trigger method should accept CancellationToken (RXBG034)
+            var isAsyncTrigger = isAsync || supportsCancellation || validExecuteMethod.EndsWith("Async");
+            if (isAsyncTrigger && !supportsCancellation)
+            {
+                var methodSemanticModel = methodSyntax.SyntaxTree == semanticModel.SyntaxTree
+                    ? semanticModel
+                    : semanticModel.Compilation.GetSemanticModel(methodSyntax.SyntaxTree);
+
+                var calledMethod = methodSyntax.FindCalledMethodWithCancellationToken(methodSemanticModel);
+                if (calledMethod is not null)
+                {
+                    var diagnostic = Diagnostic.Create(
+                        Diagnostics.DiagnosticDescriptors.AsyncTriggerMissingCancellationTokenWarning,
+                        member.Identifier.GetLocation(),
+                        validExecuteMethod,
+                        calledMethod);
+                    diagnostics.Add(diagnostic);
+                }
             }
         }
 

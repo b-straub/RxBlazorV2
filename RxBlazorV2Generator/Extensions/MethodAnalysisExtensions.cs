@@ -19,26 +19,61 @@ public static class MethodAnalysisExtensions
         return methods;
     }
 
-    public static bool HasCancellationTokenParameter(
-        this MethodDeclarationSyntax method,
-        SemanticModel semanticModel)
+    /// <summary>
+    /// String-based check is sufficient here: CancellationToken is a sealed struct in System.Threading,
+    /// so there are no realistic aliasing or shadowing scenarios. This avoids needing a SemanticModel,
+    /// which also fixes cross-partial-file detection where the method's syntax tree differs from the
+    /// caller's SemanticModel (SemanticModel.GetTypeInfo returns null for foreign syntax trees).
+    /// </summary>
+    public static bool HasCancellationTokenParameter(this MethodDeclarationSyntax method)
     {
         foreach (var param in method.ParameterList.Parameters)
         {
-            if (param.Type == null)
+            if (param.Type is null)
             {
                 continue;
             }
 
-            var typeInfo = semanticModel.GetTypeInfo(param.Type);
-            if (typeInfo.Type != null &&
-                typeInfo.Type.Name == "CancellationToken" &&
-                typeInfo.Type.ContainingNamespace?.ToDisplayString() == "System.Threading")
+            var typeName = param.Type.ToString();
+            if (typeName is "CancellationToken" or "System.Threading.CancellationToken")
             {
                 return true;
             }
         }
         return false;
+    }
+
+    /// <summary>
+    /// Checks if any method invoked in the body accepts a CancellationToken parameter.
+    /// Returns the name of the first such method found, or null if none.
+    /// Used to detect when an async trigger method should accept CancellationToken
+    /// but currently doesn't.
+    /// </summary>
+    public static string? FindCalledMethodWithCancellationToken(
+        this MethodDeclarationSyntax method,
+        SemanticModel semanticModel)
+    {
+        if (method.Body is null && method.ExpressionBody is null)
+        {
+            return null;
+        }
+
+        var invocations = (method.Body as SyntaxNode ?? method.ExpressionBody)!
+            .DescendantNodes()
+            .OfType<InvocationExpressionSyntax>();
+
+        foreach (var invocation in invocations)
+        {
+            if (semanticModel.GetSymbolInfo(invocation).Symbol is IMethodSymbol calledMethod &&
+                calledMethod.Parameters.Any(p =>
+                    p.Type.Name == "CancellationToken" &&
+                    p.Type.ContainingNamespace?.ToDisplayString() == "System.Threading"))
+            {
+                return calledMethod.Name;
+            }
+        }
+
+        return null;
     }
 
     public static List<string> AnalyzeMethodForModelReferences(

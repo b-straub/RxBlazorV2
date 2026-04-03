@@ -304,6 +304,103 @@ public class PartialClassGeneratorTests
     }
 
     /// <summary>
+    /// Tests that async trigger methods with CancellationToken in a separate partial file
+    /// correctly generate SubscribeAwait with ct passed to the method.
+    /// This verifies cross-partial-file CancellationToken detection in HasCancellationTokenParameter.
+    /// </summary>
+    [Fact]
+    public async Task PartialClass_AsyncTriggerWithCancellationToken_CrossFile_PassesCt()
+    {
+        // Main file: property with [ObservableTriggerAsync] attribute
+        // lang=csharp
+        const string mainFile = """
+            using RxBlazorV2.Model;
+            using RxBlazorV2.Interface;
+
+            namespace Test
+            {
+                [ObservableModelScope(ModelScope.Scoped)]
+                public partial class TestModel : ObservableModel
+                {
+                    [ObservableTriggerAsync(nameof(OnDataChangedAsync))]
+                    public partial string Data { get; set; } = "";
+                }
+            }
+            """;
+
+        // Separate file: async trigger method with CancellationToken
+        // lang=csharp
+        const string triggersFile = """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            namespace Test
+            {
+                public partial class TestModel
+                {
+                    private async Task OnDataChangedAsync(CancellationToken ct)
+                    {
+                        await Task.Delay(100, ct);
+                    }
+                }
+            }
+            """;
+
+        await VerifyMultipleSourcesGeneratedContainsAsync(
+            expectedSnippet: ".SubscribeAwait(async (_, ct) => await OnDataChangedAsync(ct), AwaitOperation.Switch));",
+            ("TestModel.cs", mainFile),
+            ("TestModel.Triggers.cs", triggersFile));
+    }
+
+    /// <summary>
+    /// Helper method to verify that the generated output contains a specific code snippet.
+    /// Used for cross-partial-file tests where full output matching is too brittle.
+    /// </summary>
+    private static async Task VerifyMultipleSourcesGeneratedContainsAsync(
+        string expectedSnippet,
+        params (string fileName, string content)[] sources)
+    {
+        // First, run through the test framework to verify no diagnostics
+        var test = new MultiSourceGeneratorTest();
+
+        foreach (var (fileName, content) in sources)
+        {
+            test.TestState.Sources.Add((fileName, SourceText.From(content, Encoding.UTF8)));
+        }
+
+        test.TestState.Sources.Add(("GlobalUsings.cs", SourceText.From(TestShared.GlobalUsing, Encoding.UTF8)));
+        test.TestBehaviors = TestBehaviors.SkipGeneratedSourcesCheck;
+        test.TestState.ReferenceAssemblies = TestShared.ReferenceAssemblies();
+        test.TestState.AdditionalReferences.Add(typeof(Model.ObservableModel).Assembly);
+
+        await test.RunAsync();
+
+        // Then, run the generator directly to verify the generated snippet.
+        // Resolve NuGet reference assemblies for compilation.
+        var resolvedReferences = await TestShared.ReferenceAssemblies().ResolveAsync(null, CancellationToken.None);
+
+        var syntaxTrees = sources
+            .Select(s => CSharpSyntaxTree.ParseText(s.content, new CSharpParseOptions(languageVersion: LanguageVersion.Preview), s.fileName))
+            .Append(CSharpSyntaxTree.ParseText(TestShared.GlobalUsing, new CSharpParseOptions(languageVersion: LanguageVersion.Preview), "GlobalUsings.cs"));
+
+        var compilation = CSharpCompilation.Create("TestAssembly",
+            syntaxTrees,
+            resolvedReferences
+                .Cast<MetadataReference>()
+                .Append(MetadataReference.CreateFromFile(typeof(Model.ObservableModel).Assembly.Location)),
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        var driver = CSharpGeneratorDriver
+            .Create(new RxBlazorGenerator())
+            .WithUpdatedParseOptions(new CSharpParseOptions(languageVersion: LanguageVersion.Preview))
+            .RunGenerators(compilation);
+
+        var generatedCode = string.Join("\n", driver.GetRunResult().GeneratedTrees.Select(t => t.GetText().ToString()));
+
+        Assert.Contains(expectedSnippet, generatedCode);
+    }
+
+    /// <summary>
     /// Helper method to verify generator produces no errors with multiple source files.
     /// Uses SkipGeneratedSourcesCheck to only verify diagnostics.
     /// </summary>

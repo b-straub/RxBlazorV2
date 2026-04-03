@@ -85,7 +85,7 @@ public static class AttributeAnalysisExtensions
                 // Analyze the execute method to determine if it supports cancellation
                 var supportsCancellation = executeMethod is not null &&
                                            methods.TryGetValue(executeMethod, out var executeMethodSyntax) &&
-                                           executeMethodSyntax.HasCancellationTokenParameter(semanticModel);
+                                           executeMethodSyntax.HasCancellationTokenParameter();
 
                 // Validate return value matches command type
                 if (executeMethod is not null &&

@@ -119,7 +119,7 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
 
             // Extract all components using extension methods
             var methods = classDecl.CollectMethods();
-            var (partialProperties, partialPropertyDiagnostics) = classDecl.ExtractPartialPropertiesWithDiagnostics(semanticModel);
+            var (partialProperties, partialPropertyDiagnostics) = classDecl.ExtractPartialPropertiesWithDiagnostics(semanticModel, methods);
             var (commandProperties, commandPropertiesDiagnostics) = classDecl.ExtractCommandPropertiesWithDiagnostics(methods, semanticModel);
 
             // Extract non-partial IObservableCollection properties (getter-only)
@@ -402,7 +402,7 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
             {
                 // Get semantic model for this specific declaration's syntax tree
                 var declSemanticModel = compilation.GetSemanticModel(decl.SyntaxTree);
-                var (props, propDiags) = decl.ExtractPartialPropertiesWithDiagnostics(declSemanticModel);
+                var (props, propDiags) = decl.ExtractPartialPropertiesWithDiagnostics(declSemanticModel, allMethods);
                 allPartialProperties.AddRange(props);
                 allPartialPropertyDiagnostics.AddRange(propDiags);
             }
