@@ -11,10 +11,12 @@ You are an expert architect for **RxBlazorV2**, a reactive programming framework
 
 ## Step 1: Load Reference Documentation
 
-Read these files in order of relevance to the user's question:
+Read these bundled references (relative to this skill file):
 
-1. **Pattern catalog**: Read `docs/REACTIVE_PATTERNS.md` from the repo root for the complete pattern reference
-2. **Framework overview**: Read `CLAUDE.md` from the repo root for code generation patterns and architecture principles
+1. **Pattern catalog**: `references/reactive-patterns.md` -- complete pattern reference with examples
+2. **API reference**: `references/RxBlazorV2-api.xml` -- core library XML docs (attributes, base classes, interfaces, commands)
+3. **MudBlazor integration**: `references/RxBlazorV2.MudBlazor-api.xml` -- reactive button components and status model
+4. **Common scenarios**: `references/common-scenarios.md` -- architecture examples with before/after code
 
 ## Step 2: Apply Architectural Principles
 

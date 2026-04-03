@@ -1,0 +1,469 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>RxBlazorV2.MudBlazor</name>
+    </assembly>
+    <members>
+        <member name="T:RxBlazorV2.MudBlazor.Buttons.MudButtonAsyncRx">
+            <summary>
+            A MudButton that binds to an IObservableCommandAsync with progress and cancellation support.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.Buttons.MudButtonAsyncRx.Command">
+            <summary>
+            The async observable command to bind to this button.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.Buttons.MudButtonAsyncRx.ConfirmExecutionAsync">
+            <summary>
+            Optional confirmation function called before execution.
+            Return true to proceed, false to cancel.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.Buttons.MudButtonAsyncRx.CancelText">
+            <summary>
+            Text to display on the cancel button when the command supports cancellation.
+            If not set, no cancel functionality is shown.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.Buttons.MudButtonAsyncRx.CancelColor">
+            <summary>
+            Color for the button when in cancel mode.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.Buttons.MudButtonAsyncRx.HasProgress">
+            <summary>
+            Whether to show a progress spinner during execution.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.MudBlazor.Buttons.MudButtonAsyncRxOf`1">
+            <summary>
+            A MudButton that binds to a parameterized IObservableCommandAsync with progress and cancellation support.
+            </summary>
+            <typeparam name="T">The command parameter type.</typeparam>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.Buttons.MudButtonAsyncRxOf`1.Command">
+            <summary>
+            The async observable command to bind to this button.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.Buttons.MudButtonAsyncRxOf`1.Parameter">
+            <summary>
+            The parameter to pass to the command.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.Buttons.MudButtonAsyncRxOf`1.ConfirmExecutionAsync">
+            <summary>
+            Optional confirmation function called before execution.
+            Return true to proceed, false to cancel.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.Buttons.MudButtonAsyncRxOf`1.CancelText">
+            <summary>
+            Text to display on the cancel button when the command supports cancellation.
+            If not set, no cancel functionality is shown.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.Buttons.MudButtonAsyncRxOf`1.CancelColor">
+            <summary>
+            Color for the button when in cancel mode.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.Buttons.MudButtonAsyncRxOf`1.HasProgress">
+            <summary>
+            Whether to show a progress spinner during execution.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.MudBlazor.Buttons.MudButtonRx">
+            <summary>
+            A MudButton that binds to an IObservableCommand.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.Buttons.MudButtonRx.Command">
+            <summary>
+            The observable command to bind to this button.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.Buttons.MudButtonRx.ConfirmExecutionAsync">
+            <summary>
+            Optional confirmation function called before execution.
+            Return true to proceed, false to cancel.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.MudBlazor.Buttons.MudButtonRxOf`1">
+            <summary>
+            A MudButton that binds to a parameterized IObservableCommand.
+            </summary>
+            <typeparam name="T">The command parameter type.</typeparam>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.Buttons.MudButtonRxOf`1.Command">
+            <summary>
+            The observable command to bind to this button.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.Buttons.MudButtonRxOf`1.Parameter">
+            <summary>
+            The parameter to pass to the command.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.Buttons.MudButtonRxOf`1.ConfirmExecutionAsync">
+            <summary>
+            Optional confirmation function called before execution.
+            Return true to proceed, false to cancel.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.MudBlazor.Components.StatusModel">
+            <summary>
+            Concrete singleton StatusModel for MudBlazor applications.
+            Inherits Messages, status methods, and component triggers from the abstract base.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.MudBlazor.Components.Razor.StatusDisplay.Filter">
+            <summary>
+            Auto-generated filter method for ObservableComponent property filtering.
+            Only properties used in this component trigger re-renders.
+            Property names match the qualified names emitted by Observable streams (ClassName.PropertyName).
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.Components.Razor.StatusDisplay.ErrorDisplayMode">
+            <summary>
+            How errors are displayed. Default: SNACKBAR_AND_ICON.
+            In SNACKBAR + Aggregate mode: errors accumulate while snackbar is visible,
+            cleared when snackbar closes.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.Components.Razor.StatusDisplay.ErrorMessageMode">
+            <summary>
+            How errors are accumulated. Default: Aggregate.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.Components.Razor.StatusDisplay.ShowErrorSource">
+            <summary>
+            Whether to show the source (e.g., command name) in error messages. Default: true.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.Components.Razor.StatusDisplay.MessageDisplayMode">
+            <summary>
+            How non-error messages are displayed. Default: SNACKBAR.
+            In SNACKBAR + Aggregate mode: messages accumulate while snackbar is visible,
+            cleared when snackbar closes.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.Components.Razor.StatusDisplay.MessageMessageMode">
+            <summary>
+            How non-error messages are accumulated. Default: Aggregate.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.Components.Razor.StatusDisplay.ShowMessageSource">
+            <summary>
+            Whether to show the source in non-error messages. Default: true.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.Components.Razor.StatusDisplay.GroupMessagesBySeverity">
+            <summary>
+            When true, groups non-error messages by severity (Warning first, then Success, then Info)
+            with newest on top within each group.
+            When false, shows all messages strictly by time with newest on top.
+            Default: true.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.Components.Razor.StatusDisplay.SnackbarPositionClass">
+            <summary>
+            Position of the snackbar. Default: TopEnd.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.Components.Razor.AggregatedMessagesContent.GroupBySeverity">
+            <summary>
+            When true, groups messages by severity (Warning first, then Success, then Info)
+            with newest on top within each group.
+            When false, shows all messages strictly by time with newest on top.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.Components.Razor.AggregatedMessagesContent.OnClear">
+            <summary>
+            Callback invoked when the clear all button is clicked.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.MudBlazor.ButtonType">
+            <summary>
+            Specifies the type of button component for rendering logic.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.MudBlazor.IconVariant">
+            <summary>
+            Specifies the MudBlazor icon variant style.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.MudBlazor.StatusDisplayMode">
+            <summary>
+            Specifies how status messages are displayed.
+            <para>
+            <b>Valid combinations with StatusMessageMode:</b>
+            <list type="bullet">
+            <item><description><c>Single + SNACKBAR</c>: Snackbar only, each message replaces previous</description></item>
+            <item><description><c>Single + ICON</c>: Icon only, each message replaces previous</description></item>
+            <item><description><c>Single + SNACKBAR_AND_ICON</c>: Both, each message replaces previous</description></item>
+            <item><description><c>Aggregate + ICON</c>: Icon with badge showing count, messages accumulate until cleared</description></item>
+            <item><description><c>Aggregate + SNACKBAR_AND_ICON</c>: Both with aggregated display, messages accumulate until cleared</description></item>
+            <item><description><c>Aggregate + SNACKBAR</c>: Auto-aggregation mode - messages accumulate while snackbar is visible, cleared when snackbar closes</description></item>
+            </list>
+            </para>
+            </summary>
+        </member>
+        <member name="F:RxBlazorV2.MudBlazor.StatusDisplayMode.SNACKBAR">
+            <summary>
+            Display messages via snackbar only.
+            With Aggregate mode: messages accumulate while snackbar is visible and are automatically cleared when snackbar closes (timeout or dismissal).
+            </summary>
+        </member>
+        <member name="F:RxBlazorV2.MudBlazor.StatusDisplayMode.ICON">
+            <summary>
+            Display messages via icon with badge only. Click icon to show snackbar.
+            Works with both Single and Aggregate message modes.
+            </summary>
+        </member>
+        <member name="F:RxBlazorV2.MudBlazor.StatusDisplayMode.SNACKBAR_AND_ICON">
+            <summary>
+            Display messages via both snackbar and icon with badge.
+            Works with both Single and Aggregate message modes. Messages persist until manually cleared via icon click.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.MudBlazor.FabButtons.MudFabAsyncRx">
+            <summary>
+            A MudFab that binds to an IObservableCommandAsync with progress icon support.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.FabButtons.MudFabAsyncRx.Command">
+            <summary>
+            The async observable command to bind to this button.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.FabButtons.MudFabAsyncRx.ConfirmExecutionAsync">
+            <summary>
+            Optional confirmation function called before execution.
+            Return true to proceed, false to cancel.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.FabButtons.MudFabAsyncRx.IconVariant">
+            <summary>
+            The icon variant style to use for progress icons.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.FabButtons.MudFabAsyncRx.CancelText">
+            <summary>
+            Text to display on the FAB when cancelling.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.FabButtons.MudFabAsyncRx.CancelColor">
+            <summary>
+            Color for the FAB when in cancel mode.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.FabButtons.MudFabAsyncRx.HasProgress">
+            <summary>
+            Whether to show a progress icon during execution.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.MudBlazor.FabButtons.MudFabAsyncRxOf`1">
+            <summary>
+            A MudFab that binds to a parameterized IObservableCommandAsync with progress icon support.
+            </summary>
+            <typeparam name="T">The command parameter type.</typeparam>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.FabButtons.MudFabAsyncRxOf`1.Command">
+            <summary>
+            The async observable command to bind to this button.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.FabButtons.MudFabAsyncRxOf`1.Parameter">
+            <summary>
+            The parameter to pass to the command.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.FabButtons.MudFabAsyncRxOf`1.ConfirmExecutionAsync">
+            <summary>
+            Optional confirmation function called before execution.
+            Return true to proceed, false to cancel.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.FabButtons.MudFabAsyncRxOf`1.IconVariant">
+            <summary>
+            The icon variant style to use for progress icons.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.FabButtons.MudFabAsyncRxOf`1.CancelText">
+            <summary>
+            Text to display on the FAB when cancelling.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.FabButtons.MudFabAsyncRxOf`1.CancelColor">
+            <summary>
+            Color for the FAB when in cancel mode.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.FabButtons.MudFabAsyncRxOf`1.HasProgress">
+            <summary>
+            Whether to show a progress icon during execution.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.MudBlazor.FabButtons.MudFabRx">
+            <summary>
+            A MudFab that binds to an IObservableCommand.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.FabButtons.MudFabRx.Command">
+            <summary>
+            The observable command to bind to this button.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.FabButtons.MudFabRx.ConfirmExecutionAsync">
+            <summary>
+            Optional confirmation function called before execution.
+            Return true to proceed, false to cancel.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.MudBlazor.FabButtons.MudFabRxOf`1">
+            <summary>
+            A MudFab that binds to a parameterized IObservableCommand.
+            </summary>
+            <typeparam name="T">The command parameter type.</typeparam>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.FabButtons.MudFabRxOf`1.Command">
+            <summary>
+            The observable command to bind to this button.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.FabButtons.MudFabRxOf`1.Parameter">
+            <summary>
+            The parameter to pass to the command.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.FabButtons.MudFabRxOf`1.ConfirmExecutionAsync">
+            <summary>
+            Optional confirmation function called before execution.
+            Return true to proceed, false to cancel.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonAsyncRx">
+            <summary>
+            A MudIconButton that binds to an IObservableCommandAsync with progress icon support.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonAsyncRx.Command">
+            <summary>
+            The async observable command to bind to this button.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonAsyncRx.ConfirmExecutionAsync">
+            <summary>
+            Optional confirmation function called before execution.
+            Return true to proceed, false to cancel.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonAsyncRx.IconVariant">
+            <summary>
+            The icon variant style to use for progress icons.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonAsyncRx.ExecutingColor">
+            <summary>
+            Color for the button when executing.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonAsyncRx.HasProgress">
+            <summary>
+            Whether to show a progress icon during execution.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonAsyncRxOf`1">
+            <summary>
+            A MudIconButton that binds to a parameterized IObservableCommandAsync with progress icon support.
+            </summary>
+            <typeparam name="T">The command parameter type.</typeparam>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonAsyncRxOf`1.Command">
+            <summary>
+            The async observable command to bind to this button.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonAsyncRxOf`1.Parameter">
+            <summary>
+            The parameter to pass to the command.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonAsyncRxOf`1.ConfirmExecutionAsync">
+            <summary>
+            Optional confirmation function called before execution.
+            Return true to proceed, false to cancel.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonAsyncRxOf`1.IconVariant">
+            <summary>
+            The icon variant style to use for progress icons.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonAsyncRxOf`1.ExecutingColor">
+            <summary>
+            Color for the button when executing.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonAsyncRxOf`1.HasProgress">
+            <summary>
+            Whether to show a progress icon during execution.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonRx">
+            <summary>
+            A MudIconButton that binds to an IObservableCommand.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonRx.Command">
+            <summary>
+            The observable command to bind to this button.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonRx.ConfirmExecutionAsync">
+            <summary>
+            Optional confirmation function called before execution.
+            Return true to proceed, false to cancel.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonRxOf`1">
+            <summary>
+            A MudIconButton that binds to a parameterized IObservableCommand.
+            </summary>
+            <typeparam name="T">The command parameter type.</typeparam>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonRxOf`1.Command">
+            <summary>
+            The observable command to bind to this button.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonRxOf`1.Parameter">
+            <summary>
+            The parameter to pass to the command.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonRxOf`1.ConfirmExecutionAsync">
+            <summary>
+            Optional confirmation function called before execution.
+            Return true to proceed, false to cancel.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.MudBlazor.Internal.ButtonRenderHelper">
+            <summary>
+            Helper class for rendering progress and cancel content in buttons.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.MudBlazor.Internal.ButtonRenderHelper.RenderProgress(Microsoft.AspNetCore.Components.RenderFragment)">
+            <summary>
+            Renders a progress spinner with optional text content.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.MudBlazor.Internal.ButtonRenderHelper.RenderCancel(Microsoft.AspNetCore.Components.RenderFragment,System.String,System.Boolean)">
+            <summary>
+            Renders cancel content with optional progress spinner and text.
+            </summary>
+        </member>
+    </members>
+</doc>

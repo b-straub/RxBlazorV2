@@ -14,6 +14,16 @@ ln -s /path/to/RxBlazorV2/plugins/rxblazor-guide/skills/rxblazor-audit ~/.claude
 
 Replace `/path/to/RxBlazorV2` with your actual clone path. The skills will then be available across all your projects.
 
+### Updating API References
+
+After building, regenerate the bundled API docs:
+
+```bash
+./generate-skill-docs.sh
+```
+
+This copies XML doc files and pattern documentation into the skills' `references/` folder so they work without cross-project file access.
+
 ## Skills
 
 ### `/rxblazor-expert` (or auto-invoked)

@@ -1,0 +1,1521 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>RxBlazorV2</name>
+    </assembly>
+    <members>
+        <member name="T:RxBlazorV2.Model.ComponentTriggerType">
+            <summary>
+            Defines the behavior of component triggers for properties with [ObservableComponentTrigger] or [ObservableComponentTriggerAsync].
+            Controls whether property changes trigger component re-rendering, hook execution, or both.
+            </summary>
+        </member>
+        <member name="F:RxBlazorV2.Model.ComponentTriggerType.RenderAndHook">
+             <summary>
+             Default behavior: Both renders the component AND executes the hook method when the property changes.
+             The property is automatically added to the component's Filter() for re-rendering,
+             and the generated hook method (OnPropertyChanged or OnPropertyChangedAsync) is called.
+             Use this for most scenarios where you want both UI updates and custom logic execution.
+             </summary>
+             <example>
+             <code>
+             [ObservableComponentTrigger] // or [ObservableComponentTrigger(ComponentTriggerType.RenderAndHook)]
+             public partial string UserName { get; set; }
+            
+             // Generated hook is called AND component re-renders:
+             protected override void OnUserNameChanged()
+             {
+                 Console.WriteLine($"User changed to: {Model.UserName}");
+                 // Component will also re-render after this hook executes
+             }
+             </code>
+             </example>
+        </member>
+        <member name="F:RxBlazorV2.Model.ComponentTriggerType.RenderOnly">
+             <summary>
+             Render-only behavior: Triggers component re-rendering but does NOT generate or call a hook method.
+             The property is added to the component's Filter() for automatic re-rendering,
+             but no OnPropertyChanged hook method is generated or called.
+             Use this when you only need UI updates without custom logic.
+             Note: This is rarely needed as you can just omit the attribute entirely and reference the property in the razor template.
+             </summary>
+             <example>
+             <code>
+             [ObservableComponentTrigger(ComponentTriggerType.RenderOnly)]
+             public partial int Counter { get; set; }
+            
+             // Component re-renders when Counter changes, but no hook method is generated
+             // Equivalent to just using @Model.Counter in the razor template
+             </code>
+             </example>
+        </member>
+        <member name="F:RxBlazorV2.Model.ComponentTriggerType.HookOnly">
+             <summary>
+             Hook-only behavior: Executes the hook method but does NOT trigger component re-rendering.
+             The property is NOT added to the component's Filter(), so StateHasChanged won't be called automatically.
+             Use this when you need custom logic but don't want UI updates for this specific property change.
+             You can manually call StateHasChanged() inside the hook if needed.
+             </summary>
+             <example>
+             <code>
+             [ObservableComponentTrigger(ComponentTriggerType.HookOnly)]
+             public partial string BackgroundTask { get; set; }
+            
+             // Hook is called but component does NOT re-render automatically:
+             protected override void OnBackgroundTaskChanged()
+             {
+                 StartBackgroundProcessing(Model.BackgroundTask);
+                 // Component will NOT re-render unless you call StateHasChanged() here
+             }
+             </code>
+             </example>
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableBatchAttribute">
+            <summary>
+            Groups related properties for batched change notifications.
+            Use with SuspendNotifications(batchId) to update multiple properties with a single notification.
+            </summary>
+            <param name="batchId">
+            A unique identifier for this batch group.
+            </param>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableBatchAttribute.#ctor(System.String)">
+            <summary>
+            Groups related properties for batched change notifications.
+            Use with SuspendNotifications(batchId) to update multiple properties with a single notification.
+            </summary>
+            <param name="batchId">
+            A unique identifier for this batch group.
+            </param>
+        </member>
+        <member name="P:RxBlazorV2.Model.ObservableBatchAttribute.BatchId">
+            <summary>
+            Gets the batch identifier for grouping property notifications.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableCommandAttribute">
+            <summary>
+            Marks a partial property as an observable command that will be automatically implemented by the source generator.
+            Supports sync/async commands with or without parameters.
+            </summary>
+            <param name="executionMethodName">
+            The name of the private method that executes when the command is invoked.
+            Use <see langword="nameof"/> for compile-time safety.
+            </param>
+            <param name="canExecuteMethodName">
+            Optional. The name of the private method that determines if the command can execute.
+            Must return <see langword="bool"/>. Use <see langword="nameof"/> for compile-time safety.
+            </param>
+            <remarks>
+            <para>The generator automatically detects property usage in methods to set up reactive change notifications.</para>
+            </remarks>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandAttribute.#ctor(System.String,System.String)">
+            <summary>
+            Marks a partial property as an observable command that will be automatically implemented by the source generator.
+            Supports sync/async commands with or without parameters.
+            </summary>
+            <param name="executionMethodName">
+            The name of the private method that executes when the command is invoked.
+            Use <see langword="nameof"/> for compile-time safety.
+            </param>
+            <param name="canExecuteMethodName">
+            Optional. The name of the private method that determines if the command can execute.
+            Must return <see langword="bool"/>. Use <see langword="nameof"/> for compile-time safety.
+            </param>
+            <remarks>
+            <para>The generator automatically detects property usage in methods to set up reactive change notifications.</para>
+            </remarks>
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableCommandTriggerAttribute">
+            <summary>
+            Automatically triggers a command when a specified property changes.
+            Multiple triggers can be applied to the same command property.
+            </summary>
+            <param name="triggerProperty">
+            The property that triggers command execution when it changes.
+            Supports dot notation for referenced models (e.g., "SettingsModel.AutoRefresh").
+            </param>
+            <param name="canTriggerMethodName">
+            Optional. The name of a private method that determines if the trigger should execute.
+            Must return <see langword="bool"/>. Combined with command's canExecute using logical AND.
+            </param>
+            <remarks>
+            <para><b>Warning:</b> Avoid circular triggers where the command modifies the same property it listens to.</para>
+            <para>See <see href="https://github.com/b-straub/RxBlazorV2/blob/master/Diagnostics/Help/RXBG012.md">RXBG012</see> for circular trigger troubleshooting.</para>
+            </remarks>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandTriggerAttribute.#ctor(System.String,System.String)">
+            <summary>
+            Automatically triggers a command when a specified property changes.
+            Multiple triggers can be applied to the same command property.
+            </summary>
+            <param name="triggerProperty">
+            The property that triggers command execution when it changes.
+            Supports dot notation for referenced models (e.g., "SettingsModel.AutoRefresh").
+            </param>
+            <param name="canTriggerMethodName">
+            Optional. The name of a private method that determines if the trigger should execute.
+            Must return <see langword="bool"/>. Combined with command's canExecute using logical AND.
+            </param>
+            <remarks>
+            <para><b>Warning:</b> Avoid circular triggers where the command modifies the same property it listens to.</para>
+            <para>See <see href="https://github.com/b-straub/RxBlazorV2/blob/master/Diagnostics/Help/RXBG012.md">RXBG012</see> for circular trigger troubleshooting.</para>
+            </remarks>
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableCommandTriggerAttribute`1">
+            <summary>
+            Automatically triggers a parametrized command when a property changes, passing a predefined parameter value.
+            </summary>
+            <typeparam name="T">
+            The parameter type. Must match the command's generic type parameter exactly.
+            </typeparam>
+            <param name="triggerProperty">
+            The property that triggers command execution when it changes.
+            </param>
+            <param name="parameter">
+            The value to pass to the command when triggered.
+            </param>
+            <param name="canTriggerMethodName">
+            Optional. The name of a private method that determines if the trigger should execute.
+            </param>
+            <remarks>
+            <para>See <see href="https://github.com/b-straub/RxBlazorV2/blob/master/Diagnostics/Help/RXBG011.md">RXBG011</see> for type parameter requirements.</para>
+            </remarks>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandTriggerAttribute`1.#ctor(System.String,`0,System.String)">
+            <summary>
+            Automatically triggers a parametrized command when a property changes, passing a predefined parameter value.
+            </summary>
+            <typeparam name="T">
+            The parameter type. Must match the command's generic type parameter exactly.
+            </typeparam>
+            <param name="triggerProperty">
+            The property that triggers command execution when it changes.
+            </param>
+            <param name="parameter">
+            The value to pass to the command when triggered.
+            </param>
+            <param name="canTriggerMethodName">
+            Optional. The name of a private method that determines if the trigger should execute.
+            </param>
+            <remarks>
+            <para>See <see href="https://github.com/b-straub/RxBlazorV2/blob/master/Diagnostics/Help/RXBG011.md">RXBG011</see> for type parameter requirements.</para>
+            </remarks>
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableComponentAttribute">
+             <summary>
+             Generates a complete Blazor component class that inherits from ObservableComponent&lt;T&gt;.
+             The generated component automatically subscribes to model property changes based on batches
+             and can optionally generate hooks for triggers in referenced ObservableModels.
+             </summary>
+             <param name="includeReferencedTriggers">
+             Optional. When true (default), generates hook methods for [ObservableComponentTrigger] properties
+             in referenced ObservableModels (via partial constructor parameters). Referenced models must be in
+             the same assembly for this feature to work. Set to false to disable cross-model trigger generation.
+             </param>
+             <param name="componentName">
+             Optional. The name of the generated component class.
+             If not specified, defaults to {ModelName}Component.
+             </param>
+             <remarks>
+             <para><b>Usage:</b> Apply to ObservableModel classes to generate corresponding component classes.</para>
+             <para><b>Example - Basic Usage:</b></para>
+             <code>
+             [ObservableComponent] // Generates TestModelComponent
+             public partial class TestModel : ObservableModel
+             {
+                 [ObservableBatch("common")]
+                 public partial int Count { get; set; }
+             }
+            
+             // In .razor file:
+             @inherits TestModelComponent
+             &lt;div&gt;@Model.Count&lt;/div&gt;
+             </code>
+             <para><b>Example - Referenced Model Triggers:</b></para>
+             <code>
+             // SettingsModel with trigger
+             [ObservableComponent]
+             public partial class SettingsModel : ObservableModel
+             {
+                 [ObservableComponentTrigger]
+                 public partial bool IsDay { get; set; }
+             }
+            
+             // WeatherModel references SettingsModel
+             [ObservableComponent] // includeReferencedTriggers defaults to true
+             public partial class WeatherModel : ObservableModel
+             {
+                 public partial WeatherModel(SettingsModel settings); // Creates Settings property
+             }
+            
+             // Generated in WeatherModelComponent:
+             // - OnWeatherSettingsIsDayChanged() hook method
+             // - OnWeatherSettingsIsDayChangedAsync(CancellationToken ct) hook method
+             </code>
+             <para><b>Generated Component Features:</b></para>
+             <list type="bullet">
+             <item>Inherits from ObservableComponent&lt;T&gt; where T is your model</item>
+             <item>Automatic subscription management via CompositeDisposable</item>
+             <item>Batched property change notifications based on [ObservableComponentTrigger] attributes</item>
+             <item>Lifecycle hooks: InitializeGeneratedCode, InitializeGeneratedCodeAsync</item>
+             <item>Virtual hook methods for local [ObservableComponentTrigger] properties</item>
+             <item>Virtual hook methods for referenced model triggers (when includeReferencedTriggers=true)</item>
+             </list>
+             <para><b>Referenced Trigger Naming Convention:</b></para>
+             <para>Hook methods for referenced model triggers follow the pattern:</para>
+             <para><c>On{CurrentModel}{ReferencedProperty}{TriggerProperty}Changed[Async]</c></para>
+             <para>Example: <c>OnWeatherSettingsIsDayChanged</c> where:</para>
+             <list type="bullet">
+             <item>Weather = current model (WeatherModel with "Model" suffix stripped)</item>
+             <item>Settings = referenced property name (from parameter 'settings')</item>
+             <item>IsDay = trigger property on referenced model</item>
+             </list>
+             <para><b>Assembly Requirement:</b></para>
+             <para>Referenced models with triggers must be in the same assembly. If a referenced model
+             is in a different assembly, either move it to the same assembly or set includeReferencedTriggers=false.</para>
+             </remarks>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableComponentAttribute.#ctor(System.Boolean,System.String)">
+             <summary>
+             Generates a complete Blazor component class that inherits from ObservableComponent&lt;T&gt;.
+             The generated component automatically subscribes to model property changes based on batches
+             and can optionally generate hooks for triggers in referenced ObservableModels.
+             </summary>
+             <param name="includeReferencedTriggers">
+             Optional. When true (default), generates hook methods for [ObservableComponentTrigger] properties
+             in referenced ObservableModels (via partial constructor parameters). Referenced models must be in
+             the same assembly for this feature to work. Set to false to disable cross-model trigger generation.
+             </param>
+             <param name="componentName">
+             Optional. The name of the generated component class.
+             If not specified, defaults to {ModelName}Component.
+             </param>
+             <remarks>
+             <para><b>Usage:</b> Apply to ObservableModel classes to generate corresponding component classes.</para>
+             <para><b>Example - Basic Usage:</b></para>
+             <code>
+             [ObservableComponent] // Generates TestModelComponent
+             public partial class TestModel : ObservableModel
+             {
+                 [ObservableBatch("common")]
+                 public partial int Count { get; set; }
+             }
+            
+             // In .razor file:
+             @inherits TestModelComponent
+             &lt;div&gt;@Model.Count&lt;/div&gt;
+             </code>
+             <para><b>Example - Referenced Model Triggers:</b></para>
+             <code>
+             // SettingsModel with trigger
+             [ObservableComponent]
+             public partial class SettingsModel : ObservableModel
+             {
+                 [ObservableComponentTrigger]
+                 public partial bool IsDay { get; set; }
+             }
+            
+             // WeatherModel references SettingsModel
+             [ObservableComponent] // includeReferencedTriggers defaults to true
+             public partial class WeatherModel : ObservableModel
+             {
+                 public partial WeatherModel(SettingsModel settings); // Creates Settings property
+             }
+            
+             // Generated in WeatherModelComponent:
+             // - OnWeatherSettingsIsDayChanged() hook method
+             // - OnWeatherSettingsIsDayChangedAsync(CancellationToken ct) hook method
+             </code>
+             <para><b>Generated Component Features:</b></para>
+             <list type="bullet">
+             <item>Inherits from ObservableComponent&lt;T&gt; where T is your model</item>
+             <item>Automatic subscription management via CompositeDisposable</item>
+             <item>Batched property change notifications based on [ObservableComponentTrigger] attributes</item>
+             <item>Lifecycle hooks: InitializeGeneratedCode, InitializeGeneratedCodeAsync</item>
+             <item>Virtual hook methods for local [ObservableComponentTrigger] properties</item>
+             <item>Virtual hook methods for referenced model triggers (when includeReferencedTriggers=true)</item>
+             </list>
+             <para><b>Referenced Trigger Naming Convention:</b></para>
+             <para>Hook methods for referenced model triggers follow the pattern:</para>
+             <para><c>On{CurrentModel}{ReferencedProperty}{TriggerProperty}Changed[Async]</c></para>
+             <para>Example: <c>OnWeatherSettingsIsDayChanged</c> where:</para>
+             <list type="bullet">
+             <item>Weather = current model (WeatherModel with "Model" suffix stripped)</item>
+             <item>Settings = referenced property name (from parameter 'settings')</item>
+             <item>IsDay = trigger property on referenced model</item>
+             </list>
+             <para><b>Assembly Requirement:</b></para>
+             <para>Referenced models with triggers must be in the same assembly. If a referenced model
+             is in a different assembly, either move it to the same assembly or set includeReferencedTriggers=false.</para>
+             </remarks>
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableComponentTriggerAsyncAttribute">
+             <summary>
+             Generates an async hook method that is called when the property value changes.
+             The hook method receives a CancellationToken parameter.
+             Use on partial properties within ObservableModel classes that have [ObservableComponent] attribute.
+             </summary>
+             <param name="type">
+             Specifies the trigger behavior. Defaults to <see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderAndHook"/>.
+             <list type="bullet">
+             <item><see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderAndHook"/> - Calls async hook AND re-renders component (default)</item>
+             <item><see cref="F:RxBlazorV2.Model.ComponentTriggerType.HookOnly"/> - Calls async hook but does NOT re-render component</item>
+             <item><see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderOnly"/> - Re-renders component but does NOT generate/call async hook</item>
+             </list>
+             </param>
+             <param name="hookMethodName">Optional custom name for the async hook method.
+             If not specified, defaults to On{PropertyName}ChangedAsync.
+             Only applicable when type is <see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderAndHook"/> or <see cref="F:RxBlazorV2.Model.ComponentTriggerType.HookOnly"/>.</param>
+             <example>
+             [ObservableComponentTriggerAsync]
+             public partial bool IsLoading { get; set; }
+             // Generates: protected virtual Task OnIsLoadingChangedAsync(CancellationToken ct)
+            
+             [ObservableComponentTriggerAsync("HandleStateChange")]
+             public partial bool IsActive { get; set; }
+             // Generates: protected virtual Task HandleStateChange(CancellationToken ct)
+            
+             [ObservableComponentTriggerAsync(ComponentTriggerType.HookOnly)]
+             public partial string BackgroundData { get; set; }
+             // Hook is called but component does NOT re-render automatically
+             </example>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableComponentTriggerAsyncAttribute.#ctor(RxBlazorV2.Model.ComponentTriggerType,System.String)">
+             <summary>
+             Generates an async hook method that is called when the property value changes.
+             The hook method receives a CancellationToken parameter.
+             Use on partial properties within ObservableModel classes that have [ObservableComponent] attribute.
+             </summary>
+             <param name="type">
+             Specifies the trigger behavior. Defaults to <see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderAndHook"/>.
+             <list type="bullet">
+             <item><see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderAndHook"/> - Calls async hook AND re-renders component (default)</item>
+             <item><see cref="F:RxBlazorV2.Model.ComponentTriggerType.HookOnly"/> - Calls async hook but does NOT re-render component</item>
+             <item><see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderOnly"/> - Re-renders component but does NOT generate/call async hook</item>
+             </list>
+             </param>
+             <param name="hookMethodName">Optional custom name for the async hook method.
+             If not specified, defaults to On{PropertyName}ChangedAsync.
+             Only applicable when type is <see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderAndHook"/> or <see cref="F:RxBlazorV2.Model.ComponentTriggerType.HookOnly"/>.</param>
+             <example>
+             [ObservableComponentTriggerAsync]
+             public partial bool IsLoading { get; set; }
+             // Generates: protected virtual Task OnIsLoadingChangedAsync(CancellationToken ct)
+            
+             [ObservableComponentTriggerAsync("HandleStateChange")]
+             public partial bool IsActive { get; set; }
+             // Generates: protected virtual Task HandleStateChange(CancellationToken ct)
+            
+             [ObservableComponentTriggerAsync(ComponentTriggerType.HookOnly)]
+             public partial string BackgroundData { get; set; }
+             // Hook is called but component does NOT re-render automatically
+             </example>
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableComponentTriggerAttribute">
+             <summary>
+             Generates virtual hook methods in the component class for property change events.
+             Use with [ObservableComponent] attribute to create component-level property change handlers.
+             Multiple triggers can be applied to the same property.
+             When applied to properties in models that are referenced by other models (via partial constructor),
+             the hook methods are automatically propagated to the referencing model's component.
+             </summary>
+             <param name="type">
+             Specifies the trigger behavior. Defaults to <see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderAndHook"/>.
+             <list type="bullet">
+             <item><see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderAndHook"/> - Calls hook AND re-renders component (default)</item>
+             <item><see cref="F:RxBlazorV2.Model.ComponentTriggerType.HookOnly"/> - Calls hook but does NOT re-render component</item>
+             <item><see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderOnly"/> - Re-renders component but does NOT generate/call hook</item>
+             </list>
+             </param>
+             <param name="hookMethodName">
+             Optional. The name of the hook method to generate.
+             If not specified, defaults to On{PropertyName}Changed.
+             Use <see langword="nameof"/> for compile-time safety when specifying.
+             Only applicable when type is <see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderAndHook"/> or <see cref="F:RxBlazorV2.Model.ComponentTriggerType.HookOnly"/>.
+             </param>
+             <remarks>
+             <para><b>Usage:</b> Apply to partial properties in models decorated with [ObservableComponent].</para>
+             <para><b>Example - Local Trigger:</b></para>
+             <code>
+             [ObservableComponent]
+             public partial class TestModel : ObservableModel
+             {
+                 [ObservableComponentTrigger] // Generates OnNotInBatchChanged
+                 public partial int NotInBatch { get; set; }
+            
+                 [ObservableComponentTrigger("CustomHook")] // Generates CustomHook
+                 public partial string Name { get; set; }
+             }
+            
+             // Generated in TestModelComponent:
+             protected virtual void OnNotInBatchChanged() { }
+             protected virtual Task OnNotInBatchChangedAsync(CancellationToken ct)
+                 => Task.CompletedTask;
+            
+             // Override in .razor file:
+             @inherits TestModelComponent
+             @code {
+                 protected override void OnNotInBatchChanged()
+                 {
+                     Console.WriteLine("Value changed!");
+                 }
+             }
+             </code>
+             <para><b>Example - Cross-Model Trigger Propagation:</b></para>
+             <code>
+             // SettingsModel with trigger
+             [ObservableComponent]
+             public partial class SettingsModel : ObservableModel
+             {
+                 [ObservableComponentTrigger]
+                 public partial bool IsDay { get; set; }
+             }
+            
+             // WeatherModel references SettingsModel
+             [ObservableComponent(includeReferencedTriggers: true)] // default
+             public partial class WeatherModel : ObservableModel
+             {
+                 public partial WeatherModel(SettingsModel settings);
+             }
+            
+             // Generated in WeatherModelComponent:
+             // - OnWeatherSettingsIsDayChanged() is automatically generated
+             // - OnWeatherSettingsIsDayChangedAsync(CancellationToken ct) is automatically generated
+            
+             // Use in .razor file:
+             @inherits WeatherModelComponent
+             @code {
+                 protected override void OnWeatherSettingsIsDayChanged()
+                 {
+                     // React to Settings.IsDay changes from weather component
+                 }
+             }
+             </code>
+             <para><b>Generated Hook Methods:</b></para>
+             <list type="bullet">
+             <item>Sync: <c>protected virtual void On{Property}Changed()</c></item>
+             <item>Async: <c>protected virtual Task On{Property}ChangedAsync(CancellationToken ct)</c></item>
+             </list>
+             <para><b>Cross-Model Trigger Naming:</b></para>
+             <para>When a trigger is propagated to a referencing model's component, the hook method name follows:</para>
+             <para><c>On{CurrentModel}{ReferencedProperty}{TriggerProperty}Changed[Async]</c></para>
+             <para><b>Requirements for Cross-Model Triggers:</b></para>
+             <list type="bullet">
+             <item>Both models must be in the same assembly</item>
+             <item>Referencing model must have [ObservableComponent(includeReferencedTriggers: true)]</item>
+             <item>Referenced model must be injected via partial constructor parameter</item>
+             </list>
+             <para><b>Warning:</b> Avoid modifying the same property within its hook to prevent update loops.</para>
+             </remarks>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableComponentTriggerAttribute.#ctor(RxBlazorV2.Model.ComponentTriggerType,System.String)">
+             <summary>
+             Generates virtual hook methods in the component class for property change events.
+             Use with [ObservableComponent] attribute to create component-level property change handlers.
+             Multiple triggers can be applied to the same property.
+             When applied to properties in models that are referenced by other models (via partial constructor),
+             the hook methods are automatically propagated to the referencing model's component.
+             </summary>
+             <param name="type">
+             Specifies the trigger behavior. Defaults to <see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderAndHook"/>.
+             <list type="bullet">
+             <item><see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderAndHook"/> - Calls hook AND re-renders component (default)</item>
+             <item><see cref="F:RxBlazorV2.Model.ComponentTriggerType.HookOnly"/> - Calls hook but does NOT re-render component</item>
+             <item><see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderOnly"/> - Re-renders component but does NOT generate/call hook</item>
+             </list>
+             </param>
+             <param name="hookMethodName">
+             Optional. The name of the hook method to generate.
+             If not specified, defaults to On{PropertyName}Changed.
+             Use <see langword="nameof"/> for compile-time safety when specifying.
+             Only applicable when type is <see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderAndHook"/> or <see cref="F:RxBlazorV2.Model.ComponentTriggerType.HookOnly"/>.
+             </param>
+             <remarks>
+             <para><b>Usage:</b> Apply to partial properties in models decorated with [ObservableComponent].</para>
+             <para><b>Example - Local Trigger:</b></para>
+             <code>
+             [ObservableComponent]
+             public partial class TestModel : ObservableModel
+             {
+                 [ObservableComponentTrigger] // Generates OnNotInBatchChanged
+                 public partial int NotInBatch { get; set; }
+            
+                 [ObservableComponentTrigger("CustomHook")] // Generates CustomHook
+                 public partial string Name { get; set; }
+             }
+            
+             // Generated in TestModelComponent:
+             protected virtual void OnNotInBatchChanged() { }
+             protected virtual Task OnNotInBatchChangedAsync(CancellationToken ct)
+                 => Task.CompletedTask;
+            
+             // Override in .razor file:
+             @inherits TestModelComponent
+             @code {
+                 protected override void OnNotInBatchChanged()
+                 {
+                     Console.WriteLine("Value changed!");
+                 }
+             }
+             </code>
+             <para><b>Example - Cross-Model Trigger Propagation:</b></para>
+             <code>
+             // SettingsModel with trigger
+             [ObservableComponent]
+             public partial class SettingsModel : ObservableModel
+             {
+                 [ObservableComponentTrigger]
+                 public partial bool IsDay { get; set; }
+             }
+            
+             // WeatherModel references SettingsModel
+             [ObservableComponent(includeReferencedTriggers: true)] // default
+             public partial class WeatherModel : ObservableModel
+             {
+                 public partial WeatherModel(SettingsModel settings);
+             }
+            
+             // Generated in WeatherModelComponent:
+             // - OnWeatherSettingsIsDayChanged() is automatically generated
+             // - OnWeatherSettingsIsDayChangedAsync(CancellationToken ct) is automatically generated
+            
+             // Use in .razor file:
+             @inherits WeatherModelComponent
+             @code {
+                 protected override void OnWeatherSettingsIsDayChanged()
+                 {
+                     // React to Settings.IsDay changes from weather component
+                 }
+             }
+             </code>
+             <para><b>Generated Hook Methods:</b></para>
+             <list type="bullet">
+             <item>Sync: <c>protected virtual void On{Property}Changed()</c></item>
+             <item>Async: <c>protected virtual Task On{Property}ChangedAsync(CancellationToken ct)</c></item>
+             </list>
+             <para><b>Cross-Model Trigger Naming:</b></para>
+             <para>When a trigger is propagated to a referencing model's component, the hook method name follows:</para>
+             <para><c>On{CurrentModel}{ReferencedProperty}{TriggerProperty}Changed[Async]</c></para>
+             <para><b>Requirements for Cross-Model Triggers:</b></para>
+             <list type="bullet">
+             <item>Both models must be in the same assembly</item>
+             <item>Referencing model must have [ObservableComponent(includeReferencedTriggers: true)]</item>
+             <item>Referenced model must be injected via partial constructor parameter</item>
+             </list>
+             <para><b>Warning:</b> Avoid modifying the same property within its hook to prevent update loops.</para>
+             </remarks>
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableModelObserverAttribute">
+             <summary>
+             Marks a method in a service class as an observer for property changes on an ObservableModel.
+             When the service is injected into the model via a partial constructor, the generator
+             automatically subscribes this method to changes of the specified property.
+             </summary>
+             <remarks>
+             <para>
+             The method must follow one of these signature patterns:
+             </para>
+             <list type="bullet">
+               <item>
+                 <description>Sync: <c>void MethodName(ModelType model)</c></description>
+               </item>
+               <item>
+                 <description>Async without cancellation: <c>Task MethodName(ModelType model)</c></description>
+               </item>
+               <item>
+                 <description>Async with cancellation: <c>Task MethodName(ModelType model, CancellationToken ct)</c></description>
+               </item>
+             </list>
+             <para>
+             Multiple observers can be attached to the same property by applying the attribute multiple times
+             to different methods. Each observer gets its own subscription.
+             </para>
+             </remarks>
+             <example>
+             <code>
+             public class MyService
+             {
+                 [ObservableModelObserver(nameof(MyModel.UserName))]
+                 public void OnUserNameChanged(MyModel model)
+                 {
+                     Console.WriteLine($"User changed to: {model.UserName}");
+                 }
+            
+                 [ObservableModelObserver(nameof(MyModel.Settings))]
+                 public async Task OnSettingsChangedAsync(MyModel model, CancellationToken ct)
+                 {
+                     await SaveSettingsAsync(model.Settings, ct);
+                 }
+             }
+            
+             // In the model:
+             [ObservableModelScope(ModelScope.Scoped)]
+             public partial class MyModel : ObservableModel
+             {
+                 public partial string UserName { get; set; }
+                 public partial Settings Settings { get; set; }
+            
+                 // Service is injected and observers are auto-subscribed
+                 public partial MyModel(MyService service);
+             }
+             </code>
+             </example>
+             <param name="triggerPropertyName">
+             The name of the property to observe. Use <c>nameof(ModelType.PropertyName)</c> for type safety.
+             </param>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableModelObserverAttribute.#ctor(System.String)">
+             <summary>
+             Marks a method in a service class as an observer for property changes on an ObservableModel.
+             When the service is injected into the model via a partial constructor, the generator
+             automatically subscribes this method to changes of the specified property.
+             </summary>
+             <remarks>
+             <para>
+             The method must follow one of these signature patterns:
+             </para>
+             <list type="bullet">
+               <item>
+                 <description>Sync: <c>void MethodName(ModelType model)</c></description>
+               </item>
+               <item>
+                 <description>Async without cancellation: <c>Task MethodName(ModelType model)</c></description>
+               </item>
+               <item>
+                 <description>Async with cancellation: <c>Task MethodName(ModelType model, CancellationToken ct)</c></description>
+               </item>
+             </list>
+             <para>
+             Multiple observers can be attached to the same property by applying the attribute multiple times
+             to different methods. Each observer gets its own subscription.
+             </para>
+             </remarks>
+             <example>
+             <code>
+             public class MyService
+             {
+                 [ObservableModelObserver(nameof(MyModel.UserName))]
+                 public void OnUserNameChanged(MyModel model)
+                 {
+                     Console.WriteLine($"User changed to: {model.UserName}");
+                 }
+            
+                 [ObservableModelObserver(nameof(MyModel.Settings))]
+                 public async Task OnSettingsChangedAsync(MyModel model, CancellationToken ct)
+                 {
+                     await SaveSettingsAsync(model.Settings, ct);
+                 }
+             }
+            
+             // In the model:
+             [ObservableModelScope(ModelScope.Scoped)]
+             public partial class MyModel : ObservableModel
+             {
+                 public partial string UserName { get; set; }
+                 public partial Settings Settings { get; set; }
+            
+                 // Service is injected and observers are auto-subscribed
+                 public partial MyModel(MyService service);
+             }
+             </code>
+             </example>
+             <param name="triggerPropertyName">
+             The name of the property to observe. Use <c>nameof(ModelType.PropertyName)</c> for type safety.
+             </param>
+        </member>
+        <member name="T:RxBlazorV2.Model.ModelScope">
+            <summary>
+            Defines the dependency injection lifetime scope for ObservableModel instances.
+            Determines how the model is registered in the DI container and how instances are shared.
+            </summary>
+            <remarks>
+            <para>Important considerations:</para>
+            <list type="bullet">
+            <item>
+            <term>Singleton</term>
+            <description>Required when multiple ObservableComponent&lt;T&gt; instances use the same model. Ensures data consistency across components.</description>
+            </item>
+            <item>
+            <term>Scoped</term>
+            <description>Good for models that should live for the duration of a request/page but can have multiple instances in different scopes.</description>
+            </item>
+            <item>
+            <term>Transient</term>
+            <description>Creates a new instance every time the model is requested. Use sparingly as it can break reactive bindings.</description>
+            </item>
+            </list>
+            <para>The analyzer will report diagnostic RXBG010 if multiple components use the same model with non-Singleton scope.</para>
+            </remarks>
+        </member>
+        <member name="F:RxBlazorV2.Model.ModelScope.Singleton">
+            <summary>
+            Single instance shared across the entire application lifetime.
+            Required when multiple ObservableComponent&lt;T&gt; instances use the same model.
+            </summary>
+            <remarks>
+            Use for:
+            <list type="bullet">
+            <item>Global application state</item>
+            <item>User session data</item>
+            <item>Settings and configuration</item>
+            <item>Any model used by multiple components</item>
+            </list>
+            </remarks>
+        </member>
+        <member name="F:RxBlazorV2.Model.ModelScope.Scoped">
+            <summary>
+            Single instance per scope (typically per HTTP request in server scenarios, or per component tree in client scenarios).
+            Can only be used when the model is consumed by a single component.
+            This is the default scope when no attribute is specified.
+            </summary>
+            <remarks>
+            Use for:
+            <list type="bullet">
+            <item>Page-specific data that shouldn't be shared across pages</item>
+            <item>Form models that should reset between uses</item>
+            <item>Models that hold temporary state</item>
+            </list>
+            </remarks>
+        </member>
+        <member name="F:RxBlazorV2.Model.ModelScope.Transient">
+            <summary>
+            New instance created every time the model is requested.
+            Use with extreme caution as it can break reactive bindings and component communication.
+            Can only be used when the model is consumed by a single component.
+            </summary>
+            <remarks>
+            Use for:
+            <list type="bullet">
+            <item>Lightweight data transfer objects</item>
+            <item>Models that need to be completely isolated</item>
+            <item>Testing scenarios</item>
+            </list>
+            Generally avoid this scope unless you have a specific need for complete isolation.
+            </remarks>
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableModelScopeAttribute">
+            <summary>
+            Specifies the dependency injection lifetime scope for an ObservableModel class.
+            Defaults to Scoped if not specified.
+            </summary>
+            <param name="scope">
+            The lifetime scope for this model (Singleton, Scoped, or Transient).
+            </param>
+            <remarks>
+            <para><b>Important:</b> Models used by multiple components must use Singleton scope.</para>
+            <para>See <see href="https://github.com/b-straub/RxBlazorV2/blob/master/Diagnostics/Help/RXBG010.md">RXBG010</see> for scope requirements and troubleshooting.</para>
+            </remarks>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableModelScopeAttribute.#ctor(RxBlazorV2.Model.ModelScope)">
+            <summary>
+            Specifies the dependency injection lifetime scope for an ObservableModel class.
+            Defaults to Scoped if not specified.
+            </summary>
+            <param name="scope">
+            The lifetime scope for this model (Singleton, Scoped, or Transient).
+            </param>
+            <remarks>
+            <para><b>Important:</b> Models used by multiple components must use Singleton scope.</para>
+            <para>See <see href="https://github.com/b-straub/RxBlazorV2/blob/master/Diagnostics/Help/RXBG010.md">RXBG010</see> for scope requirements and troubleshooting.</para>
+            </remarks>
+        </member>
+        <member name="P:RxBlazorV2.Model.ObservableModelScopeAttribute.Scope">
+            <summary>
+            Gets the dependency injection lifetime scope for this ObservableModel.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableTriggerAsyncAttribute">
+             <summary>
+             Automatically executes an async method when the decorated property changes.
+             This is a shortcut alternative to creating explicit async command properties with triggers.
+             Multiple triggers can be applied to the same property.
+             </summary>
+             <param name="executionMethodName">
+             The name of the private async method to execute when the property changes.
+             Method must return Task or ValueTask and may optionally accept a CancellationToken parameter.
+             Use <see langword="nameof"/> for compile-time safety.
+             </param>
+             <param name="canTriggerMethodName">
+             Optional. The name of a private method that determines if the trigger should execute.
+             Must return <see langword="bool"/>.
+             </param>
+             <remarks>
+             <para><b>Usage:</b> Apply to partial properties to automatically execute async methods on property changes.</para>
+             <para><b>Example:</b></para>
+             <code>
+             [ObservableTriggerAsync(nameof(SaveAsync))]
+             [ObservableTriggerAsync(nameof(ValidateAsync), nameof(CanValidate))]
+             public partial string Input { get; set; }
+            
+             private async Task SaveAsync()
+             {
+                 await _repository.SaveAsync(Input);
+             }
+            
+             private async Task ValidateAsync(CancellationToken ct)
+             {
+                 await _validator.ValidateAsync(Input, ct);
+             }
+            
+             private bool CanValidate() => !string.IsNullOrEmpty(Input);
+             </code>
+             <para><b>Async Method Signatures:</b></para>
+             <list type="bullet">
+             <item><c>Task Method()</c> - Basic async execution</item>
+             <item><c>Task Method(CancellationToken ct)</c> - With cancellation support</item>
+             <item><c>ValueTask Method()</c> - High-performance async</item>
+             <item><c>ValueTask Method(CancellationToken ct)</c> - High-performance with cancellation</item>
+             </list>
+             <para><b>Warning:</b> Avoid circular triggers where the method modifies the same property it listens to.</para>
+             <para><b>See Also:</b></para>
+             <list type="bullet">
+             <item><see cref="T:RxBlazorV2.Model.ObservableTriggerAttribute"/> - For sync method triggers</item>
+             <item><see cref="T:RxBlazorV2.Model.ObservableTriggerAsyncAttribute`1"/> - For parametrized async triggers</item>
+             <item><see cref="!:ObservableCallbackTriggerAsyncAttribute"/> - For external service subscriptions</item>
+             </list>
+             </remarks>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableTriggerAsyncAttribute.#ctor(System.String,System.String)">
+             <summary>
+             Automatically executes an async method when the decorated property changes.
+             This is a shortcut alternative to creating explicit async command properties with triggers.
+             Multiple triggers can be applied to the same property.
+             </summary>
+             <param name="executionMethodName">
+             The name of the private async method to execute when the property changes.
+             Method must return Task or ValueTask and may optionally accept a CancellationToken parameter.
+             Use <see langword="nameof"/> for compile-time safety.
+             </param>
+             <param name="canTriggerMethodName">
+             Optional. The name of a private method that determines if the trigger should execute.
+             Must return <see langword="bool"/>.
+             </param>
+             <remarks>
+             <para><b>Usage:</b> Apply to partial properties to automatically execute async methods on property changes.</para>
+             <para><b>Example:</b></para>
+             <code>
+             [ObservableTriggerAsync(nameof(SaveAsync))]
+             [ObservableTriggerAsync(nameof(ValidateAsync), nameof(CanValidate))]
+             public partial string Input { get; set; }
+            
+             private async Task SaveAsync()
+             {
+                 await _repository.SaveAsync(Input);
+             }
+            
+             private async Task ValidateAsync(CancellationToken ct)
+             {
+                 await _validator.ValidateAsync(Input, ct);
+             }
+            
+             private bool CanValidate() => !string.IsNullOrEmpty(Input);
+             </code>
+             <para><b>Async Method Signatures:</b></para>
+             <list type="bullet">
+             <item><c>Task Method()</c> - Basic async execution</item>
+             <item><c>Task Method(CancellationToken ct)</c> - With cancellation support</item>
+             <item><c>ValueTask Method()</c> - High-performance async</item>
+             <item><c>ValueTask Method(CancellationToken ct)</c> - High-performance with cancellation</item>
+             </list>
+             <para><b>Warning:</b> Avoid circular triggers where the method modifies the same property it listens to.</para>
+             <para><b>See Also:</b></para>
+             <list type="bullet">
+             <item><see cref="T:RxBlazorV2.Model.ObservableTriggerAttribute"/> - For sync method triggers</item>
+             <item><see cref="T:RxBlazorV2.Model.ObservableTriggerAsyncAttribute`1"/> - For parametrized async triggers</item>
+             <item><see cref="!:ObservableCallbackTriggerAsyncAttribute"/> - For external service subscriptions</item>
+             </list>
+             </remarks>
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableTriggerAsyncAttribute`1">
+             <summary>
+             Automatically executes a parametrized async method when the decorated property changes.
+             This is a shortcut alternative to creating explicit parametrized async command properties with triggers.
+             </summary>
+             <typeparam name="T">
+             The parameter type passed to the async execution method.
+             </typeparam>
+             <param name="executionMethodName">
+             The name of the private async method to execute when the property changes.
+             The method must accept a parameter of type T and return Task or ValueTask.
+             May optionally accept a second CancellationToken parameter.
+             Use <see langword="nameof"/> for compile-time safety.
+             </param>
+             <param name="parameter">
+             The value to pass to the async execution method when triggered.
+             </param>
+             <param name="canTriggerMethodName">
+             Optional. The name of a private method that determines if the trigger should execute.
+             Must return <see langword="bool"/>.
+             </param>
+             <remarks>
+             <para><b>Usage:</b> Apply to partial properties to automatically execute parametrized async methods on property changes.</para>
+             <para><b>Example:</b></para>
+             <code>
+             [ObservableTriggerAsync&lt;string&gt;(nameof(LogChangeAsync), "PropertyChanged")]
+             [ObservableTriggerAsync&lt;int&gt;(nameof(ValidateRangeAsync), 100, nameof(CanValidate))]
+             public partial int Count { get; set; }
+            
+             private async Task LogChangeAsync(string message)
+             {
+                 await _logger.LogAsync($"{message}: {Count}");
+             }
+            
+             private async Task ValidateRangeAsync(int maxValue, CancellationToken ct)
+             {
+                 if (Count > maxValue)
+                 {
+                     await _validator.ReportViolationAsync(Count, maxValue, ct);
+                 }
+             }
+            
+             private bool CanValidate() => Count > 0;
+             </code>
+             <para><b>Async Method Signatures:</b></para>
+             <list type="bullet">
+             <item><c>Task Method(T parameter)</c> - Basic async execution with parameter</item>
+             <item><c>Task Method(T parameter, CancellationToken ct)</c> - With cancellation support</item>
+             <item><c>ValueTask Method(T parameter)</c> - High-performance async</item>
+             <item><c>ValueTask Method(T parameter, CancellationToken ct)</c> - High-performance with cancellation</item>
+             </list>
+             <para><b>Warning:</b> Avoid circular triggers where the method modifies the same property it listens to.</para>
+             <para><b>See Also:</b></para>
+             <list type="bullet">
+             <item><see cref="T:RxBlazorV2.Model.ObservableTriggerAttribute`1"/> - For sync parametrized triggers</item>
+             <item><see cref="T:RxBlazorV2.Model.ObservableTriggerAsyncAttribute"/> - For non-parametrized async triggers</item>
+             <item><see cref="!:ObservableCallbackTriggerAsyncAttribute"/> - For external service subscriptions</item>
+             </list>
+             </remarks>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableTriggerAsyncAttribute`1.#ctor(System.String,`0,System.String)">
+             <summary>
+             Automatically executes a parametrized async method when the decorated property changes.
+             This is a shortcut alternative to creating explicit parametrized async command properties with triggers.
+             </summary>
+             <typeparam name="T">
+             The parameter type passed to the async execution method.
+             </typeparam>
+             <param name="executionMethodName">
+             The name of the private async method to execute when the property changes.
+             The method must accept a parameter of type T and return Task or ValueTask.
+             May optionally accept a second CancellationToken parameter.
+             Use <see langword="nameof"/> for compile-time safety.
+             </param>
+             <param name="parameter">
+             The value to pass to the async execution method when triggered.
+             </param>
+             <param name="canTriggerMethodName">
+             Optional. The name of a private method that determines if the trigger should execute.
+             Must return <see langword="bool"/>.
+             </param>
+             <remarks>
+             <para><b>Usage:</b> Apply to partial properties to automatically execute parametrized async methods on property changes.</para>
+             <para><b>Example:</b></para>
+             <code>
+             [ObservableTriggerAsync&lt;string&gt;(nameof(LogChangeAsync), "PropertyChanged")]
+             [ObservableTriggerAsync&lt;int&gt;(nameof(ValidateRangeAsync), 100, nameof(CanValidate))]
+             public partial int Count { get; set; }
+            
+             private async Task LogChangeAsync(string message)
+             {
+                 await _logger.LogAsync($"{message}: {Count}");
+             }
+            
+             private async Task ValidateRangeAsync(int maxValue, CancellationToken ct)
+             {
+                 if (Count > maxValue)
+                 {
+                     await _validator.ReportViolationAsync(Count, maxValue, ct);
+                 }
+             }
+            
+             private bool CanValidate() => Count > 0;
+             </code>
+             <para><b>Async Method Signatures:</b></para>
+             <list type="bullet">
+             <item><c>Task Method(T parameter)</c> - Basic async execution with parameter</item>
+             <item><c>Task Method(T parameter, CancellationToken ct)</c> - With cancellation support</item>
+             <item><c>ValueTask Method(T parameter)</c> - High-performance async</item>
+             <item><c>ValueTask Method(T parameter, CancellationToken ct)</c> - High-performance with cancellation</item>
+             </list>
+             <para><b>Warning:</b> Avoid circular triggers where the method modifies the same property it listens to.</para>
+             <para><b>See Also:</b></para>
+             <list type="bullet">
+             <item><see cref="T:RxBlazorV2.Model.ObservableTriggerAttribute`1"/> - For sync parametrized triggers</item>
+             <item><see cref="T:RxBlazorV2.Model.ObservableTriggerAsyncAttribute"/> - For non-parametrized async triggers</item>
+             <item><see cref="!:ObservableCallbackTriggerAsyncAttribute"/> - For external service subscriptions</item>
+             </list>
+             </remarks>
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableTriggerAttribute">
+             <summary>
+             Automatically executes a method when the decorated property changes.
+             This is a shortcut alternative to creating explicit command properties with triggers.
+             Multiple triggers can be applied to the same property.
+             </summary>
+             <param name="executionMethodName">
+             The name of the private method to execute when the property changes.
+             Supports sync/async methods with or without parameters.
+             Use <see langword="nameof"/> for compile-time safety.
+             </param>
+             <param name="canTriggerMethodName">
+             Optional. The name of a private method that determines if the trigger should execute.
+             Must return <see langword="bool"/>.
+             </param>
+             <remarks>
+             <para><b>Usage:</b> Apply to partial properties to automatically execute methods on property changes.</para>
+             <para><b>Example:</b></para>
+             <code>
+             [ObservableTrigger(nameof(ValidateInput))]
+             [ObservableTrigger(nameof(SaveAsync), nameof(CanSave))]
+             public partial string Input { get; set; }
+            
+             private void ValidateInput() { /* validation logic */ }
+             private async Task SaveAsync() { /* save logic */ }
+             private bool CanSave() => !string.IsNullOrEmpty(Input);
+             </code>
+             <para><b>Warning:</b> Avoid circular triggers where the method modifies the same property it listens to.</para>
+             <para>See <see href="https://github.com/b-straub/RxBlazorV2/blob/master/Diagnostics/Help/RXBG012.md">RXBG012</see> for circular trigger troubleshooting.</para>
+             </remarks>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableTriggerAttribute.#ctor(System.String,System.String)">
+             <summary>
+             Automatically executes a method when the decorated property changes.
+             This is a shortcut alternative to creating explicit command properties with triggers.
+             Multiple triggers can be applied to the same property.
+             </summary>
+             <param name="executionMethodName">
+             The name of the private method to execute when the property changes.
+             Supports sync/async methods with or without parameters.
+             Use <see langword="nameof"/> for compile-time safety.
+             </param>
+             <param name="canTriggerMethodName">
+             Optional. The name of a private method that determines if the trigger should execute.
+             Must return <see langword="bool"/>.
+             </param>
+             <remarks>
+             <para><b>Usage:</b> Apply to partial properties to automatically execute methods on property changes.</para>
+             <para><b>Example:</b></para>
+             <code>
+             [ObservableTrigger(nameof(ValidateInput))]
+             [ObservableTrigger(nameof(SaveAsync), nameof(CanSave))]
+             public partial string Input { get; set; }
+            
+             private void ValidateInput() { /* validation logic */ }
+             private async Task SaveAsync() { /* save logic */ }
+             private bool CanSave() => !string.IsNullOrEmpty(Input);
+             </code>
+             <para><b>Warning:</b> Avoid circular triggers where the method modifies the same property it listens to.</para>
+             <para>See <see href="https://github.com/b-straub/RxBlazorV2/blob/master/Diagnostics/Help/RXBG012.md">RXBG012</see> for circular trigger troubleshooting.</para>
+             </remarks>
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableTriggerAttribute`1">
+             <summary>
+             Automatically executes a parametrized method when the decorated property changes.
+             This is a shortcut alternative to creating explicit parametrized command properties with triggers.
+             </summary>
+             <typeparam name="T">
+             The parameter type passed to the execution method.
+             </typeparam>
+             <param name="executionMethodName">
+             The name of the private method to execute when the property changes.
+             The method must accept a parameter of type T.
+             Use <see langword="nameof"/> for compile-time safety.
+             </param>
+             <param name="parameter">
+             The value to pass to the execution method when triggered.
+             </param>
+             <param name="canTriggerMethodName">
+             Optional. The name of a private method that determines if the trigger should execute.
+             Must return <see langword="bool"/>.
+             </param>
+             <remarks>
+             <para><b>Usage:</b> Apply to partial properties to automatically execute parametrized methods on property changes.</para>
+             <para><b>Example:</b></para>
+             <code>
+             [ObservableTrigger&lt;string&gt;(nameof(LogChange), "PropertyChanged")]
+             public partial int Count { get; set; }
+            
+             private void LogChange(string message)
+             {
+                 Console.WriteLine($"{message}: {Count}");
+             }
+             </code>
+             <para><b>Warning:</b> Avoid circular triggers where the method modifies the same property it listens to.</para>
+             </remarks>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableTriggerAttribute`1.#ctor(System.String,`0,System.String)">
+             <summary>
+             Automatically executes a parametrized method when the decorated property changes.
+             This is a shortcut alternative to creating explicit parametrized command properties with triggers.
+             </summary>
+             <typeparam name="T">
+             The parameter type passed to the execution method.
+             </typeparam>
+             <param name="executionMethodName">
+             The name of the private method to execute when the property changes.
+             The method must accept a parameter of type T.
+             Use <see langword="nameof"/> for compile-time safety.
+             </param>
+             <param name="parameter">
+             The value to pass to the execution method when triggered.
+             </param>
+             <param name="canTriggerMethodName">
+             Optional. The name of a private method that determines if the trigger should execute.
+             Must return <see langword="bool"/>.
+             </param>
+             <remarks>
+             <para><b>Usage:</b> Apply to partial properties to automatically execute parametrized methods on property changes.</para>
+             <para><b>Example:</b></para>
+             <code>
+             [ObservableTrigger&lt;string&gt;(nameof(LogChange), "PropertyChanged")]
+             public partial int Count { get; set; }
+            
+             private void LogChange(string message)
+             {
+                 Console.WriteLine($"{message}: {Count}");
+             }
+             </code>
+             <para><b>Warning:</b> Avoid circular triggers where the method modifies the same property it listens to.</para>
+             </remarks>
+        </member>
+        <member name="P:RxBlazorV2.Model.ObservableCommandAsyncBase.LastCancellationReason">
+            <summary>
+            Reason for the last cancellation.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableModel.SuspendNotifications(System.String[])">
+             <summary>
+             Suspends state change notifications until the returned IDisposable is disposed.
+             Useful for batch updates to properties or observable collections.
+             All property changes during suspension are batched and fired as a single notification when disposed.
+             </summary>
+             <param name="batchIds">
+             Optional batch identifiers. When provided, only suspends notifications for properties with matching
+             <see cref="T:RxBlazorV2.Model.ObservableBatchAttribute"/>. When empty, suspends all notifications.
+             Multiple batch IDs can be specified to suspend multiple batch groups simultaneously.
+             </param>
+             <remarks>
+             <para>Nested suspensions are not supported and will throw <see cref="T:System.InvalidOperationException"/>.</para>
+             <para>Properties without batch IDs are suspended when no batch IDs are specified.</para>
+             <para>Properties with batch IDs are only suspended if at least one of their batch IDs matches a suspended batch.</para>
+             </remarks>
+             <example>
+             <code>
+             // Suspend all notifications:
+             using (Model.SuspendNotifications())
+             {
+                 Tlist.Clear();
+                 Tlist.AddRange(Enumerable.Range(0, 10000));
+                 // All notifications fire at end of block
+             }
+            
+             // Single batch-specific suspension:
+             using (Model.SuspendNotifications("UserInfo"))
+             {
+                 FirstName = "John";  // Suspended if [ObservableBatch("UserInfo")]
+                 LastName = "Doe";     // Suspended if [ObservableBatch("UserInfo")]
+                 Age = 30;             // NOT suspended if no [ObservableBatch] or different batch ID
+             }
+            
+             // Multiple batch suspensions:
+             using (Model.SuspendNotifications("UserInfo", "Address"))
+             {
+                 FirstName = "John";   // Suspended if [ObservableBatch("UserInfo")]
+                 City = "New York";    // Suspended if [ObservableBatch("Address")]
+             }
+             </code>
+             </example>
+             <returns>IDisposable that fires batched notifications when disposed.</returns>
+             <exception cref="T:System.InvalidOperationException">Thrown when a suspension is already active.</exception>
+        </member>
+        <member name="T:RxBlazorV2.Model.StatusSeverity">
+            <summary>
+            Status message severity levels.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.Model.StatusMessageMode">
+            <summary>
+            Specifies how messages are accumulated.
+            <para>
+            <b>Valid combinations with StatusDisplayMode:</b>
+            <list type="bullet">
+            <item><description><c>Single</c>: Works with all display modes (SNACKBAR, ICON, SNACKBAR_AND_ICON)</description></item>
+            <item><description><c>Aggregate</c>: Requires ICON or SNACKBAR_AND_ICON display mode. SNACKBAR alone is auto-upgraded.</description></item>
+            </list>
+            </para>
+            </summary>
+        </member>
+        <member name="F:RxBlazorV2.Model.StatusMessageMode.Aggregate">
+            <summary>
+            Multiple messages can accumulate in the list.
+            Requires ICON or SNACKBAR_AND_ICON display mode for proper aggregated display.
+            Using SNACKBAR alone with Aggregate mode automatically upgrades to SNACKBAR_AND_ICON.
+            </summary>
+        </member>
+        <member name="F:RxBlazorV2.Model.StatusMessageMode.Single">
+            <summary>
+            Only one message at a time - new message clears previous.
+            Works with all display modes (SNACKBAR, ICON, SNACKBAR_AND_ICON).
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.Model.StatusMessage">
+            <summary>
+            Represents a status message with severity level and source context.
+            </summary>
+            <param name="Message">The status message text.</param>
+            <param name="Severity">The severity level of the message.</param>
+            <param name="Source">The source of the message (e.g., "RefreshCommand.RefreshDataAsync").</param>
+        </member>
+        <member name="M:RxBlazorV2.Model.StatusMessage.#ctor(System.String,RxBlazorV2.Model.StatusSeverity,System.String)">
+            <summary>
+            Represents a status message with severity level and source context.
+            </summary>
+            <param name="Message">The status message text.</param>
+            <param name="Severity">The severity level of the message.</param>
+            <param name="Source">The source of the message (e.g., "RefreshCommand.RefreshDataAsync").</param>
+        </member>
+        <member name="P:RxBlazorV2.Model.StatusMessage.Message">
+            <summary>The status message text.</summary>
+        </member>
+        <member name="P:RxBlazorV2.Model.StatusMessage.Severity">
+            <summary>The severity level of the message.</summary>
+        </member>
+        <member name="P:RxBlazorV2.Model.StatusMessage.Source">
+            <summary>The source of the message (e.g., "RefreshCommand.RefreshDataAsync").</summary>
+        </member>
+        <member name="P:RxBlazorV2.Model.StatusMessage.Id">
+            <summary>
+            Unique identifier for the message.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.Model.StatusMessage.Timestamp">
+            <summary>
+            When the message was created.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.Model.StatusBaseModel">
+             <summary>
+             Abstract base class for status management models.
+             Provides unified error and message handling with severity levels and source tracking.
+            
+             Derive from this class and add [ObservableComponent] and [ObservableModelScope] attributes
+             to create a concrete singleton status model for your application.
+            
+             Example:
+             <code>
+             [ObservableComponent]
+             [ObservableModelScope(ModelScope.Singleton)]
+             public partial class AppStatusModel : StatusBaseModel { }
+             </code>
+             </summary>
+        </member>
+        <member name="P:RxBlazorV2.Model.StatusBaseModel.Messages">
+            <summary>
+            All status messages including errors, warnings, info, and success messages.
+            Changes to this collection trigger component updates via [ObservableComponentTrigger].
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.Model.StatusBaseModel.ErrorMessageMode">
+            <summary>
+            How error messages are accumulated - Aggregate (multiple) or Single (replace).
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.Model.StatusBaseModel.MessageMessageMode">
+            <summary>
+            How non-error messages (Info, Success, Warning) are accumulated - Aggregate (multiple) or Single (replace).
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.StatusBaseModel.HandleError(System.Exception,System.String,System.String)">
+            <summary>
+            Called by command factories when a command throws an exception.
+            Automatically captures command name and method name as source.
+            </summary>
+            <param name="error">The exception that was thrown.</param>
+            <param name="commandName">The name of the command property (e.g., "RefreshCommand").</param>
+            <param name="methodName">The name of the execute method (e.g., "RefreshDataAsync").</param>
+        </member>
+        <member name="M:RxBlazorV2.Model.StatusBaseModel.AddInfo(System.String,System.String)">
+            <summary>
+            Adds an info message.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.StatusBaseModel.AddSuccess(System.String,System.String)">
+            <summary>
+            Adds a success message.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.StatusBaseModel.AddWarning(System.String,System.String)">
+            <summary>
+            Adds a warning message.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.StatusBaseModel.AddError(System.String,System.String)">
+            <summary>
+            Adds an error message.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.StatusBaseModel.AddError(System.Exception,System.String)">
+            <summary>
+            Adds an error message.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.StatusBaseModel.AddMessage(System.String,RxBlazorV2.Model.StatusSeverity,System.String)">
+            <summary>
+            Adds a message with the specified severity.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.StatusBaseModel.ClearNonErrorMessages">
+            <summary>
+            Clears all non-error messages (Info, Success, Warning).
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.StatusBaseModel.ClearErrorMessages">
+            <summary>
+            Clears all error messages (Error).
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.StatusBaseModel.ClearMessages">
+            <summary>
+            Clears all messages.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.StatusBaseModel.ClearMessages(RxBlazorV2.Model.StatusSeverity)">
+            <summary>
+            Clears messages with the specified severity.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.Model.StatusBaseModel.HasErrors">
+            <summary>
+            Indicates whether there are any error messages.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.Model.StatusBaseModel.HasWarnings">
+            <summary>
+            Indicates whether there are any warning messages.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.Model.StatusBaseModel.ErrorCount">
+            <summary>
+            Count of error messages.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.Model.StatusBaseModel.WarningCount">
+            <summary>
+            Count of warning messages.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.Model.StatusBaseModel.LastError">
+            <summary>
+            The most recent error message, if any.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.Model.StatusBaseModel.LastMessage">
+            <summary>
+            The most recent message of any severity.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.Component.ObservableComponent`1.Body">
+            <summary>
+            Gets the content to be rendered inside the component
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.Interface.CancellationReason">
+            <summary>
+            Reason for command cancellation.
+            </summary>
+        </member>
+        <member name="F:RxBlazorV2.Interface.CancellationReason.NONE">
+            <summary>
+            No cancellation occurred.
+            </summary>
+        </member>
+        <member name="F:RxBlazorV2.Interface.CancellationReason.EXPLICIT">
+            <summary>
+            Cancelled explicitly via Cancel() method.
+            </summary>
+        </member>
+        <member name="F:RxBlazorV2.Interface.CancellationReason.SWITCH">
+            <summary>
+            Cancelled implicitly by Switch operation (new trigger fired).
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.Interface.IObservableCommandAsyncBase.LastCancellationReason">
+            <summary>
+            Reason for the last cancellation. Reset to NONE when command starts.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.Interface.IObservableModel">
+             <summary>
+             Defines the contract for reactive model objects in the RxBlazorV2 framework.
+             </summary>
+             <remarks>
+             <para>
+             Observable models provide automatic property change notifications using R3 observables.
+             They are typically created by the source generator from partial classes that inherit from
+             <c>ObservableModel</c>.
+             </para>
+             <para>
+             Key features:
+             <list type="bullet">
+               <item><description>Reactive property change notifications via <see cref="P:RxBlazorV2.Interface.IObservableModel.Observable"/></description></item>
+               <item><description>Automatic subscription cleanup via <see cref="P:RxBlazorV2.Interface.IObservableModel.Subscriptions"/></description></item>
+               <item><description>Lifecycle management with <see cref="M:RxBlazorV2.Interface.IObservableModel.ContextReady"/> and <see cref="M:RxBlazorV2.Interface.IObservableModel.ContextReadyAsync"/></description></item>
+               <item><description>Support for cross-model reactive subscriptions</description></item>
+             </list>
+             </para>
+             </remarks>
+             <example>
+             <code>
+             // Models are created via partial classes with the source generator
+             [ObservableModelScope(ModelScope.Scoped)]
+             public partial class MyModel : ObservableModel
+             {
+                 public partial string Name { get; set; }
+             }
+            
+             // Subscribe to property changes
+             model.Observable.Subscribe(props => Console.WriteLine($"Changed: {string.Join(", ", props)}"));
+             </code>
+             </example>
+        </member>
+        <member name="P:RxBlazorV2.Interface.IObservableModel.ModelID">
+            <summary>
+            Gets the unique identifier for this model instance.
+            Used for distinguishing between different model types in the reactive system.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.Interface.IObservableModel.Observable">
+            <summary>
+            Gets the observable stream that emits property change notifications.
+            Emits arrays of property names that have changed.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Interface.IObservableModel.ContextReady">
+            <summary>
+            Initializes the model when the context is ready.
+            Called once during the model's lifetime for synchronous initialization.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Interface.IObservableModel.ContextReadyAsync">
+            <summary>
+            Initializes the model when the context is ready (async version).
+            Called once during the model's lifetime for asynchronous initialization.
+            </summary>
+            <returns>A task representing the asynchronous initialization operation.</returns>
+        </member>
+        <member name="P:RxBlazorV2.Interface.IObservableModel.Subscriptions">
+            <summary>
+            Gets the collection of subscriptions managed by this model.
+            All reactive subscriptions should be added to this collection for automatic cleanup on disposal.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.Interface.IObservableModel.Initialized">
+            <summary>
+            Gets a value indicating whether the model has been initialized.
+            Returns <see langword="true"/> after <see cref="M:RxBlazorV2.Interface.IObservableModel.ContextReady"/> or <see cref="M:RxBlazorV2.Interface.IObservableModel.ContextReadyAsync"/> has been called.
+            </summary>
+        </member>
+    </members>
+</doc>
