@@ -23,6 +23,7 @@ public class MudFabRx : MudFab
     [Parameter]
     public Func<Task<bool>>? ConfirmExecutionAsync { get; set; }
 
+    /// <inheritdoc />
     protected override void OnParametersSet()
     {
         Disabled = !Command.CanExecute;
@@ -67,6 +68,7 @@ public class MudFabRxOf<T> : MudFab
     [Parameter]
     public Func<Task<bool>>? ConfirmExecutionAsync { get; set; }
 
+    /// <inheritdoc />
     protected override void OnParametersSet()
     {
         Disabled = !Command.CanExecute;

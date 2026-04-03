@@ -47,6 +47,7 @@ public class MudButtonAsyncRx : MudButton
     private Color _originalColor;
     private bool _initialized;
 
+    /// <inheritdoc />
     protected override void OnInitialized()
     {
         _originalContent = ChildContent;
@@ -55,6 +56,7 @@ public class MudButtonAsyncRx : MudButton
         base.OnInitialized();
     }
 
+    /// <inheritdoc />
     protected override void OnParametersSet()
     {
         if (!_initialized)
@@ -151,6 +153,7 @@ public class MudButtonAsyncRxOf<T> : MudButton
     private Color _originalColor;
     private bool _initialized;
 
+    /// <inheritdoc />
     protected override void OnInitialized()
     {
         _originalContent = ChildContent;
@@ -159,6 +162,7 @@ public class MudButtonAsyncRxOf<T> : MudButton
         base.OnInitialized();
     }
 
+    /// <inheritdoc />
     protected override void OnParametersSet()
     {
         if (!_initialized)

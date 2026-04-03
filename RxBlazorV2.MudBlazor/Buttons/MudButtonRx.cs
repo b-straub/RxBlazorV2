@@ -23,6 +23,7 @@ public class MudButtonRx : MudButton
     [Parameter]
     public Func<Task<bool>>? ConfirmExecutionAsync { get; set; }
 
+    /// <inheritdoc />
     protected override void OnParametersSet()
     {
         Disabled = !Command.CanExecute;
@@ -67,6 +68,7 @@ public class MudButtonRxOf<T> : MudButton
     [Parameter]
     public Func<Task<bool>>? ConfirmExecutionAsync { get; set; }
 
+    /// <inheritdoc />
     protected override void OnParametersSet()
     {
         Disabled = !Command.CanExecute;

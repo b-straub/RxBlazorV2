@@ -873,7 +873,7 @@
              <list type="bullet">
              <item><see cref="T:RxBlazorV2.Model.ObservableTriggerAttribute"/> - For sync method triggers</item>
              <item><see cref="T:RxBlazorV2.Model.ObservableTriggerAsyncAttribute`1"/> - For parametrized async triggers</item>
-             <item><see cref="!:ObservableCallbackTriggerAsyncAttribute"/> - For external service subscriptions</item>
+             <item><see cref="T:RxBlazorV2.Model.ObservableModelObserverAttribute"/> - For external service subscriptions</item>
              </list>
              </remarks>
         </member>
@@ -924,7 +924,7 @@
              <list type="bullet">
              <item><see cref="T:RxBlazorV2.Model.ObservableTriggerAttribute"/> - For sync method triggers</item>
              <item><see cref="T:RxBlazorV2.Model.ObservableTriggerAsyncAttribute`1"/> - For parametrized async triggers</item>
-             <item><see cref="!:ObservableCallbackTriggerAsyncAttribute"/> - For external service subscriptions</item>
+             <item><see cref="T:RxBlazorV2.Model.ObservableModelObserverAttribute"/> - For external service subscriptions</item>
              </list>
              </remarks>
         </member>
@@ -984,7 +984,7 @@
              <list type="bullet">
              <item><see cref="T:RxBlazorV2.Model.ObservableTriggerAttribute`1"/> - For sync parametrized triggers</item>
              <item><see cref="T:RxBlazorV2.Model.ObservableTriggerAsyncAttribute"/> - For non-parametrized async triggers</item>
-             <item><see cref="!:ObservableCallbackTriggerAsyncAttribute"/> - For external service subscriptions</item>
+             <item><see cref="T:RxBlazorV2.Model.ObservableModelObserverAttribute"/> - For external service subscriptions</item>
              </list>
              </remarks>
         </member>
@@ -1044,7 +1044,7 @@
              <list type="bullet">
              <item><see cref="T:RxBlazorV2.Model.ObservableTriggerAttribute`1"/> - For sync parametrized triggers</item>
              <item><see cref="T:RxBlazorV2.Model.ObservableTriggerAsyncAttribute"/> - For non-parametrized async triggers</item>
-             <item><see cref="!:ObservableCallbackTriggerAsyncAttribute"/> - For external service subscriptions</item>
+             <item><see cref="T:RxBlazorV2.Model.ObservableModelObserverAttribute"/> - For external service subscriptions</item>
              </list>
              </remarks>
         </member>
@@ -1180,9 +1180,405 @@
              <para><b>Warning:</b> Avoid circular triggers where the method modifies the same property it listens to.</para>
              </remarks>
         </member>
+        <member name="T:RxBlazorV2.Model.ObservableCommandBase">
+            <summary>
+            Base class for all observable command implementations, extending <see cref="T:R3.Observable`1"/> with property change filtering.
+            </summary>
+            <param name="model">The owning <see cref="T:RxBlazorV2.Model.ObservableModel"/> whose property changes are observed.</param>
+            <param name="observedProperties">Property names that trigger re-evaluation of this command.</param>
+            <param name="commandName">Display name of the command, used for error reporting.</param>
+            <param name="methodName">Name of the backing method, used for error reporting.</param>
+            <param name="statusModel">Optional <see cref="T:RxBlazorV2.Model.StatusBaseModel"/> to delegate error handling to.</param>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandBase.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel)">
+            <summary>
+            Base class for all observable command implementations, extending <see cref="T:R3.Observable`1"/> with property change filtering.
+            </summary>
+            <param name="model">The owning <see cref="T:RxBlazorV2.Model.ObservableModel"/> whose property changes are observed.</param>
+            <param name="observedProperties">Property names that trigger re-evaluation of this command.</param>
+            <param name="commandName">Display name of the command, used for error reporting.</param>
+            <param name="methodName">Name of the backing method, used for error reporting.</param>
+            <param name="statusModel">Optional <see cref="T:RxBlazorV2.Model.StatusBaseModel"/> to delegate error handling to.</param>
+        </member>
+        <member name="P:RxBlazorV2.Model.ObservableCommandBase.CanExecute">
+            <summary>
+            Gets a value indicating whether the command can currently execute. Returns <c>true</c> by default.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.Model.ObservableCommandBase.Error">
+            <summary>
+            Gets the most recent exception thrown during command execution, or <c>null</c> if no error occurred.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandBase.ResetError">
+            <summary>
+            Clears the current <see cref="P:RxBlazorV2.Model.ObservableCommandBase.Error"/>.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandBase.SetError(System.Exception)">
+            <summary>
+            Sets or clears the current error. When a <see cref="T:RxBlazorV2.Model.StatusBaseModel"/> is configured, delegates the error to it instead.
+            </summary>
+            <param name="exception">The exception to record, or <c>null</c> to clear the error.</param>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandBase.SubscribeCore(R3.Observer{System.String[]})">
+            <summary>
+            Subscribes the observer to the owning model's property change notifications, filtered to the observed properties.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableCommand">
+            <summary>
+            Abstract base class for synchronous observable commands.
+            </summary>
+            <param name="model">The owning <see cref="T:RxBlazorV2.Model.ObservableModel"/> whose property changes are observed.</param>
+            <param name="observedProperties">Property names that trigger re-evaluation of this command.</param>
+            <param name="commandName">Display name of the command, used for error reporting.</param>
+            <param name="methodName">Name of the backing method, used for error reporting.</param>
+            <param name="statusModel">Optional <see cref="T:RxBlazorV2.Model.StatusBaseModel"/> to delegate error handling to.</param>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommand.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel)">
+            <summary>
+            Abstract base class for synchronous observable commands.
+            </summary>
+            <param name="model">The owning <see cref="T:RxBlazorV2.Model.ObservableModel"/> whose property changes are observed.</param>
+            <param name="observedProperties">Property names that trigger re-evaluation of this command.</param>
+            <param name="commandName">Display name of the command, used for error reporting.</param>
+            <param name="methodName">Name of the backing method, used for error reporting.</param>
+            <param name="statusModel">Optional <see cref="T:RxBlazorV2.Model.StatusBaseModel"/> to delegate error handling to.</param>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommand.Execute">
+            <summary>
+            Executes the command synchronously.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableCommandFactory">
+            <summary>
+            Concrete synchronous command implementation that invokes an <see cref="T:System.Action"/> delegate.
+            </summary>
+            <param name="model">The owning <see cref="T:RxBlazorV2.Model.ObservableModel"/> whose property changes are observed.</param>
+            <param name="observedProperties">Property names that trigger re-evaluation and are notified after execution.</param>
+            <param name="commandName">Display name of the command, used for error reporting.</param>
+            <param name="methodName">Name of the backing method, used for error reporting.</param>
+            <param name="execute">The delegate to invoke when the command executes.</param>
+            <param name="canExecute">Optional guard function that determines whether the command can execute.</param>
+            <param name="statusModel">Optional <see cref="T:RxBlazorV2.Model.StatusBaseModel"/> to delegate error handling to.</param>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandFactory.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Action,System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel)">
+            <summary>
+            Concrete synchronous command implementation that invokes an <see cref="T:System.Action"/> delegate.
+            </summary>
+            <param name="model">The owning <see cref="T:RxBlazorV2.Model.ObservableModel"/> whose property changes are observed.</param>
+            <param name="observedProperties">Property names that trigger re-evaluation and are notified after execution.</param>
+            <param name="commandName">Display name of the command, used for error reporting.</param>
+            <param name="methodName">Name of the backing method, used for error reporting.</param>
+            <param name="execute">The delegate to invoke when the command executes.</param>
+            <param name="canExecute">Optional guard function that determines whether the command can execute.</param>
+            <param name="statusModel">Optional <see cref="T:RxBlazorV2.Model.StatusBaseModel"/> to delegate error handling to.</param>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandFactory.Execute">
+            <summary>
+            Executes the command by invoking the backing delegate and notifying observed properties.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.Model.ObservableCommandFactory.CanExecute">
+            <summary>
+            Gets a value indicating whether the command can currently execute, as determined by the guard function.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableCommand`1">
+            <summary>
+            Abstract base class for synchronous parametrized observable commands.
+            </summary>
+            <typeparam name="T">The type of the command parameter.</typeparam>
+            <param name="model">The owning <see cref="T:RxBlazorV2.Model.ObservableModel"/> whose property changes are observed.</param>
+            <param name="observedProperties">Property names that trigger re-evaluation of this command.</param>
+            <param name="commandName">Display name of the command, used for error reporting.</param>
+            <param name="methodName">Name of the backing method, used for error reporting.</param>
+            <param name="statusModel">Optional <see cref="T:RxBlazorV2.Model.StatusBaseModel"/> to delegate error handling to.</param>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommand`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel)">
+            <summary>
+            Abstract base class for synchronous parametrized observable commands.
+            </summary>
+            <typeparam name="T">The type of the command parameter.</typeparam>
+            <param name="model">The owning <see cref="T:RxBlazorV2.Model.ObservableModel"/> whose property changes are observed.</param>
+            <param name="observedProperties">Property names that trigger re-evaluation of this command.</param>
+            <param name="commandName">Display name of the command, used for error reporting.</param>
+            <param name="methodName">Name of the backing method, used for error reporting.</param>
+            <param name="statusModel">Optional <see cref="T:RxBlazorV2.Model.StatusBaseModel"/> to delegate error handling to.</param>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommand`1.Execute(`0)">
+            <summary>
+            Executes the command synchronously with the given parameter.
+            </summary>
+            <param name="parameter">The parameter to pass to the command.</param>
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableCommandFactory`1">
+            <summary>
+            Concrete synchronous parametrized command implementation that invokes an <see cref="T:System.Action`1"/> delegate.
+            </summary>
+            <typeparam name="T">The type of the command parameter.</typeparam>
+            <param name="model">The owning <see cref="T:RxBlazorV2.Model.ObservableModel"/> whose property changes are observed.</param>
+            <param name="observedProperties">Property names that trigger re-evaluation and are notified after execution.</param>
+            <param name="commandName">Display name of the command, used for error reporting.</param>
+            <param name="methodName">Name of the backing method, used for error reporting.</param>
+            <param name="execute">The delegate to invoke when the command executes.</param>
+            <param name="canExecute">Optional guard function that determines whether the command can execute.</param>
+            <param name="statusModel">Optional <see cref="T:RxBlazorV2.Model.StatusBaseModel"/> to delegate error handling to.</param>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandFactory`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Action{`0},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel)">
+            <summary>
+            Concrete synchronous parametrized command implementation that invokes an <see cref="T:System.Action`1"/> delegate.
+            </summary>
+            <typeparam name="T">The type of the command parameter.</typeparam>
+            <param name="model">The owning <see cref="T:RxBlazorV2.Model.ObservableModel"/> whose property changes are observed.</param>
+            <param name="observedProperties">Property names that trigger re-evaluation and are notified after execution.</param>
+            <param name="commandName">Display name of the command, used for error reporting.</param>
+            <param name="methodName">Name of the backing method, used for error reporting.</param>
+            <param name="execute">The delegate to invoke when the command executes.</param>
+            <param name="canExecute">Optional guard function that determines whether the command can execute.</param>
+            <param name="statusModel">Optional <see cref="T:RxBlazorV2.Model.StatusBaseModel"/> to delegate error handling to.</param>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandFactory`1.Execute(`0)">
+            <summary>
+            Executes the command by invoking the backing delegate with the given parameter and notifying observed properties.
+            </summary>
+            <param name="parameter">The parameter to pass to the command.</param>
+        </member>
+        <member name="P:RxBlazorV2.Model.ObservableCommandFactory`1.CanExecute">
+            <summary>
+            Gets a value indicating whether the command can currently execute, as determined by the guard function.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableCommandAsyncBase">
+            <summary>
+            Base class for async commands with execution tracking and cancellation support.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandAsyncBase.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel)">
+            <summary>
+            Base class for async commands with execution tracking and cancellation support.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.Model.ObservableCommandAsyncBase.Executing">
+            <summary>
+            Indicates whether the command is currently executing.
+            </summary>
+        </member>
         <member name="P:RxBlazorV2.Model.ObservableCommandAsyncBase.LastCancellationReason">
             <summary>
             Reason for the last cancellation.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.Model.ObservableCommandAsyncBase.CancellationToken">
+            <summary>
+            Gets the current cancellation token for the executing command.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandAsyncBase.ResetCancellationToken(System.Nullable{System.Threading.CancellationToken})">
+            <summary>
+            Resets the cancellation token, optionally linking to an external token.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandAsyncBase.Cancel">
+            <summary>
+            Cancels the currently executing command.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableCommandAsync">
+            <summary>
+            Abstract async command without parameters.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandAsync.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel)">
+            <summary>
+            Abstract async command without parameters.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandAsync.ExecuteAsync(System.Nullable{System.Threading.CancellationToken})">
+            <summary>
+            Executes the command asynchronously with an optional external cancellation token.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandAsync.ExecuteAsync">
+            <summary>
+            Executes the command asynchronously.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableCommandAsyncFactory">
+            <summary>
+            Non-cancellable async command that executes a delegate without cancellation support.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandAsyncFactory.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{System.Threading.Tasks.Task},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel)">
+            <summary>
+            Non-cancellable async command that executes a delegate without cancellation support.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandAsyncFactory.ExecuteAsync(System.Nullable{System.Threading.CancellationToken})">
+            <inheritdoc />
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandAsyncFactory.ExecuteAsync">
+            <inheritdoc />
+        </member>
+        <member name="P:RxBlazorV2.Model.ObservableCommandAsyncFactory.CanExecute">
+            <inheritdoc />
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableCommandAsyncCancelableFactory">
+            <summary>
+            Cancellable async command that supports CancellationToken and switch-cancellation.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandAsyncCancelableFactory.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{System.Threading.CancellationToken,System.Threading.Tasks.Task},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel)">
+            <summary>
+            Cancellable async command that supports CancellationToken and switch-cancellation.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandAsyncCancelableFactory.ExecuteAsync(System.Nullable{System.Threading.CancellationToken})">
+            <inheritdoc />
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandAsyncCancelableFactory.ExecuteAsync">
+            <inheritdoc />
+        </member>
+        <member name="P:RxBlazorV2.Model.ObservableCommandAsyncCancelableFactory.CanExecute">
+            <inheritdoc />
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableCommandAsync`1">
+            <summary>
+            Abstract parametrized async command that accepts a parameter of type <typeparamref name="T"/>.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandAsync`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel)">
+            <summary>
+            Abstract parametrized async command that accepts a parameter of type <typeparamref name="T"/>.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandAsync`1.ExecuteAsync(`0,System.Nullable{System.Threading.CancellationToken})">
+            <summary>
+            Executes the command asynchronously with the given parameter and optional external cancellation token.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandAsync`1.ExecuteAsync(`0)">
+            <summary>
+            Executes the command asynchronously with the given parameter.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableCommandAsyncFactory`1">
+            <summary>
+            Non-cancellable parametrized async command that executes a delegate with a parameter.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandAsyncFactory`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{`0,System.Threading.Tasks.Task},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel)">
+            <summary>
+            Non-cancellable parametrized async command that executes a delegate with a parameter.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandAsyncFactory`1.ExecuteAsync(`0,System.Nullable{System.Threading.CancellationToken})">
+            <inheritdoc />
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandAsyncFactory`1.ExecuteAsync(`0)">
+            <inheritdoc />
+        </member>
+        <member name="P:RxBlazorV2.Model.ObservableCommandAsyncFactory`1.CanExecute">
+            <inheritdoc />
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableCommandAsyncCancelableFactory`1">
+            <summary>
+            Cancellable parametrized async command that supports CancellationToken and switch-cancellation.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandAsyncCancelableFactory`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{`0,System.Threading.CancellationToken,System.Threading.Tasks.Task},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel)">
+            <summary>
+            Cancellable parametrized async command that supports CancellationToken and switch-cancellation.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandAsyncCancelableFactory`1.ExecuteAsync(`0,System.Nullable{System.Threading.CancellationToken})">
+            <inheritdoc />
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandAsyncCancelableFactory`1.ExecuteAsync(`0)">
+            <inheritdoc />
+        </member>
+        <member name="P:RxBlazorV2.Model.ObservableCommandAsyncCancelableFactory`1.CanExecute">
+            <inheritdoc />
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableModel">
+            <summary>
+            Abstract base class for all reactive models, providing observable state management using R3.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.Model.ObservableModel.ModelID">
+            <summary>
+            Gets the unique identifier for this model, used in property change notifications.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableModel.FilterUsedProperties(System.String[])">
+            <summary>
+            Returns true if any of the specified property names are used by this model's subscribers.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.Model.ObservableModel.Observable">
+            <summary>
+            Gets the observable stream of property change notifications, emitting arrays of changed property names.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.Model.ObservableModel.Subscriptions">
+            <summary>
+            Gets the composite disposable that manages all reactive subscriptions for this model.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.Model.ObservableModel.Initialized">
+            <summary>
+            Gets a value indicating whether both sync and async context initialization have completed.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.Model.ObservableModel.PropertyChangedSubject">
+            <summary>
+            Gets the subject used to publish property change notifications.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableModel.#ctor">
+            <summary>
+            Initializes the observable stream and subscription container.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableModel.ContextReady">
+            <summary>
+            Performs synchronous initialization, ensuring it runs only once.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableModel.ContextReadyAsync">
+            <summary>
+            Performs asynchronous initialization with thread-safe locking, ensuring it runs only once.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableModel.OnContextReadyIntern">
+            <summary>
+            Called during synchronous initialization for generated code setup; override in generated code only.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableModel.OnContextReady">
+            <summary>
+            Called during synchronous initialization; override to perform custom setup logic.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableModel.OnContextReadyInternAsync">
+            <summary>
+            Called during asynchronous initialization for generated code setup; override in generated code only.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableModel.OnContextReadyAsync">
+            <summary>
+            Called during asynchronous initialization; override to perform custom async setup logic.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableModel.StateHasChanged(System.String,System.String[])">
+            <summary>
+            Notifies subscribers that a single property has changed.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableModel.StateHasChanged(System.String[],System.String[])">
+            <summary>
+            Notifies subscribers that one or more properties have changed, respecting active suspensions.
             </summary>
         </member>
         <member name="M:RxBlazorV2.Model.ObservableModel.SuspendNotifications(System.String[])">
@@ -1230,10 +1626,271 @@
              <returns>IDisposable that fires batched notifications when disposed.</returns>
              <exception cref="T:System.InvalidOperationException">Thrown when a suspension is already active.</exception>
         </member>
+        <member name="M:RxBlazorV2.Model.ObservableModel.IsFirstCommandInSuspension">
+            <summary>
+            Returns true if this is the first command execution within the current suspension scope.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableModel.AbortCurrentSuspension">
+            <summary>
+            Marks the current notification suspension as aborted, preventing batched notifications on dispose.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableModel.IsSuspensionAborted">
+            <summary>
+            Returns true if the current notification suspension has been aborted.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableModel.NotificationSuspender">
+            <summary>
+            Manages a notification suspension scope, batching property changes until disposed.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableModel.Dispose">
+            <summary>
+            Disposes subscriptions and the property changed subject.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableModel.Dispose(System.Boolean)">
+            <summary>
+            Releases managed resources when disposing is true.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableCommandR`1">
+            <summary>
+            Abstract base class for synchronous observable commands that return a value of type <typeparamref name="T"/>.
+            </summary>
+            <typeparam name="T">The return type of the command.</typeparam>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandR`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel)">
+            <summary>
+            Abstract base class for synchronous observable commands that return a value of type <typeparamref name="T"/>.
+            </summary>
+            <typeparam name="T">The return type of the command.</typeparam>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandR`1.Execute">
+            <summary>
+            Executes the command and returns the result.
+            </summary>
+            <returns>The result of the command execution, or default if execution fails.</returns>
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableCommandRFactory`1">
+            <summary>
+            Concrete synchronous observable command that returns a value of type <typeparamref name="T"/>, backed by a delegate.
+            </summary>
+            <typeparam name="T">The return type of the command.</typeparam>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandRFactory`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{`0},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel)">
+            <summary>
+            Concrete synchronous observable command that returns a value of type <typeparamref name="T"/>, backed by a delegate.
+            </summary>
+            <typeparam name="T">The return type of the command.</typeparam>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandRFactory`1.Execute">
+            <inheritdoc />
+        </member>
+        <member name="P:RxBlazorV2.Model.ObservableCommandRFactory`1.CanExecute">
+            <inheritdoc />
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableCommandR`2">
+            <summary>
+            Abstract base class for synchronous observable commands that accept a parameter of type <typeparamref name="T1"/> and return a value of type <typeparamref name="T2"/>.
+            </summary>
+            <typeparam name="T1">The parameter type of the command.</typeparam>
+            <typeparam name="T2">The return type of the command.</typeparam>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandR`2.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel)">
+            <summary>
+            Abstract base class for synchronous observable commands that accept a parameter of type <typeparamref name="T1"/> and return a value of type <typeparamref name="T2"/>.
+            </summary>
+            <typeparam name="T1">The parameter type of the command.</typeparam>
+            <typeparam name="T2">The return type of the command.</typeparam>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandR`2.Execute(`0)">
+            <summary>
+            Executes the command with the specified parameter and returns the result.
+            </summary>
+            <param name="parameter">The input parameter for the command.</param>
+            <returns>The result of the command execution, or default if execution fails.</returns>
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableCommandRFactory`2">
+            <summary>
+            Concrete synchronous observable command that accepts a parameter of type <typeparamref name="T1"/> and returns a value of type <typeparamref name="T2"/>, backed by a delegate.
+            </summary>
+            <typeparam name="T1">The parameter type of the command.</typeparam>
+            <typeparam name="T2">The return type of the command.</typeparam>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandRFactory`2.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{`0,`1},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel)">
+            <summary>
+            Concrete synchronous observable command that accepts a parameter of type <typeparamref name="T1"/> and returns a value of type <typeparamref name="T2"/>, backed by a delegate.
+            </summary>
+            <typeparam name="T1">The parameter type of the command.</typeparam>
+            <typeparam name="T2">The return type of the command.</typeparam>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandRFactory`2.Execute(`0)">
+            <inheritdoc />
+        </member>
+        <member name="P:RxBlazorV2.Model.ObservableCommandRFactory`2.CanExecute">
+            <inheritdoc />
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableCommandRAsync`1">
+            <summary>
+            Abstract base class for asynchronous observable commands that return a value of type <typeparamref name="T"/>.
+            </summary>
+            <typeparam name="T">The return type of the command.</typeparam>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandRAsync`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel)">
+            <summary>
+            Abstract base class for asynchronous observable commands that return a value of type <typeparamref name="T"/>.
+            </summary>
+            <typeparam name="T">The return type of the command.</typeparam>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandRAsync`1.ExecuteAsync(System.Nullable{System.Threading.CancellationToken})">
+            <summary>
+            Executes the command asynchronously with an optional external cancellation token and returns the result.
+            </summary>
+            <param name="externalCancellationToken">An optional external cancellation token.</param>
+            <returns>The result of the command execution, or default if execution fails.</returns>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandRAsync`1.ExecuteAsync">
+            <summary>
+            Executes the command asynchronously and returns the result.
+            </summary>
+            <returns>The result of the command execution, or default if execution fails.</returns>
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableCommandRAsyncFactory`1">
+            <summary>
+            Non-cancellable asynchronous observable command that returns a value of type <typeparamref name="T"/>, backed by a delegate.
+            </summary>
+            <typeparam name="T">The return type of the command.</typeparam>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandRAsyncFactory`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{System.Threading.Tasks.Task{`0}},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel)">
+            <summary>
+            Non-cancellable asynchronous observable command that returns a value of type <typeparamref name="T"/>, backed by a delegate.
+            </summary>
+            <typeparam name="T">The return type of the command.</typeparam>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandRAsyncFactory`1.ExecuteAsync(System.Nullable{System.Threading.CancellationToken})">
+            <inheritdoc />
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandRAsyncFactory`1.ExecuteAsync">
+            <inheritdoc />
+        </member>
+        <member name="P:RxBlazorV2.Model.ObservableCommandRAsyncFactory`1.CanExecute">
+            <inheritdoc />
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableCommandRAsyncCancelableFactory`1">
+            <summary>
+            Cancellable asynchronous observable command that returns a value of type <typeparamref name="T"/>, backed by a delegate that accepts a <see cref="T:System.Threading.CancellationToken"/>.
+            </summary>
+            <typeparam name="T">The return type of the command.</typeparam>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandRAsyncCancelableFactory`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{System.Threading.CancellationToken,System.Threading.Tasks.Task{`0}},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel)">
+            <summary>
+            Cancellable asynchronous observable command that returns a value of type <typeparamref name="T"/>, backed by a delegate that accepts a <see cref="T:System.Threading.CancellationToken"/>.
+            </summary>
+            <typeparam name="T">The return type of the command.</typeparam>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandRAsyncCancelableFactory`1.ExecuteAsync(System.Nullable{System.Threading.CancellationToken})">
+            <inheritdoc />
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandRAsyncCancelableFactory`1.ExecuteAsync">
+            <inheritdoc />
+        </member>
+        <member name="P:RxBlazorV2.Model.ObservableCommandRAsyncCancelableFactory`1.CanExecute">
+            <inheritdoc />
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableCommandRAsync`2">
+            <summary>
+            Abstract base class for asynchronous observable commands that accept a parameter of type <typeparamref name="T1"/> and return a value of type <typeparamref name="T2"/>.
+            </summary>
+            <typeparam name="T1">The parameter type of the command.</typeparam>
+            <typeparam name="T2">The return type of the command.</typeparam>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandRAsync`2.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel)">
+            <summary>
+            Abstract base class for asynchronous observable commands that accept a parameter of type <typeparamref name="T1"/> and return a value of type <typeparamref name="T2"/>.
+            </summary>
+            <typeparam name="T1">The parameter type of the command.</typeparam>
+            <typeparam name="T2">The return type of the command.</typeparam>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandRAsync`2.ExecuteAsync(`0,System.Nullable{System.Threading.CancellationToken})">
+            <summary>
+            Executes the command asynchronously with the specified parameter and an optional external cancellation token.
+            </summary>
+            <param name="parameter">The input parameter for the command.</param>
+            <param name="externalCancellationToken">An optional external cancellation token.</param>
+            <returns>The result of the command execution, or default if execution fails.</returns>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandRAsync`2.ExecuteAsync(`0)">
+            <summary>
+            Executes the command asynchronously with the specified parameter and returns the result.
+            </summary>
+            <param name="parameter">The input parameter for the command.</param>
+            <returns>The result of the command execution, or default if execution fails.</returns>
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableCommandRAsyncFactory`2">
+            <summary>
+            Non-cancellable asynchronous observable command that accepts a parameter of type <typeparamref name="T1"/> and returns a value of type <typeparamref name="T2"/>, backed by a delegate.
+            </summary>
+            <typeparam name="T1">The parameter type of the command.</typeparam>
+            <typeparam name="T2">The return type of the command.</typeparam>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandRAsyncFactory`2.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{`0,System.Threading.Tasks.Task{`1}},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel)">
+            <summary>
+            Non-cancellable asynchronous observable command that accepts a parameter of type <typeparamref name="T1"/> and returns a value of type <typeparamref name="T2"/>, backed by a delegate.
+            </summary>
+            <typeparam name="T1">The parameter type of the command.</typeparam>
+            <typeparam name="T2">The return type of the command.</typeparam>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandRAsyncFactory`2.ExecuteAsync(`0,System.Nullable{System.Threading.CancellationToken})">
+            <inheritdoc />
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandRAsyncFactory`2.ExecuteAsync(`0)">
+            <inheritdoc />
+        </member>
+        <member name="P:RxBlazorV2.Model.ObservableCommandRAsyncFactory`2.CanExecute">
+            <inheritdoc />
+        </member>
+        <member name="T:RxBlazorV2.Model.ObservableCommandRAsyncCancelableFactory`2">
+            <summary>
+            Cancellable asynchronous observable command that accepts a parameter of type <typeparamref name="T1"/> and returns a value of type <typeparamref name="T2"/>, backed by a delegate that accepts a <see cref="T:System.Threading.CancellationToken"/>.
+            </summary>
+            <typeparam name="T1">The parameter type of the command.</typeparam>
+            <typeparam name="T2">The return type of the command.</typeparam>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandRAsyncCancelableFactory`2.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{`0,System.Threading.CancellationToken,System.Threading.Tasks.Task{`1}},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel)">
+            <summary>
+            Cancellable asynchronous observable command that accepts a parameter of type <typeparamref name="T1"/> and returns a value of type <typeparamref name="T2"/>, backed by a delegate that accepts a <see cref="T:System.Threading.CancellationToken"/>.
+            </summary>
+            <typeparam name="T1">The parameter type of the command.</typeparam>
+            <typeparam name="T2">The return type of the command.</typeparam>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandRAsyncCancelableFactory`2.ExecuteAsync(`0,System.Nullable{System.Threading.CancellationToken})">
+            <inheritdoc />
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandRAsyncCancelableFactory`2.ExecuteAsync(`0)">
+            <inheritdoc />
+        </member>
+        <member name="P:RxBlazorV2.Model.ObservableCommandRAsyncCancelableFactory`2.CanExecute">
+            <inheritdoc />
+        </member>
         <member name="T:RxBlazorV2.Model.StatusSeverity">
             <summary>
             Status message severity levels.
             </summary>
+        </member>
+        <member name="F:RxBlazorV2.Model.StatusSeverity.Info">
+            <summary>Informational message.</summary>
+        </member>
+        <member name="F:RxBlazorV2.Model.StatusSeverity.Success">
+            <summary>Success message.</summary>
+        </member>
+        <member name="F:RxBlazorV2.Model.StatusSeverity.Warning">
+            <summary>Warning message.</summary>
+        </member>
+        <member name="F:RxBlazorV2.Model.StatusSeverity.Error">
+            <summary>Error message.</summary>
         </member>
         <member name="T:RxBlazorV2.Model.StatusMessageMode">
             <summary>
@@ -1416,9 +2073,80 @@
             The most recent message of any severity.
             </summary>
         </member>
+        <member name="T:RxBlazorV2.Component.ObservableComponent`1">
+            <summary>
+            Abstract base Blazor component that binds to a reactive model and manages its lifecycle.
+            </summary>
+            <typeparam name="TModel">The observable model type this component is bound to.</typeparam>
+        </member>
+        <member name="P:RxBlazorV2.Component.ObservableComponent`1.Subscriptions">
+            <summary>
+            Gets the composite disposable that manages all reactive subscriptions for this component.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.Component.ObservableComponent`1.Model">
+            <summary>
+            Gets the reactive model instance resolved from dependency injection.
+            </summary>
+        </member>
         <member name="P:RxBlazorV2.Component.ObservableComponent`1.Body">
             <summary>
-            Gets the content to be rendered inside the component
+            Gets or sets the content to be rendered inside the component.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Component.ObservableComponent`1.OnAfterRender(System.Boolean)">
+            <summary>
+            Initializes generated code and model context on first render.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Component.ObservableComponent`1.OnAfterRenderAsync(System.Boolean)">
+            <summary>
+            Performs async initialization of generated code and model context on first render.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Component.ObservableComponent`1.InitializeGeneratedCode">
+            <summary>
+            Called on first render to set up generated subscriptions and triggers; override in generated code only.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Component.ObservableComponent`1.InitializeGeneratedCodeAsync">
+            <summary>
+            Called on first render for async generated setup; override in generated code only.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Component.ObservableComponent`1.Filter">
+            <summary>
+            Returns property names this component subscribes to for selective re-rendering.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Component.ObservableComponent`1.OnContextReady">
+            <summary>
+            Called after first render; override to perform custom synchronous initialization.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Component.ObservableComponent`1.OnContextReadyAsync">
+            <summary>
+            Called after first render; override to perform custom asynchronous initialization.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Component.ObservableComponent`1.OnDispose">
+            <summary>
+            Called during disposal; override to perform custom synchronous cleanup.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Component.ObservableComponent`1.Dispose(System.Boolean)">
+            <summary>
+            Disposes component subscriptions and invokes custom cleanup via OnDispose.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Component.ObservableComponent`1.OnDisposeAsync">
+            <summary>
+            Called during async disposal; override to perform custom asynchronous cleanup.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Component.ObservableComponent`1.DisposeAsyncCore">
+            <summary>
+            Performs async disposal by invoking OnDisposeAsync and the base implementation.
             </summary>
         </member>
         <member name="T:RxBlazorV2.Interface.CancellationReason">
@@ -1441,9 +2169,124 @@
             Cancelled implicitly by Switch operation (new trigger fired).
             </summary>
         </member>
+        <member name="T:RxBlazorV2.Interface.IObservableCommandBase">
+            <summary>
+            Base interface for all observable commands providing execution guard and error tracking.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.Interface.IObservableCommandBase.CanExecute">
+            <summary>
+            Gets whether the command can currently execute.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.Interface.IObservableCommandBase.Error">
+            <summary>
+            Gets the last exception thrown during command execution, or null if none.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Interface.IObservableCommandBase.ResetError">
+            <summary>
+            Clears the current error state.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.Interface.IObservableCommandAsyncBase">
+            <summary>
+            Base interface for async observable commands with execution tracking and cancellation support.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.Interface.IObservableCommandAsyncBase.Executing">
+            <summary>
+            Gets whether the command is currently executing.
+            </summary>
+        </member>
         <member name="P:RxBlazorV2.Interface.IObservableCommandAsyncBase.LastCancellationReason">
             <summary>
             Reason for the last cancellation. Reset to NONE when command starts.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Interface.IObservableCommandAsyncBase.Cancel">
+            <summary>
+            Cancels the currently executing command.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.Interface.IObservableCommand">
+            <summary>
+            Synchronous observable command without parameters.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Interface.IObservableCommand.Execute">
+            <summary>
+            Executes the command.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.Interface.IObservableCommand`1">
+            <summary>
+            Synchronous observable command accepting a parameter of type <typeparamref name="T"/>.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Interface.IObservableCommand`1.Execute(`0)">
+            <summary>
+            Executes the command with the specified parameter.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.Interface.IObservableCommandR`1">
+            <summary>
+            Synchronous observable command returning a result of type <typeparamref name="T"/>.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Interface.IObservableCommandR`1.Execute">
+            <summary>
+            Executes the command and returns the result.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.Interface.IObservableCommandR`2">
+            <summary>
+            Synchronous observable command accepting a parameter of type <typeparamref name="T1"/> and returning a result of type <typeparamref name="T2"/>.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Interface.IObservableCommandR`2.Execute(`0)">
+            <summary>
+            Executes the command with the specified parameter and returns the result.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.Interface.IObservableCommandAsync">
+            <summary>
+            Asynchronous observable command without parameters.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Interface.IObservableCommandAsync.ExecuteAsync">
+            <summary>
+            Executes the command asynchronously.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.Interface.IObservableCommandAsync`1">
+            <summary>
+            Asynchronous observable command accepting a parameter of type <typeparamref name="T"/>.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Interface.IObservableCommandAsync`1.ExecuteAsync(`0)">
+            <summary>
+            Executes the command asynchronously with the specified parameter.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.Interface.IObservableCommandRAsync`1">
+            <summary>
+            Asynchronous observable command returning a result of type <typeparamref name="T"/>.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Interface.IObservableCommandRAsync`1.ExecuteAsync">
+            <summary>
+            Executes the command asynchronously and returns the result.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.Interface.IObservableCommandRAsync`2">
+            <summary>
+            Asynchronous observable command accepting a parameter of type <typeparamref name="T1"/> and returning a result of type <typeparamref name="T2"/>.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.Interface.IObservableCommandRAsync`2.ExecuteAsync(`0)">
+            <summary>
+            Executes the command asynchronously with the specified parameter and returns the result.
             </summary>
         </member>
         <member name="T:RxBlazorV2.Interface.IObservableModel">

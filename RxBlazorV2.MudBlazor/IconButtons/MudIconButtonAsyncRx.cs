@@ -46,12 +46,14 @@ public class MudIconButtonAsyncRx : MudIconButton
     private Color _originalColor;
     private bool _initialized;
 
+    /// <inheritdoc />
     protected override void OnInitialized()
     {
         _initialized = true;
         base.OnInitialized();
     }
 
+    /// <inheritdoc />
     protected override void OnParametersSet()
     {
         if (string.IsNullOrEmpty(Icon))
@@ -151,12 +153,14 @@ public class MudIconButtonAsyncRxOf<T> : MudIconButton
     private Color _originalColor;
     private bool _initialized;
 
+    /// <inheritdoc />
     protected override void OnInitialized()
     {
         _initialized = true;
         base.OnInitialized();
     }
 
+    /// <inheritdoc />
     protected override void OnParametersSet()
     {
         if (string.IsNullOrEmpty(Icon))

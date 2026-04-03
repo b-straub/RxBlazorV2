@@ -11,8 +11,8 @@ USER_SKILLS="$HOME/.claude/skills"
 
 # Build both projects to generate XML docs
 echo "Building projects..."
-dotnet build "$SCRIPT_DIR/RxBlazorV2/RxBlazorV2.csproj" -c Debug -q
-dotnet build "$SCRIPT_DIR/RxBlazorV2.MudBlazor/RxBlazorV2.MudBlazor.csproj" -c Debug -q
+dotnet build "$SCRIPT_DIR/RxBlazorV2/RxBlazorV2.csproj" -c Debug --verbosity minimal
+dotnet build "$SCRIPT_DIR/RxBlazorV2.MudBlazor/RxBlazorV2.MudBlazor.csproj" -c Debug --verbosity minimal
 
 # Copy XML doc files into repo
 echo "Updating API docs in repo..."

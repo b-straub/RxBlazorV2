@@ -36,6 +36,12 @@
             Whether to show a progress spinner during execution.
             </summary>
         </member>
+        <member name="M:RxBlazorV2.MudBlazor.Buttons.MudButtonAsyncRx.OnInitialized">
+            <inheritdoc />
+        </member>
+        <member name="M:RxBlazorV2.MudBlazor.Buttons.MudButtonAsyncRx.OnParametersSet">
+            <inheritdoc />
+        </member>
         <member name="T:RxBlazorV2.MudBlazor.Buttons.MudButtonAsyncRxOf`1">
             <summary>
             A MudButton that binds to a parameterized IObservableCommandAsync with progress and cancellation support.
@@ -74,6 +80,12 @@
             Whether to show a progress spinner during execution.
             </summary>
         </member>
+        <member name="M:RxBlazorV2.MudBlazor.Buttons.MudButtonAsyncRxOf`1.OnInitialized">
+            <inheritdoc />
+        </member>
+        <member name="M:RxBlazorV2.MudBlazor.Buttons.MudButtonAsyncRxOf`1.OnParametersSet">
+            <inheritdoc />
+        </member>
         <member name="T:RxBlazorV2.MudBlazor.Buttons.MudButtonRx">
             <summary>
             A MudButton that binds to an IObservableCommand.
@@ -89,6 +101,9 @@
             Optional confirmation function called before execution.
             Return true to proceed, false to cancel.
             </summary>
+        </member>
+        <member name="M:RxBlazorV2.MudBlazor.Buttons.MudButtonRx.OnParametersSet">
+            <inheritdoc />
         </member>
         <member name="T:RxBlazorV2.MudBlazor.Buttons.MudButtonRxOf`1">
             <summary>
@@ -112,11 +127,17 @@
             Return true to proceed, false to cancel.
             </summary>
         </member>
+        <member name="M:RxBlazorV2.MudBlazor.Buttons.MudButtonRxOf`1.OnParametersSet">
+            <inheritdoc />
+        </member>
         <member name="T:RxBlazorV2.MudBlazor.Components.StatusModel">
             <summary>
             Concrete singleton StatusModel for MudBlazor applications.
             Inherits Messages, status methods, and component triggers from the abstract base.
             </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.Components.StatusModel.Messages">
+            <inheritdoc />
         </member>
         <member name="M:RxBlazorV2.MudBlazor.Components.Razor.StatusDisplay.Filter">
             <summary>
@@ -189,9 +210,49 @@
             Specifies the type of button component for rendering logic.
             </summary>
         </member>
+        <member name="F:RxBlazorV2.MudBlazor.ButtonType.DEFAULT">
+            <summary>
+            Standard button with text content.
+            </summary>
+        </member>
+        <member name="F:RxBlazorV2.MudBlazor.ButtonType.ICON">
+            <summary>
+            Icon-only button without text.
+            </summary>
+        </member>
+        <member name="F:RxBlazorV2.MudBlazor.ButtonType.FAB">
+            <summary>
+            Floating action button.
+            </summary>
+        </member>
         <member name="T:RxBlazorV2.MudBlazor.IconVariant">
             <summary>
             Specifies the MudBlazor icon variant style.
+            </summary>
+        </member>
+        <member name="F:RxBlazorV2.MudBlazor.IconVariant.FILLED">
+            <summary>
+            Filled icon style.
+            </summary>
+        </member>
+        <member name="F:RxBlazorV2.MudBlazor.IconVariant.OUTLINED">
+            <summary>
+            Outlined icon style.
+            </summary>
+        </member>
+        <member name="F:RxBlazorV2.MudBlazor.IconVariant.ROUNDED">
+            <summary>
+            Rounded icon style.
+            </summary>
+        </member>
+        <member name="F:RxBlazorV2.MudBlazor.IconVariant.SHARP">
+            <summary>
+            Sharp icon style.
+            </summary>
+        </member>
+        <member name="F:RxBlazorV2.MudBlazor.IconVariant.TWO_TONE">
+            <summary>
+            Two-tone icon style.
             </summary>
         </member>
         <member name="T:RxBlazorV2.MudBlazor.StatusDisplayMode">
@@ -264,6 +325,12 @@
             Whether to show a progress icon during execution.
             </summary>
         </member>
+        <member name="M:RxBlazorV2.MudBlazor.FabButtons.MudFabAsyncRx.OnInitialized">
+            <inheritdoc />
+        </member>
+        <member name="M:RxBlazorV2.MudBlazor.FabButtons.MudFabAsyncRx.OnParametersSet">
+            <inheritdoc />
+        </member>
         <member name="T:RxBlazorV2.MudBlazor.FabButtons.MudFabAsyncRxOf`1">
             <summary>
             A MudFab that binds to a parameterized IObservableCommandAsync with progress icon support.
@@ -306,6 +373,12 @@
             Whether to show a progress icon during execution.
             </summary>
         </member>
+        <member name="M:RxBlazorV2.MudBlazor.FabButtons.MudFabAsyncRxOf`1.OnInitialized">
+            <inheritdoc />
+        </member>
+        <member name="M:RxBlazorV2.MudBlazor.FabButtons.MudFabAsyncRxOf`1.OnParametersSet">
+            <inheritdoc />
+        </member>
         <member name="T:RxBlazorV2.MudBlazor.FabButtons.MudFabRx">
             <summary>
             A MudFab that binds to an IObservableCommand.
@@ -321,6 +394,9 @@
             Optional confirmation function called before execution.
             Return true to proceed, false to cancel.
             </summary>
+        </member>
+        <member name="M:RxBlazorV2.MudBlazor.FabButtons.MudFabRx.OnParametersSet">
+            <inheritdoc />
         </member>
         <member name="T:RxBlazorV2.MudBlazor.FabButtons.MudFabRxOf`1">
             <summary>
@@ -343,6 +419,9 @@
             Optional confirmation function called before execution.
             Return true to proceed, false to cancel.
             </summary>
+        </member>
+        <member name="M:RxBlazorV2.MudBlazor.FabButtons.MudFabRxOf`1.OnParametersSet">
+            <inheritdoc />
         </member>
         <member name="T:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonAsyncRx">
             <summary>
@@ -374,6 +453,12 @@
             <summary>
             Whether to show a progress icon during execution.
             </summary>
+        </member>
+        <member name="M:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonAsyncRx.OnInitialized">
+            <inheritdoc />
+        </member>
+        <member name="M:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonAsyncRx.OnParametersSet">
+            <inheritdoc />
         </member>
         <member name="T:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonAsyncRxOf`1">
             <summary>
@@ -412,6 +497,12 @@
             Whether to show a progress icon during execution.
             </summary>
         </member>
+        <member name="M:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonAsyncRxOf`1.OnInitialized">
+            <inheritdoc />
+        </member>
+        <member name="M:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonAsyncRxOf`1.OnParametersSet">
+            <inheritdoc />
+        </member>
         <member name="T:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonRx">
             <summary>
             A MudIconButton that binds to an IObservableCommand.
@@ -427,6 +518,9 @@
             Optional confirmation function called before execution.
             Return true to proceed, false to cancel.
             </summary>
+        </member>
+        <member name="M:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonRx.OnParametersSet">
+            <inheritdoc />
         </member>
         <member name="T:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonRxOf`1">
             <summary>
@@ -450,6 +544,9 @@
             Return true to proceed, false to cancel.
             </summary>
         </member>
+        <member name="M:RxBlazorV2.MudBlazor.IconButtons.MudIconButtonRxOf`1.OnParametersSet">
+            <inheritdoc />
+        </member>
         <member name="T:RxBlazorV2.MudBlazor.Internal.ButtonRenderHelper">
             <summary>
             Helper class for rendering progress and cancel content in buttons.
@@ -463,6 +560,21 @@
         <member name="M:RxBlazorV2.MudBlazor.Internal.ButtonRenderHelper.RenderCancel(Microsoft.AspNetCore.Components.RenderFragment,System.String,System.Boolean)">
             <summary>
             Renders cancel content with optional progress spinner and text.
+            </summary>
+        </member>
+        <member name="T:RxBlazorV2.MudBlazor.Internal.IconExtensions">
+            <summary>
+            Extension methods for resolving MudBlazor icons based on the selected icon variant.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.MudBlazor.Internal.IconExtensions.GetCancelIcon(System.Nullable{RxBlazorV2.MudBlazor.IconVariant})">
+            <summary>
+            Returns the cancel icon matching the specified variant style.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.MudBlazor.Internal.IconExtensions.GetProgressIcon(System.Nullable{RxBlazorV2.MudBlazor.IconVariant})">
+            <summary>
+            Returns the progress/refresh icon matching the specified variant style.
             </summary>
         </member>
     </members>

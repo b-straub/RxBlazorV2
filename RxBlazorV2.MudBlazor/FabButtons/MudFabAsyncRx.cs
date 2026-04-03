@@ -54,6 +54,7 @@ public class MudFabAsyncRx : MudFab
     private Color _originalColor;
     private bool _initialized;
 
+    /// <inheritdoc />
     protected override void OnInitialized()
     {
         _originalStartIcon = StartIcon;
@@ -64,6 +65,7 @@ public class MudFabAsyncRx : MudFab
         base.OnInitialized();
     }
 
+    /// <inheritdoc />
     protected override void OnParametersSet()
     {
         if (!_initialized)
@@ -181,6 +183,7 @@ public class MudFabAsyncRxOf<T> : MudFab
     private Color _originalColor;
     private bool _initialized;
 
+    /// <inheritdoc />
     protected override void OnInitialized()
     {
         _originalStartIcon = StartIcon;
@@ -191,6 +194,7 @@ public class MudFabAsyncRxOf<T> : MudFab
         base.OnInitialized();
     }
 
+    /// <inheritdoc />
     protected override void OnParametersSet()
     {
         if (!_initialized)

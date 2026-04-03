@@ -3,9 +3,19 @@ using RxBlazorV2.Interface;
 
 namespace RxBlazorV2.Model;
 
+/// <summary>
+/// Abstract base class for all reactive models, providing observable state management using R3.
+/// </summary>
 public abstract class ObservableModel : IObservableModel
 {
+    /// <summary>
+    /// Gets the unique identifier for this model, used in property change notifications.
+    /// </summary>
     public abstract string ModelID { get; }
+
+    /// <summary>
+    /// Returns true if any of the specified property names are used by this model's subscribers.
+    /// </summary>
     public abstract bool FilterUsedProperties(params string[] propertyNames);
     
     private bool _initialized;
@@ -17,12 +27,29 @@ public abstract class ObservableModel : IObservableModel
     private NotificationSuspender? _currentSuspender;
     private readonly HashSet<string> _suspendedBatchIds = new();
 
+    /// <summary>
+    /// Gets the observable stream of property change notifications, emitting arrays of changed property names.
+    /// </summary>
     public Observable<string[]> Observable { get; }
+
+    /// <summary>
+    /// Gets the composite disposable that manages all reactive subscriptions for this model.
+    /// </summary>
     public CompositeDisposable Subscriptions { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether both sync and async context initialization have completed.
+    /// </summary>
     public bool Initialized => _initialized && _initializedAsync;
-    
+
+    /// <summary>
+    /// Gets the subject used to publish property change notifications.
+    /// </summary>
     protected internal Subject<string[]> PropertyChangedSubject { get; } = new();
 
+    /// <summary>
+    /// Initializes the observable stream and subscription container.
+    /// </summary>
     protected ObservableModel()
     {
         Observable = PropertyChangedSubject
@@ -32,6 +59,9 @@ public abstract class ObservableModel : IObservableModel
         Subscriptions = new CompositeDisposable();
     }
 
+    /// <summary>
+    /// Performs synchronous initialization, ensuring it runs only once.
+    /// </summary>
     public void ContextReady()
     {
         if (!_initialized)
@@ -42,6 +72,9 @@ public abstract class ObservableModel : IObservableModel
         }
     }
     
+    /// <summary>
+    /// Performs asynchronous initialization with thread-safe locking, ensuring it runs only once.
+    /// </summary>
     public async Task ContextReadyAsync()
     {
         await _contextReadyAsyncLock.WaitAsync();
@@ -60,29 +93,47 @@ public abstract class ObservableModel : IObservableModel
         }
     }
     
+    /// <summary>
+    /// Called during synchronous initialization for generated code setup; override in generated code only.
+    /// </summary>
     protected virtual void OnContextReadyIntern()
     {
     }
-    
+
+    /// <summary>
+    /// Called during synchronous initialization; override to perform custom setup logic.
+    /// </summary>
     protected virtual void OnContextReady()
     {
     }
-    
+
+    /// <summary>
+    /// Called during asynchronous initialization for generated code setup; override in generated code only.
+    /// </summary>
     protected virtual Task OnContextReadyInternAsync()
     {
         return Task.CompletedTask;
     }
-    
+
+    /// <summary>
+    /// Called during asynchronous initialization; override to perform custom async setup logic.
+    /// </summary>
     protected virtual Task OnContextReadyAsync()
     {
         return Task.CompletedTask;
     }
     
+    /// <summary>
+    /// Notifies subscribers that a single property has changed.
+    /// </summary>
     protected void StateHasChanged(string propertyName, params string[] batchIds)
     {
         StateHasChanged([propertyName], batchIds);
     }
 
+    /// <summary>
+    /// Notifies subscribers that one or more properties have changed, respecting active suspensions.
+    /// </summary>
     protected internal void StateHasChanged(string[] propertyNames, params string[] batchIds)
     {
         if (propertyNames.Length == 0)
@@ -162,6 +213,9 @@ public abstract class ObservableModel : IObservableModel
         }
     }
 
+    /// <summary>
+    /// Returns true if this is the first command execution within the current suspension scope.
+    /// </summary>
     internal bool IsFirstCommandInSuspension()
     {
         lock (_suspenderLock)
@@ -170,6 +224,9 @@ public abstract class ObservableModel : IObservableModel
         }
     }
 
+    /// <summary>
+    /// Marks the current notification suspension as aborted, preventing batched notifications on dispose.
+    /// </summary>
     internal void AbortCurrentSuspension()
     {
         lock (_suspenderLock)
@@ -178,6 +235,9 @@ public abstract class ObservableModel : IObservableModel
         }
     }
 
+    /// <summary>
+    /// Returns true if the current notification suspension has been aborted.
+    /// </summary>
     internal bool IsSuspensionAborted()
     {
         lock (_suspenderLock)
@@ -186,6 +246,9 @@ public abstract class ObservableModel : IObservableModel
         }
     }
 
+    /// <summary>
+    /// Manages a notification suspension scope, batching property changes until disposed.
+    /// </summary>
     private sealed class NotificationSuspender : IDisposable
     {
         private readonly ObservableModel _model;
@@ -241,12 +304,18 @@ public abstract class ObservableModel : IObservableModel
         }
     }
     
+    /// <summary>
+    /// Disposes subscriptions and the property changed subject.
+    /// </summary>
     public void Dispose()
     {
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
     }
 
+    /// <summary>
+    /// Releases managed resources when disposing is true.
+    /// </summary>
     protected virtual void Dispose(bool disposing)
     {
         if (disposing)

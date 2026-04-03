@@ -20,5 +20,7 @@ public partial class StatusModel : StatusBaseModel
     // - AddInfo, AddSuccess, AddWarning, AddError methods
     // - HasErrors, HasWarnings, ErrorCount computed properties
     // - ClearMessages()
+
+    /// <inheritdoc />
     public override ObservableList<StatusMessage> Messages { get; } = [];
 }

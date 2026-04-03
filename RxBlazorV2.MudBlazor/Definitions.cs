@@ -5,8 +5,19 @@ namespace RxBlazorV2.MudBlazor;
 /// </summary>
 public enum ButtonType
 {
+    /// <summary>
+    /// Standard button with text content.
+    /// </summary>
     DEFAULT,
+
+    /// <summary>
+    /// Icon-only button without text.
+    /// </summary>
     ICON,
+
+    /// <summary>
+    /// Floating action button.
+    /// </summary>
     FAB
 }
 
@@ -15,10 +26,29 @@ public enum ButtonType
 /// </summary>
 public enum IconVariant
 {
+    /// <summary>
+    /// Filled icon style.
+    /// </summary>
     FILLED,
+
+    /// <summary>
+    /// Outlined icon style.
+    /// </summary>
     OUTLINED,
+
+    /// <summary>
+    /// Rounded icon style.
+    /// </summary>
     ROUNDED,
+
+    /// <summary>
+    /// Sharp icon style.
+    /// </summary>
     SHARP,
+
+    /// <summary>
+    /// Two-tone icon style.
+    /// </summary>
     TWO_TONE
 }
 

@@ -50,7 +50,7 @@ namespace RxBlazorV2.Model;
 /// <list type="bullet">
 /// <item><see cref="ObservableTriggerAttribute"/> - For sync method triggers</item>
 /// <item><see cref="ObservableTriggerAsyncAttribute{T}"/> - For parametrized async triggers</item>
-/// <item><see cref="ObservableCallbackTriggerAsyncAttribute"/> - For external service subscriptions</item>
+/// <item><see cref="ObservableModelObserverAttribute"/> - For external service subscriptions</item>
 /// </list>
 /// </remarks>
 

@@ -23,6 +23,7 @@ public class MudIconButtonRx : MudIconButton
     [Parameter]
     public Func<Task<bool>>? ConfirmExecutionAsync { get; set; }
 
+    /// <inheritdoc />
     protected override void OnParametersSet()
     {
         if (string.IsNullOrEmpty(Icon))
@@ -72,6 +73,7 @@ public class MudIconButtonRxOf<T> : MudIconButton
     [Parameter]
     public Func<Task<bool>>? ConfirmExecutionAsync { get; set; }
 
+    /// <inheritdoc />
     protected override void OnParametersSet()
     {
         if (string.IsNullOrEmpty(Icon))

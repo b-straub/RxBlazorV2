@@ -2,6 +2,10 @@ using RxBlazorV2.Interface;
 
 namespace RxBlazorV2.Model;
 
+/// <summary>
+/// Abstract base class for synchronous observable commands that return a value of type <typeparamref name="T"/>.
+/// </summary>
+/// <typeparam name="T">The return type of the command.</typeparam>
 public abstract class ObservableCommandR<T>(
     ObservableModel model,
     string[] observedProperties,
@@ -10,9 +14,17 @@ public abstract class ObservableCommandR<T>(
     StatusBaseModel? statusModel = null)
     : ObservableCommandBase(model, observedProperties, commandName, methodName, statusModel), IObservableCommandR<T>
 {
+    /// <summary>
+    /// Executes the command and returns the result.
+    /// </summary>
+    /// <returns>The result of the command execution, or default if execution fails.</returns>
     public abstract T? Execute();
 }
 
+/// <summary>
+/// Concrete synchronous observable command that returns a value of type <typeparamref name="T"/>, backed by a delegate.
+/// </summary>
+/// <typeparam name="T">The return type of the command.</typeparam>
 public class ObservableCommandRFactory<T>(
     ObservableModel model,
     string[] observedProperties,
@@ -26,6 +38,7 @@ public class ObservableCommandRFactory<T>(
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;
 
+    /// <inheritdoc />
     public override T? Execute()
     {
         T? result = default;
@@ -44,9 +57,15 @@ public class ObservableCommandRFactory<T>(
         return result;
     }
 
+    /// <inheritdoc />
     public override bool CanExecute => canExecute?.Invoke() ?? true;
 }
 
+/// <summary>
+/// Abstract base class for synchronous observable commands that accept a parameter of type <typeparamref name="T1"/> and return a value of type <typeparamref name="T2"/>.
+/// </summary>
+/// <typeparam name="T1">The parameter type of the command.</typeparam>
+/// <typeparam name="T2">The return type of the command.</typeparam>
 public abstract class ObservableCommandR<T1, T2>(
     ObservableModel model,
     string[] observedProperties,
@@ -55,9 +74,19 @@ public abstract class ObservableCommandR<T1, T2>(
     StatusBaseModel? statusModel = null)
     : ObservableCommandBase(model, observedProperties, commandName, methodName, statusModel), IObservableCommandR<T1, T2>
 {
+    /// <summary>
+    /// Executes the command with the specified parameter and returns the result.
+    /// </summary>
+    /// <param name="parameter">The input parameter for the command.</param>
+    /// <returns>The result of the command execution, or default if execution fails.</returns>
     public abstract T2? Execute(T1 parameter);
 }
 
+/// <summary>
+/// Concrete synchronous observable command that accepts a parameter of type <typeparamref name="T1"/> and returns a value of type <typeparamref name="T2"/>, backed by a delegate.
+/// </summary>
+/// <typeparam name="T1">The parameter type of the command.</typeparam>
+/// <typeparam name="T2">The return type of the command.</typeparam>
 public class ObservableCommandRFactory<T1, T2>(
     ObservableModel model,
     string[] observedProperties,
@@ -71,6 +100,7 @@ public class ObservableCommandRFactory<T1, T2>(
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;
 
+    /// <inheritdoc />
     public override T2? Execute(T1 parameter)
     {
         T2? result = default;
@@ -89,5 +119,6 @@ public class ObservableCommandRFactory<T1, T2>(
         return result;
     }
 
+    /// <inheritdoc />
     public override bool CanExecute => canExecute?.Invoke() ?? true;
 }
