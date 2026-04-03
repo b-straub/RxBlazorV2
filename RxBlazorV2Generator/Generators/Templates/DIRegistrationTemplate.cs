@@ -17,6 +17,7 @@ public static class DIRegistrationTemplate
     public static string GenerateAddObservableModelsExtension(ObservableModelInfo[] models, string rootNamespace)
     {
         var sb = new StringBuilder();
+        sb.AppendLine("#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member");
 
         // Generate using statements
         sb.AppendLine("using Microsoft.Extensions.DependencyInjection;");
@@ -88,6 +89,7 @@ public static class DIRegistrationTemplate
     public static string GenerateAddGenericObservableModelsExtension(ObservableModelInfo[] models, string rootNamespace)
     {
         var sb = new StringBuilder();
+        sb.AppendLine("#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member");
 
         // Generate using statements
         sb.AppendLine("using Microsoft.Extensions.DependencyInjection;");

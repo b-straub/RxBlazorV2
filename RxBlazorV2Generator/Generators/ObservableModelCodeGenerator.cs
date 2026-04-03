@@ -15,6 +15,7 @@ public static class ObservableModelCodeGenerator
         try
         {
             var sb = new StringBuilder();
+            sb.AppendLine("#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member");
             sb.AppendLine("#nullable enable");
 
             // Add all using statements from the source file

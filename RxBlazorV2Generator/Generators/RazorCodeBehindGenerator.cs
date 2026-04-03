@@ -154,6 +154,7 @@ public static class RazorCodeBehindGenerator
 
             // Generate code-behind file
             var sb = new StringBuilder();
+            sb.AppendLine("#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member");
             var componentName = Path.GetFileNameWithoutExtension(razorFile.Path);
 
             // Extract namespace from razor file location

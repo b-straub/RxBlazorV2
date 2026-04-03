@@ -66,6 +66,8 @@ internal static class TestGeneratorExtensions
     {
         generated = generated.TrimStart();
         generated = generated.Replace("\r\n", Environment.NewLine);
+        // All generated code now starts with CS1591 pragma
+        generated = $"#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member{Environment.NewLine}" + generated;
         return generated;
     }
 }
@@ -243,8 +245,9 @@ public static partial class ObservableModels
         var serviceExtension = stringBuilder.ToString();
         serviceExtension = serviceExtension.TrimStart();
         serviceExtension = serviceExtension.Replace("\r\n", Environment.NewLine);
+        serviceExtension = $"#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member{Environment.NewLine}" + serviceExtension;
         serviceExtension += Environment.NewLine;
-        
+
         var serviceExtensionGeneric = $$"""
 
         using Microsoft.Extensions.DependencyInjection;
@@ -263,6 +266,7 @@ public static partial class ObservableModels
         """;
         serviceExtensionGeneric = serviceExtensionGeneric.TrimStart();
         serviceExtensionGeneric = serviceExtensionGeneric.Replace("\r\n", Environment.NewLine);
+        serviceExtensionGeneric = $"#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member{Environment.NewLine}" + serviceExtensionGeneric;
         serviceExtensionGeneric += Environment.NewLine;
         return constrains.Length > 0 ? serviceExtensionGeneric : serviceExtension;
     }
@@ -283,8 +287,9 @@ public static partial class ObservableModels
         """;
         serviceExtension = serviceExtension.TrimStart();
         serviceExtension = serviceExtension.Replace("\r\n", Environment.NewLine);
+        serviceExtension = $"#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member{Environment.NewLine}" + serviceExtension;
         serviceExtension += Environment.NewLine;
-        
+
         var stringBuilder = new StringBuilder();
         stringBuilder.Append($$"""
 
@@ -309,16 +314,17 @@ public static partial class ObservableModels
     }
 """);
         }
-        
+
         stringBuilder.Append("""
 
 
  }
  """);
-        
+
         var serviceExtensionGeneric = stringBuilder.ToString();
         serviceExtensionGeneric = serviceExtensionGeneric.TrimStart();
         serviceExtensionGeneric = serviceExtensionGeneric.Replace("\r\n", Environment.NewLine);
+        serviceExtensionGeneric = $"#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member{Environment.NewLine}" + serviceExtensionGeneric;
         serviceExtensionGeneric += Environment.NewLine;
         
         return constrains.Length > 0 ? serviceExtensionGeneric : serviceExtension;

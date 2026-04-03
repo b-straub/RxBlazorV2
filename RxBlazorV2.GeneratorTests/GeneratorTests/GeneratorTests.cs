@@ -277,11 +277,11 @@ public class GeneratorTests
 
         // Add each generated source file
         testRunner.TestState.GeneratedSources.Add((typeof(RxBlazorGenerator), "Test.BetaModel.g.cs",
-            SourceText.From(generatedBetaModel.TrimStart().Replace("\r\n", Environment.NewLine), Encoding.UTF8)));
+            SourceText.From(generatedBetaModel.NormalizeGeneratedCode(), Encoding.UTF8)));
         testRunner.TestState.GeneratedSources.Add((typeof(RxBlazorGenerator), "Test.ZetaModel.g.cs",
-            SourceText.From(generatedZetaModel.TrimStart().Replace("\r\n", Environment.NewLine), Encoding.UTF8)));
+            SourceText.From(generatedZetaModel.NormalizeGeneratedCode(), Encoding.UTF8)));
         testRunner.TestState.GeneratedSources.Add((typeof(RxBlazorGenerator), "Test.MainModel.g.cs",
-            SourceText.From(generatedMainModel.TrimStart().Replace("\r\n", Environment.NewLine), Encoding.UTF8)));
+            SourceText.From(generatedMainModel.NormalizeGeneratedCode(), Encoding.UTF8)));
 
         // Add service extension files
         string[] modelNames = ["BetaModel", "ZetaModel", "MainModel"];

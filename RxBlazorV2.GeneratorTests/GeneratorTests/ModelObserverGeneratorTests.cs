@@ -2878,7 +2878,7 @@ internal class MultiModelGeneratorTest : Microsoft.CodeAnalysis.CSharp.Testing.C
         foreach (var (fileName, content) in _expectedGenerated)
         {
             TestState.GeneratedSources.Add((typeof(RxBlazorV2Generator.RxBlazorGenerator), fileName,
-                Microsoft.CodeAnalysis.Text.SourceText.From(content.TrimStart().Replace("\r\n", Environment.NewLine), System.Text.Encoding.UTF8)));
+                Microsoft.CodeAnalysis.Text.SourceText.From(content.NormalizeGeneratedCode(), System.Text.Encoding.UTF8)));
         }
 
         // Add service extension files
@@ -2917,7 +2917,8 @@ public static partial class ObservableModels
     }
 }
 """;
-        return result.Replace("\r\n", Environment.NewLine) + Environment.NewLine;
+        result = result.Replace("\r\n", Environment.NewLine);
+        return $"#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member{Environment.NewLine}" + result + Environment.NewLine;
     }
 
     private string GenerateGenericServiceExtension()
@@ -2933,7 +2934,8 @@ public static partial class ObservableModels
 {
 }
 """;
-        return result.TrimStart().Replace("\r\n", Environment.NewLine) + Environment.NewLine;
+        result = result.TrimStart().Replace("\r\n", Environment.NewLine);
+        return $"#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member{Environment.NewLine}" + result + Environment.NewLine;
     }
 }
 

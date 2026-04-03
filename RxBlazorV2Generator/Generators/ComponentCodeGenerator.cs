@@ -13,6 +13,7 @@ public static class ComponentCodeGenerator
         try
         {
             var sb = new StringBuilder();
+            sb.AppendLine("#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member");
 
             // Using statements
             sb.AppendLine("using R3;");
