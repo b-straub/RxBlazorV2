@@ -203,6 +203,16 @@ public static class DiagnosticDescriptors
         description: "IObservableCommandR and IObservableCommandRAsync require execute methods that return the specified type. The return type of the execute method must match the generic type parameter.",
         helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG033.md");
 
+    public static readonly DiagnosticDescriptor AsyncTriggerMissingCancellationTokenWarning = new(
+        id: "RXBG034",
+        title: "Async trigger method should accept CancellationToken",
+        messageFormat: "Async trigger method '{0}' calls '{1}' which accepts CancellationToken, but '{0}' does not. Add a CancellationToken parameter so the generator can pass the subscription's cancellation token for proper disposal and switch cancellation.",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "Async trigger methods are called via SubscribeAwait which provides a CancellationToken for disposal and AwaitOperation.Switch cancellation. Methods that call cancellable APIs should accept CancellationToken to propagate it.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG034.md");
+
     // ============================================================================
     // RXBG040-RXBG049: Properties
     // ============================================================================
@@ -420,6 +430,7 @@ public static class DiagnosticDescriptors
         new(CircularTriggerReferenceError, DiagnosticReporter.Analyzer),
         new(CommandMethodReturnsValueError, DiagnosticReporter.Analyzer),
         new(CommandMethodMissingReturnValueError, DiagnosticReporter.Analyzer),
+        new(AsyncTriggerMissingCancellationTokenWarning, DiagnosticReporter.Analyzer),
 
         // RXBG040-049: Properties - mixed
         new(InvalidInitPropertyError, DiagnosticReporter.Analyzer),

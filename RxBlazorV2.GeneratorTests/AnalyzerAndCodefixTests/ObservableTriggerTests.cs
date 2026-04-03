@@ -411,6 +411,118 @@ public class ObservableTriggerTests
     }
 
     [Fact]
+    public async Task AsyncTriggerWithoutCt_BodyCallsCancellableMethod_WarningExpected()
+    {
+        // lang=csharp
+        var test = $$"""
+
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel : ObservableModel
+            {
+                [{|{{DiagnosticDescriptors.AsyncTriggerMissingCancellationTokenWarning.Id}}:ObservableTriggerAsync(nameof(ProcessAsync))|}]
+                public partial string Data { get; set; } = "";
+
+                private async Task ProcessAsync()
+                {
+                    await Task.Delay(100, CancellationToken.None);
+                }
+            }
+        }
+        """;
+        await AnalyzerVerifier.VerifyAnalyzerAsync(test);
+    }
+
+    [Fact]
+    public async Task AsyncTriggerWithoutCt_BodyCallsNonCancellableMethod_NoWarning()
+    {
+        // lang=csharp
+        var test = """
+
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel : ObservableModel
+            {
+                [ObservableTriggerAsync(nameof(ProcessAsync))]
+                public partial string Data { get; set; } = "";
+
+                private async Task ProcessAsync()
+                {
+                    await Task.Delay(100);
+                    Console.WriteLine($"Done: {Data}");
+                }
+            }
+        }
+        """;
+        await AnalyzerVerifier.VerifyAnalyzerAsync(test);
+    }
+
+    [Fact]
+    public async Task AsyncTriggerWithCt_BodyCallsCancellableMethod_NoWarning()
+    {
+        // lang=csharp
+        var test = """
+
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel : ObservableModel
+            {
+                [ObservableTriggerAsync(nameof(ProcessAsync))]
+                public partial string Data { get; set; } = "";
+
+                private async Task ProcessAsync(CancellationToken ct)
+                {
+                    await Task.Delay(100, ct);
+                    Console.WriteLine($"Done: {Data}");
+                }
+            }
+        }
+        """;
+        await AnalyzerVerifier.VerifyAnalyzerAsync(test);
+    }
+
+    [Fact]
+    public async Task InferredAsyncTriggerWithoutCt_BodyCallsCancellableMethod_WarningExpected()
+    {
+        // Using [ObservableTrigger] (not Async) but method name ends with Async
+        // and calls a cancellable method
+        // lang=csharp
+        var test = $$"""
+
+        using RxBlazorV2.Model;
+        using RxBlazorV2.Interface;
+
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Singleton)]
+            public partial class TestModel : ObservableModel
+            {
+                [{|{{DiagnosticDescriptors.AsyncTriggerMissingCancellationTokenWarning.Id}}:ObservableTrigger(nameof(SaveAsync))|}]
+                public partial string Data { get; set; } = "";
+
+                private async Task SaveAsync()
+                {
+                    await Task.Delay(300, CancellationToken.None);
+                }
+            }
+        }
+        """;
+        await AnalyzerVerifier.VerifyAnalyzerAsync(test);
+    }
+
+    [Fact]
     public async Task TriggersAndCommandsInSameModel_NoErrorsExpected()
     {
         // lang=csharp
