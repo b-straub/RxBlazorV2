@@ -36,6 +36,8 @@ Find all files containing reactive patterns:
 - `[ObservableModelObserver]` methods that call back to model (`model.Set*`, `model.Notify*`) — External observer orchestrating workflow. Use command pattern instead.
 - Local mutable fields in `*ModelComponent` — Private fields (`bool _isX`, `string _error`, `List<T> _items`) set in async methods inside a component that inherits from a generated `*ModelComponent`. These should be partial properties on a model with proper commands. The component is bypassing the reactive system entirely.
 - Manual `_isLoading`/`_isProcessing` booleans — Hand-rolled loading state (`IsLoading = true; try { ... } finally { IsLoading = false; }`) when `IObservableCommandAsync.Executing` provides this automatically. Use command binding and bind to `Command.Executing` in the UI.
+- Component hook that maps/transforms data into local fields — e.g., `OnProfileLoadedChanged()` that copies model data into a local `_formData` object. Move the data preparation into the model's command (after the async operation succeeds) and expose it as a model property. The component should only bind to `Model.FormData`, never construct its own copy.
+- Component hook that forwards to status model — e.g., `OnSuccessMessageChanged() { StatusModel.AddInfo(Model.SuccessMessage); }`. Use `[ObservableTrigger]` on the model property instead so the model handles its own side effects without a component middleman.
 
 **ARCHITECTURE (design issue):**
 - Model over 300 lines — Likely contains domain logic. Extract to services.

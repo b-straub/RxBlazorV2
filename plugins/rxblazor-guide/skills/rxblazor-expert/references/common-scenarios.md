@@ -204,3 +204,93 @@ private async Task SearchAsync(CancellationToken ct)
     Results = await SearchService.QueryAsync(SearchTerm, ct);
 }
 ```
+
+---
+
+## Scenario 7: Form Data in Model, Not Component
+
+**Problem**: Component hook copies loaded data into a local field for form binding.
+
+**Before** (form data in component):
+```csharp
+// Component
+private UserProfileData _formData = new();
+
+protected override void OnProfileLoadedChanged()
+{
+    if (Model.ProfileLoaded && Model.Profile is not null)
+    {
+        _formData = new UserProfileData
+        {
+            Username = Model.Profile.Username,
+            Email = Model.Profile.Email
+        };
+    }
+}
+```
+
+**After** (form data in model):
+```csharp
+// Model - prepare FormData inside the command
+public partial UserProfileData? FormData { get; set; }
+
+private async Task LoadProfileAsync(CancellationToken ct)
+{
+    var profile = await ProfileService.LoadAsync(ct);
+    if (profile is not null)
+    {
+        FormData = new UserProfileData
+        {
+            Username = profile.Username,
+            Email = profile.Email
+        };
+    }
+}
+```
+
+```razor
+@* Component - just binds, no hook needed *@
+@if (Model.FormData is not null)
+{
+    <EditForm Model="Model.FormData" OnValidSubmit="OnValidSubmitAsync">
+        <MudTextField @bind-Value="Model.FormData.Username" />
+    </EditForm>
+}
+```
+
+**Why**: The component hook was a middleman -- it received a notification, transformed data, and stored it locally. Moving the preparation into the command keeps the component as a pure view.
+
+---
+
+## Scenario 8: Status Forwarding via Trigger, Not Component Hook
+
+**Problem**: Component hook forwards model property to status service.
+
+**Before** (component middleman):
+```csharp
+// Component hook
+protected override void OnSuccessMessageChanged()
+{
+    if (Model.SuccessMessage is not null)
+    {
+        Model.StatusModel.AddInfo(Model.SuccessMessage);
+    }
+}
+```
+
+**After** (model trigger):
+```csharp
+// Model - handles its own side effects
+[ObservableTrigger(nameof(OnSuccessMessageChanged))]
+public partial string? SuccessMessage { get; set; }
+
+private void OnSuccessMessageChanged()
+{
+    if (SuccessMessage is not null)
+    {
+        StatusModel.AddInfo(SuccessMessage);
+    }
+}
+```
+
+**Why**: The component was just relaying -- the model already has access to `StatusModel` via DI. Use `[ObservableTrigger]` to keep side effects in the model layer.
