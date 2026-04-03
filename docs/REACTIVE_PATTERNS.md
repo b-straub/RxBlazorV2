@@ -132,18 +132,22 @@ private void ValidateEmail()
 }
 ```
 
-**Async Trigger with Guard:**
+**Async Trigger with Guard and CancellationToken:**
 ```csharp
 [ObservableTriggerAsync(nameof(AutoSaveAsync), nameof(CanAutoSave))]
 public partial string DocumentContent { get; set; } = "";
 
-private async Task AutoSaveAsync()
+private async Task AutoSaveAsync(CancellationToken ct)
 {
-    await _repository.SaveAsync(DocumentContent);
+    await _repository.SaveAsync(DocumentContent, ct);
 }
 
 private bool CanAutoSave() => !string.IsNullOrWhiteSpace(DocumentContent);
 ```
+
+> **CancellationToken best practice:** Always accept `CancellationToken` in async trigger methods.
+> The generator's `SubscribeAwait` provides a token that cancels on model disposal or when
+> `AwaitOperation.Switch` replaces an in-flight operation with a newer one.
 
 **Parametrized Trigger:**
 ```csharp
@@ -171,7 +175,7 @@ Subscriptions.Add(Observable.Where(p => p.Intersect(["Model.Email"]).Any())
 
 Subscriptions.Add(Observable.Where(p => p.Intersect(["Model.DocumentContent"]).Any())
     .Where(_ => CanAutoSave())
-    .SubscribeAwait(async (_, ct) => await AutoSaveAsync(), AwaitOperation.Switch));
+    .SubscribeAwait(async (_, ct) => await AutoSaveAsync(ct), AwaitOperation.Switch));
 ```
 
 **Valid Method Signatures:**

@@ -75,11 +75,10 @@
 @code {
     /// <summary>
     /// Called when format dropdown selection changes.
-    /// Updates the Settings property and triggers re-export.
+    /// Sets the format - internal observer in ShareModel handles re-export.
     /// </summary>
     private void OnFormatChanged(ExportFormat newFormat)
     {
         Model.Settings.PreferredExportFormat = newFormat;
-        _ = Model.PerformExportAsync(CancellationToken.None);
     }
 }

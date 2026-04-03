@@ -34,7 +34,7 @@ public partial class ShareModel : ObservableModel
     /// Whether the share dialog is open.
     /// When opened, triggers auto-export with current format.
     /// </summary>
-    [ObservableTrigger(nameof(AutoExportOnDialogOpen))]
+    [ObservableTriggerAsync(nameof(AutoExportOnDialogOpenAsync))]
     public partial bool IsDialogOpen { get; set; }
 
     /// <summary>

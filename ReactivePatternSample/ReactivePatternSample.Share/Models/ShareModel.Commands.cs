@@ -18,21 +18,27 @@ public partial class ShareModel
     /// <summary>
     /// Trigger method for auto-export when dialog opens.
     /// Only exports if dialog is being opened (not closed).
-    /// Uses fire-and-forget pattern since trigger is sync.
     /// </summary>
-    private void AutoExportOnDialogOpen()
+    private async Task AutoExportOnDialogOpenAsync(CancellationToken ct)
     {
         if (IsDialogOpen)
         {
-            _ = PerformExportAsync(CancellationToken.None);
+            await PerformExportAsync(ct);
         }
     }
 
     /// <summary>
     /// Performs the export operation with the current format from Settings.
+    /// Auto-detected as internal observer for Settings.PreferredExportFormat and Todo.UserItems changes.
+    /// Guard ensures export only runs when dialog is open.
     /// </summary>
-    internal async Task PerformExportAsync(CancellationToken ct)
+    private async Task PerformExportAsync(CancellationToken ct)
     {
+        if (!IsDialogOpen)
+        {
+            return;
+        }
+
         IsExporting = true;
         CopySuccess = false;
 
