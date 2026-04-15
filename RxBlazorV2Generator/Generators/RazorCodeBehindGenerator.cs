@@ -39,6 +39,7 @@ public static class RazorCodeBehindGenerator
         SourceText razorContent,
         GeneratorContext generatorContext,
         Dictionary<string, HashSet<string>> codeBehindPropertyUsages,
+        Dictionary<string, Dictionary<string, (int syncBehavior, int asyncBehavior, Location location)>> triggerLocations,
         GeneratorConfig config)
     {
         try
@@ -89,6 +90,17 @@ public static class RazorCodeBehindGenerator
             {
                 var matchedProperty = FindMatchingValidProperty(extractedProp, component.FilterableProperties);
                 usedProperties.Add(matchedProperty ?? $"Model.{extractedProp}");
+            }
+
+            // Check for redundant trigger attributes (RXBG042)
+            // A trigger with RenderOnly or RenderAndHook behavior is redundant when the property
+            // is already observed from the razor file (automatic re-render via Filter())
+            // HookOnly triggers are valid even when the property is in the razor file
+            if (component.ComponentInfo is not null)
+            {
+                var modelFullNameForTriggers = $"{component.ComponentInfo.ModelNamespace}.{component.ComponentInfo.ModelTypeName}{component.ComponentInfo.GenericTypes}";
+                CheckForRedundantTriggers(context, razorFile, component.ComponentInfo, usedProperties,
+                    triggerLocations, modelFullNameForTriggers);
             }
 
             // Add component trigger properties to filter for automatic re-rendering
@@ -548,6 +560,63 @@ public static class RazorCodeBehindGenerator
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Checks for redundant ObservableComponentTrigger attributes (RXBG042).
+    /// A trigger with RenderOnly (1) or RenderAndHook (0) behavior is redundant when the property
+    /// is already observed from the razor file. HookOnly (2) triggers are always valid.
+    /// Only checks local triggers (not referenced model triggers).
+    /// </summary>
+    private static void CheckForRedundantTriggers(
+        SourceProductionContext context,
+        AdditionalText razorFile,
+        ComponentInfo componentInfo,
+        HashSet<string> razorUsedProperties,
+        Dictionary<string, Dictionary<string, (int syncBehavior, int asyncBehavior, Location location)>> triggerLocations,
+        string modelFullName)
+    {
+        if (!triggerLocations.TryGetValue(modelFullName, out var modelTriggerLocations))
+        {
+            return;
+        }
+
+        var razorFileName = Path.GetFileNameWithoutExtension(razorFile.Path);
+
+        foreach (var trigger in componentInfo.ComponentTriggers)
+        {
+            // Only check local triggers (no referenced model property = local)
+            if (trigger.ReferencedModelPropertyName is not null)
+            {
+                continue;
+            }
+
+            // HookOnly (2) is always valid - skip
+            if (trigger.TriggerBehavior == 2)
+            {
+                continue;
+            }
+
+            // Check if the trigger property is already observed from razor
+            if (!razorUsedProperties.Contains(trigger.QualifiedPropertyPath))
+            {
+                continue;
+            }
+
+            // Found redundant trigger - report RXBG042
+            if (modelTriggerLocations.TryGetValue(trigger.PropertyName, out var triggerInfo))
+            {
+                var behaviorName = trigger.TriggerBehavior == 1 ? "RenderOnly" : "RenderAndHook";
+                var diagnostic = Diagnostic.Create(
+                    Diagnostics.DiagnosticDescriptors.RedundantComponentTriggerError,
+                    triggerInfo.location,
+                    trigger.PropertyName,
+                    componentInfo.ModelTypeName,
+                    behaviorName,
+                    razorFileName);
+                context.ReportDiagnostic(diagnostic);
+            }
+        }
     }
 
 }

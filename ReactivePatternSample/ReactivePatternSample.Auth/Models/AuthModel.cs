@@ -31,13 +31,11 @@ public partial class AuthModel : ObservableModel
     /// <summary>
     /// Whether the user is currently authenticated.
     /// </summary>
-    [ObservableComponentTrigger]
     public partial bool IsAuthenticated { get; set; }
 
     /// <summary>
     /// The current authenticated user, if any.
     /// </summary>
-    [ObservableComponentTrigger]
     public partial User? CurrentUser { get; set; }
 
     /// <summary>

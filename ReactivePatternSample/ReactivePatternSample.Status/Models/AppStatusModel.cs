@@ -27,31 +27,26 @@ public partial class AppStatusModel : ObservableModel
     /// <summary>
     /// Reactive collection of status messages.
     /// </summary>
-    [ObservableComponentTrigger]
     public partial ObservableList<StatusMessage> Messages { get; init; } = [];
 
     /// <summary>
     /// Indicates whether there are any error messages.
     /// </summary>
-    [ObservableComponentTrigger]
     public partial bool HasErrors { get; set; }
 
     /// <summary>
     /// Indicates whether there are any warning messages.
     /// </summary>
-    [ObservableComponentTrigger]
     public partial bool HasWarnings { get; set; }
 
     /// <summary>
     /// The most recent error message, if any.
     /// </summary>
-    [ObservableComponentTrigger]
     public partial string? LastError { get; set; }
 
     /// <summary>
     /// The most recent status message (any severity).
     /// </summary>
-    [ObservableComponentTrigger]
     public partial string? LastMessage { get; set; }
 
     /// <summary>

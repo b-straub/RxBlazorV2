@@ -563,6 +563,9 @@ public class RxBlazorGenerator : IIncrementalGenerator
                     compilation,
                     generatorContext);
 
+                // Build trigger location lookup for RXBG042 redundancy detection
+                var triggerLocations = BuildTriggerLocationLookup(records);
+
                 foreach (var razorFile in razorFilesList)
                 {
                     var content = razorFile.GetText();
@@ -578,6 +581,7 @@ public class RxBlazorGenerator : IIncrementalGenerator
                         content,
                         generatorContext,
                         codeBehindPropertyUsages,
+                        triggerLocations,
                         config);
                 }
             });
@@ -698,5 +702,35 @@ public class RxBlazorGenerator : IIncrementalGenerator
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Builds a lookup from model fully-qualified name → property name → (syncBehavior, asyncBehavior, location).
+    /// Used by RazorCodeBehindGenerator to detect redundant triggers (RXBG042).
+    /// </summary>
+    private static Dictionary<string, Dictionary<string, (int syncBehavior, int asyncBehavior, Location location)>>
+        BuildTriggerLocationLookup(ImmutableArray<ObservableModelRecord?> records)
+    {
+        var lookup = new Dictionary<string, Dictionary<string, (int syncBehavior, int asyncBehavior, Location location)>>();
+
+        foreach (var record in records)
+        {
+            if (record is null || record.ComponentTriggerProperties.Count == 0)
+            {
+                continue;
+            }
+
+            var propertyLookup = new Dictionary<string, (int syncBehavior, int asyncBehavior, Location location)>();
+
+            foreach (var kvp in record.ComponentTriggerProperties)
+            {
+                var (_, _, syncBehavior, _, _, asyncBehavior, location) = kvp.Value;
+                propertyLookup[kvp.Key] = (syncBehavior, asyncBehavior, location);
+            }
+
+            lookup[record.ModelInfo.FullyQualifiedName] = propertyLookup;
+        }
+
+        return lookup;
     }
 }

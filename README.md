@@ -113,7 +113,6 @@ Commands automatically capture exceptions and route them to an `IErrorModel` imp
 [ObservableModelScope(ModelScope.Singleton)]
 public partial class ErrorModel : ObservableModel, IErrorModel
 {
-    [ObservableComponentTrigger]
     public ObservableList<string> Errors { get; } = [];
 
     public void HandleError(Exception error)
@@ -199,6 +198,8 @@ Options:
 - `componentName`: Custom component class name (default: `{ModelName}Component`)
 - `includeReferencedTriggers`: Include triggers from referenced models (default: `true`)
 
+Generated components seal `OnAfterRender` and `OnAfterRenderAsync` to protect the reactive pipeline. Use `OnContextReady`/`OnContextReadyAsync` for component initialization instead.
+
 ## Trigger System
 
 RxBlazorV2 provides multiple trigger types for different reactive scenarios:
@@ -233,6 +234,8 @@ public partial class SettingsModel : ObservableModel
 - `RenderAndHook` (default): Calls hook AND re-renders component
 - `RenderOnly`: Re-renders but no hook method
 - `HookOnly`: Calls hook but no automatic re-render
+
+> **Important (RXBG042):** If a property is already referenced in the razor file (e.g., `@Model.Theme`), the component already re-renders automatically via the generated `Filter()` method. Using `RenderAndHook` or `RenderOnly` on such properties is a compile error. Use `HookOnly` if you need a code-behind hook, or remove the attribute entirely.
 
 ### Property Triggers
 
@@ -278,10 +281,10 @@ Define reactive contracts in abstract base classes with attribute transfer to co
 // Abstract base class defines the contract with reactive attributes
 public abstract class StatusBaseModel : ObservableModel
 {
-    [ObservableComponentTrigger]
+    [ObservableComponentTrigger(ComponentTriggerType.HookOnly)]
     public abstract ObservableList<StatusMessage> Messages { get; }
 
-    [ObservableComponentTrigger]
+    [ObservableComponentTrigger(ComponentTriggerType.HookOnly)]
     [ObservableTrigger(nameof(CanAddMessageTrigger))]
     public abstract bool CanAddMessage { get; set; }
 
@@ -546,16 +549,19 @@ dotnet run --project ReactivePatternSample/ReactivePatternSample
 
 ## Diagnostics
 
-The generator provides comprehensive diagnostics (RXBG001-RXBG082) with code fixes. See the [Diagnostics Help](RxBlazorV2Generator/Diagnostics/Help/) folder for detailed documentation.
+The generator provides comprehensive diagnostics (RXBG001-RXBG090) with code fixes. See the [Diagnostics Help](RxBlazorV2Generator/Diagnostics/Help/) folder for detailed documentation.
 
 Key diagnostic ranges:
-- **RXBG001-RXBG019**: Core model and property diagnostics
-- **RXBG020-RXBG029**: DI and service registration diagnostics
-- **RXBG030-RXBG049**: Command diagnostics
-- **RXBG050-RXBG059**: Service scope and cross-assembly diagnostics
-- **RXBG060-RXBG069**: Component generation diagnostics
-- **RXBG070-RXBG079**: Generic model diagnostics
-- **RXBG080-RXBG082**: Model observer diagnostics
+- **RXBG001-RXBG009**: Internal/generator analysis errors
+- **RXBG010-RXBG019**: Model structure and references
+- **RXBG020-RXBG029**: Generic type system
+- **RXBG030-RXBG039**: Command triggers
+- **RXBG040-RXBG049**: Properties (including RXBG042: redundant component trigger)
+- **RXBG050-RXBG059**: Dependency injection and service scope
+- **RXBG060-RXBG069**: Component generation
+- **RXBG070-RXBG079**: Attributes and partial constructors
+- **RXBG080-RXBG089**: Model observers
+- **RXBG090-RXBG099**: Observable property usage
 
 ## Contributing
 

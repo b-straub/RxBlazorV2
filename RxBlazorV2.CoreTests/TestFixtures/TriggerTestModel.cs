@@ -8,13 +8,13 @@ public partial class TriggerTestModel : ObservableModel
 {
     private bool _contextReadyCalled;
 
-    [ObservableComponentTrigger]
+    [ObservableComponentTrigger(ComponentTriggerType.HookOnly)]
     public partial string SyncTriggerProperty { get; set; } = "Initial Sync";
 
-    [ObservableComponentTriggerAsync]
+    [ObservableComponentTriggerAsync(ComponentTriggerType.HookOnly)]
     public partial int AsyncTriggerProperty { get; set; }
 
-    [ObservableComponentTrigger(hookMethodName: "OnCustomTriggered")]
+    [ObservableComponentTrigger(ComponentTriggerType.HookOnly, hookMethodName: "OnCustomTriggered")]
     public partial int CustomNamedTriggerProperty { get; set; }
 
     public partial string RegularProperty { get; set; } = "Regular";

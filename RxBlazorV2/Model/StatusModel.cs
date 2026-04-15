@@ -22,7 +22,7 @@ public abstract class StatusBaseModel : ObservableModel
     /// All status messages including errors, warnings, info, and success messages.
     /// Changes to this collection trigger component updates via [ObservableComponentTrigger].
     /// </summary>
-    [ObservableComponentTrigger]
+    [ObservableComponentTrigger(ComponentTriggerType.HookOnly)]
     public abstract ObservableList<StatusMessage> Messages { get; }
 
     /// <summary>

@@ -239,6 +239,28 @@ public static class DiagnosticDescriptors
         helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG041.md",
         customTags: ["Add [ObservableComponent] attribute", "Remove trigger attributes"]);
 
+    public static readonly DiagnosticDescriptor NonObservableCollectionPropertyError = new(
+        id: "RXBG043",
+        title: "Non-observable collection type on partial property",
+        messageFormat: "Property '{0}' uses '{1}' which does not support reactive change notifications. Collection mutations (Add, Remove, Clear) will be invisible to the reactive system. Use 'ObservableList<{2}>' with 'init' accessor instead of 'set' for proper reactivity.",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Partial properties in ObservableModel that use non-observable collection types (List<T>, IList<T>, Collection<T>, etc.) will not fire reactive notifications when items are added, removed, or cleared. Only full property reassignment triggers a change notification. Use ObservableList<T> from the ObservableCollections library with an 'init' accessor for proper collection-level reactivity.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG043.md",
+        customTags: ["Replace with ObservableList"]);
+
+    public static readonly DiagnosticDescriptor RedundantComponentTriggerError = new(
+        id: "RXBG042",
+        title: "Redundant ObservableComponentTrigger on razor-observed property",
+        messageFormat: "Property '{0}' in model '{1}' has [ObservableComponentTrigger] with {2} behavior, but is already referenced in the razor file '{3}'. The component already re-renders when this property changes. Remove the trigger attribute — use HookOnly behavior if you need a code-behind hook method.",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "When a property is already referenced in a razor file, the component automatically re-renders on changes via the generated Filter() method. Adding [ObservableComponentTrigger] with RenderOnly or RenderAndHook behavior is redundant. If you need a hook method for code-behind logic, use HookOnly behavior instead.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG042.md",
+        customTags: ["Remove trigger attribute"]);
+
     // ============================================================================
     // RXBG050-RXBG059: Dependency Injection
     // ============================================================================
@@ -435,6 +457,8 @@ public static class DiagnosticDescriptors
         // RXBG040-049: Properties - mixed
         new(InvalidInitPropertyError, DiagnosticReporter.Analyzer),
         new(UnusedObservableComponentTriggerWarning, DiagnosticReporter.Generator),  // Requires cross-model analysis
+        new(RedundantComponentTriggerError, DiagnosticReporter.Generator),  // Requires razor file analysis
+        new(NonObservableCollectionPropertyError, DiagnosticReporter.Analyzer),
 
         // RXBG050-059: Dependency Injection - generator (requires service list analysis)
         new(UnregisteredServiceWarning, DiagnosticReporter.Generator),

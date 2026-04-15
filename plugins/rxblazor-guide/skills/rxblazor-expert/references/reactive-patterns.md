@@ -995,7 +995,7 @@ public partial class StorageModel : ObservableModel
 - Referenced models' lifecycle methods run before dependent models
 - Use for: seed data, loading persisted state, initial subscriptions
 
-**NEVER override `OnAfterRender` or `OnAfterRenderAsync` in components inheriting from a generated `*ModelComponent`.** The base `ObservableComponent<T>` uses `OnAfterRender` to set up Observable subscriptions and `OnAfterRenderAsync` to run model initialization. Overriding without calling `base` silently breaks the reactive pipeline — property changes stop triggering re-renders, CanExecute stops updating, and trigger hooks never fire. Use `OnContextReady`/`OnContextReadyAsync` instead.
+`OnAfterRender` and `OnAfterRenderAsync` are **sealed** in generated `*ModelComponent` classes. The compiler enforces this — attempting to override them produces a compile error. Use `OnContextReady`/`OnContextReadyAsync` for initialization instead.
 
 ### SuspendNotifications Pattern
 

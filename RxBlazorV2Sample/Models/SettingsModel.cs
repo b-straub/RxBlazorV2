@@ -10,7 +10,6 @@ public partial class SettingsModel : ObservableModel, ISettingsModel
 {
     public partial string TemperatureUnit { get; set; } = "Celsius";
     
-    [ObservableComponentTrigger]
     public partial bool IsDay { get; set; } = false;
     
     public partial bool AutoRefresh { get; set; } = true;

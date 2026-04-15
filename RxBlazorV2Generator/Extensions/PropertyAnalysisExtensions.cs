@@ -45,6 +45,20 @@ public static class PropertyAnalysisExtensions
                     diagnostics.Add(diagnostic);
                 }
 
+                // Check for non-observable collection types (List<T>, IList<T>, etc.)
+                // These don't fire reactive notifications on mutations (Add, Remove, Clear)
+                var nonObservableElementType = member.GetNonObservableCollectionElementType(semanticModel);
+                if (nonObservableElementType is not null)
+                {
+                    var diagnostic = Diagnostic.Create(
+                        Diagnostics.DiagnosticDescriptors.NonObservableCollectionPropertyError,
+                        member.Type.GetLocation(),
+                        member.Identifier.ValueText,
+                        member.Type.ToString(),
+                        nonObservableElementType);
+                    diagnostics.Add(diagnostic);
+                }
+
                 // Extract accessibility modifier
                 var accessibility = member.Modifiers
                     .Where(m => m.IsKind(SyntaxKind.PublicKeyword) ||
@@ -854,6 +868,63 @@ public static class PropertyAnalysisExtensions
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Checks if a property type is a non-observable mutable collection (List&lt;T&gt;, IList&lt;T&gt;, Collection&lt;T&gt;, etc.).
+    /// Returns the element type if it is, null otherwise.
+    /// A collection is "non-observable" if it implements ICollection&lt;T&gt; from System.Collections.Generic
+    /// but does NOT implement IObservableCollection from ObservableCollections.
+    /// </summary>
+    public static string? GetNonObservableCollectionElementType(this PropertyDeclarationSyntax property, SemanticModel semanticModel)
+    {
+        try
+        {
+            var propertySymbol = semanticModel.GetDeclaredSymbol(property);
+            if (propertySymbol is not IPropertySymbol propSymbol)
+            {
+                return null;
+            }
+
+            var propertyType = propSymbol.Type;
+
+            // Skip if it already implements IObservableCollection
+            if (ImplementsIObservableCollection(propertyType))
+            {
+                return null;
+            }
+
+            // Skip arrays - they are fixed-size and typically reassigned entirely,
+            // which is a valid reactive pattern (property change fires on reassignment)
+            if (propertyType is IArrayTypeSymbol)
+            {
+                return null;
+            }
+
+            // Unwrap nullable wrapper (e.g., List<T>? -> List<T>)
+            if (propertyType is INamedTypeSymbol { OriginalDefinition.SpecialType: SpecialType.System_Nullable_T } nullable)
+            {
+                propertyType = nullable.TypeArguments[0];
+            }
+
+            // Check if the type implements ICollection<T> from System.Collections.Generic
+            foreach (var interfaceType in propertyType.AllInterfaces)
+            {
+                if (interfaceType.Name == "ICollection" &&
+                    interfaceType.IsGenericType &&
+                    interfaceType.ContainingNamespace?.ToDisplayString() == "System.Collections.Generic")
+                {
+                    // Return the element type (T from ICollection<T>)
+                    return interfaceType.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
+                }
+            }
+
+            return null;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 
     public static bool IsEquatableProperty(this PropertyDeclarationSyntax property, SemanticModel semanticModel)
