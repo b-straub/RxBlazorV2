@@ -7,12 +7,6 @@ public partial class TriggerTestComponent
     public int AsyncTriggerHookCallCount { get; private set; }
     public int CustomNamedHookCallCount { get; private set; }
 
-    protected override void OnAfterRender(bool firstRender)
-    {
-        base.OnAfterRender(firstRender);
-        RenderCount++;
-    }
-
     protected override void OnSyncTriggerPropertyChanged()
     {
         SyncTriggerHookCallCount++;

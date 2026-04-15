@@ -340,6 +340,15 @@ public class RazorFileDiagnosticsTests
                 return Task.CompletedTask;
             }
 
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
+            }
         }
 
         """;
@@ -480,6 +489,15 @@ public class RazorFileDiagnosticsTests
                 return Task.CompletedTask;
             }
 
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
+            }
         }
 
         """;
@@ -644,6 +662,15 @@ public class RazorFileDiagnosticsTests
                 return Task.CompletedTask;
             }
 
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
+            }
         }
 
         """;
@@ -823,6 +850,15 @@ public class RazorFileDiagnosticsTests
                 return Task.CompletedTask;
             }
 
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
+            }
         }
 
         """;
@@ -976,6 +1012,15 @@ public class RazorFileDiagnosticsTests
                 return Task.CompletedTask;
             }
 
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
+            }
         }
 
         """;
@@ -1220,6 +1265,15 @@ public class RazorFileDiagnosticsTests
                 return Task.CompletedTask;
             }
 
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
+            }
         }
 
         """;
@@ -1411,6 +1465,15 @@ public class RazorFileDiagnosticsTests
                 return Task.CompletedTask;
             }
 
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
+            }
         }
 
         """;
@@ -1550,6 +1613,15 @@ public class RazorFileDiagnosticsTests
                 return Task.CompletedTask;
             }
 
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
+            }
         }
 
         """;
@@ -1702,6 +1774,15 @@ public class RazorFileDiagnosticsTests
                 return Task.CompletedTask;
             }
 
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
+            }
         }
 
         """;
@@ -1889,6 +1970,15 @@ public class RazorFileDiagnosticsTests
                 return Task.CompletedTask;
             }
 
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
+            }
         }
 
         """;
@@ -2062,6 +2152,15 @@ public class RazorFileDiagnosticsTests
                 return Task.CompletedTask;
             }
 
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
+            }
         }
 
         """;
@@ -2209,6 +2308,15 @@ public class RazorFileDiagnosticsTests
                 return Task.CompletedTask;
             }
 
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
+            }
         }
 
         """;
@@ -2363,6 +2471,15 @@ public class RazorFileDiagnosticsTests
                 return Task.CompletedTask;
             }
 
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
+            }
         }
 
         """;
@@ -2521,6 +2638,15 @@ public class RazorFileDiagnosticsTests
                 return Task.CompletedTask;
             }
 
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
+            }
         }
 
         """;
@@ -2666,6 +2792,16 @@ public class RazorFileDiagnosticsTests
             protected virtual void OnCounterChanged()
             {
             }
+
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
+            }
         }
 
         """;
@@ -2807,6 +2943,15 @@ public class RazorFileDiagnosticsTests
                 return Task.CompletedTask;
             }
 
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
+            }
         }
 
         """;
@@ -2957,6 +3102,16 @@ public class RazorFileDiagnosticsTests
 
             protected virtual void OnCounterChanged()
             {
+            }
+
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
             }
         }
 
@@ -3131,6 +3286,15 @@ public class RazorFileDiagnosticsTests
                 return Task.CompletedTask;
             }
 
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
+            }
         }
 
         """;

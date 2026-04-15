@@ -28,12 +28,12 @@ internal static class TestShared
             .AddPackages([
                 new PackageIdentity("Microsoft.Net.Compilers.Toolset",
                     "5.0.0"), // Use the latest version of the compiler toolset
-                new PackageIdentity("Microsoft.Extensions.DependencyInjection", "10.0.0"),
-                new PackageIdentity("Microsoft.AspNetCore.Components", "10.0.0"),
+                new PackageIdentity("Microsoft.Extensions.DependencyInjection", "10.0.5"),
+                new PackageIdentity("Microsoft.AspNetCore.Components", "10.0.5"),
                 new PackageIdentity("R3", "1.3.0"),
                 new PackageIdentity("ObservableCollections.R3", "3.3.4"),
                 new PackageIdentity("JetBrains.Annotations", "2025.2.4"),
-                new PackageIdentity("MudBlazor", "8.15.0")
+                new PackageIdentity("MudBlazor", "9.2.0")
             ]);
     }
 }

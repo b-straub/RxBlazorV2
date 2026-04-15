@@ -29,6 +29,7 @@ Find all files containing reactive patterns:
 ### Step 2: Detect Issues by Severity
 
 **CRITICAL (must fix):**
+- `OnAfterRender` or `OnAfterRenderAsync` override in a `*ModelComponent` — Breaks the `ObservableComponent<T>` lifecycle. The base class uses `OnAfterRender` to set up Observable subscriptions and `OnAfterRenderAsync` to run `Model.ContextReadyAsync()`. Overriding either without calling `base` silently disconnects the reactive pipeline — properties change but no component re-render occurs, commands' CanExecute stops updating, and trigger hooks never fire. Move initialization logic to `OnContextReady`/`OnContextReadyAsync` (sync/async hooks called by the base class after setup completes). If you must override, **always call base first**.
 - `StateHasChanged()` — Manual calls bypass reactive system. Use partial properties. When found in a component hook method (e.g., `OnXChanged()`), note that `RenderAndHook` already re-renders -- the call is redundant.
 - `_ = *.ExecuteAsync()` or `_ = SomeAsync()` — Fire-and-forget async loses exceptions and bypasses cancellation. Use proper command binding or `[ObservableTriggerAsync]`.
 - `[ObservableTrigger]` with sync method that calls `_ = AsyncMethod()` inside — Sync trigger wrapping async work. Use `[ObservableTriggerAsync]` so the generator manages the async subscription with proper error handling and cancellation.

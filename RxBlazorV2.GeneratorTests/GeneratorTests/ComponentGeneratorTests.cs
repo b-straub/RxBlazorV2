@@ -112,13 +112,22 @@ public class ComponentTriggerGeneratorTests
                 return Task.CompletedTask;
             }
 
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
+            }
         }
-        
+
         """;
 
         await ComponentGeneratorVerifier.VerifyComponentGeneratorAsync(test, generatedModel, generatedComponent, "TestModel", "TestModelComponent");
     }
-    
+
     [Fact]
     public async Task ComponentWithCustomNamingOnly()
     {
@@ -223,8 +232,17 @@ public class ComponentTriggerGeneratorTests
                 return Task.CompletedTask;
             }
 
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
+            }
         }
-        
+
         """;
 
         await ComponentGeneratorVerifier.VerifyComponentGeneratorAsync(test, generatedModel, generatedComponent, "TestModel", "TestModelCustomNamedComponent");
@@ -344,6 +362,16 @@ public class ComponentTriggerGeneratorTests
 
             protected virtual void OnCounterChanged()
             {
+            }
+
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
             }
         }
 
@@ -467,6 +495,16 @@ public class ComponentTriggerGeneratorTests
             protected virtual Task OnCounterChangedAsync(CancellationToken ct)
             {
                 return Task.CompletedTask;
+            }
+
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
             }
         }
 
@@ -603,6 +641,16 @@ public class ComponentTriggerGeneratorTests
             {
                 return Task.CompletedTask;
             }
+
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
+            }
         }
 
         """;
@@ -737,6 +785,16 @@ public class ComponentTriggerGeneratorTests
             protected virtual Task HandleCounterUpdateAsync(CancellationToken ct)
             {
                 return Task.CompletedTask;
+            }
+
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
             }
         }
 
@@ -904,6 +962,16 @@ public class ComponentTriggerGeneratorTests
             protected virtual Task OnNameChangedAsync(CancellationToken ct)
             {
                 return Task.CompletedTask;
+            }
+
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
             }
         }
 

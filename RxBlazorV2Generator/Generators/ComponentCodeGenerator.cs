@@ -61,7 +61,13 @@ public static class ComponentCodeGenerator
             if (triggersWithHooks.Any())
             {
                 GenerateHookMethods(sb, triggersWithHooks);
+                sb.AppendLine();
             }
+
+            // Seal lifecycle methods to prevent derived classes (Razor pages) from
+            // overriding them and breaking the reactive pipeline.
+            // Use OnContextReady/OnContextReadyAsync for initialization instead.
+            GenerateSealedLifecycleMethods(sb);
 
             sb.AppendLine("}");
 
@@ -195,6 +201,19 @@ public static class ComponentCodeGenerator
                 sb.AppendLine();
             }
         }
+    }
+
+    private static void GenerateSealedLifecycleMethods(StringBuilder sb)
+    {
+        sb.AppendLine("    protected sealed override void OnAfterRender(bool firstRender)");
+        sb.AppendLine("    {");
+        sb.AppendLine("        base.OnAfterRender(firstRender);");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+        sb.AppendLine("    protected sealed override async Task OnAfterRenderAsync(bool firstRender)");
+        sb.AppendLine("    {");
+        sb.AppendLine("        await base.OnAfterRenderAsync(firstRender);");
+        sb.AppendLine("    }");
     }
 
 }

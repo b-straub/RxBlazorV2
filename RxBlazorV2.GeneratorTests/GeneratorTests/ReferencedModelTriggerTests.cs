@@ -230,6 +230,16 @@ public class ReferencedModelTriggerTests
             protected virtual void OnSettingsIsDayChanged()
             {
             }
+
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
+            }
         }
 
         """;
@@ -436,6 +446,15 @@ public class ReferencedModelTriggerTests
                 return Task.CompletedTask;
             }
 
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
+            }
         }
 
         """;
@@ -686,6 +705,16 @@ public class ReferencedModelTriggerTests
             {
                 return Task.CompletedTask;
             }
+
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
+            }
         }
 
         """;
@@ -916,6 +945,16 @@ public class ReferencedModelTriggerTests
             protected virtual void OnSettingsIsDayChanged()
             {
             }
+
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
+            }
         }
 
         """;
@@ -1034,6 +1073,15 @@ public class ReferencedModelTriggerTests
                 return Task.CompletedTask;
             }
 
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
+            }
         }
 
         """;

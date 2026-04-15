@@ -193,6 +193,16 @@ public class CrossAssemblyInheritanceTests
             protected virtual void OnCanAddMessageChanged()
             {
             }
+
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
+            }
         }
 
         """;
@@ -398,6 +408,16 @@ public class InheritanceFlatteningTests
 
             protected virtual void OnCanAddMessageChanged()
             {
+            }
+
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
             }
         }
 
@@ -610,6 +630,16 @@ public class InheritanceFlatteningTests
             protected virtual void OnCanAddMessageChanged()
             {
             }
+
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
+            }
         }
 
         """;
@@ -731,6 +761,16 @@ public class InheritanceFlatteningTests
 
             protected virtual void OnItemsChanged()
             {
+            }
+
+            protected sealed override void OnAfterRender(bool firstRender)
+            {
+                base.OnAfterRender(firstRender);
+            }
+
+            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
+            {
+                await base.OnAfterRenderAsync(firstRender);
             }
         }
 
