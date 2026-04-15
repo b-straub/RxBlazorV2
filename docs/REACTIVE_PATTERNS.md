@@ -348,15 +348,10 @@ public partial class SettingsPage : SettingsModelComponent
 }
 ```
 
-**Trigger Types:**
-| Type | Behavior |
-|------|----------|
-| `RenderAndHook` (default) | Re-renders component AND calls hook |
-| `RenderOnly` | Re-renders only, no hook method generated |
-| `HookOnly` | Calls hook only, no automatic re-render |
+Triggers only generate hook methods — rendering is always handled by properties referenced in razor.
 
 ```csharp
-[ObservableComponentTrigger(ComponentTriggerType.HookOnly)]
+[ObservableComponentTrigger]
 public partial string BackgroundStatus { get; set; }
 ```
 
@@ -1237,7 +1232,7 @@ public partial class DataViewModel : ObservableModel
     public partial string? ErrorMessage { get; set; }
 
     // Component triggers for UI feedback
-    [ObservableComponentTrigger(ComponentTriggerType.HookOnly)]
+    [ObservableComponentTrigger]
     public partial bool IsLoading { get; set; }
 
     [ObservableComponentTriggerAsync]

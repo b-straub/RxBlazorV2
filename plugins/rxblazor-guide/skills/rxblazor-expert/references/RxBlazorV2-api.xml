@@ -4,72 +4,6 @@
         <name>RxBlazorV2</name>
     </assembly>
     <members>
-        <member name="T:RxBlazorV2.Model.ComponentTriggerType">
-            <summary>
-            Defines the behavior of component triggers for properties with [ObservableComponentTrigger] or [ObservableComponentTriggerAsync].
-            Controls whether property changes trigger component re-rendering, hook execution, or both.
-            </summary>
-        </member>
-        <member name="F:RxBlazorV2.Model.ComponentTriggerType.RenderAndHook">
-             <summary>
-             Default behavior: Both renders the component AND executes the hook method when the property changes.
-             The property is automatically added to the component's Filter() for re-rendering,
-             and the generated hook method (OnPropertyChanged or OnPropertyChangedAsync) is called.
-             Use this for most scenarios where you want both UI updates and custom logic execution.
-             </summary>
-             <example>
-             <code>
-             [ObservableComponentTrigger] // or [ObservableComponentTrigger(ComponentTriggerType.RenderAndHook)]
-             public partial string UserName { get; set; }
-            
-             // Generated hook is called AND component re-renders:
-             protected override void OnUserNameChanged()
-             {
-                 Console.WriteLine($"User changed to: {Model.UserName}");
-                 // Component will also re-render after this hook executes
-             }
-             </code>
-             </example>
-        </member>
-        <member name="F:RxBlazorV2.Model.ComponentTriggerType.RenderOnly">
-             <summary>
-             Render-only behavior: Triggers component re-rendering but does NOT generate or call a hook method.
-             The property is added to the component's Filter() for automatic re-rendering,
-             but no OnPropertyChanged hook method is generated or called.
-             Use this when you only need UI updates without custom logic.
-             Note: This is rarely needed as you can just omit the attribute entirely and reference the property in the razor template.
-             </summary>
-             <example>
-             <code>
-             [ObservableComponentTrigger(ComponentTriggerType.RenderOnly)]
-             public partial int Counter { get; set; }
-            
-             // Component re-renders when Counter changes, but no hook method is generated
-             // Equivalent to just using @Model.Counter in the razor template
-             </code>
-             </example>
-        </member>
-        <member name="F:RxBlazorV2.Model.ComponentTriggerType.HookOnly">
-             <summary>
-             Hook-only behavior: Executes the hook method but does NOT trigger component re-rendering.
-             The property is NOT added to the component's Filter(), so StateHasChanged won't be called automatically.
-             Use this when you need custom logic but don't want UI updates for this specific property change.
-             You can manually call StateHasChanged() inside the hook if needed.
-             </summary>
-             <example>
-             <code>
-             [ObservableComponentTrigger(ComponentTriggerType.HookOnly)]
-             public partial string BackgroundTask { get; set; }
-            
-             // Hook is called but component does NOT re-render automatically:
-             protected override void OnBackgroundTaskChanged()
-             {
-                 StartBackgroundProcessing(Model.BackgroundTask);
-                 // Component will NOT re-render unless you call StateHasChanged() here
-             }
-             </code>
-             </example>
-        </member>
         <member name="T:RxBlazorV2.Model.ObservableBatchAttribute">
             <summary>
             Groups related properties for batched change notifications.
@@ -356,18 +290,11 @@
              Generates an async hook method that is called when the property value changes.
              The hook method receives a CancellationToken parameter.
              Use on partial properties within ObservableModel classes that have [ObservableComponent] attribute.
+             The attribute only generates hooks — rendering is handled by the reactive pipeline through
+             properties referenced in the razor file.
              </summary>
-             <param name="type">
-             Specifies the trigger behavior. Defaults to <see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderAndHook"/>.
-             <list type="bullet">
-             <item><see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderAndHook"/> - Calls async hook AND re-renders component (default)</item>
-             <item><see cref="F:RxBlazorV2.Model.ComponentTriggerType.HookOnly"/> - Calls async hook but does NOT re-render component</item>
-             <item><see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderOnly"/> - Re-renders component but does NOT generate/call async hook</item>
-             </list>
-             </param>
              <param name="hookMethodName">Optional custom name for the async hook method.
-             If not specified, defaults to On{PropertyName}ChangedAsync.
-             Only applicable when type is <see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderAndHook"/> or <see cref="F:RxBlazorV2.Model.ComponentTriggerType.HookOnly"/>.</param>
+             If not specified, defaults to On{PropertyName}ChangedAsync.</param>
              <example>
              [ObservableComponentTriggerAsync]
              public partial bool IsLoading { get; set; }
@@ -376,29 +303,18 @@
              [ObservableComponentTriggerAsync("HandleStateChange")]
              public partial bool IsActive { get; set; }
              // Generates: protected virtual Task HandleStateChange(CancellationToken ct)
-            
-             [ObservableComponentTriggerAsync(ComponentTriggerType.HookOnly)]
-             public partial string BackgroundData { get; set; }
-             // Hook is called but component does NOT re-render automatically
              </example>
         </member>
-        <member name="M:RxBlazorV2.Model.ObservableComponentTriggerAsyncAttribute.#ctor(RxBlazorV2.Model.ComponentTriggerType,System.String)">
+        <member name="M:RxBlazorV2.Model.ObservableComponentTriggerAsyncAttribute.#ctor(System.String)">
              <summary>
              Generates an async hook method that is called when the property value changes.
              The hook method receives a CancellationToken parameter.
              Use on partial properties within ObservableModel classes that have [ObservableComponent] attribute.
+             The attribute only generates hooks — rendering is handled by the reactive pipeline through
+             properties referenced in the razor file.
              </summary>
-             <param name="type">
-             Specifies the trigger behavior. Defaults to <see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderAndHook"/>.
-             <list type="bullet">
-             <item><see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderAndHook"/> - Calls async hook AND re-renders component (default)</item>
-             <item><see cref="F:RxBlazorV2.Model.ComponentTriggerType.HookOnly"/> - Calls async hook but does NOT re-render component</item>
-             <item><see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderOnly"/> - Re-renders component but does NOT generate/call async hook</item>
-             </list>
-             </param>
              <param name="hookMethodName">Optional custom name for the async hook method.
-             If not specified, defaults to On{PropertyName}ChangedAsync.
-             Only applicable when type is <see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderAndHook"/> or <see cref="F:RxBlazorV2.Model.ComponentTriggerType.HookOnly"/>.</param>
+             If not specified, defaults to On{PropertyName}ChangedAsync.</param>
              <example>
              [ObservableComponentTriggerAsync]
              public partial bool IsLoading { get; set; }
@@ -407,33 +323,22 @@
              [ObservableComponentTriggerAsync("HandleStateChange")]
              public partial bool IsActive { get; set; }
              // Generates: protected virtual Task HandleStateChange(CancellationToken ct)
-            
-             [ObservableComponentTriggerAsync(ComponentTriggerType.HookOnly)]
-             public partial string BackgroundData { get; set; }
-             // Hook is called but component does NOT re-render automatically
              </example>
         </member>
         <member name="T:RxBlazorV2.Model.ObservableComponentTriggerAttribute">
              <summary>
-             Generates virtual hook methods in the component class for property change events.
+             Generates a virtual hook method in the component class that is called when the property value changes.
              Use with [ObservableComponent] attribute to create component-level property change handlers.
+             The attribute only generates hooks — rendering is handled by the reactive pipeline through
+             properties referenced in the razor file.
              Multiple triggers can be applied to the same property.
              When applied to properties in models that are referenced by other models (via partial constructor),
              the hook methods are automatically propagated to the referencing model's component.
              </summary>
-             <param name="type">
-             Specifies the trigger behavior. Defaults to <see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderAndHook"/>.
-             <list type="bullet">
-             <item><see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderAndHook"/> - Calls hook AND re-renders component (default)</item>
-             <item><see cref="F:RxBlazorV2.Model.ComponentTriggerType.HookOnly"/> - Calls hook but does NOT re-render component</item>
-             <item><see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderOnly"/> - Re-renders component but does NOT generate/call hook</item>
-             </list>
-             </param>
              <param name="hookMethodName">
              Optional. The name of the hook method to generate.
              If not specified, defaults to On{PropertyName}Changed.
              Use <see langword="nameof"/> for compile-time safety when specifying.
-             Only applicable when type is <see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderAndHook"/> or <see cref="F:RxBlazorV2.Model.ComponentTriggerType.HookOnly"/>.
              </param>
              <remarks>
              <para><b>Usage:</b> Apply to partial properties in models decorated with [ObservableComponent].</para>
@@ -451,8 +356,6 @@
             
              // Generated in TestModelComponent:
              protected virtual void OnNotInBatchChanged() { }
-             protected virtual Task OnNotInBatchChangedAsync(CancellationToken ct)
-                 => Task.CompletedTask;
             
              // Override in .razor file:
              @inherits TestModelComponent
@@ -466,7 +369,6 @@
              <para><b>Example - Cross-Model Trigger Propagation:</b></para>
              <code>
              // SettingsModel with trigger
-             [ObservableComponent]
              public partial class SettingsModel : ObservableModel
              {
                  [ObservableComponentTrigger]
@@ -481,26 +383,22 @@
              }
             
              // Generated in WeatherModelComponent:
-             // - OnWeatherSettingsIsDayChanged() is automatically generated
-             // - OnWeatherSettingsIsDayChangedAsync(CancellationToken ct) is automatically generated
+             // - OnSettingsIsDayChanged() is automatically generated
             
              // Use in .razor file:
              @inherits WeatherModelComponent
              @code {
-                 protected override void OnWeatherSettingsIsDayChanged()
+                 protected override void OnSettingsIsDayChanged()
                  {
                      // React to Settings.IsDay changes from weather component
                  }
              }
              </code>
-             <para><b>Generated Hook Methods:</b></para>
-             <list type="bullet">
-             <item>Sync: <c>protected virtual void On{Property}Changed()</c></item>
-             <item>Async: <c>protected virtual Task On{Property}ChangedAsync(CancellationToken ct)</c></item>
-             </list>
+             <para><b>Generated Hook Method:</b></para>
+             <para><c>protected virtual void On{Property}Changed()</c></para>
              <para><b>Cross-Model Trigger Naming:</b></para>
              <para>When a trigger is propagated to a referencing model's component, the hook method name follows:</para>
-             <para><c>On{CurrentModel}{ReferencedProperty}{TriggerProperty}Changed[Async]</c></para>
+             <para><c>On{ReferencedProperty}{TriggerProperty}Changed</c></para>
              <para><b>Requirements for Cross-Model Triggers:</b></para>
              <list type="bullet">
              <item>Both models must be in the same assembly</item>
@@ -510,27 +408,20 @@
              <para><b>Warning:</b> Avoid modifying the same property within its hook to prevent update loops.</para>
              </remarks>
         </member>
-        <member name="M:RxBlazorV2.Model.ObservableComponentTriggerAttribute.#ctor(RxBlazorV2.Model.ComponentTriggerType,System.String)">
+        <member name="M:RxBlazorV2.Model.ObservableComponentTriggerAttribute.#ctor(System.String)">
              <summary>
-             Generates virtual hook methods in the component class for property change events.
+             Generates a virtual hook method in the component class that is called when the property value changes.
              Use with [ObservableComponent] attribute to create component-level property change handlers.
+             The attribute only generates hooks — rendering is handled by the reactive pipeline through
+             properties referenced in the razor file.
              Multiple triggers can be applied to the same property.
              When applied to properties in models that are referenced by other models (via partial constructor),
              the hook methods are automatically propagated to the referencing model's component.
              </summary>
-             <param name="type">
-             Specifies the trigger behavior. Defaults to <see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderAndHook"/>.
-             <list type="bullet">
-             <item><see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderAndHook"/> - Calls hook AND re-renders component (default)</item>
-             <item><see cref="F:RxBlazorV2.Model.ComponentTriggerType.HookOnly"/> - Calls hook but does NOT re-render component</item>
-             <item><see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderOnly"/> - Re-renders component but does NOT generate/call hook</item>
-             </list>
-             </param>
              <param name="hookMethodName">
              Optional. The name of the hook method to generate.
              If not specified, defaults to On{PropertyName}Changed.
              Use <see langword="nameof"/> for compile-time safety when specifying.
-             Only applicable when type is <see cref="F:RxBlazorV2.Model.ComponentTriggerType.RenderAndHook"/> or <see cref="F:RxBlazorV2.Model.ComponentTriggerType.HookOnly"/>.
              </param>
              <remarks>
              <para><b>Usage:</b> Apply to partial properties in models decorated with [ObservableComponent].</para>
@@ -548,8 +439,6 @@
             
              // Generated in TestModelComponent:
              protected virtual void OnNotInBatchChanged() { }
-             protected virtual Task OnNotInBatchChangedAsync(CancellationToken ct)
-                 => Task.CompletedTask;
             
              // Override in .razor file:
              @inherits TestModelComponent
@@ -563,7 +452,6 @@
              <para><b>Example - Cross-Model Trigger Propagation:</b></para>
              <code>
              // SettingsModel with trigger
-             [ObservableComponent]
              public partial class SettingsModel : ObservableModel
              {
                  [ObservableComponentTrigger]
@@ -578,26 +466,22 @@
              }
             
              // Generated in WeatherModelComponent:
-             // - OnWeatherSettingsIsDayChanged() is automatically generated
-             // - OnWeatherSettingsIsDayChangedAsync(CancellationToken ct) is automatically generated
+             // - OnSettingsIsDayChanged() is automatically generated
             
              // Use in .razor file:
              @inherits WeatherModelComponent
              @code {
-                 protected override void OnWeatherSettingsIsDayChanged()
+                 protected override void OnSettingsIsDayChanged()
                  {
                      // React to Settings.IsDay changes from weather component
                  }
              }
              </code>
-             <para><b>Generated Hook Methods:</b></para>
-             <list type="bullet">
-             <item>Sync: <c>protected virtual void On{Property}Changed()</c></item>
-             <item>Async: <c>protected virtual Task On{Property}ChangedAsync(CancellationToken ct)</c></item>
-             </list>
+             <para><b>Generated Hook Method:</b></para>
+             <para><c>protected virtual void On{Property}Changed()</c></para>
              <para><b>Cross-Model Trigger Naming:</b></para>
              <para>When a trigger is propagated to a referencing model's component, the hook method name follows:</para>
-             <para><c>On{CurrentModel}{ReferencedProperty}{TriggerProperty}Changed[Async]</c></para>
+             <para><c>On{ReferencedProperty}{TriggerProperty}Changed</c></para>
              <para><b>Requirements for Cross-Model Triggers:</b></para>
              <list type="bullet">
              <item>Both models must be in the same assembly</item>

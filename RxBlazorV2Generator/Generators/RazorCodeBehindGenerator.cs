@@ -91,20 +91,8 @@ public static class RazorCodeBehindGenerator
                 usedProperties.Add(matchedProperty ?? $"Model.{extractedProp}");
             }
 
-            // Add component trigger properties to filter for automatic re-rendering
-            // UNLESS they are HookOnly (TriggerBehavior == 2)
-            // HookOnly triggers execute hooks but don't trigger component re-renders
-            if (component.ComponentInfo is not null)
-            {
-                foreach (var trigger in component.ComponentInfo.ComponentTriggers)
-                {
-                    // Only add to filter if NOT HookOnly (2 = HookOnly)
-                    if (trigger.TriggerBehavior != 2)
-                    {
-                        usedProperties.Add(trigger.QualifiedPropertyPath);
-                    }
-                }
-            }
+            // Component triggers only generate hooks - they never add to Filter().
+            // Rendering is handled by properties referenced in the razor file.
 
             // Add command observed properties (including CanExecute dependencies) to the filter
             // When a command is used in razor (e.g., Model.AddCommand), we need to re-render

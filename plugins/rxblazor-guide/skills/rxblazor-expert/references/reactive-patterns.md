@@ -348,15 +348,10 @@ public partial class SettingsPage : SettingsModelComponent
 }
 ```
 
-**Trigger Types:**
-| Type | Behavior |
-|------|----------|
-| `RenderAndHook` (default) | Re-renders component AND calls hook |
-| `RenderOnly` | Re-renders only, no hook method generated |
-| `HookOnly` | Calls hook only, no automatic re-render |
+Triggers only generate hook methods — rendering is always handled by properties referenced in razor.
 
 ```csharp
-[ObservableComponentTrigger(ComponentTriggerType.HookOnly)]
+[ObservableComponentTrigger]
 public partial string BackgroundStatus { get; set; }
 ```
 
@@ -995,8 +990,6 @@ public partial class StorageModel : ObservableModel
 - Referenced models' lifecycle methods run before dependent models
 - Use for: seed data, loading persisted state, initial subscriptions
 
-**NEVER override `OnAfterRender` or `OnAfterRenderAsync` in components inheriting from a generated `*ModelComponent`.** The base `ObservableComponent<T>` uses `OnAfterRender` to set up Observable subscriptions and `OnAfterRenderAsync` to run model initialization. Overriding without calling `base` silently breaks the reactive pipeline — property changes stop triggering re-renders, CanExecute stops updating, and trigger hooks never fire. Use `OnContextReady`/`OnContextReadyAsync` instead.
-
 ### SuspendNotifications Pattern
 
 When making multiple property changes that should fire as a single notification:
@@ -1239,7 +1232,7 @@ public partial class DataViewModel : ObservableModel
     public partial string? ErrorMessage { get; set; }
 
     // Component triggers for UI feedback
-    [ObservableComponentTrigger(ComponentTriggerType.HookOnly)]
+    [ObservableComponentTrigger]
     public partial bool IsLoading { get; set; }
 
     [ObservableComponentTriggerAsync]

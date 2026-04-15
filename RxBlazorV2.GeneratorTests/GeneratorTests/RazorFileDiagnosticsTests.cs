@@ -2824,7 +2824,7 @@ public class RazorFileDiagnosticsTests
                 "TriggerOnlyComponent",
                 "TestModelComponent",
                 "Pages",
-                ["Model.Counter"], // Filter from ObservableComponentTrigger attribute default behavior
+                [], // Triggers don't add to filter - rendering via razor references only
                 ["Test"]) // Component namespace using directive
         };
 
@@ -2838,157 +2838,7 @@ public class RazorFileDiagnosticsTests
             "TestModelComponent",
             additionalGeneratedSources: additionalGeneratedSources);
     }
-    
-    [Fact]
-    public async Task ComponentWithOnlyTriggers_Render()
-    {
-        // lang=csharp
-        const string source = """
 
-        using RxBlazorV2.Model;
-        using RxBlazorV2.Interface;
-
-        namespace Test
-        {
-            [ObservableComponent]
-            public partial class TestModel : ObservableModel
-            {
-                [ObservableComponentTrigger(ComponentTriggerType.RenderOnly)]
-                public partial int Counter { get; set; }
-            }
-        }
-        """;
-
-        // lang=csharp
-        const string generatedModel = """
-
-        #nullable enable
-        using JetBrains.Annotations;
-        using Microsoft.Extensions.DependencyInjection;
-        using ObservableCollections;
-        using R3;
-        using RxBlazorV2.Interface;
-        using RxBlazorV2.Model;
-        using System;
-
-        namespace Test;
-
-        public partial class TestModel
-        {
-            public override string ModelID => "Test.TestModel";
-
-            public override bool FilterUsedProperties(params string[] propertyNames)
-            {
-                if (propertyNames.Length == 0)
-                {
-                    return false;
-                }
-
-                // No filtering information available - pass through all
-                return true;
-            }
-
-            public partial int Counter
-            {
-                get => field;
-                [UsedImplicitly]
-                set
-                {
-                    if (field != value)
-                    {
-                        field = value;
-                        StateHasChanged("Model.Counter");
-                    }
-                }
-            }
-
-        }
-
-        """;
-
-        // lang=csharp
-        const string generatedComponent = """
-
-        using R3;
-        using ObservableCollections;
-        using System;
-        using System.Threading.Tasks;
-        using Microsoft.Extensions.DependencyInjection;
-        using RxBlazorV2.Component;
-
-        namespace Test;
-
-        public partial class TestModelComponent : ObservableComponent<TestModel>
-        {
-            protected override void InitializeGeneratedCode()
-            {
-                // Subscribe to model changes - respects Filter() method
-                var filter = Filter();
-                if (filter.Length > 0)
-                {
-                    // Filter active - observe only filtered properties
-                    Subscriptions.Add(Model.Observable
-                        .Where(changedProps => changedProps.Intersect(filter).Any())
-                        .Chunk(TimeSpan.FromMilliseconds(100))
-                        .Subscribe(chunks =>
-                        {
-                            InvokeAsync(StateHasChanged);
-                        }));
-                }
-                // else: Empty filter - no automatic StateHasChanged, only triggers (if any) will fire
-            }
-
-            protected override Task InitializeGeneratedCodeAsync()
-            {
-                return Task.CompletedTask;
-            }
-
-            protected sealed override void OnAfterRender(bool firstRender)
-            {
-                base.OnAfterRender(firstRender);
-            }
-
-            protected sealed override async Task OnAfterRenderAsync(bool firstRender)
-            {
-                await base.OnAfterRenderAsync(firstRender);
-            }
-        }
-
-        """;
-
-        // Razor file with component that only uses triggers, no direct property usage
-        var razorFiles = new Dictionary<string, string>
-        {
-            ["Pages/TriggerOnlyComponent.razor"] = """
-            @inherits TestModelComponent
-
-            <h3>Trigger Only Component</h3>
-            <p>This component uses triggers but doesn't directly reference model properties</p>
-            """
-        };
-
-        // Generate expected code-behind with empty filter (no properties used)
-        var additionalGeneratedSources = new Dictionary<string, string>
-        {
-            ["TriggerOnlyComponent.g.cs"] = GenerateFilterCodeBehind(
-                "TriggerOnlyComponent",
-                "TestModelComponent",
-                "Pages",
-                ["Model.Counter"], // Filter from ObservableComponentTrigger attribute default behavior
-                ["Test"]) // Component namespace using directive
-        };
-
-        // No diagnostic expected - component has triggers
-        await RazorFileGeneratorVerifier.VerifyRazorDiagnosticsAsync(
-            source,
-            razorFiles,
-            generatedModel,
-            generatedComponent,
-            "TestModel",
-            "TestModelComponent",
-            additionalGeneratedSources: additionalGeneratedSources);
-    }
-    
     [Fact]
     public async Task ComponentWithOnlyTriggers_Hook()
     {
@@ -3003,7 +2853,7 @@ public class RazorFileDiagnosticsTests
             [ObservableComponent]
             public partial class TestModel : ObservableModel
             {
-                [ObservableComponentTrigger(ComponentTriggerType.HookOnly)]
+                [ObservableComponentTrigger]
                 public partial int Counter { get; set; }
             }
         }

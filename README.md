@@ -216,23 +216,16 @@ public partial class SettingsModel : ObservableModel
     public partial string Theme { get; set; }
 
     // Async hook with custom name
-    [ObservableComponentTriggerAsync(hookMethodName: "HandleDarkModeToggle")]
+    [ObservableComponentTriggerAsync("HandleDarkModeToggle")]
     public partial bool IsDarkMode { get; set; }
 
-    // Render only - no hook generated
-    [ObservableComponentTrigger(ComponentTriggerType.RenderOnly)]
-    public partial int Counter { get; set; }
-
-    // Hook only - no re-render
-    [ObservableComponentTrigger(ComponentTriggerType.HookOnly)]
+    // Hook for code-behind logic
+    [ObservableComponentTrigger]
     public partial string BackgroundTask { get; set; }
 }
 ```
 
-**ComponentTriggerType Options:**
-- `RenderAndHook` (default): Calls hook AND re-renders component
-- `RenderOnly`: Re-renders but no hook method
-- `HookOnly`: Calls hook but no automatic re-render
+Triggers only generate hook methods — rendering is always handled by the reactive pipeline through properties referenced in razor.
 
 ### Property Triggers
 
@@ -544,9 +537,32 @@ dotnet run --project ReactivePatternSample/ReactivePatternSample
 - **RxBlazorV2Sample** - Sample Blazor WebAssembly application with isolated examples
 - **ReactivePatternSample** - Multi-project sample demonstrating all reactive patterns
 
+## Breaking Changes
+
+### ComponentTriggerType Removed
+
+The `ComponentTriggerType` enum (`RenderAndHook`, `RenderOnly`, `HookOnly`) has been removed. `[ObservableComponentTrigger]` and `[ObservableComponentTriggerAsync]` now **only generate hook methods** — they never control rendering.
+
+**Why:** Rendering is always handled by the reactive pipeline through properties referenced in razor. The enum was either redundant (property in razor already re-renders) or an anti-pattern (forcing re-render for properties not in razor).
+
+**Migration:**
+
+| Before | After |
+|---|---|
+| `[ObservableComponentTrigger]` | `[ObservableComponentTrigger]` (unchanged) |
+| `[ObservableComponentTrigger(ComponentTriggerType.RenderAndHook)]` | `[ObservableComponentTrigger]` |
+| `[ObservableComponentTrigger(ComponentTriggerType.HookOnly)]` | `[ObservableComponentTrigger]` |
+| `[ObservableComponentTrigger(ComponentTriggerType.RenderOnly)]` | Remove the attribute entirely |
+| `[ObservableComponentTrigger(ComponentTriggerType.HookOnly, hookMethodName: "X")]` | `[ObservableComponentTrigger("X")]` |
+| `[ObservableComponentTriggerAsync(ComponentTriggerType.HookOnly)]` | `[ObservableComponentTriggerAsync]` |
+
+### ObservableCollection Code Fix Uses `private init`
+
+RXBG042 (non-observable collection) code fix now generates `private init` instead of `init` for collection properties. This aligns with latest Roslyn analyzer recommendations.
+
 ## Diagnostics
 
-The generator provides comprehensive diagnostics (RXBG001-RXBG082) with code fixes. See the [Diagnostics Help](RxBlazorV2Generator/Diagnostics/Help/) folder for detailed documentation.
+The generator provides comprehensive diagnostics (RXBG001-RXBG090) with code fixes. See the [Diagnostics Help](RxBlazorV2Generator/Diagnostics/Help/) folder for detailed documentation.
 
 Key diagnostic ranges:
 - **RXBG001-RXBG019**: Core model and property diagnostics

@@ -9,20 +9,19 @@ public partial class ComponentTriggersModel : SampleBaseModel
 {
     public override string Usage => "Component triggers generate hook methods that execute when specific properties change";
 
-    // RenderAndHook (default) - generates hook AND triggers re-render
+    // Generates OnThemeChanged() hook
     [ObservableComponentTrigger]
     public partial string Theme { get; set; } = "Light";
 
     // Async hook with custom name
-    [ObservableComponentTriggerAsync(hookMethodName: "HandleUserNameUpdateAsync")]
+    [ObservableComponentTriggerAsync("HandleUserNameUpdateAsync")]
     public partial string UserName { get; set; } = "";
 
-    // RenderOnly - triggers re-render but no hook method
-    [ObservableComponentTrigger(ComponentTriggerType.RenderOnly)]
+    // No trigger needed - property in razor handles rendering
     public partial int RenderOnlyCounter { get; set; }
 
-    // HookOnly - calls hook but no automatic re-render
-    [ObservableComponentTrigger(ComponentTriggerType.HookOnly)]
+    // Generates OnBackgroundStatusChanged() hook
+    [ObservableComponentTrigger]
     public partial string BackgroundStatus { get; set; } = "Idle";
 
     // Track hook executions for demonstration
