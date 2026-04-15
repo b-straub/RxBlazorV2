@@ -138,6 +138,23 @@ public static class PropertyAnalysisExtensions
                     accessibility,
                     triggers));
             }
+            else
+            {
+                // Check non-partial properties for observable attributes that require partial (RXBG072)
+                var attributes = member.AttributeLists.SelectMany(al => al.Attributes).ToArray();
+                var observableAttrName = GetObservableAttributeName(attributes, semanticModel);
+                if (observableAttrName is not null)
+                {
+                    var diagnostic = Diagnostic.Create(
+                        Diagnostics.DiagnosticDescriptors.ObservableEntityMissingPartialModifierError,
+                        member.Identifier.GetLocation(),
+                        "Property",
+                        member.Identifier.ValueText,
+                        $"has [{observableAttrName}] attribute",
+                        "property");
+                    diagnostics.Add(diagnostic);
+                }
+            }
         }
 
         return (partialProperties, diagnostics);
@@ -147,6 +164,44 @@ public static class PropertyAnalysisExtensions
     {
         var (properties, _) = ExtractPartialPropertiesWithDiagnostics(classDecl, semanticModel);
         return properties;
+    }
+
+    /// <summary>
+    /// Returns the name of the first observable attribute found on a property that requires the partial modifier.
+    /// Returns null if no such attribute is found.
+    /// </summary>
+    private static string? GetObservableAttributeName(AttributeSyntax[] attributes, SemanticModel semanticModel)
+    {
+        foreach (var attr in attributes)
+        {
+            if (attr.IsObservableTrigger(semanticModel))
+            {
+                return "ObservableTrigger";
+            }
+
+            if (attr.IsObservableTriggerAsync(semanticModel))
+            {
+                return "ObservableTriggerAsync";
+            }
+
+            if (attr.IsObservableCommandTrigger(semanticModel))
+            {
+                return "ObservableCommandTrigger";
+            }
+
+            var symbolInfo = semanticModel.GetSymbolInfo(attr);
+            var attrType = symbolInfo.Symbol?.ContainingType;
+            if (attrType is not null)
+            {
+                var typeName = attrType.Name;
+                if (typeName is "ObservableComponentTriggerAttribute" or "ObservableComponentTriggerAsyncAttribute")
+                {
+                    return typeName.Replace("Attribute", "");
+                }
+            }
+        }
+
+        return null;
     }
 
     /// <summary>

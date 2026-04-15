@@ -165,6 +165,112 @@ public class ObservableEntityMissingPartialDiagnosticTests
     }
 
     [Fact]
+    public async Task NonPartialPropertyWithObservableTrigger_ReportsError()
+    {
+        // lang=csharp
+        var test = """
+
+        using RxBlazorV2.Model;
+
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Scoped)]
+            public partial class TestModel : ObservableModel
+            {
+                [ObservableTrigger(nameof(OnNameChanged))]
+                public string {|#0:Name|} { get; set; } = "";
+
+                private void OnNameChanged() { }
+            }
+        }
+        """;
+
+        var expected = AnalyzerVerifier.Diagnostic(DiagnosticDescriptors.ObservableEntityMissingPartialModifierError)
+            .WithLocation(0)
+            .WithArguments("Property", "Name", "has [ObservableTrigger] attribute", "property");
+
+        await AnalyzerVerifier.VerifyAnalyzerAsync(test, expected);
+    }
+
+    [Fact]
+    public async Task NonPartialPropertyWithObservableComponentTrigger_ReportsError()
+    {
+        // lang=csharp
+        var test = """
+
+        using RxBlazorV2.Model;
+
+        namespace Test
+        {
+            [ObservableComponent]
+            [ObservableModelScope(ModelScope.Scoped)]
+            public partial class TestModel : ObservableModel
+            {
+                [ObservableComponentTrigger]
+                public string {|#0:Theme|} { get; set; } = "Light";
+            }
+        }
+        """;
+
+        var expected = AnalyzerVerifier.Diagnostic(DiagnosticDescriptors.ObservableEntityMissingPartialModifierError)
+            .WithLocation(0)
+            .WithArguments("Property", "Theme", "has [ObservableComponentTrigger] attribute", "property");
+
+        await AnalyzerVerifier.VerifyAnalyzerAsync(test, expected);
+    }
+
+    [Fact]
+    public async Task NonPartialPropertyWithObservableComponentTriggerAsync_ReportsError()
+    {
+        // lang=csharp
+        var test = """
+
+        using RxBlazorV2.Model;
+
+        namespace Test
+        {
+            [ObservableComponent]
+            [ObservableModelScope(ModelScope.Scoped)]
+            public partial class TestModel : ObservableModel
+            {
+                [ObservableComponentTriggerAsync]
+                public bool {|#0:IsLoading|} { get; set; }
+            }
+        }
+        """;
+
+        var expected = AnalyzerVerifier.Diagnostic(DiagnosticDescriptors.ObservableEntityMissingPartialModifierError)
+            .WithLocation(0)
+            .WithArguments("Property", "IsLoading", "has [ObservableComponentTriggerAsync] attribute", "property");
+
+        await AnalyzerVerifier.VerifyAnalyzerAsync(test, expected);
+    }
+
+    [Fact]
+    public async Task PartialPropertyWithObservableTrigger_NoError()
+    {
+        // lang=csharp
+        var test = """
+
+        using RxBlazorV2.Model;
+
+        namespace Test
+        {
+            [ObservableModelScope(ModelScope.Scoped)]
+            public partial class TestModel : ObservableModel
+            {
+                [ObservableTrigger(nameof(OnNameChanged))]
+                public partial string Name { get; set; }
+
+                private void OnNameChanged() { }
+            }
+        }
+        """;
+
+        await AnalyzerVerifier.VerifyAnalyzerAsync(test);
+    }
+
+    [Fact]
     public async Task MultipleNonPartialCommandProperties_ReportsMultipleErrors()
     {
         // lang=csharp
