@@ -110,11 +110,12 @@ public class PartialPropertyInfo
     public string[]? BatchIds { get; }
     public bool HasRequiredModifier { get; }
     public bool HasInitAccessor { get; }
+    public string? InitAccessorModifier { get; }
     public bool IsOverride { get; }
     public string Accessibility { get; }
     public List<PropertyTriggerInfo> Triggers { get; }
 
-    public PartialPropertyInfo(string name, string type, bool isObservableCollection = false, bool isEquatable = false, string[]? batchIds = null, bool hasRequiredModifier = false, bool hasInitAccessor = false, bool isOverride = false, string accessibility = "public", List<PropertyTriggerInfo>? triggers = null)
+    public PartialPropertyInfo(string name, string type, bool isObservableCollection = false, bool isEquatable = false, string[]? batchIds = null, bool hasRequiredModifier = false, bool hasInitAccessor = false, string? initAccessorModifier = null, bool isOverride = false, string accessibility = "public", List<PropertyTriggerInfo>? triggers = null)
     {
         Name = name;
         Type = type;
@@ -123,6 +124,7 @@ public class PartialPropertyInfo
         BatchIds = batchIds;
         HasRequiredModifier = hasRequiredModifier;
         HasInitAccessor = hasInitAccessor;
+        InitAccessorModifier = initAccessorModifier;
         IsOverride = isOverride;
         Accessibility = accessibility;
         Triggers = triggers ?? [];

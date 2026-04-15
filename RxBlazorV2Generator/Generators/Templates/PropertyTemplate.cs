@@ -108,17 +108,19 @@ public static class PropertyTemplate
         // The diagnostic will inform the user about invalid usage
         if (prop.HasInitAccessor)
         {
+            var initModifier = prop.InitAccessorModifier is not null ? $"{prop.InitAccessorModifier} " : "";
+
             // For IObservableCollection with init, skip reactive pattern
             // Reactivity comes from observing the collection, not property changes
             if (prop.IsObservableCollection)
             {
-                sb.AppendLine("        init => field = value;");
+                sb.AppendLine($"        {initModifier}init => field = value;");
             }
             else
             {
                 // For non-IObservableCollection, still generate init but add reactive pattern
                 // This maintains compatibility but the diagnostic will warn the user
-                sb.AppendLine("        init");
+                sb.AppendLine($"        {initModifier}init");
                 sb.AppendLine("        {");
                 sb.AppendLine("            field = value;");
                 sb.AppendLine($"            StateHasChanged(\"{qualifiedPropertyName}\"{batchIdsParam});");

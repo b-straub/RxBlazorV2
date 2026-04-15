@@ -239,6 +239,17 @@ public static class DiagnosticDescriptors
         helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG041.md",
         customTags: ["Add [ObservableComponent] attribute", "Remove trigger attributes"]);
 
+    public static readonly DiagnosticDescriptor NonObservableCollectionPropertyError = new(
+        id: "RXBG042",
+        title: "Non-observable collection type on partial property",
+        messageFormat: "Property '{0}' uses '{1}' which does not support reactive change notifications. Collection mutations (Add, Remove, Clear) will be invisible to the reactive system. Use 'ObservableList<{2}>' with 'private init' accessor instead of 'set' for proper reactivity.",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Partial properties in ObservableModel that use non-observable collection types (List<T>, IList<T>, Collection<T>, etc.) will not fire reactive notifications when items are added, removed, or cleared. Only full property reassignment triggers a change notification. Use ObservableList<T> from the ObservableCollections library with a 'private init' accessor for proper collection-level reactivity.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG042.md",
+        customTags: ["Replace with ObservableList"]);
+
     // ============================================================================
     // RXBG050-RXBG059: Dependency Injection
     // ============================================================================
@@ -435,6 +446,7 @@ public static class DiagnosticDescriptors
         // RXBG040-049: Properties - mixed
         new(InvalidInitPropertyError, DiagnosticReporter.Analyzer),
         new(UnusedObservableComponentTriggerWarning, DiagnosticReporter.Generator),  // Requires cross-model analysis
+        new(NonObservableCollectionPropertyError, DiagnosticReporter.Analyzer),
 
         // RXBG050-059: Dependency Injection - generator (requires service list analysis)
         new(UnregisteredServiceWarning, DiagnosticReporter.Generator),
