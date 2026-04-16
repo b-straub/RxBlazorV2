@@ -294,3 +294,125 @@ private void OnSuccessMessageChanged()
 ```
 
 **Why**: The component was just relaying -- the model already has access to `StatusModel` via DI. Use `[ObservableTrigger]` to keep side effects in the model layer.
+
+---
+
+## Scenario 9: EventCallback Bubbling Between Reactive Components ("EventCallback Hell")
+
+**Problem**: A child `*ModelComponent` declares `[Parameter] EventCallback OnXxxRequested` parameters and bubbles button clicks up to a parent that opens a dialog, navigates, or calls a service. The parent and child both inherit from a generated `*ModelComponent` (or both have access to the same Model via DI).
+
+This is the most common AI-generated fallback pattern -- when the model isn't recognized as the communication channel, generated code defaults to vanilla Blazor parent-child event plumbing.
+
+**Before** (event bubbling):
+```razor
+@* ContactsPanel.razor — child *@
+@inherits ContactsModelComponent
+
+<MudButton OnClick="@(() => OnCreateInviteRequested.InvokeAsync())">
+    Create Invite Link
+</MudButton>
+<MudButton OnClick="@(() => OnCheckResponsesRequested.InvokeAsync())">
+    Check Responses
+</MudButton>
+
+@code {
+    [Parameter] public EventCallback OnCreateInviteRequested { get; set; }
+    [Parameter] public EventCallback OnCheckResponsesRequested { get; set; }
+}
+```
+
+```razor
+@* Contacts.razor — parent *@
+@inherits ContactsModelComponent
+@inject IDialogService DialogService
+
+<ContactsPanel OnCreateInviteRequested="OpenCreateInviteDialogAsync"
+               OnCheckResponsesRequested="OpenCheckResponsesDialogAsync" />
+
+@code {
+    private async Task OpenCreateInviteDialogAsync()
+    {
+        if (!await Model.PrfModel.EnsureKeysAsync()) return;
+        await InviteLinkModel.LoadProfileAsync();
+        await DialogService.ShowAsync<CreateInviteLinkDialog>("Create Invite Link", options);
+    }
+}
+```
+
+**Why it's wrong:**
+- Both components share the same `Model` instance (DI-injected by the generated `*ModelComponent` base)
+- Child re-uses `EventCallback` plumbing instead of the reactive Model -- defeats the entire reactive pipeline
+- Loses CanExecute auto-disable, Executing state, cancellation token support
+- Creates parent-child coupling: the child can't be reused without the parent's exact handler shape
+
+**After — Option A: Move dialog logic into the child** (preferred — shortest, most cohesive):
+```razor
+@* ContactsPanel.razor — handles its own dialogs *@
+@inherits ContactsModelComponent
+@inject IDialogService DialogService
+@inject InviteLinkModel InviteLinkModel
+
+<MudButtonAsyncRx Command="Model.OpenCreateInvite">Create Invite Link</MudButtonAsyncRx>
+<MudButtonAsyncRx Command="Model.OpenCheckResponses">Check Responses</MudButtonAsyncRx>
+
+@code {
+    // Dialog show is UI behaviour; keep it in the component but driven by command
+    protected override async Task OnContextReadyAsync()
+    {
+        Model.OpenCreateInvite.RegisterHandler(OpenCreateInviteDialogAsync);
+        Model.OpenCheckResponses.RegisterHandler(OpenCheckResponsesDialogAsync);
+    }
+    // ... dialog show methods stay here, parent no longer needs to know
+}
+```
+
+**After — Option B: Make it a model command with a dialog service** (when the same action is needed from multiple components):
+```csharp
+// Inject a dialog presenter service into the model
+public partial ContactsModel(IDialogPresenter dialogs, PrfModel prfModel, InviteLinkModel inviteLinkModel);
+
+[ObservableCommand(nameof(OpenCreateInviteAsync))]
+public partial IObservableCommandAsync OpenCreateInvite { get; }
+
+private async Task OpenCreateInviteAsync()
+{
+    if (!await PrfModel.EnsureKeysAsync()) return;
+    await InviteLinkModel.LoadProfileAsync();
+    await _dialogs.ShowAsync<CreateInviteLinkDialog>("Create Invite Link");
+}
+```
+
+```razor
+@* Both parent and child just bind — no EventCallback plumbing *@
+<MudButtonAsyncRx Command="Model.OpenCreateInvite">Create Invite Link</MudButtonAsyncRx>
+```
+
+**After — Option C: Signal via model property + ObservableComponentTrigger** (when the parent is the only one that knows how to render the dialog):
+```csharp
+// Model
+[ObservableComponentTrigger]
+public partial DialogRequest? RequestedDialog { get; set; }
+
+[ObservableCommand(nameof(RequestCreateInvite))]
+public partial IObservableCommand OpenCreateInvite { get; }
+
+private void RequestCreateInvite() => RequestedDialog = DialogRequest.CreateInvite;
+```
+
+```csharp
+// Parent component reacts via generated hook — no callback declared
+protected override async Task OnRequestedDialogChangedAsync(CancellationToken ct)
+{
+    if (Model.RequestedDialog is null) return;
+    var request = Model.RequestedDialog;
+    Model.RequestedDialog = null;  // consume
+    await ShowDialogAsync(request, ct);
+}
+```
+
+**Decision rule:**
+- Action is purely UI (show a dialog, navigate, focus an element) → **Option A** (handle in child)
+- Action needs to be triggered from many places, or includes async/business logic → **Option B** (model command + service)
+- Only the parent has the right context (e.g., layout-specific dialog) → **Option C** (property + component trigger)
+
+**Anti-pattern signal**: If you're writing `[Parameter] EventCallback` on a `*ModelComponent`-derived component, ask: "Why doesn't the child use the Model directly?" The answer is almost always "because it can — I just defaulted to event plumbing."
