@@ -113,6 +113,9 @@ public class CrossComponentCommunicationTests
     [Fact]
     public void MultipleCommands_ShouldWorkSequentially()
     {
+        // Arrange
+        _model.SharedCounter = 0;
+
         // Act
         _model.IncrementCommand.Execute();
         _model.IncrementCommand.Execute();
