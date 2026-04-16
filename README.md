@@ -10,6 +10,84 @@ A reactive programming framework for Blazor applications built on top of [R3 (Re
 
 **[Live Demo](https://b-straub.github.io/RxBlazorV2/)**
 
+> [!WARNING]
+> **Breaking changes in 1.2.x** — `ComponentTriggerType` has been removed. All existing `[ObservableComponentTrigger]` usages must be reviewed. See [Breaking Changes](#breaking-changes) below for the cleanup checklist.
+
+## Breaking Changes
+
+### Version 1.2.x — `ComponentTriggerType` Removed
+
+The `ComponentTriggerType` enum (`RenderAndHook`, `RenderOnly`, `HookOnly`) has been removed. `[ObservableComponentTrigger]` and `[ObservableComponentTriggerAsync]` now **only generate hook methods** — they never control rendering.
+
+**Why:** Rendering is always handled by the reactive pipeline through properties referenced in razor. The enum was either redundant (property in razor already re-renders) or an anti-pattern (forcing re-render for properties not in razor).
+
+**Cleanup checklist:**
+
+1. **Remove every `[ObservableComponentTrigger(ComponentTriggerType.RenderOnly)]` attribute entirely.** These never produced a hook — their only job was to force a re-render, which the reactive pipeline now handles automatically. The attribute is redundant.
+2. **For `HookOnly` and `RenderAndHook` variants, check whether the generated hook is actually used.** Search the component for overrides of the generated `On{Property}Changed()` / `On{Property}ChangedAsync()` method. If no override exists or the override is empty, **remove the attribute**. If the hook is used, keep the attribute and drop the enum argument.
+
+**Migration:**
+
+| Before | After |
+|---|---|
+| `[ObservableComponentTrigger]` | `[ObservableComponentTrigger]` (unchanged) |
+| `[ObservableComponentTrigger(ComponentTriggerType.RenderOnly)]` | **Remove the attribute entirely** |
+| `[ObservableComponentTrigger(ComponentTriggerType.RenderAndHook)]` | `[ObservableComponentTrigger]` *(only if hook is used)* |
+| `[ObservableComponentTrigger(ComponentTriggerType.HookOnly)]` | `[ObservableComponentTrigger]` *(only if hook is used)* |
+| `[ObservableComponentTrigger(ComponentTriggerType.HookOnly, hookMethodName: "X")]` | `[ObservableComponentTrigger("X")]` *(only if hook is used)* |
+| `[ObservableComponentTriggerAsync(ComponentTriggerType.HookOnly)]` | `[ObservableComponentTriggerAsync]` *(only if hook is used)* |
+
+### Version 1.2.x — `ObservableCollection` Code Fix Uses `private init`
+
+RXBG042 (non-observable collection) code fix now generates `private init` instead of `init` for collection properties. This aligns with latest Roslyn analyzer recommendations.
+
+### Version 1.0.4 — Generic Trigger Attributes Removed
+
+The generic `[ObservableTrigger<T>]` and `[ObservableTriggerAsync<T>]` attributes have been removed. Use these alternatives instead:
+
+| Removed                                      | Replacement                                          |
+|----------------------------------------------|------------------------------------------------------|
+| `[ObservableTrigger<T>(method, param)]`      | `[ObservableModelObserver]` on service methods       |
+| `[ObservableTriggerAsync<T>(method, param)]` | `[ObservableModelObserver]` with async signature     |
+
+> **Note**: The non-generic `[ObservableTrigger]` and `[ObservableTriggerAsync]` attributes for internal method execution are still available.
+
+For internal model observers that react to referenced model changes, use the **auto-detection pattern**:
+
+```csharp
+[ObservableModelScope(ModelScope.Scoped)]
+public partial class MyModel : ObservableModel
+{
+    public partial MyModel(SettingsModel settings);
+
+    // Auto-detected: private void method accessing Settings properties
+    private void OnThemeChanged()
+    {
+        // Automatically subscribed to Settings.Theme changes
+        ApplyTheme(Settings.Theme);
+    }
+
+    // Async version with CancellationToken
+    private async Task OnLanguageChangedAsync(CancellationToken ct)
+    {
+        await LoadLocalizationAsync(Settings.Language, ct);
+    }
+}
+```
+
+For external services, use `[ObservableModelObserver]`:
+
+```csharp
+public class ThemeService
+{
+    [ObservableModelObserver(nameof(SettingsModel.Theme))]
+    private void OnThemeChanged(SettingsModel model)
+    {
+        ApplyGlobalTheme(model.Theme);
+    }
+}
+```
+
 ## Features
 
 - **Reactive State Management**: Automatic change notifications using R3 observables
@@ -414,57 +492,6 @@ public partial class FormModel : ObservableModel
 - **No Runtime Reflection**: All code generated at compile time
 - **Type Safety**: Full IntelliSense and compile-time checking
 
-## Breaking Changes
-
-### Version 1.0.4
-
-**Removed: Generic `[ObservableTrigger<T>]` and `[ObservableTriggerAsync<T>]` attributes**
-
-The generic trigger attributes have been removed. Use these alternatives instead:
-
-| Removed                                  | Replacement                                                   |
-|------------------------------------------|---------------------------------------------------------------|
-| `[ObservableTrigger<T>(method, param)]`  | `[ObservableModelObserver]` on service methods                |
-| `[ObservableTriggerAsync<T>(method, param)]` | `[ObservableModelObserver]` with async signature          |
-
-> **Note**: The non-generic `[ObservableTrigger]` and `[ObservableTriggerAsync]` attributes for internal method execution are still available.
-
-For internal model observers that react to referenced model changes, use the new **auto-detection pattern**:
-
-```csharp
-[ObservableModelScope(ModelScope.Scoped)]
-public partial class MyModel : ObservableModel
-{
-    public partial MyModel(SettingsModel settings);
-
-    // Auto-detected: private void method accessing Settings properties
-    private void OnThemeChanged()
-    {
-        // Automatically subscribed to Settings.Theme changes
-        ApplyTheme(Settings.Theme);
-    }
-
-    // Async version with CancellationToken
-    private async Task OnLanguageChangedAsync(CancellationToken ct)
-    {
-        await LoadLocalizationAsync(Settings.Language, ct);
-    }
-}
-```
-
-For external services, use `[ObservableModelObserver]`:
-
-```csharp
-public class ThemeService
-{
-    [ObservableModelObserver(nameof(SettingsModel.Theme))]
-    private void OnThemeChanged(SettingsModel model)
-    {
-        ApplyGlobalTheme(model.Theme);
-    }
-}
-```
-
 ## Requirements
 
 - .NET 10.0 or later
@@ -536,29 +563,6 @@ dotnet run --project ReactivePatternSample/ReactivePatternSample
 - **RxBlazorV2.MudBlazor** - MudBlazor button components with command binding
 - **RxBlazorV2Sample** - Sample Blazor WebAssembly application with isolated examples
 - **ReactivePatternSample** - Multi-project sample demonstrating all reactive patterns
-
-## Breaking Changes
-
-### ComponentTriggerType Removed
-
-The `ComponentTriggerType` enum (`RenderAndHook`, `RenderOnly`, `HookOnly`) has been removed. `[ObservableComponentTrigger]` and `[ObservableComponentTriggerAsync]` now **only generate hook methods** — they never control rendering.
-
-**Why:** Rendering is always handled by the reactive pipeline through properties referenced in razor. The enum was either redundant (property in razor already re-renders) or an anti-pattern (forcing re-render for properties not in razor).
-
-**Migration:**
-
-| Before | After |
-|---|---|
-| `[ObservableComponentTrigger]` | `[ObservableComponentTrigger]` (unchanged) |
-| `[ObservableComponentTrigger(ComponentTriggerType.RenderAndHook)]` | `[ObservableComponentTrigger]` |
-| `[ObservableComponentTrigger(ComponentTriggerType.HookOnly)]` | `[ObservableComponentTrigger]` |
-| `[ObservableComponentTrigger(ComponentTriggerType.RenderOnly)]` | Remove the attribute entirely |
-| `[ObservableComponentTrigger(ComponentTriggerType.HookOnly, hookMethodName: "X")]` | `[ObservableComponentTrigger("X")]` |
-| `[ObservableComponentTriggerAsync(ComponentTriggerType.HookOnly)]` | `[ObservableComponentTriggerAsync]` |
-
-### ObservableCollection Code Fix Uses `private init`
-
-RXBG042 (non-observable collection) code fix now generates `private init` instead of `init` for collection properties. This aligns with latest Roslyn analyzer recommendations.
 
 ## Diagnostics
 
