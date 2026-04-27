@@ -9,7 +9,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="RxBlazorV2" Version="$(RxBlazorV2Version)" Condition="'$(Configuration)' == 'Release'"/>
+        <PackageReference Include="RxBlazorV2" Condition="'$(Configuration)' == 'Release'"/>
     </ItemGroup>
     
     <ItemGroup Condition="'$(Configuration)' == 'Debug'">

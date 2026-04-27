@@ -13,7 +13,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="MudBlazor" Version="9.3.0" />
+        <PackageReference Include="MudBlazor" />
     </ItemGroup>
 
     <!-- Domain dependencies -->
@@ -31,8 +31,8 @@
 
     <!-- Release: Use NuGet packages -->
     <ItemGroup Condition="'$(Configuration)' == 'Release'">
-        <PackageReference Include="RxBlazorV2" Version="$(RxBlazorV2Version)"/>
-        <PackageReference Include="RxBlazorV2.MudBlazor" Version="$(RxBlazorV2Version)"/>
+        <PackageReference Include="RxBlazorV2" />
+        <PackageReference Include="RxBlazorV2.MudBlazor" />
     </ItemGroup>
 
 </Project>

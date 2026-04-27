@@ -1,0 +1,56 @@
+<Project>
+  <ItemGroup>
+    <!-- RxBlazorV2 internal NuGet packages (Release-only references) -->
+    <PackageVersion Include="RxBlazorV2" Version="$(RxBlazorV2Version)" />
+    <PackageVersion Include="RxBlazorV2.MudBlazor" Version="$(RxBlazorV2Version)" />
+
+    <!-- Reactive / R3 -->
+    <PackageVersion Include="R3" Version="1.3.0" />
+    <PackageVersion Include="ObservableCollections.R3" Version="3.3.4" />
+
+    <!-- ASP.NET Core / Blazor -->
+    <PackageVersion Include="Microsoft.AspNetCore.Components" Version="10.0.7" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="10.0.7" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.7" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.7" />
+
+    <!-- Microsoft.Extensions -->
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="10.0.7" />
+    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.5.0" />
+
+    <!-- Roslyn / Source Generator tooling -->
+    <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="5.3.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Common" Version="5.3.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.3.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.3.0" />
+
+    <!-- Source generator / analyzer / code fix testing -->
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.SourceGenerators.Testing.XUnit" Version="1.1.2" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Analyzer.Testing.XUnit" Version="1.1.2" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.CodeFix.Testing.XUnit" Version="1.1.2" />
+
+    <!-- Source linking / packaging -->
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.203" />
+
+    <!-- Compile-time helpers -->
+    <PackageVersion Include="Nullable" Version="1.3.1" />
+    <PackageVersion Include="JetBrains.Annotations" Version="2025.2.4" />
+    <PackageVersion Include="System.Composition" Version="10.0.7" />
+
+    <!-- UI -->
+    <PackageVersion Include="MudBlazor" Version="9.4.0" />
+
+    <!-- Test platform -->
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.5.0" />
+    <PackageVersion Include="bunit" Version="2.7.2" />
+    <PackageVersion Include="coverlet.msbuild" Version="10.0.0" />
+
+    <!-- xUnit v3 -->
+    <PackageVersion Include="xunit.v3" Version="3.2.2" />
+    <PackageVersion Include="xunit.v3.assert" Version="3.2.2" />
+    <PackageVersion Include="xunit.analyzers" Version="1.27.0" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageVersion Include="Xunit.DependencyInjection" Version="11.2.1" />
+  </ItemGroup>
+</Project>

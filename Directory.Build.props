@@ -2,5 +2,9 @@
   <PropertyGroup>
     <!-- Central version for all RxBlazorV2 packages -->
     <RxBlazorV2Version>1.2.1</RxBlazorV2Version>
+
+    <!-- Central Package Management -->
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
 </Project>
