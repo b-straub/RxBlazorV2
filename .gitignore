@@ -381,3 +381,4 @@ RxBlazorV2Internal.slnx
 
 CLAUDE.md
 RxBlazorV2Sample/appsettings.Development.json
+*.lscache
