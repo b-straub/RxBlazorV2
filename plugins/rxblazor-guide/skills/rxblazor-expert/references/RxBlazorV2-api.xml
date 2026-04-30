@@ -40,11 +40,18 @@
             Optional. The name of the private method that determines if the command can execute.
             Must return <see langword="bool"/>. Use <see langword="nameof"/> for compile-time safety.
             </param>
+            <param name="formatErrorMethodName">
+            Optional. The name of a method that formats an <see cref="T:System.Exception"/> into a user-facing
+            string when the command throws. Must match the signature <c>string Method(Exception)</c>; may be
+            instance or static, with any accessibility. Used by the factory before delegating the exception
+            to a configured <see cref="T:RxBlazorV2.Model.StatusBaseModel"/>, or for populating <c>Command.ErrorMessage</c>
+            when no status model is configured. Use <see langword="nameof"/> for compile-time safety.
+            </param>
             <remarks>
             <para>The generator automatically detects property usage in methods to set up reactive change notifications.</para>
             </remarks>
         </member>
-        <member name="M:RxBlazorV2.Model.ObservableCommandAttribute.#ctor(System.String,System.String)">
+        <member name="M:RxBlazorV2.Model.ObservableCommandAttribute.#ctor(System.String,System.String,System.String)">
             <summary>
             Marks a partial property as an observable command that will be automatically implemented by the source generator.
             Supports sync/async commands with or without parameters.
@@ -56,6 +63,13 @@
             <param name="canExecuteMethodName">
             Optional. The name of the private method that determines if the command can execute.
             Must return <see langword="bool"/>. Use <see langword="nameof"/> for compile-time safety.
+            </param>
+            <param name="formatErrorMethodName">
+            Optional. The name of a method that formats an <see cref="T:System.Exception"/> into a user-facing
+            string when the command throws. Must match the signature <c>string Method(Exception)</c>; may be
+            instance or static, with any accessibility. Used by the factory before delegating the exception
+            to a configured <see cref="T:RxBlazorV2.Model.StatusBaseModel"/>, or for populating <c>Command.ErrorMessage</c>
+            when no status model is configured. Use <see langword="nameof"/> for compile-time safety.
             </param>
             <remarks>
             <para>The generator automatically detects property usage in methods to set up reactive change notifications.</para>
@@ -1073,8 +1087,10 @@
             <param name="commandName">Display name of the command, used for error reporting.</param>
             <param name="methodName">Name of the backing method, used for error reporting.</param>
             <param name="statusModel">Optional <see cref="T:RxBlazorV2.Model.StatusBaseModel"/> to delegate error handling to.</param>
+            <param name="errorFormatter">Optional formatter that maps an <see cref="T:System.Exception"/> to a user-facing
+            string. Invoked before delegating to <paramref name="statusModel"/> or populating <c>ErrorMessage</c>.</param>
         </member>
-        <member name="M:RxBlazorV2.Model.ObservableCommandBase.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel)">
+        <member name="M:RxBlazorV2.Model.ObservableCommandBase.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel,System.Func{System.Exception,System.String})">
             <summary>
             Base class for all observable command implementations, extending <see cref="T:R3.Observable`1"/> with property change filtering.
             </summary>
@@ -1083,6 +1099,8 @@
             <param name="commandName">Display name of the command, used for error reporting.</param>
             <param name="methodName">Name of the backing method, used for error reporting.</param>
             <param name="statusModel">Optional <see cref="T:RxBlazorV2.Model.StatusBaseModel"/> to delegate error handling to.</param>
+            <param name="errorFormatter">Optional formatter that maps an <see cref="T:System.Exception"/> to a user-facing
+            string. Invoked before delegating to <paramref name="statusModel"/> or populating <c>ErrorMessage</c>.</param>
         </member>
         <member name="P:RxBlazorV2.Model.ObservableCommandBase.CanExecute">
             <summary>
@@ -1092,16 +1110,29 @@
         <member name="P:RxBlazorV2.Model.ObservableCommandBase.Error">
             <summary>
             Gets the most recent exception thrown during command execution, or <c>null</c> if no error occurred.
+            Always populated when the command body throws, regardless of whether a <see cref="T:RxBlazorV2.Model.StatusBaseModel"/>
+            is configured — render this surface for per-command inline alerts.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.Model.ObservableCommandBase.ErrorMessage">
+            <summary>
+            Gets the user-facing message produced by the configured formatter, or <see cref="P:System.Exception.Message"/>
+            when no formatter is configured. Populated whenever <see cref="P:RxBlazorV2.Model.ObservableCommandBase.Error"/> is, so consumers can bind a
+            per-command alert to <c>Command.ErrorMessage</c> independently of any global status sink. The same
+            formatted text is also forwarded to the configured <see cref="T:RxBlazorV2.Model.StatusBaseModel"/> when one is wired.
             </summary>
         </member>
         <member name="M:RxBlazorV2.Model.ObservableCommandBase.ResetError">
             <summary>
-            Clears the current <see cref="P:RxBlazorV2.Model.ObservableCommandBase.Error"/>.
+            Clears the current <see cref="P:RxBlazorV2.Model.ObservableCommandBase.Error"/> and <see cref="P:RxBlazorV2.Model.ObservableCommandBase.ErrorMessage"/>.
             </summary>
         </member>
         <member name="M:RxBlazorV2.Model.ObservableCommandBase.SetError(System.Exception)">
             <summary>
-            Sets or clears the current error. When a <see cref="T:RxBlazorV2.Model.StatusBaseModel"/> is configured, delegates the error to it instead.
+            Sets or clears the current error. Always records both the raw exception (<see cref="P:RxBlazorV2.Model.ObservableCommandBase.Error"/>) and the
+            formatted user-facing text (<see cref="P:RxBlazorV2.Model.ObservableCommandBase.ErrorMessage"/>) on the command, and additionally forwards the
+            formatted text to a configured <see cref="T:RxBlazorV2.Model.StatusBaseModel"/>. The consumer chooses which surface to
+            render — rendering both is a deliberate choice (e.g. inline alert + global status log).
             </summary>
             <param name="exception">The exception to record, or <c>null</c> to clear the error.</param>
         </member>
@@ -1119,8 +1150,9 @@
             <param name="commandName">Display name of the command, used for error reporting.</param>
             <param name="methodName">Name of the backing method, used for error reporting.</param>
             <param name="statusModel">Optional <see cref="T:RxBlazorV2.Model.StatusBaseModel"/> to delegate error handling to.</param>
+            <param name="errorFormatter">Optional formatter that maps an <see cref="T:System.Exception"/> to a user-facing string.</param>
         </member>
-        <member name="M:RxBlazorV2.Model.ObservableCommand.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel)">
+        <member name="M:RxBlazorV2.Model.ObservableCommand.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel,System.Func{System.Exception,System.String})">
             <summary>
             Abstract base class for synchronous observable commands.
             </summary>
@@ -1129,6 +1161,7 @@
             <param name="commandName">Display name of the command, used for error reporting.</param>
             <param name="methodName">Name of the backing method, used for error reporting.</param>
             <param name="statusModel">Optional <see cref="T:RxBlazorV2.Model.StatusBaseModel"/> to delegate error handling to.</param>
+            <param name="errorFormatter">Optional formatter that maps an <see cref="T:System.Exception"/> to a user-facing string.</param>
         </member>
         <member name="M:RxBlazorV2.Model.ObservableCommand.Execute">
             <summary>
@@ -1146,8 +1179,9 @@
             <param name="execute">The delegate to invoke when the command executes.</param>
             <param name="canExecute">Optional guard function that determines whether the command can execute.</param>
             <param name="statusModel">Optional <see cref="T:RxBlazorV2.Model.StatusBaseModel"/> to delegate error handling to.</param>
+            <param name="errorFormatter">Optional formatter that maps an <see cref="T:System.Exception"/> to a user-facing string.</param>
         </member>
-        <member name="M:RxBlazorV2.Model.ObservableCommandFactory.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Action,System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel)">
+        <member name="M:RxBlazorV2.Model.ObservableCommandFactory.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Action,System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel,System.Func{System.Exception,System.String})">
             <summary>
             Concrete synchronous command implementation that invokes an <see cref="T:System.Action"/> delegate.
             </summary>
@@ -1158,6 +1192,7 @@
             <param name="execute">The delegate to invoke when the command executes.</param>
             <param name="canExecute">Optional guard function that determines whether the command can execute.</param>
             <param name="statusModel">Optional <see cref="T:RxBlazorV2.Model.StatusBaseModel"/> to delegate error handling to.</param>
+            <param name="errorFormatter">Optional formatter that maps an <see cref="T:System.Exception"/> to a user-facing string.</param>
         </member>
         <member name="M:RxBlazorV2.Model.ObservableCommandFactory.Execute">
             <summary>
@@ -1179,8 +1214,9 @@
             <param name="commandName">Display name of the command, used for error reporting.</param>
             <param name="methodName">Name of the backing method, used for error reporting.</param>
             <param name="statusModel">Optional <see cref="T:RxBlazorV2.Model.StatusBaseModel"/> to delegate error handling to.</param>
+            <param name="errorFormatter">Optional formatter that maps an <see cref="T:System.Exception"/> to a user-facing string.</param>
         </member>
-        <member name="M:RxBlazorV2.Model.ObservableCommand`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel)">
+        <member name="M:RxBlazorV2.Model.ObservableCommand`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel,System.Func{System.Exception,System.String})">
             <summary>
             Abstract base class for synchronous parametrized observable commands.
             </summary>
@@ -1190,6 +1226,7 @@
             <param name="commandName">Display name of the command, used for error reporting.</param>
             <param name="methodName">Name of the backing method, used for error reporting.</param>
             <param name="statusModel">Optional <see cref="T:RxBlazorV2.Model.StatusBaseModel"/> to delegate error handling to.</param>
+            <param name="errorFormatter">Optional formatter that maps an <see cref="T:System.Exception"/> to a user-facing string.</param>
         </member>
         <member name="M:RxBlazorV2.Model.ObservableCommand`1.Execute(`0)">
             <summary>
@@ -1209,8 +1246,9 @@
             <param name="execute">The delegate to invoke when the command executes.</param>
             <param name="canExecute">Optional guard function that determines whether the command can execute.</param>
             <param name="statusModel">Optional <see cref="T:RxBlazorV2.Model.StatusBaseModel"/> to delegate error handling to.</param>
+            <param name="errorFormatter">Optional formatter that maps an <see cref="T:System.Exception"/> to a user-facing string.</param>
         </member>
-        <member name="M:RxBlazorV2.Model.ObservableCommandFactory`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Action{`0},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel)">
+        <member name="M:RxBlazorV2.Model.ObservableCommandFactory`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Action{`0},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel,System.Func{System.Exception,System.String})">
             <summary>
             Concrete synchronous parametrized command implementation that invokes an <see cref="T:System.Action`1"/> delegate.
             </summary>
@@ -1222,6 +1260,7 @@
             <param name="execute">The delegate to invoke when the command executes.</param>
             <param name="canExecute">Optional guard function that determines whether the command can execute.</param>
             <param name="statusModel">Optional <see cref="T:RxBlazorV2.Model.StatusBaseModel"/> to delegate error handling to.</param>
+            <param name="errorFormatter">Optional formatter that maps an <see cref="T:System.Exception"/> to a user-facing string.</param>
         </member>
         <member name="M:RxBlazorV2.Model.ObservableCommandFactory`1.Execute(`0)">
             <summary>
@@ -1239,7 +1278,7 @@
             Base class for async commands with execution tracking and cancellation support.
             </summary>
         </member>
-        <member name="M:RxBlazorV2.Model.ObservableCommandAsyncBase.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel)">
+        <member name="M:RxBlazorV2.Model.ObservableCommandAsyncBase.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel,System.Func{System.Exception,System.String})">
             <summary>
             Base class for async commands with execution tracking and cancellation support.
             </summary>
@@ -1274,7 +1313,7 @@
             Abstract async command without parameters.
             </summary>
         </member>
-        <member name="M:RxBlazorV2.Model.ObservableCommandAsync.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel)">
+        <member name="M:RxBlazorV2.Model.ObservableCommandAsync.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel,System.Func{System.Exception,System.String})">
             <summary>
             Abstract async command without parameters.
             </summary>
@@ -1294,7 +1333,7 @@
             Non-cancellable async command that executes a delegate without cancellation support.
             </summary>
         </member>
-        <member name="M:RxBlazorV2.Model.ObservableCommandAsyncFactory.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{System.Threading.Tasks.Task},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel)">
+        <member name="M:RxBlazorV2.Model.ObservableCommandAsyncFactory.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{System.Threading.Tasks.Task},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel,System.Func{System.Exception,System.String})">
             <summary>
             Non-cancellable async command that executes a delegate without cancellation support.
             </summary>
@@ -1313,7 +1352,7 @@
             Cancellable async command that supports CancellationToken and switch-cancellation.
             </summary>
         </member>
-        <member name="M:RxBlazorV2.Model.ObservableCommandAsyncCancelableFactory.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{System.Threading.CancellationToken,System.Threading.Tasks.Task},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel)">
+        <member name="M:RxBlazorV2.Model.ObservableCommandAsyncCancelableFactory.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{System.Threading.CancellationToken,System.Threading.Tasks.Task},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel,System.Func{System.Exception,System.String})">
             <summary>
             Cancellable async command that supports CancellationToken and switch-cancellation.
             </summary>
@@ -1332,7 +1371,7 @@
             Abstract parametrized async command that accepts a parameter of type <typeparamref name="T"/>.
             </summary>
         </member>
-        <member name="M:RxBlazorV2.Model.ObservableCommandAsync`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel)">
+        <member name="M:RxBlazorV2.Model.ObservableCommandAsync`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel,System.Func{System.Exception,System.String})">
             <summary>
             Abstract parametrized async command that accepts a parameter of type <typeparamref name="T"/>.
             </summary>
@@ -1352,7 +1391,7 @@
             Non-cancellable parametrized async command that executes a delegate with a parameter.
             </summary>
         </member>
-        <member name="M:RxBlazorV2.Model.ObservableCommandAsyncFactory`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{`0,System.Threading.Tasks.Task},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel)">
+        <member name="M:RxBlazorV2.Model.ObservableCommandAsyncFactory`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{`0,System.Threading.Tasks.Task},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel,System.Func{System.Exception,System.String})">
             <summary>
             Non-cancellable parametrized async command that executes a delegate with a parameter.
             </summary>
@@ -1371,7 +1410,7 @@
             Cancellable parametrized async command that supports CancellationToken and switch-cancellation.
             </summary>
         </member>
-        <member name="M:RxBlazorV2.Model.ObservableCommandAsyncCancelableFactory`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{`0,System.Threading.CancellationToken,System.Threading.Tasks.Task},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel)">
+        <member name="M:RxBlazorV2.Model.ObservableCommandAsyncCancelableFactory`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{`0,System.Threading.CancellationToken,System.Threading.Tasks.Task},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel,System.Func{System.Exception,System.String})">
             <summary>
             Cancellable parametrized async command that supports CancellationToken and switch-cancellation.
             </summary>
@@ -1546,7 +1585,7 @@
             </summary>
             <typeparam name="T">The return type of the command.</typeparam>
         </member>
-        <member name="M:RxBlazorV2.Model.ObservableCommandR`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel)">
+        <member name="M:RxBlazorV2.Model.ObservableCommandR`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel,System.Func{System.Exception,System.String})">
             <summary>
             Abstract base class for synchronous observable commands that return a value of type <typeparamref name="T"/>.
             </summary>
@@ -1564,7 +1603,7 @@
             </summary>
             <typeparam name="T">The return type of the command.</typeparam>
         </member>
-        <member name="M:RxBlazorV2.Model.ObservableCommandRFactory`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{`0},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel)">
+        <member name="M:RxBlazorV2.Model.ObservableCommandRFactory`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{`0},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel,System.Func{System.Exception,System.String})">
             <summary>
             Concrete synchronous observable command that returns a value of type <typeparamref name="T"/>, backed by a delegate.
             </summary>
@@ -1583,7 +1622,7 @@
             <typeparam name="T1">The parameter type of the command.</typeparam>
             <typeparam name="T2">The return type of the command.</typeparam>
         </member>
-        <member name="M:RxBlazorV2.Model.ObservableCommandR`2.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel)">
+        <member name="M:RxBlazorV2.Model.ObservableCommandR`2.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel,System.Func{System.Exception,System.String})">
             <summary>
             Abstract base class for synchronous observable commands that accept a parameter of type <typeparamref name="T1"/> and return a value of type <typeparamref name="T2"/>.
             </summary>
@@ -1604,7 +1643,7 @@
             <typeparam name="T1">The parameter type of the command.</typeparam>
             <typeparam name="T2">The return type of the command.</typeparam>
         </member>
-        <member name="M:RxBlazorV2.Model.ObservableCommandRFactory`2.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{`0,`1},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel)">
+        <member name="M:RxBlazorV2.Model.ObservableCommandRFactory`2.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{`0,`1},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel,System.Func{System.Exception,System.String})">
             <summary>
             Concrete synchronous observable command that accepts a parameter of type <typeparamref name="T1"/> and returns a value of type <typeparamref name="T2"/>, backed by a delegate.
             </summary>
@@ -1623,7 +1662,7 @@
             </summary>
             <typeparam name="T">The return type of the command.</typeparam>
         </member>
-        <member name="M:RxBlazorV2.Model.ObservableCommandRAsync`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel)">
+        <member name="M:RxBlazorV2.Model.ObservableCommandRAsync`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel,System.Func{System.Exception,System.String})">
             <summary>
             Abstract base class for asynchronous observable commands that return a value of type <typeparamref name="T"/>.
             </summary>
@@ -1648,7 +1687,7 @@
             </summary>
             <typeparam name="T">The return type of the command.</typeparam>
         </member>
-        <member name="M:RxBlazorV2.Model.ObservableCommandRAsyncFactory`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{System.Threading.Tasks.Task{`0}},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel)">
+        <member name="M:RxBlazorV2.Model.ObservableCommandRAsyncFactory`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{System.Threading.Tasks.Task{`0}},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel,System.Func{System.Exception,System.String})">
             <summary>
             Non-cancellable asynchronous observable command that returns a value of type <typeparamref name="T"/>, backed by a delegate.
             </summary>
@@ -1669,7 +1708,7 @@
             </summary>
             <typeparam name="T">The return type of the command.</typeparam>
         </member>
-        <member name="M:RxBlazorV2.Model.ObservableCommandRAsyncCancelableFactory`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{System.Threading.CancellationToken,System.Threading.Tasks.Task{`0}},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel)">
+        <member name="M:RxBlazorV2.Model.ObservableCommandRAsyncCancelableFactory`1.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{System.Threading.CancellationToken,System.Threading.Tasks.Task{`0}},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel,System.Func{System.Exception,System.String})">
             <summary>
             Cancellable asynchronous observable command that returns a value of type <typeparamref name="T"/>, backed by a delegate that accepts a <see cref="T:System.Threading.CancellationToken"/>.
             </summary>
@@ -1691,7 +1730,7 @@
             <typeparam name="T1">The parameter type of the command.</typeparam>
             <typeparam name="T2">The return type of the command.</typeparam>
         </member>
-        <member name="M:RxBlazorV2.Model.ObservableCommandRAsync`2.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel)">
+        <member name="M:RxBlazorV2.Model.ObservableCommandRAsync`2.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,RxBlazorV2.Model.StatusBaseModel,System.Func{System.Exception,System.String})">
             <summary>
             Abstract base class for asynchronous observable commands that accept a parameter of type <typeparamref name="T1"/> and return a value of type <typeparamref name="T2"/>.
             </summary>
@@ -1720,7 +1759,7 @@
             <typeparam name="T1">The parameter type of the command.</typeparam>
             <typeparam name="T2">The return type of the command.</typeparam>
         </member>
-        <member name="M:RxBlazorV2.Model.ObservableCommandRAsyncFactory`2.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{`0,System.Threading.Tasks.Task{`1}},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel)">
+        <member name="M:RxBlazorV2.Model.ObservableCommandRAsyncFactory`2.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{`0,System.Threading.Tasks.Task{`1}},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel,System.Func{System.Exception,System.String})">
             <summary>
             Non-cancellable asynchronous observable command that accepts a parameter of type <typeparamref name="T1"/> and returns a value of type <typeparamref name="T2"/>, backed by a delegate.
             </summary>
@@ -1743,7 +1782,7 @@
             <typeparam name="T1">The parameter type of the command.</typeparam>
             <typeparam name="T2">The return type of the command.</typeparam>
         </member>
-        <member name="M:RxBlazorV2.Model.ObservableCommandRAsyncCancelableFactory`2.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{`0,System.Threading.CancellationToken,System.Threading.Tasks.Task{`1}},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel)">
+        <member name="M:RxBlazorV2.Model.ObservableCommandRAsyncCancelableFactory`2.#ctor(RxBlazorV2.Model.ObservableModel,System.String[],System.String,System.String,System.Func{`0,System.Threading.CancellationToken,System.Threading.Tasks.Task{`1}},System.Func{System.Boolean},RxBlazorV2.Model.StatusBaseModel,System.Func{System.Exception,System.String})">
             <summary>
             Cancellable asynchronous observable command that accepts a parameter of type <typeparamref name="T1"/> and returns a value of type <typeparamref name="T2"/>, backed by a delegate that accepts a <see cref="T:System.Threading.CancellationToken"/>.
             </summary>
@@ -1874,6 +1913,17 @@
             Automatically captures command name and method name as source.
             </summary>
             <param name="error">The exception that was thrown.</param>
+            <param name="commandName">The name of the command property (e.g., "RefreshCommand").</param>
+            <param name="methodName">The name of the execute method (e.g., "RefreshDataAsync").</param>
+        </member>
+        <member name="M:RxBlazorV2.Model.StatusBaseModel.HandleError(System.Exception,System.String,System.String,System.String)">
+            <summary>
+            Called by command factories when a command throws an exception and a per-command error formatter
+            has produced a user-facing message. Records the formatted text in <see cref="P:RxBlazorV2.Model.StatusBaseModel.Messages"/> with the
+            command source attribution; the original exception is accepted for symmetry / future logging hooks.
+            </summary>
+            <param name="error">The exception that was thrown (kept for parity with the unformatted overload).</param>
+            <param name="formattedMessage">The user-facing message produced by the configured formatter.</param>
             <param name="commandName">The name of the command property (e.g., "RefreshCommand").</param>
             <param name="methodName">The name of the execute method (e.g., "RefreshDataAsync").</param>
         </member>
@@ -2066,6 +2116,14 @@
         <member name="P:RxBlazorV2.Interface.IObservableCommandBase.Error">
             <summary>
             Gets the last exception thrown during command execution, or null if none.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.Interface.IObservableCommandBase.ErrorMessage">
+            <summary>
+            Gets the user-facing message produced by the per-command error formatter (configured via the
+            third argument of <c>[ObservableCommand]</c>), or <c>null</c> when no error is recorded or
+            when a <c>StatusBaseModel</c> is configured (the formatted message flows there instead).
+            Falls back to <see cref="P:System.Exception.Message"/> when no formatter is configured.
             </summary>
         </member>
         <member name="M:RxBlazorV2.Interface.IObservableCommandBase.ResetError">

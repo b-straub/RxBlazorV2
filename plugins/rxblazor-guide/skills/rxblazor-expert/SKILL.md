@@ -113,6 +113,7 @@ When reviewing or designing models, check:
 | React to my own property change | Property Trigger | `[ObservableTrigger]` |
 | React to injected model's UI state | Internal Observer | Auto-detected private method |
 | Bind button to method | Command | `[ObservableCommand]` |
+| Show a friendly message when a command throws | Per-Command Formatter | `[ObservableCommand]` 3rd arg → `string Format(Exception)` |
 | Auto-run command on property change | Command Trigger | `[ObservableCommandTrigger]` |
 | React in UI component to model change | Component Trigger | `[ObservableComponentTrigger]` |
 | Fire-and-forget side effect | External Observer | `[ObservableModelObserver]` on service |
