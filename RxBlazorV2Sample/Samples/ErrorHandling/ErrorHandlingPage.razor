@@ -1,4 +1,5 @@
 @page "/samples/error-handling"
+@using System.Globalization
 @using RxBlazorV2Sample.Samples.Helpers
 @using RxBlazorVSSampleComponents.ErrorManager
 @inherits ErrorHandlingModelComponent
@@ -58,6 +59,23 @@
                         @(Model.FetchDataCommand.Executing ? "Fetching..." : "Fetch (formatted error)")
                     </MudButton>
                 </MudStack>
+
+                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                    <MudIcon Icon="@Icons.Material.Filled.Language" Size="Size.Small" />
+                    <MudText Typo="Typo.body2">
+                        Formatter culture: <strong>@CultureInfo.CurrentUICulture.Name</strong>
+                    </MudText>
+                    <MudButtonGroup OverrideStyles="false" Variant="Variant.Outlined" Size="Size.Small">
+                        <MudButton OnClick="@(() => SetCulture("en"))"
+                                   Color="@(CultureInfo.CurrentUICulture.Name.StartsWith("en") ? Color.Primary : Color.Default)">
+                            English
+                        </MudButton>
+                        <MudButton OnClick="@(() => SetCulture("de"))"
+                                   Color="@(CultureInfo.CurrentUICulture.Name.StartsWith("de") ? Color.Primary : Color.Default)">
+                            Deutsch
+                        </MudButton>
+                    </MudButtonGroup>
+                </MudStack>
             </MudStack>
         </MudCardContent>
     </MudCard>
@@ -82,6 +100,12 @@
                 - replaces cryptic <code>ex.Message</code> with a user-facing string before it reaches
                 StatusModel. Click <em>Fetch (formatted error)</em> twice to see different friendly
                 messages for <code>TimeoutException</code> vs <code>InvalidOperationException</code>.
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                <strong>Localized formatter output</strong> - <code>FormatFetchError</code> uses
+                <code>IStringLocalizer&lt;ErrorHandlingModel&gt;</code> against
+                <code>ErrorHandlingModel.resx</code> / <code>.de.resx</code>. Switch the culture above
+                and click <em>Fetch</em> again to see the German translations land in the snackbar.
             </MudListItem>
         </MudList>
     </MudPaper>
@@ -148,3 +172,20 @@ public partial class MyModel : ObservableModel
 }</pre>
     </MudPaper>
 </MudContainer>
+
+@code
+{
+    // Switching CultureInfo at runtime is enough because Blazor's default boot
+    // ships every satellite resource assembly into the WASM payload. Both
+    // DefaultThread* (for resource manager fallback) and Current* (for the
+    // current execution context, including this re-render) are written so the
+    // displayed culture and IStringLocalizer<T> lookups stay in sync.
+    private void SetCulture(string name)
+    {
+        var culture = new CultureInfo(name);
+        CultureInfo.DefaultThreadCurrentCulture = culture;
+        CultureInfo.DefaultThreadCurrentUICulture = culture;
+        CultureInfo.CurrentCulture = culture;
+        CultureInfo.CurrentUICulture = culture;
+    }
+}

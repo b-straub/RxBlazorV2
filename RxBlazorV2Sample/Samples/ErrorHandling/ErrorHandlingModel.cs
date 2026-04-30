@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Localization;
 using RxBlazorV2.Interface;
 using RxBlazorV2.Model;
 using RxBlazorV2Sample.Samples.Helpers;
@@ -9,13 +10,18 @@ namespace RxBlazorV2Sample.Samples.ErrorHandling;
 /// Demonstrates automatic error handling via StatusModel.
 /// When a StatusModel is injected, all command exceptions are automatically
 /// captured with source info (command name + method name) and routed to the status handler.
+/// The injected <see cref="IStringLocalizer{T}"/> is used by <see cref="FormatFetchError"/>
+/// to produce culture-aware messages instead of hard-coded English strings.
 /// </summary>
 [ObservableComponent]
 [ObservableModelScope(ModelScope.Singleton)]
 public partial class ErrorHandlingModel : SampleBaseModel
 {
-    // Inject StatusModel to enable automatic error capture for all commands
-    public partial ErrorHandlingModel(ErrorModel errorModel);
+    // Inject StatusModel to enable automatic error capture for all commands;
+    // inject IStringLocalizer<T> for culture-aware formatter output.
+    public partial ErrorHandlingModel(
+        ErrorModel errorModel,
+        IStringLocalizer<ErrorHandlingModel> localizer);
 
     public override string Usage => "Click buttons to trigger commands - errors are automatically captured";
 
@@ -97,13 +103,15 @@ public partial class ErrorHandlingModel : SampleBaseModel
     }
 
     /// <summary>
-    /// Maps fetch-data exceptions to user-facing text. Pattern matching keeps the friendly
-    /// message close to the failure mode and hides cryptic internals from the status display.
+    /// Maps fetch-data exceptions to user-facing text. Resource keys live in
+    /// <c>ErrorHandlingModel.resx</c> (en) and <c>ErrorHandlingModel.de.resx</c>; the
+    /// active <see cref="System.Globalization.CultureInfo.CurrentUICulture"/> at the
+    /// moment the formatter runs decides which translation is returned.
     /// </summary>
     private string FormatFetchError(Exception ex) => ex switch
     {
-        TimeoutException          => "The data service is unreachable. Please check your connection and try again.",
-        InvalidOperationException => "Could not load data: the response was incomplete.",
-        _                         => $"Could not load data: {ex.Message}",
+        TimeoutException          => Localizer["FetchTimeout"],
+        InvalidOperationException => Localizer["FetchInvalidData"],
+        _                         => Localizer["FetchGeneric", ex.Message],
     };
 }

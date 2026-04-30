@@ -12,6 +12,10 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddMudServices();
 
+// Resource lookups for IStringLocalizer<T> follow the type's namespace - resx files
+// live next to their model (e.g. Samples/ErrorHandling/ErrorHandlingModel.de.resx).
+builder.Services.AddLocalization();
+
 // Add HttpClient for external API calls
 builder.Services.AddScoped(_ => new HttpClient());
 
@@ -34,4 +38,7 @@ builder.Services.AddScoped<ModelObserversService>();
 // Register service-model interaction sample service
 builder.Services.AddScoped<ProcessingService>();
 
+// The localization demo on /samples/error-handling switches CultureInfo at runtime;
+// in dev builds Blazor includes every satellite resource assembly, so just flipping
+// CultureInfo.DefaultThreadCurrentUICulture from the page is enough.
 await builder.Build().RunAsync();

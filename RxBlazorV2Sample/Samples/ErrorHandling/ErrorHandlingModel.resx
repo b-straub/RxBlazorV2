@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e108</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e108</value>
+  </resheader>
+  <data name="FetchTimeout" xml:space="preserve">
+    <value>The data service is unreachable. Please check your connection and try again.</value>
+  </data>
+  <data name="FetchInvalidData" xml:space="preserve">
+    <value>Could not load data: the response was incomplete.</value>
+  </data>
+  <data name="FetchGeneric" xml:space="preserve">
+    <value>Could not load data: {0}</value>
+  </data>
+</root>
