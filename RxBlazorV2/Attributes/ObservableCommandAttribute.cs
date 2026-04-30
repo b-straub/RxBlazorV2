@@ -16,13 +16,23 @@ namespace RxBlazorV2.Model;
 /// Optional. The name of the private method that determines if the command can execute.
 /// Must return <see langword="bool"/>. Use <see langword="nameof"/> for compile-time safety.
 /// </param>
+/// <param name="formatErrorMethodName">
+/// Optional. The name of a method that formats an <see cref="System.Exception"/> into a user-facing
+/// string when the command throws. Must match the signature <c>string Method(Exception)</c>; may be
+/// instance or static, with any accessibility. Used by the factory before delegating the exception
+/// to a configured <see cref="StatusBaseModel"/>, or for populating <c>Command.ErrorMessage</c>
+/// when no status model is configured. Use <see langword="nameof"/> for compile-time safety.
+/// </param>
 /// <remarks>
 /// <para>The generator automatically detects property usage in methods to set up reactive change notifications.</para>
 /// </remarks>
 #pragma warning disable CS9113
 [ExcludeFromCodeCoverage]
 [AttributeUsage(AttributeTargets.Property)]
-public class ObservableCommandAttribute(string executionMethodName, string? canExecuteMethodName = null)
+public class ObservableCommandAttribute(
+    string executionMethodName,
+    string? canExecuteMethodName = null,
+    string? formatErrorMethodName = null)
     : Attribute
 {
 }

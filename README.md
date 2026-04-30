@@ -224,6 +224,38 @@ public partial class MyModel : ObservableModel
 - No try/catch needed in command methods - errors are handled centrally
 - Use with `RxBlazorV2.MudBlazor.StatusDisplay` for automatic UI feedback
 
+### Per-Command Error Formatters
+
+A third positional argument on `[ObservableCommand]` names a method that maps an
+`Exception` to a user-facing string. When the command body throws, the framework
+invokes the formatter, then **always** populates `Command.Error` (the raw exception)
+and `Command.ErrorMessage` (the formatted text), and **also** forwards the formatted
+text to a configured `StatusBaseModel`. Cryptic `ex.Message` strings never reach the
+user — your formatter rewrites them.
+
+```csharp
+[ObservableCommand(nameof(LoadContactsAsync), nameof(CanLoad), nameof(FormatLoadError))]
+public partial IObservableCommandAsync LoadContactsCommand { get; }
+
+private async Task LoadContactsAsync(CancellationToken ct) { /* no try/catch */ }
+
+// Required signature: string Method(Exception). Instance or static, any accessibility.
+private string FormatLoadError(Exception ex) => ex switch
+{
+    HttpRequestException http => $"Network error loading contacts: {http.Message}",
+    TimeoutException          => "The data service is unreachable. Try again.",
+    _                         => $"Failed to load contacts: {ex.Message}",
+};
+```
+
+**Key Points:**
+- Bind a per-command inline alert to `Command.ErrorMessage`; render the global status
+  log from `StatusBaseModel.Messages` — the consumer chooses which surface(s) to render
+- `OperationCanceledException` from a `CancellationToken` is intercepted by the
+  cancelable factory and never reaches the formatter
+- Diagnostics: **RXBG091** (formatter method missing — quick fix scaffolds a stub),
+  **RXBG092** (formatter signature must be `string Method(Exception)`)
+
 ### Model References (Partial Constructor Pattern)
 
 Models can reference and react to changes in other models through the partial constructor pattern:
@@ -566,7 +598,7 @@ dotnet run --project ReactivePatternSample/ReactivePatternSample
 
 ## Diagnostics
 
-The generator provides comprehensive diagnostics (RXBG001-RXBG090) with code fixes. See the [Diagnostics Help](RxBlazorV2Generator/Diagnostics/Help/) folder for detailed documentation.
+The generator provides comprehensive diagnostics (RXBG001-RXBG092) with code fixes. See the [Diagnostics Help](RxBlazorV2Generator/Diagnostics/Help/) folder for detailed documentation.
 
 Key diagnostic ranges:
 - **RXBG001-RXBG019**: Core model and property diagnostics
@@ -576,6 +608,7 @@ Key diagnostic ranges:
 - **RXBG060-RXBG069**: Component generation diagnostics
 - **RXBG070-RXBG079**: Generic model diagnostics
 - **RXBG080-RXBG082**: Model observer diagnostics
+- **RXBG090-RXBG092**: Observable usage and per-command error formatter diagnostics
 
 ## Contributing
 

@@ -11,8 +11,9 @@ public abstract class ObservableCommandR<T>(
     string[] observedProperties,
     string commandName,
     string methodName,
-    StatusBaseModel? statusModel = null)
-    : ObservableCommandBase(model, observedProperties, commandName, methodName, statusModel), IObservableCommandR<T>
+    StatusBaseModel? statusModel = null,
+    Func<Exception, string>? errorFormatter = null)
+    : ObservableCommandBase(model, observedProperties, commandName, methodName, statusModel, errorFormatter), IObservableCommandR<T>
 {
     /// <summary>
     /// Executes the command and returns the result.
@@ -32,8 +33,9 @@ public class ObservableCommandRFactory<T>(
     string methodName,
     Func<T?> execute,
     Func<bool>? canExecute = null,
-    StatusBaseModel? statusModel = null) :
-    ObservableCommandR<T>(model, observedProperties, commandName, methodName, statusModel)
+    StatusBaseModel? statusModel = null,
+    Func<Exception, string>? errorFormatter = null) :
+    ObservableCommandR<T>(model, observedProperties, commandName, methodName, statusModel, errorFormatter)
 {
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;
@@ -71,8 +73,9 @@ public abstract class ObservableCommandR<T1, T2>(
     string[] observedProperties,
     string commandName,
     string methodName,
-    StatusBaseModel? statusModel = null)
-    : ObservableCommandBase(model, observedProperties, commandName, methodName, statusModel), IObservableCommandR<T1, T2>
+    StatusBaseModel? statusModel = null,
+    Func<Exception, string>? errorFormatter = null)
+    : ObservableCommandBase(model, observedProperties, commandName, methodName, statusModel, errorFormatter), IObservableCommandR<T1, T2>
 {
     /// <summary>
     /// Executes the command with the specified parameter and returns the result.
@@ -94,8 +97,9 @@ public class ObservableCommandRFactory<T1, T2>(
     string methodName,
     Func<T1, T2?> execute,
     Func<bool>? canExecute = null,
-    StatusBaseModel? statusModel = null) :
-    ObservableCommandR<T1, T2>(model, observedProperties, commandName, methodName, statusModel)
+    StatusBaseModel? statusModel = null,
+    Func<Exception, string>? errorFormatter = null) :
+    ObservableCommandR<T1, T2>(model, observedProperties, commandName, methodName, statusModel, errorFormatter)
 {
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;

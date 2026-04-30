@@ -10,8 +10,9 @@ public class ObservableCommandAsyncBase(
     string[] observedProperties,
     string commandName,
     string methodName,
-    StatusBaseModel? statusModel = null)
-    : ObservableCommandBase(model, observedProperties, commandName, methodName, statusModel), IObservableCommandAsyncBase
+    StatusBaseModel? statusModel = null,
+    Func<Exception, string>? errorFormatter = null)
+    : ObservableCommandBase(model, observedProperties, commandName, methodName, statusModel, errorFormatter), IObservableCommandAsyncBase
 {
     /// <summary>
     /// Indicates whether the command is currently executing.
@@ -61,8 +62,9 @@ public abstract class ObservableCommandAsync(
     string[] observedProperties,
     string commandName,
     string methodName,
-    StatusBaseModel? statusModel = null)
-    : ObservableCommandAsyncBase(model, observedProperties, commandName, methodName, statusModel), IObservableCommandAsync
+    StatusBaseModel? statusModel = null,
+    Func<Exception, string>? errorFormatter = null)
+    : ObservableCommandAsyncBase(model, observedProperties, commandName, methodName, statusModel, errorFormatter), IObservableCommandAsync
 {
     /// <summary>
     /// Executes the command asynchronously with an optional external cancellation token.
@@ -85,8 +87,9 @@ public class ObservableCommandAsyncFactory(
     string methodName,
     Func<Task> execute,
     Func<bool>? canExecute = null,
-    StatusBaseModel? statusModel = null) :
-    ObservableCommandAsync(model, observedProperties, commandName, methodName, statusModel)
+    StatusBaseModel? statusModel = null,
+    Func<Exception, string>? errorFormatter = null) :
+    ObservableCommandAsync(model, observedProperties, commandName, methodName, statusModel, errorFormatter)
 {
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;
@@ -131,8 +134,9 @@ public class ObservableCommandAsyncCancelableFactory(
     string methodName,
     Func<CancellationToken, Task> execute,
     Func<bool>? canExecute = null,
-    StatusBaseModel? statusModel = null) :
-    ObservableCommandAsync(model, observedProperties, commandName, methodName, statusModel)
+    StatusBaseModel? statusModel = null,
+    Func<Exception, string>? errorFormatter = null) :
+    ObservableCommandAsync(model, observedProperties, commandName, methodName, statusModel, errorFormatter)
 {
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;
@@ -220,8 +224,9 @@ public abstract class ObservableCommandAsync<T>(
     string[] observedProperties,
     string commandName,
     string methodName,
-    StatusBaseModel? statusModel = null)
-    : ObservableCommandAsyncBase(model, observedProperties, commandName, methodName, statusModel), IObservableCommandAsync<T>
+    StatusBaseModel? statusModel = null,
+    Func<Exception, string>? errorFormatter = null)
+    : ObservableCommandAsyncBase(model, observedProperties, commandName, methodName, statusModel, errorFormatter), IObservableCommandAsync<T>
 {
     /// <summary>
     /// Executes the command asynchronously with the given parameter and optional external cancellation token.
@@ -244,8 +249,9 @@ public class ObservableCommandAsyncFactory<T>(
     string methodName,
     Func<T, Task> execute,
     Func<bool>? canExecute = null,
-    StatusBaseModel? statusModel = null) :
-    ObservableCommandAsync<T>(model, observedProperties, commandName, methodName, statusModel)
+    StatusBaseModel? statusModel = null,
+    Func<Exception, string>? errorFormatter = null) :
+    ObservableCommandAsync<T>(model, observedProperties, commandName, methodName, statusModel, errorFormatter)
 {
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;
@@ -290,8 +296,9 @@ public class ObservableCommandAsyncCancelableFactory<T>(
     string methodName,
     Func<T, CancellationToken, Task> execute,
     Func<bool>? canExecute = null,
-    StatusBaseModel? statusModel = null) :
-    ObservableCommandAsync<T>(model, observedProperties, commandName, methodName, statusModel)
+    StatusBaseModel? statusModel = null,
+    Func<Exception, string>? errorFormatter = null) :
+    ObservableCommandAsync<T>(model, observedProperties, commandName, methodName, statusModel, errorFormatter)
 {
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;

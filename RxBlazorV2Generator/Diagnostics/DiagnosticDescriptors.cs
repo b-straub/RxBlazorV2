@@ -407,6 +407,28 @@ public static class DiagnosticDescriptors
         description: "Direct access to the Observable property bypasses the framework's reactive patterns. Use attributes like [ObservableTrigger] for property change reactions, [ObservableCommand] for command triggers, or [ObservableComponentTrigger] for component hooks. The Observable property should only be accessed in generated code.",
         helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG090.md");
 
+    public static readonly DiagnosticDescriptor ErrorFormatterMethodNotFoundError = new(
+        id: "RXBG091",
+        title: "Error formatter method not found",
+        messageFormat: "Command '{0}' references error formatter '{1}' which does not exist on the model. Define a method 'string {1}(Exception ex)' or remove the third argument of [ObservableCommand].",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "The third argument of [ObservableCommand] names a method that should map an Exception to a user-facing string. The named method must exist on the declaring type (or a base type) and have the signature 'string Method(Exception)'.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG091.md",
+        customTags: ["Generate stub method"]);
+
+    public static readonly DiagnosticDescriptor ErrorFormatterMethodInvalidSignatureError = new(
+        id: "RXBG092",
+        title: "Error formatter method has invalid signature",
+        messageFormat: "Command '{0}' error formatter '{1}' must match 'string {1}(Exception ex)' (currently: {2})",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Error formatters declared as the third argument of [ObservableCommand] must return string and accept exactly one parameter assignable from System.Exception. Static or instance, any accessibility, are all permitted.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG092.md",
+        customTags: ["Fix method signature"]);
+
     // ============================================================================
     // UNIFIED DIAGNOSTIC REGISTRY - Single Source of Truth for who reports what
     // ============================================================================
@@ -468,8 +490,10 @@ public static class DiagnosticDescriptors
         new(ObservableModelObserverPropertyNotFoundError, DiagnosticReporter.Analyzer),
         new(InternalModelObserverInvalidSignatureWarning, DiagnosticReporter.Generator),  // Requires cross-model analysis
 
-        // RXBG090-099: Observable usage - separate analyzer (ObservableUsageAnalyzer)
-        new(DirectObservableAccessWarning, DiagnosticReporter.Analyzer)
+        // RXBG090-099: Observable usage + command error formatting
+        new(DirectObservableAccessWarning, DiagnosticReporter.Analyzer),
+        new(ErrorFormatterMethodNotFoundError, DiagnosticReporter.Analyzer),
+        new(ErrorFormatterMethodInvalidSignatureError, DiagnosticReporter.Analyzer)
     ];
 
     /// <summary>

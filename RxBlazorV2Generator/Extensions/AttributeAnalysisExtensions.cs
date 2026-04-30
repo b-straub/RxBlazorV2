@@ -76,10 +76,12 @@ public static class AttributeAnalysisExtensions
 
                 var executeMethodArg = commandAttr.ArgumentList?.Arguments.FirstOrDefault()?.Expression.ToString();
                 var canExecuteMethodArg = commandAttr.ArgumentList?.Arguments.Skip(1).FirstOrDefault()?.Expression.ToString();
+                var formatErrorMethodArg = commandAttr.ArgumentList?.Arguments.Skip(2).FirstOrDefault()?.Expression.ToString();
 
                 // Remove nameof() wrapper and quotes
                 var executeMethod = executeMethodArg?.Replace("nameof(", "").Replace(")", "").Trim('"');
                 var canExecuteMethod = canExecuteMethodArg?.Replace("nameof(", "").Replace(")", "").Trim('"');
+                var formatErrorMethod = formatErrorMethodArg?.Replace("nameof(", "").Replace(")", "").Trim('"');
 
                 semanticModel.ThrowIfNull();
                 // Analyze the execute method to determine if it supports cancellation
@@ -146,6 +148,42 @@ public static class AttributeAnalysisExtensions
                             // NOTE: Skip code generation - diagnostic is reported by analyzer
                             continue;
                         }
+                    }
+                }
+
+                // Validate formatter method (RXBG091/092). Diagnostic is reported by analyzer; generator skips emission.
+                if (!string.IsNullOrEmpty(formatErrorMethod))
+                {
+                    var classSymbol = semanticModel.GetDeclaredSymbol(classDecl) as INamedTypeSymbol;
+                    var formatterArgLocation = commandAttr.ArgumentList?.Arguments.Skip(2).FirstOrDefault()?.GetLocation()
+                                               ?? commandAttr.GetLocation();
+                    var resolution = classSymbol.ResolveErrorFormatter(formatErrorMethod!, semanticModel.Compilation);
+
+                    if (!resolution.Found)
+                    {
+                        var props = ImmutableDictionary.CreateBuilder<string, string?>();
+                        props.Add("CommandProperty", member.Identifier.ValueText);
+                        props.Add("FormatterName", formatErrorMethod);
+                        diagnostics.Add(Diagnostic.Create(
+                            DiagnosticDescriptors.ErrorFormatterMethodNotFoundError,
+                            formatterArgLocation,
+                            props.ToImmutable(),
+                            member.Identifier.ValueText,
+                            formatErrorMethod));
+                        // NOTE: Skip code generation - diagnostic is reported by analyzer
+                        continue;
+                    }
+
+                    if (!resolution.SignatureValid)
+                    {
+                        diagnostics.Add(Diagnostic.Create(
+                            DiagnosticDescriptors.ErrorFormatterMethodInvalidSignatureError,
+                            formatterArgLocation,
+                            member.Identifier.ValueText,
+                            formatErrorMethod,
+                            resolution.ActualSignatureDisplay));
+                        // NOTE: Skip code generation - diagnostic is reported by analyzer
+                        continue;
                     }
                 }
 
@@ -274,13 +312,67 @@ public static class AttributeAnalysisExtensions
                     supportsCancellation,
                     isOverride,
                     triggers,
-                    accessibility));
+                    accessibility,
+                    formatErrorMethod));
             }
         }
 
         return (commandProperties, diagnostics);;
     }
 
+
+    /// <summary>
+    /// Result of resolving a per-command error formatter method by name.
+    /// </summary>
+    public readonly record struct ErrorFormatterResolution(bool Found, bool SignatureValid, string ActualSignatureDisplay);
+
+    /// <summary>
+    /// Walks the type and its bases looking for a method with the given name.
+    /// Reports whether a candidate exists and, if so, whether at least one overload matches
+    /// <c>string Method(System.Exception)</c> (instance or static, any accessibility).
+    /// </summary>
+    public static ErrorFormatterResolution ResolveErrorFormatter(this INamedTypeSymbol? typeSymbol, string methodName, Compilation compilation)
+    {
+        if (typeSymbol is null)
+        {
+            return new ErrorFormatterResolution(false, false, "");
+        }
+
+        var stringType = compilation.GetSpecialType(SpecialType.System_String);
+        var exceptionType = compilation.GetTypeByMetadataName("System.Exception");
+        if (exceptionType is null)
+        {
+            // Should never happen in a well-formed compilation; fail open so we don't block codegen.
+            return new ErrorFormatterResolution(true, true, "");
+        }
+
+        IMethodSymbol? firstFound = null;
+        for (var current = typeSymbol; current is not null; current = current.BaseType)
+        {
+            foreach (var member in current.GetMembers(methodName))
+            {
+                if (member is IMethodSymbol method)
+                {
+                    firstFound ??= method;
+                    if (SymbolEqualityComparer.Default.Equals(method.ReturnType, stringType) &&
+                        method.Parameters.Length == 1 &&
+                        SymbolEqualityComparer.Default.Equals(method.Parameters[0].Type, exceptionType))
+                    {
+                        return new ErrorFormatterResolution(true, true, "");
+                    }
+                }
+            }
+        }
+
+        if (firstFound is null)
+        {
+            return new ErrorFormatterResolution(false, false, "");
+        }
+
+        var paramList = string.Join(", ", firstFound.Parameters.Select(p => p.Type.ToDisplayString()));
+        var actual = $"{firstFound.ReturnType.ToDisplayString()} {firstFound.Name}({paramList})";
+        return new ErrorFormatterResolution(true, false, actual);
+    }
 
     public static string ExtractModelScopeFromClass(this ClassDeclarationSyntax classDecl, SemanticModel semanticModel)
     {

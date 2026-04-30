@@ -49,6 +49,22 @@ public abstract class StatusBaseModel : ObservableModel
     }
 
     /// <summary>
+    /// Called by command factories when a command throws an exception and a per-command error formatter
+    /// has produced a user-facing message. Records the formatted text in <see cref="Messages"/> with the
+    /// command source attribution; the original exception is accepted for symmetry / future logging hooks.
+    /// </summary>
+    /// <param name="error">The exception that was thrown (kept for parity with the unformatted overload).</param>
+    /// <param name="formattedMessage">The user-facing message produced by the configured formatter.</param>
+    /// <param name="commandName">The name of the command property (e.g., "RefreshCommand").</param>
+    /// <param name="methodName">The name of the execute method (e.g., "RefreshDataAsync").</param>
+    public void HandleError(Exception error, string formattedMessage, string commandName, string methodName)
+    {
+        _ = error;
+        var source = $"{commandName}.{methodName}";
+        AddError(formattedMessage, source);
+    }
+
+    /// <summary>
     /// Adds an info message.
     /// </summary>
     public void AddInfo(string message, string? source = null)

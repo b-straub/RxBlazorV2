@@ -37,6 +37,14 @@ public interface IObservableCommandBase
     public Exception? Error { get; }
 
     /// <summary>
+    /// Gets the user-facing message produced by the per-command error formatter (configured via the
+    /// third argument of <c>[ObservableCommand]</c>), or <c>null</c> when no error is recorded or
+    /// when a <c>StatusBaseModel</c> is configured (the formatted message flows there instead).
+    /// Falls back to <see cref="Exception.Message"/> when no formatter is configured.
+    /// </summary>
+    public string? ErrorMessage { get; }
+
+    /// <summary>
     /// Clears the current error state.
     /// </summary>
     public void ResetError();

@@ -29,10 +29,10 @@
                       Immediate="true"
                       Disabled="@Model.IsLoggingIn" />
 
-        @if (Model.LoginError is not null)
+        @if (Model.LoginCommand.ErrorMessage is not null)
         {
             <MudAlert Severity="Severity.Error" Dense="true">
-                @Model.LoginError
+                @Model.LoginCommand.ErrorMessage
             </MudAlert>
         }
 

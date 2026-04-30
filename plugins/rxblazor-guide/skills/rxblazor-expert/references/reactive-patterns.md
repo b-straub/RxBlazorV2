@@ -224,6 +224,35 @@ private void Submit() { /* ... */ }
 private bool CanSubmit() => IsValid && !IsSubmitting;
 ```
 
+**Command with per-command Error Formatter:**
+The third positional argument names a method that maps an `Exception` to a user-facing
+string. When the command body throws, the framework invokes the formatter and then:
+- always populates `Command.Error` (the exception) and `Command.ErrorMessage` (the formatted text),
+  so a per-command inline alert can bind directly to `Command.ErrorMessage`;
+- additionally forwards the formatted text to the configured `StatusBaseModel`, so a global
+  status log / toast surface stays in sync.
+
+Rendering both surfaces is a deliberate consumer choice. `OperationCanceledException` from a
+`CancellationToken` is handled by the cancelable factory itself and never reaches the formatter.
+
+```csharp
+[ObservableCommand(nameof(LoadContactsAsync), nameof(CanLoad), nameof(FormatLoadError))]
+public partial IObservableCommandAsync LoadContactsCommand { get; }
+
+private async Task LoadContactsAsync(CancellationToken ct) { /* no try/catch */ }
+
+// Required signature: string Method(Exception). Instance or static, any accessibility.
+private string FormatLoadError(Exception ex) => ex switch
+{
+    HttpRequestException http => $"Network error loading contacts: {http.Message}",
+    _                         => $"Failed to load contacts: {ex.Message}",
+};
+```
+
+Diagnostics:
+- **RXBG091** — named formatter method does not exist on the model (a quick fix scaffolds a stub).
+- **RXBG092** — formatter exists but the signature is not `string Method(Exception)`.
+
 **Parametrized Command:**
 ```csharp
 [ObservableCommand(nameof(DeleteItem))]

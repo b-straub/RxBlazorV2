@@ -48,6 +48,15 @@
                         StartIcon="@Icons.Material.Filled.Error">
                         @(Model.RiskyOperationCommand.Executing ? "Running..." : "Async Error Demo")
                     </MudButton>
+
+                    <MudButton
+                        Variant="Variant.Filled"
+                        Color="Color.Secondary"
+                        Disabled="@Model.FetchDataCommand.Executing"
+                        OnClick="@(() => Model.FetchDataCommand.ExecuteAsync())"
+                        StartIcon="@Icons.Material.Filled.CloudDownload">
+                        @(Model.FetchDataCommand.Executing ? "Fetching..." : "Fetch (formatted error)")
+                    </MudButton>
                 </MudStack>
             </MudStack>
         </MudCardContent>
@@ -68,7 +77,39 @@
             <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
                 <strong>ErrorDisplay component</strong> - shows captured errors with badge and tooltip
             </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check">
+                <strong>Per-command error formatter</strong> (third arg of <code>[ObservableCommand]</code>)
+                - replaces cryptic <code>ex.Message</code> with a user-facing string before it reaches
+                StatusModel. Click <em>Fetch (formatted error)</em> twice to see different friendly
+                messages for <code>TimeoutException</code> vs <code>InvalidOperationException</code>.
+            </MudListItem>
         </MudList>
+    </MudPaper>
+
+    <MudPaper Class="pa-4 mt-4">
+        <MudText Typo="Typo.h6" GutterBottom="true">Formatter Pattern</MudText>
+        <MudText Typo="Typo.body2" Class="mb-2">
+            The third positional argument of <code>[ObservableCommand]</code> names a method that maps
+            an <code>Exception</code> to a user-facing string. The framework calls it on uncaught
+            exceptions, populates <code>Command.Error</code> / <code>Command.ErrorMessage</code>, and
+            additionally forwards the formatted text to StatusModel:
+        </MudText>
+        <pre class="mud-typography-body2" style="background: var(--mud-palette-background-gray); padding: 1rem; border-radius: 4px; overflow-x: auto;">
+[ObservableCommand(nameof(FetchDataAsync), null, nameof(FormatFetchError))]
+public partial IObservableCommandAsync FetchDataCommand { get; }
+
+private async Task FetchDataAsync() { /* throws TimeoutException or InvalidOperationException */ }
+
+private string FormatFetchError(Exception ex) => ex switch
+{
+    TimeoutException          =&gt; "The data service is unreachable. Please check your connection and try again.",
+    InvalidOperationException =&gt; "Could not load data: the response was incomplete.",
+    _                         =&gt; $"Could not load data: {ex.Message}",
+};</pre>
+        <MudText Typo="Typo.body2" Class="mt-2">
+            <code>OperationCanceledException</code> from a <code>CancellationToken</code> is intercepted
+            by the cancelable factory before the formatter is invoked.
+        </MudText>
     </MudPaper>
 
     <MudPaper Class="pa-4 mt-4">

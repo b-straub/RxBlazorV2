@@ -11,8 +11,9 @@ public abstract class ObservableCommandRAsync<T>(
     string[] observedProperties,
     string commandName,
     string methodName,
-    StatusBaseModel? statusModel = null)
-    : ObservableCommandAsyncBase(model, observedProperties, commandName, methodName, statusModel), IObservableCommandRAsync<T>
+    StatusBaseModel? statusModel = null,
+    Func<Exception, string>? errorFormatter = null)
+    : ObservableCommandAsyncBase(model, observedProperties, commandName, methodName, statusModel, errorFormatter), IObservableCommandRAsync<T>
 {
     /// <summary>
     /// Executes the command asynchronously with an optional external cancellation token and returns the result.
@@ -39,8 +40,9 @@ public class ObservableCommandRAsyncFactory<T>(
     string methodName,
     Func<Task<T?>> execute,
     Func<bool>? canExecute = null,
-    StatusBaseModel? statusModel = null) :
-    ObservableCommandRAsync<T>(model, observedProperties, commandName, methodName, statusModel)
+    StatusBaseModel? statusModel = null,
+    Func<Exception, string>? errorFormatter = null) :
+    ObservableCommandRAsync<T>(model, observedProperties, commandName, methodName, statusModel, errorFormatter)
 {
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;
@@ -88,8 +90,9 @@ public class ObservableCommandRAsyncCancelableFactory<T>(
     string methodName,
     Func<CancellationToken, Task<T?>> execute,
     Func<bool>? canExecute = null,
-    StatusBaseModel? statusModel = null) :
-    ObservableCommandRAsync<T>(model, observedProperties, commandName, methodName, statusModel)
+    StatusBaseModel? statusModel = null,
+    Func<Exception, string>? errorFormatter = null) :
+    ObservableCommandRAsync<T>(model, observedProperties, commandName, methodName, statusModel, errorFormatter)
 {
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;
@@ -183,8 +186,9 @@ public abstract class ObservableCommandRAsync<T1, T2>(
     string[] observedProperties,
     string commandName,
     string methodName,
-    StatusBaseModel? statusModel = null)
-    : ObservableCommandAsyncBase(model, observedProperties, commandName, methodName, statusModel), IObservableCommandRAsync<T1, T2>
+    StatusBaseModel? statusModel = null,
+    Func<Exception, string>? errorFormatter = null)
+    : ObservableCommandAsyncBase(model, observedProperties, commandName, methodName, statusModel, errorFormatter), IObservableCommandRAsync<T1, T2>
 {
     /// <summary>
     /// Executes the command asynchronously with the specified parameter and an optional external cancellation token.
@@ -214,8 +218,9 @@ public class ObservableCommandRAsyncFactory<T1, T2>(
     string methodName,
     Func<T1, Task<T2?>> execute,
     Func<bool>? canExecute = null,
-    StatusBaseModel? statusModel = null) :
-    ObservableCommandRAsync<T1, T2>(model, observedProperties, commandName, methodName, statusModel)
+    StatusBaseModel? statusModel = null,
+    Func<Exception, string>? errorFormatter = null) :
+    ObservableCommandRAsync<T1, T2>(model, observedProperties, commandName, methodName, statusModel, errorFormatter)
 {
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;
@@ -264,8 +269,9 @@ public class ObservableCommandRAsyncCancelableFactory<T1, T2>(
     string methodName,
     Func<T1, CancellationToken, Task<T2?>> execute,
     Func<bool>? canExecute = null,
-    StatusBaseModel? statusModel = null) :
-    ObservableCommandRAsync<T1, T2>(model, observedProperties, commandName, methodName, statusModel)
+    StatusBaseModel? statusModel = null,
+    Func<Exception, string>? errorFormatter = null) :
+    ObservableCommandRAsync<T1, T2>(model, observedProperties, commandName, methodName, statusModel, errorFormatter)
 {
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;

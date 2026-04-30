@@ -41,6 +41,15 @@ public partial class ErrorHandlingModel : SampleBaseModel
     [ObservableCommand(nameof(RiskyOperationAsync))]
     public partial IObservableCommandAsync RiskyOperationCommand { get; }
 
+    /// <summary>
+    /// Async command that throws different exception types and routes them through a per-command
+    /// error formatter. The formatter pattern-matches on the exception type to produce a friendly
+    /// message; the framework forwards that message to StatusModel (and also exposes it on
+    /// <c>Command.ErrorMessage</c>). Source: "FetchDataCommand.FetchDataAsync".
+    /// </summary>
+    [ObservableCommand(nameof(FetchDataAsync), null, nameof(FormatFetchError))]
+    public partial IObservableCommandAsync FetchDataCommand { get; }
+
     private void IncrementSync()
     {
         Counter++;
@@ -67,4 +76,34 @@ public partial class ErrorHandlingModel : SampleBaseModel
         // Always throw to demonstrate async error capture
         throw new InvalidOperationException("Async operation failed! This error was automatically captured.");
     }
+
+    /// <summary>
+    /// Throws either a <see cref="TimeoutException"/> or an <see cref="InvalidOperationException"/>
+    /// depending on parity. The cryptic raw <c>ex.Message</c> never reaches the user — the formatter
+    /// rewrites it.
+    /// </summary>
+    private async Task FetchDataAsync()
+    {
+        Counter++;
+        LogEntries.Add(new LogEntry($"Fetching data (attempt {Counter})...", DateTime.Now));
+        await Task.Delay(300);
+
+        if (Counter % 2 == 0)
+        {
+            throw new TimeoutException("HTTP timeout: 0x80072EE2 connection reset by peer");
+        }
+
+        throw new InvalidOperationException("NRE in DataMapper.Bind: Object reference not set to an instance of an object");
+    }
+
+    /// <summary>
+    /// Maps fetch-data exceptions to user-facing text. Pattern matching keeps the friendly
+    /// message close to the failure mode and hides cryptic internals from the status display.
+    /// </summary>
+    private string FormatFetchError(Exception ex) => ex switch
+    {
+        TimeoutException          => "The data service is unreachable. Please check your connection and try again.",
+        InvalidOperationException => "Could not load data: the response was incomplete.",
+        _                         => $"Could not load data: {ex.Message}",
+    };
 }

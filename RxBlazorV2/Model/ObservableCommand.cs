@@ -11,12 +11,15 @@ namespace RxBlazorV2.Model;
 /// <param name="commandName">Display name of the command, used for error reporting.</param>
 /// <param name="methodName">Name of the backing method, used for error reporting.</param>
 /// <param name="statusModel">Optional <see cref="StatusBaseModel"/> to delegate error handling to.</param>
+/// <param name="errorFormatter">Optional formatter that maps an <see cref="Exception"/> to a user-facing
+/// string. Invoked before delegating to <paramref name="statusModel"/> or populating <c>ErrorMessage</c>.</param>
 public class ObservableCommandBase(
     ObservableModel model,
     string[] observedProperties,
     string commandName,
     string methodName,
-    StatusBaseModel? statusModel = null)
+    StatusBaseModel? statusModel = null,
+    Func<Exception, string>? errorFormatter = null)
     : Observable<string[]>, IObservableCommandBase
 {
     /// <summary>
@@ -26,33 +29,52 @@ public class ObservableCommandBase(
 
     /// <summary>
     /// Gets the most recent exception thrown during command execution, or <c>null</c> if no error occurred.
+    /// Always populated when the command body throws, regardless of whether a <see cref="StatusBaseModel"/>
+    /// is configured — render this surface for per-command inline alerts.
     /// </summary>
     public Exception? Error { get; private set; }
 
     /// <summary>
-    /// Clears the current <see cref="Error"/>.
+    /// Gets the user-facing message produced by the configured formatter, or <see cref="Exception.Message"/>
+    /// when no formatter is configured. Populated whenever <see cref="Error"/> is, so consumers can bind a
+    /// per-command alert to <c>Command.ErrorMessage</c> independently of any global status sink. The same
+    /// formatted text is also forwarded to the configured <see cref="StatusBaseModel"/> when one is wired.
+    /// </summary>
+    public string? ErrorMessage { get; private set; }
+
+    /// <summary>
+    /// Clears the current <see cref="Error"/> and <see cref="ErrorMessage"/>.
     /// </summary>
     public void ResetError()
     {
         Error = null;
+        ErrorMessage = null;
     }
 
     /// <summary>
-    /// Sets or clears the current error. When a <see cref="StatusBaseModel"/> is configured, delegates the error to it instead.
+    /// Sets or clears the current error. Always records both the raw exception (<see cref="Error"/>) and the
+    /// formatted user-facing text (<see cref="ErrorMessage"/>) on the command, and additionally forwards the
+    /// formatted text to a configured <see cref="StatusBaseModel"/>. The consumer chooses which surface to
+    /// render — rendering both is a deliberate choice (e.g. inline alert + global status log).
     /// </summary>
     /// <param name="exception">The exception to record, or <c>null</c> to clear the error.</param>
     protected void SetError(Exception? exception = null)
     {
-        if (exception is not null && statusModel is not null)
+        if (exception is null)
         {
-            // Delegate error to status model with command source info
-            statusModel.HandleError(exception, commandName, methodName);
             Error = null;
+            ErrorMessage = null;
+            return;
         }
-        else
-        {
-            Error = exception;
-        }
+
+        var formatted = errorFormatter is not null
+            ? errorFormatter(exception)
+            : exception.Message;
+
+        Error = exception;
+        ErrorMessage = formatted;
+
+        statusModel?.HandleError(exception, formatted, commandName, methodName);
     }
 
     /// <summary>
@@ -74,13 +96,15 @@ public class ObservableCommandBase(
 /// <param name="commandName">Display name of the command, used for error reporting.</param>
 /// <param name="methodName">Name of the backing method, used for error reporting.</param>
 /// <param name="statusModel">Optional <see cref="StatusBaseModel"/> to delegate error handling to.</param>
+/// <param name="errorFormatter">Optional formatter that maps an <see cref="Exception"/> to a user-facing string.</param>
 public abstract class ObservableCommand(
     ObservableModel model,
     string[] observedProperties,
     string commandName,
     string methodName,
-    StatusBaseModel? statusModel = null)
-    : ObservableCommandBase(model, observedProperties, commandName, methodName, statusModel), IObservableCommand
+    StatusBaseModel? statusModel = null,
+    Func<Exception, string>? errorFormatter = null)
+    : ObservableCommandBase(model, observedProperties, commandName, methodName, statusModel, errorFormatter), IObservableCommand
 {
     /// <summary>
     /// Executes the command synchronously.
@@ -98,6 +122,7 @@ public abstract class ObservableCommand(
 /// <param name="execute">The delegate to invoke when the command executes.</param>
 /// <param name="canExecute">Optional guard function that determines whether the command can execute.</param>
 /// <param name="statusModel">Optional <see cref="StatusBaseModel"/> to delegate error handling to.</param>
+/// <param name="errorFormatter">Optional formatter that maps an <see cref="Exception"/> to a user-facing string.</param>
 public class ObservableCommandFactory(
     ObservableModel model,
     string[] observedProperties,
@@ -105,8 +130,9 @@ public class ObservableCommandFactory(
     string methodName,
     Action execute,
     Func<bool>? canExecute = null,
-    StatusBaseModel? statusModel = null) :
-    ObservableCommand(model, observedProperties, commandName, methodName, statusModel)
+    StatusBaseModel? statusModel = null,
+    Func<Exception, string>? errorFormatter = null) :
+    ObservableCommand(model, observedProperties, commandName, methodName, statusModel, errorFormatter)
 {
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;
@@ -144,13 +170,15 @@ public class ObservableCommandFactory(
 /// <param name="commandName">Display name of the command, used for error reporting.</param>
 /// <param name="methodName">Name of the backing method, used for error reporting.</param>
 /// <param name="statusModel">Optional <see cref="StatusBaseModel"/> to delegate error handling to.</param>
+/// <param name="errorFormatter">Optional formatter that maps an <see cref="Exception"/> to a user-facing string.</param>
 public abstract class ObservableCommand<T>(
     ObservableModel model,
     string[] observedProperties,
     string commandName,
     string methodName,
-    StatusBaseModel? statusModel = null)
-    : ObservableCommandBase(model, observedProperties, commandName, methodName, statusModel), IObservableCommand<T>
+    StatusBaseModel? statusModel = null,
+    Func<Exception, string>? errorFormatter = null)
+    : ObservableCommandBase(model, observedProperties, commandName, methodName, statusModel, errorFormatter), IObservableCommand<T>
 {
     /// <summary>
     /// Executes the command synchronously with the given parameter.
@@ -170,6 +198,7 @@ public abstract class ObservableCommand<T>(
 /// <param name="execute">The delegate to invoke when the command executes.</param>
 /// <param name="canExecute">Optional guard function that determines whether the command can execute.</param>
 /// <param name="statusModel">Optional <see cref="StatusBaseModel"/> to delegate error handling to.</param>
+/// <param name="errorFormatter">Optional formatter that maps an <see cref="Exception"/> to a user-facing string.</param>
 public class ObservableCommandFactory<T>(
     ObservableModel model,
     string[] observedProperties,
@@ -177,8 +206,9 @@ public class ObservableCommandFactory<T>(
     string methodName,
     Action<T> execute,
     Func<bool>? canExecute = null,
-    StatusBaseModel? statusModel = null) :
-    ObservableCommand<T>(model, observedProperties, commandName, methodName, statusModel)
+    StatusBaseModel? statusModel = null,
+    Func<Exception, string>? errorFormatter = null) :
+    ObservableCommand<T>(model, observedProperties, commandName, methodName, statusModel, errorFormatter)
 {
     private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;

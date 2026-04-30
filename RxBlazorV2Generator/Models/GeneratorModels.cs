@@ -158,17 +158,19 @@ public class CommandPropertyInfo
     public string Type { get; }
     public string ExecuteMethod { get; }
     public string? CanExecuteMethod { get; }
+    public string? FormatErrorMethod { get; }
     public bool SupportsCancellation { get; }
     public bool IsOverride { get; }
     public List<CommandTriggerInfo> Triggers { get; }
     public string Accessibility { get; }
 
-    public CommandPropertyInfo(string name, string type, string executeMethod, string? canExecuteMethod, bool supportsCancellation = false, bool isOverride = false, List<CommandTriggerInfo>? triggers = null, string accessibility = "public")
+    public CommandPropertyInfo(string name, string type, string executeMethod, string? canExecuteMethod, bool supportsCancellation = false, bool isOverride = false, List<CommandTriggerInfo>? triggers = null, string accessibility = "public", string? formatErrorMethod = null)
     {
         Name = name;
         Type = type;
         ExecuteMethod = executeMethod;
         CanExecuteMethod = canExecuteMethod;
+        FormatErrorMethod = formatErrorMethod;
         SupportsCancellation = supportsCancellation;
         IsOverride = isOverride;
         Triggers = triggers ?? [];
