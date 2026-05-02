@@ -13,6 +13,46 @@ A reactive programming framework for Blazor applications built on top of [R3 (Re
 > [!WARNING]
 > **Breaking changes in 1.2.x** — `ComponentTriggerType` has been removed. All existing `[ObservableComponentTrigger]` usages must be reviewed. See [Breaking Changes](#breaking-changes) below for the cleanup checklist.
 
+> [!TIP]
+> **New in 1.2.x (non-breaking)** — cancellation token on `OnContextReadyAsync`, plus swipe + sort list components in `RxBlazorV2.MudBlazor`. See [What's New](#whats-new) below.
+
+## What's New
+
+The following are **non-breaking** additions — existing code continues to compile and run unchanged.
+
+### `OnContextReadyAsync(CancellationToken)` overload
+
+Both `ObservableModel` and `ObservableComponent<T>` now expose a cancellation-aware `OnContextReadyAsync(CancellationToken)` virtual. The token is cancelled when the model or component is disposed, so async initialization work (e.g. `await Task.Delay(...)` before flipping a property) aborts cleanly instead of writing to a torn-down R3 subject after navigation.
+
+The existing parameterless `OnContextReadyAsync()` keeps working — the new virtual delegates to it by default. Opt in by switching the override signature only where you actually need cancellation:
+
+```csharp
+// Existing override — still works, no changes required
+protected override Task OnContextReadyAsync()
+{
+    PreferredFormat = Storage.PreferredFormat;
+    return Task.CompletedTask;
+}
+
+// New override — cancellation token bound to disposal
+protected override async Task OnContextReadyAsync(CancellationToken cancellationToken)
+{
+    await Task.Delay(3000, cancellationToken);   // OperationCanceledException on dispose
+    IndirectUsageReady = true;                   // never runs after navigation away
+}
+```
+
+### Swipe + sort list components in `RxBlazorV2.MudBlazor`
+
+Two reactive list components for iOS-Mail-style swipe actions and drag-to-reorder:
+
+- **`MudSwipeoutRx<TItem>`** — row with reveal-on-swipe action panels (up to 3 per side), overswipe-to-fire, swipe-to-delete. Standalone — does not require a sortable list around it.
+- **`MudSortableSwipeoutListRx<TItem>`** — sortable list with three activation modes (drag-handle, tap-hold, whole-row), cross-list groups (`SortableGroup` with move / clone / drag-out-to-remove semantics), edge auto-scroll, real-time grow/shrink of the dropzone.
+
+Single ESM gesture engine: Pointer Events for mouse / pen, Touch Events for finger input (touchmove non-passive so `preventDefault` reliably wins the gesture against the browser scroll heuristic on iOS Safari and Android Chrome).
+
+See the dedicated **[RxBlazorV2.MudBlazor README](RxBlazorV2.MudBlazor/README.md)** for full API, usage examples, the touch-action trade-off, and live screenshots in the sample app (`/sortable`, `/contacts`, `/notifications`).
+
 ## Breaking Changes
 
 ### Version 1.2.x — `ComponentTriggerType` Removed
@@ -115,7 +155,7 @@ The package includes the source generator and code fixes automatically.
 
 | Package | Description |
 |---------|-------------|
-| [RxBlazorV2.MudBlazor](https://www.nuget.org/packages/RxBlazorV2.MudBlazor) | Reactive MudBlazor button components with progress indicators, cancellation, and confirmation dialogs |
+| [RxBlazorV2.MudBlazor](https://www.nuget.org/packages/RxBlazorV2.MudBlazor) | Reactive MudBlazor components: command-bound buttons / icon buttons / FABs with progress + cancellation + confirmation dialogs, status display, and swipe + sort list components (`MudSwipeoutRx`, `MudSortableSwipeoutListRx`). See its [dedicated README](RxBlazorV2.MudBlazor/README.md). |
 
 ## Quick Start
 
@@ -561,6 +601,22 @@ Run the sample application:
 dotnet run --project RxBlazorV2Sample
 ```
 
+### RxBlazorV2.MudBlazor.Sample
+
+The **RxBlazorV2.MudBlazor.Sample** project showcases the reactive MudBlazor components in four pages:
+
+| Page | Demonstrates |
+|---|---|
+| `/` (Buttons) | `MudButton[Async]Rx[Of<T>]`, `MudIconButton...`, `MudFab...` with progress / cancellation / confirmation; `StatusDisplay` for snackbar + icon messages |
+| `/sortable` | `MudSortableSwipeoutListRx` intra-list reorder + `MudSwipeoutRx` swipe-to-pin / archive / delete; runtime toggle between drag-handle / tap-hold / whole-row activation |
+| `/contacts` | Cross-list groups: `All Contacts` (clone source) ↔ `VIP Group` (move target) with drag-out-to-remove |
+| `/notifications` | Standalone `MudSwipeoutRx` (no sortable wrapping) — DB-style timestamp-desc order with toggle-read / archive (toggles) / overswipe-to-delete |
+
+Run:
+```bash
+dotnet run --project RxBlazorV2.MudBlazor.Sample
+```
+
 ### ReactivePatternSample
 
 The **ReactivePatternSample** is a multi-project Blazor application demonstrating all reactive patterns in a real-world scenario:
@@ -592,8 +648,9 @@ dotnet run --project ReactivePatternSample/ReactivePatternSample
 - **RxBlazorV2** - Core runtime library with base classes and interfaces
 - **RxBlazorV2Generator** - Roslyn source generator for code generation
 - **RxBlazorV2CodeFix** - Code analyzers and fixes for common issues
-- **RxBlazorV2.MudBlazor** - MudBlazor button components with command binding
+- **RxBlazorV2.MudBlazor** - MudBlazor components: command-bound buttons + swipe / sort list components
 - **RxBlazorV2Sample** - Sample Blazor WebAssembly application with isolated examples
+- **RxBlazorV2.MudBlazor.Sample** - Sample app showcasing the reactive MudBlazor components
 - **ReactivePatternSample** - Multi-project sample demonstrating all reactive patterns
 
 ## Diagnostics
