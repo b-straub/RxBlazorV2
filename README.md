@@ -8,7 +8,7 @@
 
 A reactive programming framework for Blazor applications built on top of [R3 (Reactive Extensions)](https://github.com/Cysharp/R3). RxBlazorV2 uses Roslyn source generators to automatically create observable models with reactive property bindings, command patterns, and dependency injection support.
 
-**[Live Demo](https://b-straub.github.io/RxBlazorV2/)**
+**Live demos:** [Reactive patterns](https://b-straub.github.io/RxBlazorV2/) · [MudBlazor components](https://b-straub.github.io/RxBlazorV2/mudblazor/)
 
 > [!WARNING]
 > **Breaking changes in 1.2.x** — `ComponentTriggerType` has been removed. All existing `[ObservableComponentTrigger]` usages must be reviewed. See [Breaking Changes](#breaking-changes) below for the cleanup checklist.
@@ -574,7 +574,7 @@ public partial class FormModel : ObservableModel
 
 ### RxBlazorV2Sample
 
-See the **RxBlazorV2Sample** project for comprehensive, interactive examples:
+See the **RxBlazorV2Sample** project for comprehensive, interactive examples — [live at b-straub.github.io/RxBlazorV2/](https://b-straub.github.io/RxBlazorV2/):
 
 | Sample                          | Description                                                        |
 |---------------------------------|--------------------------------------------------------------------|
@@ -603,7 +603,7 @@ dotnet run --project RxBlazorV2Sample
 
 ### RxBlazorV2.MudBlazor.Sample
 
-The **RxBlazorV2.MudBlazor.Sample** project showcases the reactive MudBlazor components in four pages:
+The **RxBlazorV2.MudBlazor.Sample** project showcases the reactive MudBlazor components in four pages — [live at b-straub.github.io/RxBlazorV2/mudblazor/](https://b-straub.github.io/RxBlazorV2/mudblazor/):
 
 | Page | Demonstrates |
 |---|---|

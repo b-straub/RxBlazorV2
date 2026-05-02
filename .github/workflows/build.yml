@@ -59,28 +59,80 @@ jobs:
     - name: Test Core
       run: dotnet test RxBlazorV2.CoreTests/RxBlazorV2.CoreTests.csproj --configuration Release --no-build --verbosity normal
 
+    # ---------------------------------------------------------------------------
     # Deploy to GitHub Pages (only on push to master)
-    - name: Set base path for GitHub Pages
+    #   Two Blazor WASM apps share one Pages site:
+    #     /RxBlazorV2/            -> RxBlazorV2Sample (reactive patterns)
+    #     /RxBlazorV2/mudblazor/  -> RxBlazorV2.MudBlazor.Sample (MudBlazor components)
+    #   A smart root 404.html stashes the requested path in sessionStorage and
+    #   redirects to the right subapp, where an injected recovery script replays
+    #   the path with history.replaceState before Blazor's router initialises.
+    # ---------------------------------------------------------------------------
+    - name: Set base path and SPA-recovery script (basic sample)
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       run: |
         sed -i 's|<base href="/" />|<base href="/RxBlazorV2/" />|g' RxBlazorV2Sample/wwwroot/index.html
+        sed -i 's|<script src="_framework/blazor.webassembly.js"></script>|<script>(function(){var t=sessionStorage.getItem("spa-deep-link");if(t){sessionStorage.removeItem("spa-deep-link");var b=window.location.pathname.replace(/\/$/,"");history.replaceState(null,"",b+(t.charAt(0)==="/"?t:"/"+t));}})();</script>\n<script src="_framework/blazor.webassembly.js"></script>|' RxBlazorV2Sample/wwwroot/index.html
 
-    - name: Publish Sample
-      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-      run: dotnet publish RxBlazorV2Sample/RxBlazorV2Sample.csproj -c Release -o ./build --nologo
-
-    - name: Add .nojekyll and 404.html
+    - name: Set base path and SPA-recovery script (MudBlazor sample)
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       run: |
-        cd build/wwwroot
-        touch .nojekyll
-        cp index.html 404.html
+        sed -i 's|<base href="/" />|<base href="/RxBlazorV2/mudblazor/" />|g' RxBlazorV2.MudBlazor.Sample/wwwroot/index.html
+        sed -i 's|<script src="_framework/blazor.webassembly.js"></script>|<script>(function(){var t=sessionStorage.getItem("spa-deep-link");if(t){sessionStorage.removeItem("spa-deep-link");var b=window.location.pathname.replace(/\/$/,"");history.replaceState(null,"",b+(t.charAt(0)==="/"?t:"/"+t));}})();</script>\n<script src="_framework/blazor.webassembly.js"></script>|' RxBlazorV2.MudBlazor.Sample/wwwroot/index.html
+
+    - name: Publish basic sample
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      run: dotnet publish RxBlazorV2Sample/RxBlazorV2Sample.csproj -c Release -o ./build-basic --nologo
+
+    - name: Publish MudBlazor sample
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      run: dotnet publish RxBlazorV2.MudBlazor.Sample/RxBlazorV2.MudBlazor.Sample.csproj -c Release -o ./build-mudblazor --nologo
+
+    - name: Combine and stage GitHub Pages output
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      run: |
+        mkdir -p ./pages
+        cp -r ./build-basic/wwwroot/. ./pages/
+        mkdir -p ./pages/mudblazor
+        cp -r ./build-mudblazor/wwwroot/. ./pages/mudblazor/
+        touch ./pages/.nojekyll
+        cat > ./pages/404.html <<'HTML'
+        <!doctype html>
+        <html lang="en">
+        <head>
+          <meta charset="utf-8">
+          <title>Loading…</title>
+          <script>
+          (function () {
+            var apps = [
+              { prefix: '/RxBlazorV2/mudblazor/', root: '/RxBlazorV2/mudblazor/' },
+              { prefix: '/RxBlazorV2/',           root: '/RxBlazorV2/' }
+            ];
+            var path = window.location.pathname;
+            for (var i = 0; i < apps.length; i++) {
+              var app = apps[i];
+              if (path.indexOf(app.prefix) === 0) {
+                var tail = path.substring(app.prefix.length) + window.location.search + window.location.hash;
+                if (tail.length > 0) {
+                  sessionStorage.setItem('spa-deep-link', tail);
+                }
+                window.location.replace(app.root);
+                return;
+              }
+            }
+            window.location.replace('/RxBlazorV2/');
+          })();
+          </script>
+        </head>
+        <body>Loading…</body>
+        </html>
+        HTML
 
     - name: Upload artifact
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       uses: actions/upload-pages-artifact@v3
       with:
-        path: ./build/wwwroot
+        path: ./pages
 
     - name: Deploy to GitHub Pages
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
