@@ -20,7 +20,9 @@ public abstract class ObservableModel : IObservableModel
     
     private bool _initialized;
     private bool _initializedAsync;
+    private bool _disposed;
     private readonly SemaphoreSlim _contextReadyAsyncLock = new(1, 1);
+    private readonly CancellationTokenSource _contextDisposeCts = new();
     private bool _suspendNotifications;
     private readonly HashSet<string> _pendingNotifications = new();
     private readonly Lock _suspenderLock = new();
@@ -83,9 +85,14 @@ public abstract class ObservableModel : IObservableModel
             if (!_initializedAsync)
             {
                 await OnContextReadyInternAsync();
-                await OnContextReadyAsync();
+                await OnContextReadyAsync(_contextDisposeCts.Token);
                 _initializedAsync = true;
             }
+        }
+        catch (OperationCanceledException) when (_contextDisposeCts.IsCancellationRequested)
+        {
+            // Model was disposed while async init was running — drop silently. Subsequent Dispose
+            // calls will tear down subscriptions; nothing else to do.
         }
         finally
         {
@@ -121,6 +128,19 @@ public abstract class ObservableModel : IObservableModel
     protected virtual Task OnContextReadyAsync()
     {
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Called during asynchronous initialization with a cancellation token bound to model disposal.
+    /// Default implementation delegates to <see cref="OnContextReadyAsync()"/> for backwards compatibility —
+    /// override <i>this</i> overload to pass the token to <see cref="Task.Delay(int, CancellationToken)"/> and
+    /// any other awaitable so a navigation that disposes the model doesn't leave this method writing to a
+    /// disposed reactive subject.
+    /// </summary>
+    /// <param name="cancellationToken">Cancelled when the model is disposed.</param>
+    protected virtual Task OnContextReadyAsync(CancellationToken cancellationToken)
+    {
+        return OnContextReadyAsync();
     }
     
     /// <summary>
@@ -314,12 +334,15 @@ public abstract class ObservableModel : IObservableModel
     }
 
     /// <summary>
-    /// Releases managed resources when disposing is true.
+    /// Releases managed resources when disposing is true. Safe to call multiple times.
     /// </summary>
     protected virtual void Dispose(bool disposing)
     {
-        if (disposing)
+        if (disposing && !_disposed)
         {
+            _disposed = true;
+            _contextDisposeCts.Cancel();
+            _contextDisposeCts.Dispose();
             Subscriptions.Dispose();
             PropertyChangedSubject.Dispose();
         }

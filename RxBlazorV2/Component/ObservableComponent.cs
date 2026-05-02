@@ -15,6 +15,9 @@ public abstract class ObservableComponent<TModel> : OwningComponentBase<TModel> 
     /// </summary>
     protected CompositeDisposable Subscriptions { get; } = new();
 
+    private readonly CancellationTokenSource _contextDisposeCts = new();
+    private bool _disposed;
+
     /// <summary>
     /// Gets the reactive model instance resolved from dependency injection.
     /// </summary>
@@ -48,9 +51,16 @@ public abstract class ObservableComponent<TModel> : OwningComponentBase<TModel> 
         await base.OnAfterRenderAsync(firstRender);
         if (firstRender)
         {
-            await InitializeGeneratedCodeAsync();
-            await OnContextReadyAsync();
-            await Model.ContextReadyAsync();
+            try
+            {
+                await InitializeGeneratedCodeAsync();
+                await OnContextReadyAsync(_contextDisposeCts.Token);
+                await Model.ContextReadyAsync();
+            }
+            catch (OperationCanceledException) when (_contextDisposeCts.IsCancellationRequested)
+            {
+                // Component was disposed while async init was running — drop silently.
+            }
         }
     }
     
@@ -93,6 +103,18 @@ public abstract class ObservableComponent<TModel> : OwningComponentBase<TModel> 
     }
 
     /// <summary>
+    /// Called after first render with a cancellation token bound to component disposal. Default
+    /// implementation delegates to <see cref="OnContextReadyAsync()"/> for backwards compatibility —
+    /// override <i>this</i> overload to pass the token to any awaitable so navigating away during
+    /// initialization doesn't keep work running against torn-down state.
+    /// </summary>
+    /// <param name="cancellationToken">Cancelled when the component is disposed.</param>
+    protected virtual Task OnContextReadyAsync(CancellationToken cancellationToken)
+    {
+        return OnContextReadyAsync();
+    }
+
+    /// <summary>
     /// Called during disposal; override to perform custom synchronous cleanup.
     /// </summary>
     protected virtual void OnDispose()
@@ -104,8 +126,11 @@ public abstract class ObservableComponent<TModel> : OwningComponentBase<TModel> 
     /// </summary>
     protected override void Dispose(bool disposing)
     {
-        if (disposing)
+        if (disposing && !_disposed)
         {
+            _disposed = true;
+            _contextDisposeCts.Cancel();
+            _contextDisposeCts.Dispose();
             OnDispose();
             Subscriptions.Dispose();
         }

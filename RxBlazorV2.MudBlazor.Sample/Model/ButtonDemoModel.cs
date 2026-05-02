@@ -34,9 +34,9 @@ public partial class ButtonDemoModel : ObservableModel
     [ObservableCommand(nameof(AddValueAsync), nameof(CanRun))]
     public partial IObservableCommandAsync<int> AddAsyncCommand { get; }
 
-    protected override async Task OnContextReadyAsync()
+    protected override async Task OnContextReadyAsync(CancellationToken cancellationToken)
     {
-        await Task.Delay(3000);
+        await Task.Delay(3000, cancellationToken);
         IndirectUsageReady = true;
     }
 
