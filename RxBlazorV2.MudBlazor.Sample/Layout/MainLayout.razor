@@ -25,16 +25,19 @@
                Breakpoint="Breakpoint.Md"
                Elevation="1">
         <MudNavMenu>
-            <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.SmartButton">
+            @* Hrefs without a leading slash so they resolve relative to <base href="..."> —
+               this works both locally (base = "/") and deployed (base = "/RxBlazorV2/mudblazor/").
+               An absolute "/sortable" would otherwise route to the host root and 404. *@
+            <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.SmartButton">
                 Buttons
             </MudNavLink>
-            <MudNavLink Href="/sortable" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.SwapVert">
+            <MudNavLink Href="sortable" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.SwapVert">
                 Sortable + Swipeout
             </MudNavLink>
-            <MudNavLink Href="/contacts" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Group">
+            <MudNavLink Href="contacts" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Group">
                 Contact groups
             </MudNavLink>
-            <MudNavLink Href="/notifications" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.NotificationsActive">
+            <MudNavLink Href="notifications" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.NotificationsActive">
                 Notifications
             </MudNavLink>
         </MudNavMenu>
