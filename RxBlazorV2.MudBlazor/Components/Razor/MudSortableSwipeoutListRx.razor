@@ -1,0 +1,10 @@
+@typeparam TItem
+
+<div @ref="_listRef" class="rxb-sortable @AdditionalClasses" data-rxb-list data-rxb-activation="@ActivationAttr" style="@Style">
+    @foreach (var item in Items)
+    {
+        <div @key="GetKey(item)" data-rxb-sortable-item>
+            @ItemTemplate(item)
+        </div>
+    }
+</div>

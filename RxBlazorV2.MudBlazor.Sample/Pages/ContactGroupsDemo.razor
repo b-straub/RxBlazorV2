@@ -1,0 +1,100 @@
+@page "/contacts"
+@using RxBlazorV2.MudBlazor.Buttons
+@using RxBlazorV2.MudBlazor.Components.Razor
+@inherits ContactGroupsDemoModelComponent
+
+<PageTitle>Contact Groups</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium">
+    <MudText Typo="Typo.h4" Class="mb-2">Contact Groups</MudText>
+    <MudText Typo="Typo.body2" Class="mb-4">
+        Drag a contact from <b>All Contacts</b> to <b>VIP Group</b> to add them (clone — they stay in All).
+        Drag inside either list to reorder. Drag a VIP contact <i>out</i> of VIP to remove from the group.
+    </MudText>
+
+    <MudPaper Class="pa-3 mb-3" Elevation="0" Outlined="true">
+        <MudRadioGroup T="SortActivation" Value="_activation" ValueChanged="OnActivationChanged">
+            <MudRadio T="SortActivation" Value="SortActivation.DRAG_HANDLE">Drag handle</MudRadio>
+            <MudRadio T="SortActivation" Value="SortActivation.TAP_HOLD">Tap &amp; hold</MudRadio>
+            <MudRadio T="SortActivation" Value="SortActivation.ALWAYS">Whole row</MudRadio>
+        </MudRadioGroup>
+    </MudPaper>
+
+    <MudGrid>
+        <MudItem xs="12" md="6">
+            <MudPaper Elevation="2" Class="pa-2">
+                <MudText Typo="Typo.subtitle1" Class="px-2 pb-2">All Contacts (@Model.AllContacts.Count)</MudText>
+                <MudSortableSwipeoutListRx TItem="Contact"
+                                           ListId="@ContactGroupsDemoModel.AllListId"
+                                           Items="@Model.AllContacts"
+                                           KeySelector="@(c => c.Id)"
+                                           Reorder="@(p => Model.ReorderCommand.ExecuteAsync(p))"
+                                           ActivationMode="@_activation"
+                                           Group="@_allGroup">
+                    <ItemTemplate Context="contact">
+                        @ContactRow(contact)
+                    </ItemTemplate>
+                </MudSortableSwipeoutListRx>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudPaper Elevation="2" Class="pa-2">
+                <MudText Typo="Typo.subtitle1" Class="px-2 pb-2">VIP Group (@Model.VipContacts.Count)</MudText>
+                <MudSortableSwipeoutListRx TItem="Contact"
+                                           ListId="@ContactGroupsDemoModel.VipListId"
+                                           Items="@Model.VipContacts"
+                                           KeySelector="@(c => c.Id)"
+                                           Reorder="@(p => Model.ReorderCommand.ExecuteAsync(p))"
+                                           ActivationMode="@_activation"
+                                           Group="@_vipGroup">
+                    <ItemTemplate Context="contact">
+                        @ContactRow(contact)
+                    </ItemTemplate>
+                </MudSortableSwipeoutListRx>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <MudButtonAsyncRx Command="@Model.ResetCommand" Variant="Variant.Outlined" Class="mt-4" StartIcon="@Icons.Material.Filled.Refresh">
+        Reset
+    </MudButtonAsyncRx>
+</MudContainer>
+
+@code
+{
+    private SortActivation _activation = SortActivation.ALWAYS;
+
+    private void OnActivationChanged(SortActivation mode)
+    {
+        _activation = mode;
+    }
+
+    // CLONE source: items stay in this list when dragged out; never accept incoming.
+    private readonly SortableGroup _allGroup = new()
+    {
+        Name = "contacts",
+        Pull = SortablePull.CLONE,
+        Put = false
+    };
+
+    // MOVE target: items dragged out are removed from VIP; accept incoming from "contacts" group.
+    private readonly SortableGroup _vipGroup = new()
+    {
+        Name = "contacts",
+        Pull = SortablePull.MOVE,
+        Put = true
+    };
+
+    private RenderFragment ContactRow(Contact contact) => @<MudPaper Class="pa-3 d-flex align-center" Elevation="0" Square="true">
+        @if (_activation == SortActivation.DRAG_HANDLE)
+        {
+            <MudIcon Icon="@Icons.Material.Filled.DragIndicator"
+                     Color="Color.Default"
+                     data-rxb-sort-handle
+                     Class="mr-3" />
+        }
+        <MudAvatar Color="Color.Primary" Size="Size.Small" Class="mr-3">@contact.Initial</MudAvatar>
+        <MudText Typo="Typo.body1">@contact.Name</MudText>
+    </MudPaper>;
+}

@@ -8,13 +8,48 @@
 
 <MudLayout>
     <MudAppBar Elevation="1">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                       Color="Color.Inherit"
+                       Edge="Edge.Start"
+                       OnClick="@ToggleDrawer"
+                       aria-label="Toggle navigation" />
         <MudText Typo="Typo.h5" Class="ml-3">RxBlazorV2.MudBlazor Sample</MudText>
         <MudSpacer />
         <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit"
                        Href="https://github.com/b-straub/RxBlazorV2" Target="_blank" />
         <StatusDisplay ShowMessageSource="false" GroupMessagesBySeverity="false" MessageMessageMode="StatusMessageMode.Single"/>
     </MudAppBar>
+    <MudDrawer @bind-Open="_drawerOpen"
+               ClipMode="DrawerClipMode.Always"
+               Variant="@DrawerVariant.Responsive"
+               Breakpoint="Breakpoint.Md"
+               Elevation="1">
+        <MudNavMenu>
+            <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.SmartButton">
+                Buttons
+            </MudNavLink>
+            <MudNavLink Href="/sortable" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.SwapVert">
+                Sortable + Swipeout
+            </MudNavLink>
+            <MudNavLink Href="/contacts" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Group">
+                Contact groups
+            </MudNavLink>
+            <MudNavLink Href="/notifications" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.NotificationsActive">
+                Notifications
+            </MudNavLink>
+        </MudNavMenu>
+    </MudDrawer>
     <MudMainContent Class="pa-4">
         @Body
     </MudMainContent>
 </MudLayout>
+
+@code
+{
+    private bool _drawerOpen = true;
+
+    private void ToggleDrawer()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+}

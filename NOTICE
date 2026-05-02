@@ -1,0 +1,59 @@
+RxBlazorV2
+Copyright (c) 2025 b-straub
+Licensed under the MIT License (see LICENSE).
+
+This product includes work derived from third-party MIT-licensed software:
+
+------------------------------------------------------------------------------
+Framework7
+https://framework7.io
+Copyright (c) 2014 Vladimir Kharlampidi
+Licensed under the MIT License
+
+The gesture algorithms in
+  RxBlazorV2.MudBlazor/wwwroot/SwipeoutSortable.js
+are derived from Framework7's swipeout and sortable components:
+  - Swipeout: elasticity model, velocity snap thresholds, overswipe detection,
+    swipe-to-delete sweep, action-button reveal layout.
+  - Sortable: midpoint-cross sibling shift algorithm, tap-hold activation timing,
+    edge auto-scroll, dragged-item snap-back.
+
+The original Framework7 implementation uses jQuery / dom7 and Touch Events.
+The port here is a clean re-implementation in plain DOM with Pointer Events for
+mouse/pen and Touch Events for finger input.
+
+Original framework7 LICENSE text:
+
+    The MIT License (MIT)
+
+    Copyright (c) 2014 Vladimir Kharlampidi
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy of
+    this software and associated documentation files (the "Software"), to deal in
+    the Software without restriction, including without limitation the rights to
+    use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+    the Software, and to permit persons to whom the Software is furnished to do so,
+    subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+    FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+    COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+    IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+    CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+------------------------------------------------------------------------------
+SortableJS / BlazorSortable
+https://github.com/SortableJS/Sortable
+https://github.com/the-urlist/BlazorSortable
+Copyright (c) 2019 SortableJS
+Copyright (c) 2023 The Urlist
+Licensed under the MIT License
+
+The cross-list group API in MudSortableSwipeoutListRx (SortableGroup with
+Name / Pull / Put rules, drag-out-to-remove, clone semantics) follows the
+SortableJS group model, with the BlazorSortable wrapper as a reference for
+Blazor JS-interop conventions. No code is copied verbatim.

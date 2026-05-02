@@ -1,0 +1,178 @@
+@page "/notifications"
+@using RxBlazorV2.MudBlazor.Buttons
+@using RxBlazorV2.MudBlazor.Components.Razor
+@inherits NotificationsDemoModelComponent
+
+<PageTitle>Notifications</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
+        <MudText Typo="Typo.h4">Notifications</MudText>
+        @if (Model.UnreadCount > 0)
+        {
+            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled">
+                @Model.UnreadCount unread
+            </MudChip>
+        }
+        <MudSpacer />
+        <MudButtonAsyncRx Command="@Model.ResetCommand"
+                          Variant="Variant.Outlined"
+                          Size="Size.Small"
+                          StartIcon="@Icons.Material.Filled.Refresh">
+            Reload
+        </MudButtonAsyncRx>
+    </MudStack>
+
+    <MudText Typo="Typo.body2" Class="mb-4">
+        Standalone <code>MudSwipeoutRx</code> — no sortable list wrapping it. Order comes from the
+        DB (timestamp desc), not from the user. Swipe left for Archive (toggles) + Delete
+        (overswipe = delete), swipe right to toggle read.
+    </MudText>
+
+    <MudPaper Outlined="true">
+        @foreach (var notification in Model.Notifications)
+        {
+            <div @key="notification.Id" class="notif-row-wrapper">
+                <MudSwipeoutRx TItem="Notification"
+                               Item="notification"
+                               LeftActions="@BuildLeftActions(notification)"
+                               RightActions="@BuildRightActions(notification)">
+                    <ChildContent Context="n">
+                        <div class="d-flex align-center pa-3 @(n.IsArchived ? "notif-archived" : "")" style="gap: 12px;">
+                            <div class="unread-marker" style="@(n.IsRead || n.IsArchived ? "opacity: 0;" : "")"></div>
+                            <MudAvatar Color="@AvatarColor(n)" Size="Size.Medium">@Initials(n.Sender)</MudAvatar>
+                            <div style="flex: 1; min-width: 0;">
+                                <MudStack Row="true" AlignItems="AlignItems.Baseline" Spacing="2">
+                                    <MudText Typo="Typo.subtitle2"
+                                             Style="@(n.IsRead || n.IsArchived ? "" : "font-weight: 600;")"
+                                             Class="text-truncate">
+                                        @n.Sender
+                                    </MudText>
+                                    @if (n.IsArchived)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.Archive" Size="Size.Small" Color="Color.Default" />
+                                    }
+                                    <MudSpacer />
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary" Style="white-space: nowrap;">
+                                        @FormatTime(n.Timestamp)
+                                    </MudText>
+                                </MudStack>
+                                <MudText Typo="Typo.body2"
+                                         Style="@(n.IsRead || n.IsArchived ? "" : "font-weight: 600;")"
+                                         Class="text-truncate">
+                                    @n.Subject
+                                </MudText>
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary text-truncate" Style="display: block;">
+                                    @n.Preview
+                                </MudText>
+                            </div>
+                        </div>
+                    </ChildContent>
+                </MudSwipeoutRx>
+            </div>
+        }
+        @if (Model.Notifications.Count == 0)
+        {
+            <MudText Typo="Typo.body2" Class="pa-6 mud-text-secondary" Style="text-align: center;">
+                Inbox zero. Tap Reload to repopulate.
+            </MudText>
+        }
+    </MudPaper>
+</MudContainer>
+
+<style>
+    .notif-row-wrapper:not(:last-child) {
+        border-bottom: 1px solid var(--mud-palette-lines-default, rgba(0,0,0,0.12));
+    }
+    .unread-marker {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--mud-palette-primary);
+        flex: 0 0 8px;
+    }
+    .text-truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .notif-archived {
+        opacity: 0.55;
+    }
+    .notif-archived .mud-avatar {
+        filter: grayscale(1);
+    }
+</style>
+
+@code
+{
+    private IReadOnlyList<SwipeoutAction<Notification>> BuildLeftActions(Notification n)
+    {
+        return
+        [
+            new SwipeoutAction<Notification>
+            {
+                Icon = n.IsRead ? Icons.Material.Filled.MarkEmailUnread : Icons.Material.Filled.MarkEmailRead,
+                Color = Color.Info,
+                AriaLabel = n.IsRead ? "Mark unread" : "Mark read",
+                CommandAsyncOfItem = Model.ToggleReadCommand
+            }
+        ];
+    }
+
+    private IReadOnlyList<SwipeoutAction<Notification>> BuildRightActions(Notification n)
+    {
+        return
+        [
+            new SwipeoutAction<Notification>
+            {
+                Icon = n.IsArchived ? Icons.Material.Filled.Unarchive : Icons.Material.Outlined.Archive,
+                Color = Color.Warning,
+                AriaLabel = n.IsArchived ? "Unarchive" : "Archive",
+                CommandAsyncOfItem = Model.ArchiveCommand
+            },
+            new SwipeoutAction<Notification>
+            {
+                Icon = Icons.Material.Filled.Delete,
+                Color = Color.Error,
+                AriaLabel = "Delete",
+                IsDelete = true,
+                CommandAsyncOfItem = Model.DeleteCommand
+            }
+        ];
+    }
+
+    private static string Initials(string name)
+    {
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0)
+        {
+            return "?";
+        }
+        if (parts.Length == 1)
+        {
+            return parts[0][..Math.Min(2, parts[0].Length)].ToUpperInvariant();
+        }
+        return ($"{parts[0][0]}{parts[^1][0]}").ToUpperInvariant();
+    }
+
+    private static Color AvatarColor(Notification n) => n.IsRead ? Color.Default : Color.Primary;
+
+    private static string FormatTime(DateTimeOffset ts)
+    {
+        var delta = DateTimeOffset.UtcNow - ts;
+        if (delta.TotalMinutes < 1)
+        {
+            return "just now";
+        }
+        if (delta.TotalMinutes < 60)
+        {
+            return $"{(int)delta.TotalMinutes}m ago";
+        }
+        if (delta.TotalHours < 24)
+        {
+            return $"{(int)delta.TotalHours}h ago";
+        }
+        return $"{(int)delta.TotalDays}d ago";
+    }
+}

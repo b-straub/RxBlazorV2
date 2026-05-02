@@ -1,0 +1,110 @@
+@page "/sortable"
+@using RxBlazorV2.MudBlazor.Buttons
+@using RxBlazorV2.MudBlazor.Components.Razor
+@inherits SortableSwipeoutDemoModelComponent
+
+<PageTitle>Sortable + Swipeout</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small">
+    <MudText Typo="Typo.h4" Class="mb-2">Sortable + Swipeout</MudText>
+    <MudText Typo="Typo.body2" Class="mb-4">
+        Drag the handle to reorder. Swipe a row left to reveal Archive + Delete (overswipe = delete).
+        Swipe right to reveal Pin (overswipe = pin).
+    </MudText>
+
+    <MudPaper Class="pa-3 mb-3" Elevation="0" Outlined="true">
+        <MudRadioGroup T="SortActivation" Value="_activation" ValueChanged="OnActivationChanged">
+            <MudRadio T="SortActivation" Value="SortActivation.DRAG_HANDLE">Drag handle</MudRadio>
+            <MudRadio T="SortActivation" Value="SortActivation.TAP_HOLD">Tap &amp; hold</MudRadio>
+            <MudRadio T="SortActivation" Value="SortActivation.ALWAYS">Whole row</MudRadio>
+        </MudRadioGroup>
+    </MudPaper>
+
+    <MudPaper Class="mb-4" Elevation="2">
+        <MudSortableSwipeoutListRx TItem="TaskItem"
+                                   Items="@Model.Tasks"
+                                   KeySelector="@(t => t.Id)"
+                                   Reorder="@(p => Model.ReorderCommand.ExecuteAsync(p))"
+                                   ActivationMode="@_activation">
+            <ItemTemplate Context="task">
+                <MudSwipeoutRx TItem="TaskItem"
+                               Item="task"
+                               LeftActions="@BuildLeftActions(task)"
+                               RightActions="@BuildRightActions(task)">
+                    <ChildContent Context="t">
+                        <MudPaper Class="pa-3 d-flex align-center" Elevation="0" Square="true">
+                            @if (_activation == SortActivation.DRAG_HANDLE)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.DragIndicator"
+                                         Color="Color.Default"
+                                         data-rxb-sort-handle
+                                         Class="mr-3" />
+                            }
+                            @if (t.IsPinned)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.PushPin" Color="Color.Info" Class="mr-2" Size="Size.Small" />
+                            }
+                            @if (t.IsArchived)
+                            {
+                                <MudIcon Icon="@Icons.Material.Outlined.Archive" Color="Color.Default" Class="mr-2" Size="Size.Small" />
+                            }
+                            <MudText Typo="Typo.body1" Style="@(t.IsArchived ? "text-decoration: line-through; opacity: 0.6;" : "")">
+                                @t.Title
+                            </MudText>
+                        </MudPaper>
+                    </ChildContent>
+                </MudSwipeoutRx>
+            </ItemTemplate>
+        </MudSortableSwipeoutListRx>
+    </MudPaper>
+
+    <MudButtonAsyncRx Command="@Model.ResetCommand" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh">
+        Reset
+    </MudButtonAsyncRx>
+</MudContainer>
+
+@code
+{
+    private SortActivation _activation = SortActivation.ALWAYS;
+
+    private void OnActivationChanged(SortActivation mode)
+    {
+        _activation = mode;
+    }
+
+    private IReadOnlyList<SwipeoutAction<TaskItem>> BuildLeftActions(TaskItem task)
+    {
+        return
+        [
+            new SwipeoutAction<TaskItem>
+            {
+                Icon = Icons.Material.Filled.PushPin,
+                Color = Color.Info,
+                AriaLabel = task.IsPinned ? "Unpin" : "Pin",
+                CommandAsyncOfItem = Model.PinCommand
+            }
+        ];
+    }
+
+    private IReadOnlyList<SwipeoutAction<TaskItem>> BuildRightActions(TaskItem task)
+    {
+        return
+        [
+            new SwipeoutAction<TaskItem>
+            {
+                Icon = task.IsArchived ? Icons.Material.Filled.Unarchive : Icons.Material.Outlined.Archive,
+                Color = Color.Warning,
+                AriaLabel = task.IsArchived ? "Unarchive" : "Archive",
+                CommandAsyncOfItem = Model.ArchiveCommand
+            },
+            new SwipeoutAction<TaskItem>
+            {
+                Icon = Icons.Material.Filled.Delete,
+                Color = Color.Error,
+                AriaLabel = "Delete",
+                IsDelete = true,
+                CommandAsyncOfItem = Model.DeleteCommand
+            }
+        ];
+    }
+}

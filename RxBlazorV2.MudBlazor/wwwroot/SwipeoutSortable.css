@@ -1,0 +1,176 @@
+/* RxBlazorV2.MudBlazor — Swipeout + Sortable
+ *
+ * Theming hooks (override in your app to follow MudBlazor palette):
+ *   --rxb-swipeout-bg      : row background          (default: var(--mud-palette-surface))
+ *   --rxb-swipeout-radius  : row border radius       (default: 0)
+ *   --rxb-action-min-width : minimum action width    (default: 64px)
+ *   --rxb-overswipe-bg     : highlight when overswipe is armed
+ */
+
+.rxb-swipeout
+{
+    position: relative;
+    overflow: hidden;
+    background: var(--rxb-swipeout-bg, var(--mud-palette-surface, #fff));
+    border-radius: var(--rxb-swipeout-radius, 0);
+    /* JS owns every gesture inside a row — touchmove handlers call preventDefault on the first
+       touchmove which is what actually wins the gesture from the browser's scroll heuristic.
+       touch-action:none here is a fallback, in case preventDefault doesn't reach (rare). Page
+       scrolling has to come from the surrounding scroll container; override --rxb-touch-action
+       if you need row-internal scroll. */
+    touch-action: var(--rxb-touch-action, none);
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.rxb-swipeout-content
+{
+    position: relative;
+    z-index: 1;
+    background: inherit;
+    will-change: transform;
+}
+
+.rxb-swipeout-actions
+{
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    align-items: stretch;
+    z-index: 0;
+    overflow: hidden;
+    will-change: width;
+    /* Width is owned by JS; no transition during drag (JS sets it without transition).
+       Snap timing kicks in when the gesture ends (JS adds transition then). */
+}
+
+.rxb-swipeout-actions[data-swipeout-actions="left"]
+{
+    /* Below content — content slides right to reveal left actions, so left-aligned text moves
+       with content and stays visible. */
+    left: 0;
+    z-index: 0;
+    justify-content: flex-start;
+}
+
+.rxb-swipeout-actions[data-swipeout-actions="right"]
+{
+    /* Above content — content stays put on left-swipe, the right panel slides in from the right
+       edge over content, so left-aligned text on the left of the row remains visible. */
+    right: 0;
+    z-index: 2;
+    justify-content: flex-end;
+}
+
+.rxb-swipeout-actions > [data-swipeout-action]
+{
+    /* Sizing is driven entirely by flex-basis so the overswipe transition has length-to-length
+       interpolation on every animated property (no flex-basis: auto, no min-width snap). */
+    flex: 0 0 var(--rxb-action-min-width, 64px);
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    transition: flex-grow 180ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                flex-basis 180ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                opacity 180ms ease;
+}
+
+/* Overswipe: the trigger action expands to fill the revealed area; the others collapse to zero. */
+.rxb-swipeout-actions.rxb-overswipe > [data-swipeout-action]:not([data-swipeout-overswipe="true"])
+{
+    flex: 0 0 0;
+    opacity: 0;
+}
+
+.rxb-swipeout-actions.rxb-overswipe > [data-swipeout-action][data-swipeout-overswipe="true"]
+{
+    flex: 1 0 var(--rxb-action-min-width, 64px);
+}
+
+/* Sortable */
+.rxb-sortable
+{
+    position: relative;
+    /* Empty lists still need a hit area for cross-list drops to land. */
+    min-height: var(--rxb-sortable-empty-height, 56px);
+    /* Reserved slot height for an incoming dragged item — set by JS via --rxb-drag-slot-height
+       when this list is the active cross-list drop target. */
+    padding-bottom: var(--rxb-drag-slot-height, 0);
+    transition: padding-bottom 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                background-color 150ms ease;
+}
+
+.rxb-sortable.rxb-sorting-active
+{
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* Cross-list drop target — subtle background tint follows MudBlazor's hover semantics. */
+.rxb-sortable.rxb-drop-target
+{
+    background: var(--mud-palette-action-default-hover, rgba(0, 0, 0, 0.04));
+}
+
+/* Floating clone gets a soft error tint when the drop would remove the item from its source. */
+.rxb-drag-ghost.rxb-drag-ghost-removing
+{
+    box-shadow: 0 0 0 2px var(--mud-palette-error, #f44336),
+                var(--mud-elevation-12, 0 8px 24px rgba(0, 0, 0, 0.2));
+}
+
+/* While dragEl is collapsing into / out of its slot, the height transition is owned by JS;
+   make sure the row clips its content so child padding doesn't leak. */
+.rxb-sortable [data-rxb-sortable-item][style*="height"]
+{
+    overflow: hidden;
+}
+
+.rxb-sortable > [data-rxb-sortable-item]
+{
+    /* position:relative + a baseline z-index so the .rxb-sorting bump can lift the dragged row
+       above its (transformed) siblings. Without position the z-index has no effect. */
+    position: relative;
+    z-index: 0;
+    background: var(--rxb-swipeout-bg, var(--mud-palette-surface, #fff));
+    will-change: transform;
+}
+
+/* Divider lives on the sortable wrapper, OUTSIDE the swipeout's clipped content,
+   so it stays visible at full row width during a swipe. */
+.rxb-sortable > [data-rxb-sortable-item]:not(:last-child)
+{
+    border-bottom: 1px solid var(--rxb-list-divider, var(--mud-palette-lines-default, rgba(0, 0, 0, 0.12)));
+}
+
+.rxb-sortable > [data-rxb-sortable-item].rxb-sorting
+{
+    z-index: 10;
+    box-shadow: var(--mud-elevation-8, 0 4px 12px rgba(0,0,0,0.15));
+    opacity: 0.96;
+    transition: none !important;
+}
+
+[data-rxb-sort-handle]
+{
+    cursor: grab;
+    touch-action: none;
+}
+
+.rxb-sortable.rxb-sorting-active [data-rxb-sort-handle]
+{
+    cursor: grabbing;
+}
+
+@media (prefers-reduced-motion: reduce)
+{
+    .rxb-swipeout-content,
+    .rxb-swipeout-actions,
+    .rxb-sortable [data-rxb-sortable-item]
+    {
+        transition: none !important;
+    }
+}

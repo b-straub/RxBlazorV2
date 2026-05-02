@@ -1,0 +1,89 @@
+@typeparam TItem
+@using RxBlazorV2.MudBlazor.IconButtons
+
+<div @ref="_rowRef" class="rxb-swipeout @AdditionalClasses" style="@Style">
+    @if (LeftActions is not null && LeftActions.Count > 0)
+    {
+        <div data-swipeout-actions="left" class="rxb-swipeout-actions">
+            @for (var i = 0; i < LeftActions.Count; i++)
+            {
+                @RenderAction(LeftActions[i], isOverswipe: i == 0, isDeleteOverswipe: false)
+            }
+        </div>
+    }
+    <div data-swipeout-content class="rxb-swipeout-content">
+        @ChildContent(Item)
+    </div>
+    @if (RightActions is not null && RightActions.Count > 0)
+    {
+        <div data-swipeout-actions="right" class="rxb-swipeout-actions">
+            @for (var i = 0; i < RightActions.Count; i++)
+            {
+                var action = RightActions[i];
+                var isOverswipe = i == RightActions.Count - 1;
+                @RenderAction(action, isOverswipe, isDeleteOverswipe: isOverswipe && action.IsDelete)
+            }
+        </div>
+    }
+</div>
+
+@code
+{
+    private RenderFragment RenderAction(SwipeoutAction<TItem> action, bool isOverswipe, bool isDeleteOverswipe) => @<span
+        class="@($"rxb-action {ThemeClass(action.Color)}")"
+        data-swipeout-action
+        data-swipeout-overswipe="@(isOverswipe ? "true" : null)"
+        data-swipeout-delete="@(isDeleteOverswipe ? "true" : null)">
+        @if (action.Command is not null)
+        {
+            <MudIconButtonRx Command="@action.Command"
+                             ConfirmExecutionAsync="@action.ConfirmExecutionAsync"
+                             Icon="@action.Icon"
+                             Color="Color.Inherit"
+                             aria-label="@action.AriaLabel" />
+        }
+        else if (action.CommandOfItem is not null)
+        {
+            <MudIconButtonRxOf T="TItem"
+                               Command="@action.CommandOfItem"
+                               Parameter="@Item"
+                               ConfirmExecutionAsync="@action.ConfirmExecutionAsync"
+                               Icon="@action.Icon"
+                               Color="Color.Inherit"
+                               aria-label="@action.AriaLabel" />
+        }
+        else if (action.CommandAsync is not null)
+        {
+            <MudIconButtonAsyncRx Command="@action.CommandAsync"
+                                  ConfirmExecutionAsync="@action.ConfirmExecutionAsync"
+                                  Icon="@action.Icon"
+                                  Color="Color.Inherit"
+                                  HasProgress="false"
+                                  aria-label="@action.AriaLabel" />
+        }
+        else if (action.CommandAsyncOfItem is not null)
+        {
+            <MudIconButtonAsyncRxOf T="TItem"
+                                    Command="@action.CommandAsyncOfItem"
+                                    Parameter="@Item"
+                                    ConfirmExecutionAsync="@action.ConfirmExecutionAsync"
+                                    Icon="@action.Icon"
+                                    Color="Color.Inherit"
+                                    HasProgress="false"
+                                    aria-label="@action.AriaLabel" />
+        }
+    </span>;
+
+    private static string ThemeClass(Color color) => color switch
+    {
+        Color.Primary => "mud-theme-primary",
+        Color.Secondary => "mud-theme-secondary",
+        Color.Tertiary => "mud-theme-tertiary",
+        Color.Info => "mud-theme-info",
+        Color.Success => "mud-theme-success",
+        Color.Warning => "mud-theme-warning",
+        Color.Error => "mud-theme-error",
+        Color.Dark => "mud-theme-dark",
+        _ => string.Empty
+    };
+}
