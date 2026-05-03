@@ -1,7 +1,7 @@
 @typeparam TItem
 @using RxBlazorV2.MudBlazor.IconButtons
 
-<div @ref="_rowRef" class="rxb-swipeout @AdditionalClasses" style="@Style">
+<div @ref="_rowRef" class="@($"rxb-swipeout {(RevealScale ? "rxb-reveal-scale" : "")} {AdditionalClasses}".Trim())" style="@Style">
     @if (LeftActions is not null && LeftActions.Count > 0)
     {
         <div data-swipeout-actions="left" class="rxb-swipeout-actions">
@@ -33,11 +33,15 @@
         class="@($"rxb-action {ThemeClass(action.Color)}")"
         data-swipeout-action
         data-swipeout-overswipe="@(isOverswipe ? "true" : null)"
-        data-swipeout-delete="@(isDeleteOverswipe ? "true" : null)">
+        data-swipeout-delete="@(isDeleteOverswipe ? "true" : null)"
+        data-swipeout-confirm="@(action.ConfirmExecutionAsync is not null ? "true" : null)">
+        @{
+            var wrappedConfirm = WrapConfirm(action.ConfirmExecutionAsync);
+        }
         @if (action.Command is not null)
         {
             <MudIconButtonRx Command="@action.Command"
-                             ConfirmExecutionAsync="@action.ConfirmExecutionAsync"
+                             ConfirmExecutionAsync="@wrappedConfirm"
                              Icon="@action.Icon"
                              Color="Color.Inherit"
                              aria-label="@action.AriaLabel" />
@@ -47,7 +51,7 @@
             <MudIconButtonRxOf T="TItem"
                                Command="@action.CommandOfItem"
                                Parameter="@Item"
-                               ConfirmExecutionAsync="@action.ConfirmExecutionAsync"
+                               ConfirmExecutionAsync="@wrappedConfirm"
                                Icon="@action.Icon"
                                Color="Color.Inherit"
                                aria-label="@action.AriaLabel" />
@@ -55,7 +59,7 @@
         else if (action.CommandAsync is not null)
         {
             <MudIconButtonAsyncRx Command="@action.CommandAsync"
-                                  ConfirmExecutionAsync="@action.ConfirmExecutionAsync"
+                                  ConfirmExecutionAsync="@wrappedConfirm"
                                   Icon="@action.Icon"
                                   Color="Color.Inherit"
                                   HasProgress="false"
@@ -66,7 +70,7 @@
             <MudIconButtonAsyncRxOf T="TItem"
                                     Command="@action.CommandAsyncOfItem"
                                     Parameter="@Item"
-                                    ConfirmExecutionAsync="@action.ConfirmExecutionAsync"
+                                    ConfirmExecutionAsync="@wrappedConfirm"
                                     Icon="@action.Icon"
                                     Color="Color.Inherit"
                                     HasProgress="false"

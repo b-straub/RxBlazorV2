@@ -41,7 +41,7 @@
     z-index: 0;
     overflow: hidden;
     will-change: width;
-    /* Width is owned by JS; no transition during drag (JS sets it without transition).
+    /* Width is owned by JS — JS sets a per-frame width (drag offset + animated armed bonus).
        Snap timing kicks in when the gesture ends (JS adds transition then). */
 }
 
@@ -56,38 +56,107 @@
 
 .rxb-swipeout-actions[data-swipeout-actions="right"]
 {
-    /* Above content — content stays put on left-swipe, the right panel slides in from the right
-       edge over content, so left-aligned text on the left of the row remains visible. */
+    /* Below content — content slides left to reveal right actions, mirroring the left panel
+       behaviour. The whole row content moves with the gesture. */
     right: 0;
-    z-index: 2;
+    z-index: 0;
     justify-content: flex-end;
 }
 
 .rxb-swipeout-actions > [data-swipeout-action]
 {
-    /* Sizing is driven entirely by flex-basis so the overswipe transition has length-to-length
-       interpolation on every animated property (no flex-basis: auto, no min-width snap). */
+    /* Length-driven flex-basis so the armed transition (basis 64 → 0) interpolates cleanly. */
     flex: 0 0 var(--rxb-action-min-width, 64px);
     min-width: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    transition: flex-grow 180ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
-                flex-basis 180ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    /* Spring curve for the non-trigger collapse on arm (basis 64 → 0). */
+    transition: flex-basis 220ms cubic-bezier(0.34, 1.56, 0.64, 1),
                 opacity 180ms ease;
 }
 
-/* Overswipe: the trigger action expands to fill the revealed area; the others collapse to zero. */
-.rxb-swipeout-actions.rxb-overswipe > [data-swipeout-action]:not([data-swipeout-overswipe="true"])
+/* Trigger always absorbs free panel space — as the panel grows past natural width with the
+   gesture, the trigger button widens while the non-trigger stays at its natural basis. */
+.rxb-swipeout-actions > [data-swipeout-action][data-swipeout-overswipe="true"]
 {
-    flex: 0 0 0;
-    opacity: 0;
+    flex-grow: 1;
 }
 
-.rxb-swipeout-actions.rxb-overswipe > [data-swipeout-action][data-swipeout-overswipe="true"]
+/* Opt-in iOS-style reveal: each button scales in from a small dot to its natural size as the
+   panel reveals it. JS sets --rxb-reveal (0..1) per button based on how much of it is currently
+   inside the visible panel area. transform-origin pins each button to the row edge it's emerging
+   from so the scale anchors the button's edge to the panel edge while the rest unfolts inward.
+   A surface-coloured border (with box-sizing: border-box, so flex-basis stays at 64) gives each
+   button a "frame" of row-bg colour the scaling button grows into — matches the iOS Mail pill
+   look. A small outer margin adds a constant gap between adjacent buttons that does not scale
+   with the transform. align-self + fixed height keep buttons square inside tall rows; height is
+   pinned (not aspect-ratio) so the trigger's width-only growth during overswipe arming widens
+   the button without making it taller. */
+.rxb-swipeout.rxb-reveal-scale .rxb-swipeout-actions > [data-swipeout-action]
 {
-    flex: 1 0 var(--rxb-action-min-width, 64px);
+    border: var(--rxb-reveal-border-width, 3px) solid var(--rxb-reveal-border-color, var(--rxb-swipeout-bg, var(--mud-palette-surface, #fff)));
+    box-sizing: border-box;
+    border-radius: var(--rxb-reveal-border-radius, 6px);
+    margin: var(--rxb-reveal-gap, 1px);
+    align-self: center;
+    /* Adaptive height: row height minus a minimum top/bottom padding, capped at a maximum so
+       very tall rows still produce a roughly square button. Width-only growth during overswipe
+       arming is preserved because flex-grow only affects width. */
+    height: calc(100% - 2 * var(--rxb-reveal-vpad, 4px));
+    max-height: var(--rxb-action-max-size, var(--rxb-action-min-width, 64px));
+}
+
+/* The right action panel sits ON TOP of content (z-index: 2) so it slides in over the row text
+   on left-swipe. With reveal-scale active there are gaps (margins + scaling) that would show the
+   content text underneath. Filling the panel with the row's background colour hides the content
+   through those gaps so only the colored action buttons remain visible. The left panel sits BELOW
+   content and naturally shows the row's bg through any gaps, but we apply the same fill for visual
+   consistency. */
+.rxb-swipeout.rxb-reveal-scale .rxb-swipeout-actions
+{
+    background: var(--rxb-swipeout-bg, var(--mud-palette-surface, #fff));
+}
+
+.rxb-swipeout.rxb-reveal-scale .rxb-swipeout-actions[data-swipeout-actions="left"] > [data-swipeout-action]
+{
+    transform: scale(var(--rxb-reveal, 1));
+    transform-origin: left center;
+}
+
+.rxb-swipeout.rxb-reveal-scale .rxb-swipeout-actions[data-swipeout-actions="right"] > [data-swipeout-action]
+{
+    transform: scale(var(--rxb-reveal, 1));
+    transform-origin: right center;
+}
+
+/* The icon button inside the trigger gets an animated translateX + scale on arm. Animating the
+   inner element (not the trigger span) keeps the colored panel bg flush to the row edge while
+   the icon visibly shifts in the swipe direction — matches iOS Mail's delete behaviour, and is
+   the *only* armed signal for single-button rows where the panel-widen bonus is suppressed. */
+.rxb-swipeout-actions > [data-swipeout-action][data-swipeout-overswipe="true"] > *
+{
+    transform: translateX(0) scale(1);
+    transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.rxb-swipeout-actions[data-swipeout-actions="left"].rxb-overswipe-armed > [data-swipeout-action][data-swipeout-overswipe="true"] > *
+{
+    transform: translateX(30px) scale(1.1);
+}
+
+.rxb-swipeout-actions[data-swipeout-actions="right"].rxb-overswipe-armed > [data-swipeout-action][data-swipeout-overswipe="true"] > *
+{
+    transform: translateX(-30px) scale(1.1);
+}
+
+/* Armed: the non-trigger collapses (multi-button case). The bonus-driven panel-widen + content
+   slide handles the layout-level "auto-widen" signal for multi-button rows. */
+.rxb-swipeout-actions.rxb-overswipe-armed > [data-swipeout-action]:not([data-swipeout-overswipe="true"])
+{
+    flex-basis: 0;
+    opacity: 0;
 }
 
 /* Sortable */

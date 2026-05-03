@@ -96,6 +96,15 @@ public partial class MudSwipeoutRx<TItem> : ComponentBase, IAsyncDisposable
     public string? AdditionalClasses { get; set; }
 
     /// <summary>
+    /// When <c>true</c> (default), action buttons reveal with an iOS-style scale-in animation: each
+    /// button starts at scale 0 and grows to its natural size as the panel reveals it, with a
+    /// surface-coloured frame around each button so the row background shows through as breathing
+    /// room. Set to <c>false</c> for a plain "curtain reveal" via overflow clipping only.
+    /// </summary>
+    [Parameter]
+    public bool RevealScale { get; set; } = true;
+
+    /// <summary>
     /// Optional inline style on the row root.
     /// </summary>
     [Parameter]
@@ -204,6 +213,36 @@ public partial class MudSwipeoutRx<TItem> : ComponentBase, IAsyncDisposable
         _internalState = newState;
         OpenedSide = newState;
         await OpenedSideChanged.InvokeAsync(newState);
+    }
+
+    /// <summary>
+    /// Wraps an action's user-supplied <c>ConfirmExecutionAsync</c> with a notification call to the
+    /// JS instance so the row stays at its current swept-open visual until the dialog resolves.
+    /// Returns <c>null</c> when the user provided no confirm — in that case the action runs immediately
+    /// and the JS side falls through to its default close-after-click behaviour.
+    /// </summary>
+    private Func<Task<bool>>? WrapConfirm(Func<Task<bool>>? userConfirm)
+    {
+        if (userConfirm is null)
+        {
+            return null;
+        }
+        return async () =>
+        {
+            var ok = await userConfirm();
+            if (_instance is not null)
+            {
+                try
+                {
+                    await _instance.InvokeVoidAsync("notifyActionDecided", ok);
+                }
+                catch (JSDisconnectedException)
+                {
+                    // Browser navigated away — nothing to release.
+                }
+            }
+            return ok;
+        };
     }
 
     /// <inheritdoc />

@@ -31,6 +31,10 @@ const DRAG_THRESHOLD = 5;
 const ELASTICITY = 0.4;
 const VELOCITY_SNAP = 0.3;
 const OVERSWIPE_EXTRA = 60;
+// Width/translate the visual jumps by when overswipe arms — animated over ARMED_ANIM_MS via rAF
+// with an easeOutBack overshoot so the auto-widen feels like a self-completing further swipe.
+const ARMED_BONUS = 30;
+const ARMED_ANIM_MS = 220;
 const SNAP_MS = 200;
 const DELETE_COLLAPSE_MS = 220;
 const TAPHOLD_MS = 500;
@@ -190,6 +194,15 @@ export function createSwipeout(rowEl, dotnetRef, opts)
         return findMarked(panel, "data-swipeout-overswipe") !== null;
     }
 
+    function hasNonTrigger(panel)
+    {
+        if (panel === null)
+        {
+            return false;
+        }
+        return panel.querySelector('[data-swipeout-action]:not([data-swipeout-overswipe="true"])') !== null;
+    }
+
     function hasDelete(panel)
     {
         return findMarked(panel, "data-swipeout-delete") !== null;
@@ -210,6 +223,20 @@ export function createSwipeout(rowEl, dotnetRef, opts)
     let velocity = 0;
     let currentOffset = 0;
     let overswipeArmed = null;
+
+    // Armed-bonus animation: when armed, leftBonus / rightBonus interpolate 0 → ARMED_BONUS via
+    // rAF, with easeOutBack overshoot. Visual offset = drag offset ± bonus, applied per frame so
+    // the bonus composes with continuous drag without CSS-transition lag.
+    let leftBonus = 0;
+    let rightBonus = 0;
+    let leftBonusAnim = null;
+    let rightBonusAnim = null;
+    let bonusRaf = 0;
+
+    // Decision-hold state: when an action carries data-swipeout-confirm the row stays at its
+    // current visual offset until .NET resolves the user's choice via notifyActionDecided. This
+    // keeps the row swept-open / fully-swept across while a confirmation dialog is showing.
+    let actionDecisionResolver = null;
 
     const instance = {};
 
@@ -240,47 +267,253 @@ export function createSwipeout(rowEl, dotnetRef, opts)
         }
     }
 
+    function easeOutBack(t)
+    {
+        // Spring-overshoot easing: peaks above 1 around t≈0.7 then settles at 1.
+        const c1 = 1.70158;
+        const c3 = c1 + 1;
+        return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+    }
+
+    function setArmedBonusTarget(side, target)
+    {
+        const currentValue = side === "left" ? leftBonus : rightBonus;
+        const currentAnim = side === "left" ? leftBonusAnim : rightBonusAnim;
+        // Already at or animating to target — no-op.
+        if (currentAnim !== null && currentAnim.target === target)
+        {
+            return;
+        }
+        if (currentAnim === null && currentValue === target)
+        {
+            return;
+        }
+
+        // prefers-reduced-motion: snap directly to the target instead of running the spring rAF.
+        // Visuals refresh once via applyVisuals so the new bonus value takes effect immediately.
+        if (reduceMotion() === true)
+        {
+            if (side === "left")
+            {
+                leftBonus = target;
+                leftBonusAnim = null;
+            }
+            else
+            {
+                rightBonus = target;
+                rightBonusAnim = null;
+            }
+            applyVisuals();
+            return;
+        }
+
+        // Start (or replace) the spring animation for this side from its current value to target.
+        const anim = {
+            from: currentValue,
+            target: target,
+            startTime: performance.now()
+        };
+        if (side === "left")
+        {
+            leftBonusAnim = anim;
+        }
+        else
+        {
+            rightBonusAnim = anim;
+        }
+        if (bonusRaf === 0)
+        {
+            bonusRaf = requestAnimationFrame(bonusRafTick);
+        }
+    }
+
+    function bonusRafTick(now)
+    {
+        let stillAnimating = false;
+        if (leftBonusAnim !== null)
+        {
+            const t = Math.min(1, (now - leftBonusAnim.startTime) / ARMED_ANIM_MS);
+            const eased = easeOutBack(t);
+            leftBonus = leftBonusAnim.from + (leftBonusAnim.target - leftBonusAnim.from) * eased;
+            if (t < 1)
+            {
+                stillAnimating = true;
+            }
+            else
+            {
+                leftBonus = leftBonusAnim.target;
+                leftBonusAnim = null;
+            }
+        }
+        if (rightBonusAnim !== null)
+        {
+            const t = Math.min(1, (now - rightBonusAnim.startTime) / ARMED_ANIM_MS);
+            const eased = easeOutBack(t);
+            rightBonus = rightBonusAnim.from + (rightBonusAnim.target - rightBonusAnim.from) * eased;
+            if (t < 1)
+            {
+                stillAnimating = true;
+            }
+            else
+            {
+                rightBonus = rightBonusAnim.target;
+                rightBonusAnim = null;
+            }
+        }
+        applyVisuals();
+        if (stillAnimating === true)
+        {
+            bonusRaf = requestAnimationFrame(bonusRafTick);
+        }
+        else
+        {
+            bonusRaf = 0;
+        }
+    }
+
+    function applyVisuals()
+    {
+        // Visual offset combines the gesture's offset with any in-flight armed bonus.
+        let visualOffset = currentOffset;
+        if (currentOffset > 0)
+        {
+            visualOffset = currentOffset + leftBonus;
+        }
+        else if (currentOffset < 0)
+        {
+            visualOffset = currentOffset - rightBonus;
+        }
+
+        // Symmetric motion: content slides in both directions so the entire row moves with the
+        // gesture. Right panel sits z-index:0 (below content) so the slide-left reveals it.
+        content.style.transform = `translate3d(${visualOffset}px, 0, 0)`;
+
+        if (left !== null)
+        {
+            let w = leftWidth;
+            if (visualOffset > 0)
+            {
+                w = Math.max(leftWidth, visualOffset);
+            }
+            left.style.width = `${w}px`;
+            applyButtonReveal(left, visualOffset > 0 ? visualOffset : 0, false);
+        }
+        if (right !== null)
+        {
+            const w = visualOffset < 0 ? -visualOffset : 0;
+            right.style.width = `${w}px`;
+            applyButtonReveal(right, w, true);
+        }
+    }
+
+    /**
+     * Per-button reveal progress (0..1) for the iOS-style scale-in effect. CSS reads
+     * --rxb-reveal on each [data-swipeout-action] and applies transform: scale(var(...)) when
+     * the row carries the rxb-reveal-scale class. Without that class the var is harmless — the
+     * default CSS keeps scale(1) regardless.
+     *
+     * Reveal order:
+     *   - Left panel (flex-start): buttons appear left → right (DOM order).
+     *   - Right panel (flex-end):  buttons appear right → left (rightmost = first).
+     *
+     * Each button gets its own progress: starts at 0 when the panel is too narrow to show it,
+     * reaches 1 when fully revealed at the panel's natural width.
+     */
+    function applyButtonReveal(panel, visibleWidth, rightToLeft)
+    {
+        const buttons = panel.querySelectorAll(":scope > [data-swipeout-action]");
+        const n = buttons.length;
+        if (n === 0)
+        {
+            return;
+        }
+        const buttonWidth = readActionWidth(buttons[0]);
+        for (let i = 0; i < n; i++)
+        {
+            const positionFromRevealing = rightToLeft === true ? (n - 1 - i) : i;
+            const startW = positionFromRevealing * buttonWidth;
+            const progress = Math.max(0, Math.min(1, (visibleWidth - startW) / buttonWidth));
+            buttons[i].style.setProperty("--rxb-reveal", String(progress));
+        }
+    }
+
+    function readActionWidth(actionEl)
+    {
+        const cs = window.getComputedStyle(actionEl);
+        const basis = parseFloat(cs.flexBasis);
+        return Number.isNaN(basis) === true ? 64 : basis;
+    }
+
     function applyOffset(offset, animate)
     {
         currentOffset = offset;
         const ms = animate === true ? SNAP_MS : 0;
 
-        // Right-swipe (offset > 0): content slides right so left actions reveal from underneath.
-        //   Default left-aligned text moves with content and stays visible.
-        // Left-swipe (offset < 0): content stays put; right panel grows in from the right edge
-        //   above content, covering the right portion of the row. Text on the left is unaffected.
+        // Set transitions for snap (open / close / fire). During drag (animate=false) the
+        // transitions are cleared so per-frame width / translate updates are instant.
         setTransition(content, ms);
-        const contentX = offset > 0 ? offset : 0;
-        content.style.transform = `translate3d(${contentX}px, 0, 0)`;
-
         if (left !== null)
         {
             panelTransition(left, ms);
-            // Below content: width grows with offset (also covers overswipe) so as content slides
-            // right it never reveals empty row beyond the panel's natural width.
-            const w = offset > 0 ? Math.max(leftWidth, offset) : leftWidth;
-            left.style.width = `${w}px`;
         }
         if (right !== null)
         {
             panelTransition(right, ms);
-            // Above content: closed = invisible (width 0); during left-swipe it slides in from the
-            // right edge with width tracking |offset|.
-            const w = offset < 0 ? -offset : 0;
-            right.style.width = `${w}px`;
         }
-    }
 
-    function setOverswipeVisual(side)
-    {
+        // Determine armed state from the raw gesture offset (the bonus is purely visual; arming
+        // depends on the user's finger crossing the threshold).
+        let nextArmed = null;
+        if (offset > 0 && offset >= leftWidth + OVERSWIPE_EXTRA && left !== null && hasOverswipe(left) === true)
+        {
+            nextArmed = "left";
+        }
+        else if (offset < 0 && -offset >= rightWidth + OVERSWIPE_EXTRA && right !== null && hasOverswipe(right) === true)
+        {
+            nextArmed = "right";
+        }
+
+        // Bonus auto-widen only fires for multi-button rows. Single-button rows use the icon-shift
+        // CSS rule alone as the armed-state signal (matches the chosen design — iOS does this for
+        // delete and the panel widen would otherwise look redundant when there's only one action).
+        const leftBonusTarget = (nextArmed === "left" && hasNonTrigger(left)) ? ARMED_BONUS : 0;
+        const rightBonusTarget = (nextArmed === "right" && hasNonTrigger(right)) ? ARMED_BONUS : 0;
+
+        // Drive the armed-bonus animation:
+        //   - During drag (animate=false): rAF interpolates 0 ↔ ARMED_BONUS with overshoot.
+        //   - During snap (animate=true): set bonus instantly to target, cancel rAF — the snap's
+        //     own transition handles the visual change in lockstep with width / translate.
+        if (animate === true)
+        {
+            leftBonus = leftBonusTarget;
+            rightBonus = rightBonusTarget;
+            leftBonusAnim = null;
+            rightBonusAnim = null;
+            if (bonusRaf !== 0)
+            {
+                cancelAnimationFrame(bonusRaf);
+                bonusRaf = 0;
+            }
+        }
+        else
+        {
+            setArmedBonusTarget("left", leftBonusTarget);
+            setArmedBonusTarget("right", rightBonusTarget);
+        }
+
+        // Apply visuals using current offset + (possibly in-flight) bonus.
+        applyVisuals();
+
         if (left !== null)
         {
-            left.classList.toggle("rxb-overswipe", side === "left");
+            left.classList.toggle("rxb-overswipe-armed", nextArmed === "left");
         }
         if (right !== null)
         {
-            right.classList.toggle("rxb-overswipe", side === "right");
+            right.classList.toggle("rxb-overswipe-armed", nextArmed === "right");
         }
+
+        overswipeArmed = nextArmed;
     }
 
     function setState(newState)
@@ -319,20 +552,37 @@ export function createSwipeout(rowEl, dotnetRef, opts)
         {
             setState("right-open");
         }
-        setOverswipeVisual(null);
     }
 
     async function fireOuterAction(side, isDelete)
     {
-        // Animate the full row sweep, keeping the trigger action expanded (rxb-overswipe class on)
-        // so the user sees a single, full-width action firing — matches iOS / F7 overswipe behaviour.
+        // Animate the full row sweep — applyOffset to a target far past the threshold drives
+        // overswipe progress to 1, which fully expands the trigger via CSS so the user sees a
+        // single full-width action firing.
         const panel = side === "left" ? left : right;
         const rowWidth = rowEl.getBoundingClientRect().width;
         const target = side === "left" ? rowWidth : -rowWidth;
-        setOverswipeVisual(side);
         applyOffset(target, true);
         await new Promise(r => setTimeout(r, SNAP_MS));
+
+        // If the outer action has a confirmation wired, set up a decision promise BEFORE
+        // dispatching the click so the row stays at its current swept-open visual until the
+        // user's choice resolves. .NET calls notifyActionDecided(ok) once the dialog returns.
+        const marker = findMarked(panel, "data-swipeout-overswipe");
+        const hasConfirm = marker !== null && marker.getAttribute("data-swipeout-confirm") === "true";
+        let decisionPromise = null;
+        if (hasConfirm === true)
+        {
+            decisionPromise = new Promise(r => { actionDecisionResolver = r; });
+        }
+
         dispatchActionClick(panel);
+
+        if (decisionPromise !== null)
+        {
+            await decisionPromise;
+        }
+
         if (isDelete === true)
         {
             // Yield two frames so Blazor can process the click + re-render.
@@ -355,6 +605,55 @@ export function createSwipeout(rowEl, dotnetRef, opts)
     function performOverswipe(side)
     {
         return fireOuterAction(side, false);
+    }
+
+    /**
+     * Resolve the offset for a given finger displacement and apply it.
+     *
+     * Pre-arm the offset is elastic (rubber-band feel past natural width). Past the overswipe
+     * threshold the offset becomes linear with finger movement so further drag grows the panel
+     * 1:1 — both formulas agree at the exact arm boundary so the transition is smooth.
+     * applyOffset is responsible for translating the offset into panel width + overswipe progress
+     * + armed state.
+     */
+    function applySwipeMove(dx)
+    {
+        // 1. Elastic candidate offset (rubber band past natural width).
+        let offset = openedOffset + dx;
+        if (offset > leftWidth)
+        {
+            offset = leftWidth + (offset - leftWidth) * ELASTICITY;
+        }
+        if (offset < -rightWidth)
+        {
+            offset = -rightWidth + (offset + rightWidth) * ELASTICITY;
+        }
+
+        // 2. Past the arm threshold, switch to a linear formula so further finger motion grows
+        //    the panel 1:1. dxAtArm is the finger position at which the elastic formula reaches
+        //    the threshold; the linear formula starts from there.
+        if (hasOverswipe(right) === true && offset < -(rightWidth + OVERSWIPE_EXTRA))
+        {
+            const dxAtArm = -OVERSWIPE_EXTRA / ELASTICITY - rightWidth - openedOffset;
+            offset = -rightWidth - OVERSWIPE_EXTRA + (dx - dxAtArm);
+        }
+        else if (hasOverswipe(left) === true && offset > leftWidth + OVERSWIPE_EXTRA)
+        {
+            const dxAtArm = OVERSWIPE_EXTRA / ELASTICITY + leftWidth - openedOffset;
+            offset = leftWidth + OVERSWIPE_EXTRA + (dx - dxAtArm);
+        }
+
+        // 3. Block movement to a side that has no actions.
+        if (left === null && offset > 0)
+        {
+            offset = 0;
+        }
+        if (right === null && offset < 0)
+        {
+            offset = 0;
+        }
+
+        applyOffset(offset, false);
     }
 
     function onPointerDown(e)
@@ -452,43 +751,7 @@ export function createSwipeout(rowEl, dotnetRef, opts)
         lastX = e.clientX;
         lastT = t;
 
-        let offset = openedOffset + dx;
-        if (offset > leftWidth)
-        {
-            offset = leftWidth + (offset - leftWidth) * ELASTICITY;
-        }
-        if (offset < -rightWidth)
-        {
-            offset = -rightWidth + (offset + rightWidth) * ELASTICITY;
-        }
-        // Block movement to a side that has no actions.
-        if (left === null && offset > 0)
-        {
-            offset = 0;
-        }
-        if (right === null && offset < 0)
-        {
-            offset = 0;
-        }
-        applyOffset(offset, false);
-
-        // Overswipe arming (visual only — fire on release). Recheck DOM each gesture
-        // because Blazor may have replaced the action panel contents since last drag.
-        if (hasOverswipe(right) === true && offset < -(rightWidth + OVERSWIPE_EXTRA))
-        {
-            overswipeArmed = "right";
-            setOverswipeVisual("right");
-        }
-        else if (hasOverswipe(left) === true && offset > leftWidth + OVERSWIPE_EXTRA)
-        {
-            overswipeArmed = "left";
-            setOverswipeVisual("left");
-        }
-        else
-        {
-            overswipeArmed = null;
-            setOverswipeVisual(null);
-        }
+        applySwipeMove(dx);
     }
 
     function onPointerUp(e)
@@ -588,12 +851,19 @@ export function createSwipeout(rowEl, dotnetRef, opts)
         {
             return;
         }
-        if (e.target.closest("[data-swipeout-action]") === null)
+        const action = e.target.closest("[data-swipeout-action]");
+        if (action === null)
         {
             return;
         }
-        // Defer one frame so the click handler runs before we snap closed (avoids any visual
-        // jump while the command's spinner is still attached to the action button).
+        // If the action has a confirmation wired, hold the row open at its current swept state
+        // until .NET signals the decision via notifyActionDecided. Otherwise snap closed after
+        // a one-frame defer (gives the click handler time to run before the spring-back).
+        if (action.getAttribute("data-swipeout-confirm") === "true")
+        {
+            actionDecisionResolver = () => snapTo(0, true);
+            return;
+        }
         requestAnimationFrame(() => snapTo(0, true));
     }
 
@@ -707,40 +977,7 @@ export function createSwipeout(rowEl, dotnetRef, opts)
         lastX = t.clientX;
         lastT = tNow;
 
-        let offset = openedOffset + dx;
-        if (offset > leftWidth)
-        {
-            offset = leftWidth + (offset - leftWidth) * ELASTICITY;
-        }
-        if (offset < -rightWidth)
-        {
-            offset = -rightWidth + (offset + rightWidth) * ELASTICITY;
-        }
-        if (left === null && offset > 0)
-        {
-            offset = 0;
-        }
-        if (right === null && offset < 0)
-        {
-            offset = 0;
-        }
-        applyOffset(offset, false);
-
-        if (hasOverswipe(right) === true && offset < -(rightWidth + OVERSWIPE_EXTRA))
-        {
-            overswipeArmed = "right";
-            setOverswipeVisual("right");
-        }
-        else if (hasOverswipe(left) === true && offset > leftWidth + OVERSWIPE_EXTRA)
-        {
-            overswipeArmed = "left";
-            setOverswipeVisual("left");
-        }
-        else
-        {
-            overswipeArmed = null;
-            setOverswipeVisual(null);
-        }
+        applySwipeMove(dx);
     }
 
     function onTouchEnd(e)
@@ -869,6 +1106,23 @@ export function createSwipeout(rowEl, dotnetRef, opts)
     {
         measure();
         applyOffset(openedOffset, false);
+    };
+    /**
+     * Called from .NET after a confirmation gate (ConfirmExecutionAsync) resolves. Releases the
+     * row hold set up by fireOuterAction / onActionClick: a tap path snaps closed; a swipe path's
+     * pending decisionPromise resolves so its post-click flow continues. The `ok` argument is
+     * forwarded for symmetry but the row's snap behaviour is the same either way (delete removes
+     * the item; non-delete just closes).
+     */
+    instance.notifyActionDecided = function (ok)
+    {
+        if (actionDecisionResolver === null)
+        {
+            return;
+        }
+        const r = actionDecisionResolver;
+        actionDecisionResolver = null;
+        r(ok);
     };
     instance.dispose = function ()
     {

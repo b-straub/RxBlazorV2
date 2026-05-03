@@ -2,6 +2,7 @@
 @using RxBlazorV2.MudBlazor.Buttons
 @using RxBlazorV2.MudBlazor.Components.Razor
 @inherits NotificationsDemoModelComponent
+@inject IDialogService DialogService
 
 <PageTitle>Notifications</PageTitle>
 
@@ -29,12 +30,17 @@
         (overswipe = delete), swipe right to toggle read.
     </MudText>
 
+    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
+        <MudSwitch T="bool" @bind-Value="_revealScale" Color="Color.Primary" Label="iOS-style scale-in reveal" />
+    </MudStack>
+
     <MudPaper Outlined="true">
         @foreach (var notification in Model.Notifications)
         {
             <div @key="notification.Id" class="notif-row-wrapper">
                 <MudSwipeoutRx TItem="Notification"
                                Item="notification"
+                               RevealScale="_revealScale"
                                LeftActions="@BuildLeftActions(notification)"
                                RightActions="@BuildRightActions(notification)">
                     <ChildContent Context="n">
@@ -106,6 +112,8 @@
 
 @code
 {
+    private bool _revealScale = true;
+
     private IReadOnlyList<SwipeoutAction<Notification>> BuildLeftActions(Notification n)
     {
         return
@@ -137,9 +145,20 @@
                 Color = Color.Error,
                 AriaLabel = "Delete",
                 IsDelete = true,
-                CommandAsyncOfItem = Model.DeleteCommand
+                CommandAsyncOfItem = Model.DeleteCommand,
+                ConfirmExecutionAsync = () => ConfirmDeleteAsync(n)
             }
         ];
+    }
+
+    private async Task<bool> ConfirmDeleteAsync(Notification n)
+    {
+        var result = await DialogService.ShowMessageBoxAsync(
+            title: "Delete notification?",
+            message: $"Permanently remove the message from {n.Sender}?",
+            yesText: "Delete",
+            cancelText: "Cancel");
+        return result == true;
     }
 
     private static string Initials(string name)
