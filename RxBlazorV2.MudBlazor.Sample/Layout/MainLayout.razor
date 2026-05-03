@@ -13,7 +13,14 @@
                        Edge="Edge.Start"
                        OnClick="@ToggleDrawer"
                        aria-label="Toggle navigation" />
-        <MudText Typo="Typo.h5" Class="ml-3">RxBlazorV2.MudBlazor Sample</MudText>
+        @* Long title only above sm — narrow viewports get a compact label so the AppBar's
+           right-side icons (GitHub link + status badges) always fit without clipping. *@
+        <MudHidden Breakpoint="Breakpoint.SmAndDown">
+            <MudText Typo="Typo.h6" Class="ml-3">RxBlazorV2.MudBlazor Sample</MudText>
+        </MudHidden>
+        <MudHidden Breakpoint="Breakpoint.MdAndUp">
+            <MudText Typo="Typo.h6" Class="ml-3">RxBlazorV2</MudText>
+        </MudHidden>
         <MudSpacer />
         <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit"
                        Href="https://github.com/b-straub/RxBlazorV2" Target="_blank" />
@@ -49,7 +56,10 @@
 
 @code
 {
-    private bool _drawerOpen = true;
+    // Drawer starts closed: on Md+ Variant.Responsive will switch it to persistent — the user
+    // taps the menu icon once. On smaller viewports a closed-by-default temporary drawer avoids
+    // the navigation overlay covering the page on first load.
+    private bool _drawerOpen;
 
     private void ToggleDrawer()
     {

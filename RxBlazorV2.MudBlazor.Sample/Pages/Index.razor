@@ -11,7 +11,7 @@
 
     <MudPaper Class="pa-4 mb-4" Elevation="2">
         <MudText Typo="Typo.h6" Class="mb-2">Current State</MudText>
-        <MudStack Row="true" Spacing="4" AlignItems="AlignItems.Center">
+        <MudStack Row="true" Spacing="4" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center">
             <MudText><strong>Counter:</strong> @Model.Counter</MudText>
             @if (Model.IncrementAsyncCommand.Executing || Model.LongOperationCommand.Executing || Model.AddAsyncCommand.Executing)
             {
@@ -23,7 +23,7 @@
     @* Sync Buttons Section *@
     <MudPaper Class="pa-4 mb-4" Elevation="2">
         <MudText Typo="Typo.h6" Class="mb-3">Sync Buttons (MudButtonRx)</MudText>
-        <MudStack Row="true" Spacing="2">
+        <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
             <MudButtonRx Command="@Model.IncrementCommand"
                          Variant="Variant.Filled"
                          Color="Color.Primary">
@@ -57,7 +57,7 @@
     @* Async Buttons Section *@
     <MudPaper Class="pa-4 mb-4" Elevation="2">
         <MudText Typo="Typo.h6" Class="mb-3">Async Buttons (MudButtonAsyncRx)</MudText>
-        <MudStack Row="true" Spacing="2">
+        <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
             <MudButtonAsyncRx Command="@Model.IncrementAsyncCommand"
                               Variant="Variant.Filled"
                               Color="Color.Primary">
@@ -86,7 +86,7 @@
     @* Icon Buttons Section *@
     <MudPaper Class="pa-4 mb-4" Elevation="2">
         <MudText Typo="Typo.h6" Class="mb-3">Icon Buttons</MudText>
-        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+        <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center">
             <MudIconButtonRx Command="@Model.IncrementCommand"
                              Icon="@Icons.Material.Filled.Add"
                              Color="Color.Primary" />
@@ -104,7 +104,7 @@
     @* FAB Buttons Section *@
     <MudPaper Class="pa-4 mb-4" Elevation="2">
         <MudText Typo="Typo.h6" Class="mb-3">Floating Action Buttons</MudText>
-        <MudStack Row="true" Spacing="4" AlignItems="AlignItems.Center">
+        <MudStack Row="true" Spacing="4" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center">
             <MudFabRx Command="@Model.IncrementCommand"
                       StartIcon="@Icons.Material.Filled.Add"
                       Color="Color.Primary" />
@@ -131,7 +131,7 @@
     @* Confirmation Dialog Section *@
     <MudPaper Class="pa-4" Elevation="2">
         <MudText Typo="Typo.h6" Class="mb-3">With Confirmation Dialog</MudText>
-        <MudStack Row="true" Spacing="2">
+        <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
             <MudButtonRx Command="@Model.IncrementCommand"
                          ConfirmExecutionAsync="@ConfirmActionAsync"
                          Variant="Variant.Filled"
