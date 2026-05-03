@@ -31,6 +31,13 @@ const DRAG_THRESHOLD = 5;
 const ELASTICITY = 0.4;
 const VELOCITY_SNAP = 0.3;
 const OVERSWIPE_EXTRA = 60;
+// Maximum elastic-phase finger distance as a fraction of the row's width. With ELASTICITY = 0.4
+// the user has to swipe ~2.5× the offset extra to cross the threshold, so on narrow rows the
+// finger distance to arm can otherwise approach the opposite row edge. This fraction caps the
+// elastic-phase finger travel to a portion of the row's width — wide rows hit OVERSWIPE_EXTRA
+// well below the cap (default behaviour), narrow rows shrink the effective extra so arming stays
+// reachable a comfortable distance away from the opposite border.
+const OVERSWIPE_FINGER_FRACTION = 0.3;
 // Width/translate the visual jumps by when overswipe arms — animated over ARMED_ANIM_MS via rAF
 // with an easeOutBack overshoot so the auto-widen feels like a self-completing further swipe.
 const ARMED_BONUS = 30;
@@ -189,6 +196,33 @@ export function createSwipeout(rowEl, dotnetRef, opts)
         btn.click();
     }
 
+    function armSuppressTrustedClick()
+    {
+        suppressTrustedClick = true;
+        if (suppressTrustedClickTimer !== 0)
+        {
+            clearTimeout(suppressTrustedClickTimer);
+        }
+        // Safety net: if no trusted click ever lands (e.g. the touchend wasn't over the button),
+        // make sure future clicks aren't permanently blocked. fireOuterAction clears the flag
+        // explicitly before its synthetic click anyway.
+        suppressTrustedClickTimer = setTimeout(() =>
+        {
+            suppressTrustedClick = false;
+            suppressTrustedClickTimer = 0;
+        }, 600);
+    }
+
+    function clearSuppressTrustedClick()
+    {
+        suppressTrustedClick = false;
+        if (suppressTrustedClickTimer !== 0)
+        {
+            clearTimeout(suppressTrustedClickTimer);
+            suppressTrustedClickTimer = 0;
+        }
+    }
+
     function hasOverswipe(panel)
     {
         return findMarked(panel, "data-swipeout-overswipe") !== null;
@@ -237,6 +271,16 @@ export function createSwipeout(rowEl, dotnetRef, opts)
     // current visual offset until .NET resolves the user's choice via notifyActionDecided. This
     // keeps the row swept-open / fully-swept across while a confirmation dialog is showing.
     let actionDecisionResolver = null;
+
+    // When the gesture ends with overswipe armed (one-pass OR two-pass from already-open buttons)
+    // and the finger happens to lift over a real action button, the browser will also fire a
+    // trusted click on that button in addition to our scripted btn.click() in fireOuterAction.
+    // Two clicks => two confirm dialogs => only the top one closes when the user taps Delete and
+    // a phantom dialog gets stuck. The capture-phase filter below swallows that trusted click;
+    // fireOuterAction clears the flag right before dispatching its synthetic click so the
+    // scripted one (isTrusted === false) passes through unaffected.
+    let suppressTrustedClick = false;
+    let suppressTrustedClickTimer = 0;
 
     const instance = {};
 
@@ -444,6 +488,25 @@ export function createSwipeout(rowEl, dotnetRef, opts)
         return Number.isNaN(basis) === true ? 64 : basis;
     }
 
+    /**
+     * The effective "extra past natural width" before overswipe arms. Default OVERSWIPE_EXTRA on
+     * rows wide enough that the elastic-phase finger distance fits within OVERSWIPE_FINGER_FRACTION
+     * of the row width; clamped down on narrow rows so the arming finger position stays a
+     * comfortable distance from the opposite row edge.
+     *
+     * Math: elastic phase maps `extra` (offset units) → `extra / ELASTICITY` (finger units).
+     *       We cap finger units at `rowWidth × OVERSWIPE_FINGER_FRACTION`, so:
+     *           extra / ELASTICITY ≤ rowWidth × FRACTION
+     *           extra ≤ rowWidth × FRACTION × ELASTICITY
+     */
+    function effectiveOverswipeExtra(naturalWidth)
+    {
+        const rowWidth = rowEl.getBoundingClientRect().width;
+        const elasticFingerCap = rowWidth * OVERSWIPE_FINGER_FRACTION;
+        const extraByFinger = elasticFingerCap * ELASTICITY;
+        return Math.max(0, Math.min(OVERSWIPE_EXTRA, extraByFinger));
+    }
+
     function applyOffset(offset, animate)
     {
         currentOffset = offset;
@@ -462,13 +525,14 @@ export function createSwipeout(rowEl, dotnetRef, opts)
         }
 
         // Determine armed state from the raw gesture offset (the bonus is purely visual; arming
-        // depends on the user's finger crossing the threshold).
+        // depends on the user's finger crossing the threshold). The threshold is OVERSWIPE_EXTRA
+        // past natural width on wide rows, but clamped down on narrow rows so it stays reachable.
         let nextArmed = null;
-        if (offset > 0 && offset >= leftWidth + OVERSWIPE_EXTRA && left !== null && hasOverswipe(left) === true)
+        if (offset > 0 && offset >= leftWidth + effectiveOverswipeExtra(leftWidth) && left !== null && hasOverswipe(left) === true)
         {
             nextArmed = "left";
         }
-        else if (offset < 0 && -offset >= rightWidth + OVERSWIPE_EXTRA && right !== null && hasOverswipe(right) === true)
+        else if (offset < 0 && -offset >= rightWidth + effectiveOverswipeExtra(rightWidth) && right !== null && hasOverswipe(right) === true)
         {
             nextArmed = "right";
         }
@@ -576,6 +640,10 @@ export function createSwipeout(rowEl, dotnetRef, opts)
             decisionPromise = new Promise(r => { actionDecisionResolver = r; });
         }
 
+        // The browser's trusted click that may follow the gesture's pointerup has by now had its
+        // chance to fire (we waited SNAP_MS above). Clear the suppress flag so our scripted click
+        // below isn't accidentally swallowed.
+        clearSuppressTrustedClick();
         dispatchActionClick(panel);
 
         if (decisionPromise !== null)
@@ -631,16 +699,19 @@ export function createSwipeout(rowEl, dotnetRef, opts)
 
         // 2. Past the arm threshold, switch to a linear formula so further finger motion grows
         //    the panel 1:1. dxAtArm is the finger position at which the elastic formula reaches
-        //    the threshold; the linear formula starts from there.
-        if (hasOverswipe(right) === true && offset < -(rightWidth + OVERSWIPE_EXTRA))
+        //    the threshold; the linear formula starts from there. The extra is row-width-aware
+        //    so the elastic→linear handoff stays consistent with the arming threshold.
+        const rightExtra = right !== null ? effectiveOverswipeExtra(rightWidth) : OVERSWIPE_EXTRA;
+        const leftExtra = left !== null ? effectiveOverswipeExtra(leftWidth) : OVERSWIPE_EXTRA;
+        if (hasOverswipe(right) === true && offset < -(rightWidth + rightExtra))
         {
-            const dxAtArm = -OVERSWIPE_EXTRA / ELASTICITY - rightWidth - openedOffset;
-            offset = -rightWidth - OVERSWIPE_EXTRA + (dx - dxAtArm);
+            const dxAtArm = -rightExtra / ELASTICITY - rightWidth - openedOffset;
+            offset = -rightWidth - rightExtra + (dx - dxAtArm);
         }
-        else if (hasOverswipe(left) === true && offset > leftWidth + OVERSWIPE_EXTRA)
+        else if (hasOverswipe(left) === true && offset > leftWidth + leftExtra)
         {
-            const dxAtArm = OVERSWIPE_EXTRA / ELASTICITY + leftWidth - openedOffset;
-            offset = leftWidth + OVERSWIPE_EXTRA + (dx - dxAtArm);
+            const dxAtArm = leftExtra / ELASTICITY + leftWidth - openedOffset;
+            offset = leftWidth + leftExtra + (dx - dxAtArm);
         }
 
         // 3. Block movement to a side that has no actions.
@@ -791,6 +862,7 @@ export function createSwipeout(rowEl, dotnetRef, opts)
         if (overswipeArmed === "right" && hasDelete(right) === true)
         {
             overswipeArmed = null;
+            armSuppressTrustedClick();
             performDelete();
             return;
         }
@@ -798,6 +870,7 @@ export function createSwipeout(rowEl, dotnetRef, opts)
         {
             const side = overswipeArmed;
             overswipeArmed = null;
+            armSuppressTrustedClick();
             performOverswipe(side);
             return;
         }
@@ -841,6 +914,19 @@ export function createSwipeout(rowEl, dotnetRef, opts)
             return;
         }
         snapTo(0, true);
+    }
+
+    function onClickCapture(e)
+    {
+        // See suppressTrustedClick: when a gesture lands on top of an action button the browser
+        // emits an extra trusted click in addition to fireOuterAction's scripted btn.click().
+        // We only ever want exactly one click reaching the inner button, so block the trusted one
+        // here in capture phase before it can reach Blazor's onclick handler.
+        if (suppressTrustedClick === true && e.isTrusted === true && e.target.closest("[data-swipeout-action]") !== null)
+        {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+        }
     }
 
     function onActionClick(e)
@@ -1009,6 +1095,7 @@ export function createSwipeout(rowEl, dotnetRef, opts)
         if (overswipeArmed === "right" && hasDelete(right) === true)
         {
             overswipeArmed = null;
+            armSuppressTrustedClick();
             performDelete();
             return;
         }
@@ -1016,6 +1103,7 @@ export function createSwipeout(rowEl, dotnetRef, opts)
         {
             const side = overswipeArmed;
             overswipeArmed = null;
+            armSuppressTrustedClick();
             performOverswipe(side);
             return;
         }
@@ -1074,6 +1162,7 @@ export function createSwipeout(rowEl, dotnetRef, opts)
     rowEl.addEventListener("pointercancel", onPointerUp);
     rowEl.addEventListener("lostpointercapture", onPointerUp);
     rowEl.addEventListener("click", onActionClick);
+    rowEl.addEventListener("click", onClickCapture, true);
     // Touch events drive finger input — touchmove must be non-passive so preventDefault claims
     // the gesture against the browser's scroll heuristic on iOS Safari + Android Chrome, where
     // pointer-event preventDefault alone isn't reliable.
@@ -1132,12 +1221,14 @@ export function createSwipeout(rowEl, dotnetRef, opts)
         rowEl.removeEventListener("pointercancel", onPointerUp);
         rowEl.removeEventListener("lostpointercapture", onPointerUp);
         rowEl.removeEventListener("click", onActionClick);
+        rowEl.removeEventListener("click", onClickCapture, true);
         rowEl.removeEventListener("touchstart", onTouchStart);
         rowEl.removeEventListener("touchmove", onTouchMove);
         rowEl.removeEventListener("touchend", onTouchEnd);
         rowEl.removeEventListener("touchcancel", onTouchCancel);
         document.removeEventListener("pointerdown", onClickOutside, true);
         coord.registerClosed(instance);
+        clearSuppressTrustedClick();
         clearInlineTransitions([content, left, right].filter(x => x !== null));
         if (content !== null)
         {
