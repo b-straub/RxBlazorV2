@@ -21,6 +21,11 @@
         <MudHidden Breakpoint="Breakpoint.MdAndUp">
             <MudText Typo="Typo.h6" Class="ml-3">RxBlazorV2</MudText>
         </MudHidden>
+        @* Build-time stamp — quick visual confirmation that the deployed/cached bundle is the
+           latest one. Generated at compile time by cmdwtf.BuildTimestampGenerator. *@
+        <MudText Typo="Typo.caption" Class="ml-3 mud-text-secondary" Style="opacity: 0.75; white-space: nowrap;">
+            @cmdwtf.BuildTimestamp.BuildTime.ToString("MMM d HH:mm")
+        </MudText>
         <MudSpacer />
         <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit"
                        Href="https://github.com/b-straub/RxBlazorV2" Target="_blank" />

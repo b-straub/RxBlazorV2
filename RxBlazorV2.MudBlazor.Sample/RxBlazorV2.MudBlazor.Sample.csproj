@@ -11,6 +11,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" PrivateAssets="all" />
     <PackageReference Include="RxBlazorV2.MudBlazor" Condition="'$(Configuration)' == 'Release'"/>
+    <PackageReference Include="cmdwtf.BuildTimestampGenerator" PrivateAssets="all" />
   </ItemGroup>
   
   <ItemGroup Condition="'$(Configuration)' == 'Debug'">

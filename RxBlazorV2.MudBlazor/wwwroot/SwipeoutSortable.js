@@ -30,6 +30,96 @@
 const DRAG_THRESHOLD = 5;
 const ELASTICITY = 0.4;
 const VELOCITY_SNAP = 0.3;
+// =============================================================================
+// iOS slow-tap → click polyfill. iOS Safari only fires a click for fast taps (touchend
+// within ~300 ms of touchstart on the same element); slow taps get interpreted as long-
+// press / focus / selection and the click is silently dropped. We watch touchstart →
+// touchend pairs on interactive elements and synthesize a click after a short window if
+// the browser doesn't fire one. A capture-phase click listener cancels the pending
+// synthesis when the browser does fire its own click, so fast taps aren't double-fired.
+// =============================================================================
+(function installSlowTapClickSynth()
+{
+    if (typeof window === "undefined" || window.__rxbSlowTapInstalled === true)
+    {
+        return;
+    }
+    window.__rxbSlowTapInstalled = true;
+
+    const TAP_MOVE_TOLERANCE = 10;
+    const SYNTH_DELAY_MS = 120;
+    const interactiveSelector = "button, a, [role=\"button\"], .mud-button-root, .mud-icon-button, .mud-list-item-clickable";
+
+    let touchStartTarget = null;
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let pendingTimer = 0;
+
+    document.addEventListener("touchstart", function (e)
+    {
+        if (e.target === null || e.target.closest === undefined)
+        {
+            touchStartTarget = null;
+            return;
+        }
+        touchStartTarget = e.target.closest(interactiveSelector);
+        if (touchStartTarget !== null)
+        {
+            const t = e.changedTouches[0];
+            touchStartX = t.clientX;
+            touchStartY = t.clientY;
+        }
+    }, { passive: true, capture: true });
+
+    document.addEventListener("touchend", function (e)
+    {
+        if (touchStartTarget === null)
+        {
+            return;
+        }
+        const target = e.target !== null && e.target.closest !== undefined ? e.target.closest(interactiveSelector) : null;
+        if (target !== touchStartTarget || (target !== null && target.disabled === true))
+        {
+            touchStartTarget = null;
+            return;
+        }
+        const t = e.changedTouches[0];
+        const dx = Math.abs(t.clientX - touchStartX);
+        const dy = Math.abs(t.clientY - touchStartY);
+        if (dx > TAP_MOVE_TOLERANCE || dy > TAP_MOVE_TOLERANCE)
+        {
+            touchStartTarget = null;
+            return;
+        }
+
+        const candidate = touchStartTarget;
+        touchStartTarget = null;
+        if (pendingTimer !== 0)
+        {
+            clearTimeout(pendingTimer);
+        }
+        pendingTimer = setTimeout(function ()
+        {
+            pendingTimer = 0;
+            if (candidate !== null && candidate.isConnected === true)
+            {
+                candidate.click();
+            }
+        }, SYNTH_DELAY_MS);
+    }, { passive: true, capture: true });
+
+    // If the browser fires its own click in response to the touch, cancel our pending
+    // synthesis so the click isn't fired twice.
+    document.addEventListener("click", function ()
+    {
+        if (pendingTimer !== 0)
+        {
+            clearTimeout(pendingTimer);
+            pendingTimer = 0;
+        }
+    }, true);
+})();
+
 const OVERSWIPE_EXTRA = 60;
 // Maximum elastic-phase finger distance as a fraction of the row's width. With ELASTICITY = 0.4
 // the user has to swipe ~2.5× the offset extra to cross the threshold, so on narrow rows the
@@ -203,14 +293,15 @@ export function createSwipeout(rowEl, dotnetRef, opts)
         {
             clearTimeout(suppressTrustedClickTimer);
         }
-        // Safety net: if no trusted click ever lands (e.g. the touchend wasn't over the button),
-        // make sure future clicks aren't permanently blocked. fireOuterAction clears the flag
-        // explicitly before its synthetic click anyway.
-        suppressTrustedClickTimer = setTimeout(() =>
+        // Auto-clear after the post-touchend trusted-click window has elapsed. iOS Safari can
+        // delay the synthetic click ~300 ms after touchend (and a bit more under load), so we
+        // keep the flag armed for 800 ms to cover that window comfortably without permanently
+        // blocking later legitimate clicks.
+        suppressTrustedClickTimer = setTimeout(function ()
         {
             suppressTrustedClick = false;
             suppressTrustedClickTimer = 0;
-        }, 600);
+        }, 800);
     }
 
     function clearSuppressTrustedClick()
@@ -266,11 +357,6 @@ export function createSwipeout(rowEl, dotnetRef, opts)
     let leftBonusAnim = null;
     let rightBonusAnim = null;
     let bonusRaf = 0;
-
-    // Decision-hold state: when an action carries data-swipeout-confirm the row stays at its
-    // current visual offset until .NET resolves the user's choice via notifyActionDecided. This
-    // keeps the row swept-open / fully-swept across while a confirmation dialog is showing.
-    let actionDecisionResolver = null;
 
     // When the gesture ends with overswipe armed (one-pass OR two-pass from already-open buttons)
     // and the finger happens to lift over a real action button, the browser will also fire a
@@ -629,40 +715,58 @@ export function createSwipeout(rowEl, dotnetRef, opts)
         applyOffset(target, true);
         await new Promise(r => setTimeout(r, SNAP_MS));
 
-        // If the outer action has a confirmation wired, set up a decision promise BEFORE
-        // dispatching the click so the row stays at its current swept-open visual until the
-        // user's choice resolves. .NET calls notifyActionDecided(ok) once the dialog returns.
-        const marker = findMarked(panel, "data-swipeout-overswipe");
-        const hasConfirm = marker !== null && marker.getAttribute("data-swipeout-confirm") === "true";
-        let decisionPromise = null;
-        if (hasConfirm === true)
-        {
-            decisionPromise = new Promise(r => { actionDecisionResolver = r; });
-        }
+        // If the trigger has a confirmation wired, hold the row at full sweep until the
+        // dialog closes — observed via MudBlazor's dialog container in the DOM. No JS↔.NET
+        // callback needed: the dialog is rendered by MudDialogProvider, JS just watches.
+        const trigger = findMarked(panel, "data-swipeout-overswipe");
+        const hasConfirm = trigger !== null && trigger.getAttribute("data-swipeout-confirm") === "true";
 
-        // The browser's trusted click that may follow the gesture's pointerup has by now had its
-        // chance to fire (we waited SNAP_MS above). Clear the suppress flag so our scripted click
-        // below isn't accidentally swallowed.
-        clearSuppressTrustedClick();
+        // Dispatch the synthetic click on the inner action button — confirm dialog (if any)
+        // and command execution are handled entirely on the .NET side from this point.
         dispatchActionClick(panel);
 
-        if (decisionPromise !== null)
+        if (hasConfirm === true)
         {
-            await decisionPromise;
+            await waitForDialogClose();
         }
 
         if (isDelete === true)
         {
-            // Yield two frames so Blazor can process the click + re-render.
+            // Yield two frames so Blazor can process the click + re-render the row removal.
             await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
             if (rowEl.isConnected === false)
             {
                 return;
             }
         }
-        // Either non-delete action (snap closed after firing — onActionClick would do the same on a tap),
-        // or delete cancelled (e.g. ConfirmExecutionAsync returned false): snap closed.
         snapTo(0, true);
+    }
+
+    /**
+     * Wait until no MudBlazor dialog overlay is in the DOM. Used by the confirm-aware paths to
+     * keep the row at its swept-open visual while a confirmation dialog is showing. Uses
+     * MutationObserver rather than polling so the JS thread stays idle for iOS click synthesis.
+     */
+    async function waitForDialogClose()
+    {
+        // Brief delay so Blazor has rendered the dialog before we sample.
+        await new Promise(r => setTimeout(r, 100));
+        if (document.querySelector(".mud-overlay-dialog, .mud-dialog-container") === null)
+        {
+            return;
+        }
+        await new Promise(resolve =>
+        {
+            const observer = new MutationObserver(() =>
+            {
+                if (document.querySelector(".mud-overlay-dialog, .mud-dialog-container") === null)
+                {
+                    observer.disconnect();
+                    resolve();
+                }
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
+        });
     }
 
     function performDelete()
@@ -918,10 +1022,10 @@ export function createSwipeout(rowEl, dotnetRef, opts)
 
     function onClickCapture(e)
     {
-        // See suppressTrustedClick: when a gesture lands on top of an action button the browser
-        // emits an extra trusted click in addition to fireOuterAction's scripted btn.click().
-        // We only ever want exactly one click reaching the inner button, so block the trusted one
-        // here in capture phase before it can reach Blazor's onclick handler.
+        // After an overswipe the user's finger may lift over the trigger button — iOS then
+        // emits a trusted click on top of the gesture. Without filtering it would reach the
+        // inner button and re-trigger the action. The flag is armed in pointerup/touchend
+        // and self-clears after 800 ms.
         if (suppressTrustedClick === true && e.isTrusted === true && e.target.closest("[data-swipeout-action]") !== null)
         {
             e.stopImmediatePropagation();
@@ -942,12 +1046,16 @@ export function createSwipeout(rowEl, dotnetRef, opts)
         {
             return;
         }
-        // If the action has a confirmation wired, hold the row open at its current swept state
-        // until .NET signals the decision via notifyActionDecided. Otherwise snap closed after
-        // a one-frame defer (gives the click handler time to run before the spring-back).
+        // If the action has a confirmation wired, defer the snap until the dialog closes so
+        // the row stays at its swept-open visual while the user is still deciding. Otherwise
+        // snap closed after a one-frame defer (gives the click handler time to run first).
         if (action.getAttribute("data-swipeout-confirm") === "true")
         {
-            actionDecisionResolver = () => snapTo(0, true);
+            (async function ()
+            {
+                await waitForDialogClose();
+                snapTo(0, true);
+            })();
             return;
         }
         requestAnimationFrame(() => snapTo(0, true));
@@ -1195,23 +1303,6 @@ export function createSwipeout(rowEl, dotnetRef, opts)
     {
         measure();
         applyOffset(openedOffset, false);
-    };
-    /**
-     * Called from .NET after a confirmation gate (ConfirmExecutionAsync) resolves. Releases the
-     * row hold set up by fireOuterAction / onActionClick: a tap path snaps closed; a swipe path's
-     * pending decisionPromise resolves so its post-click flow continues. The `ok` argument is
-     * forwarded for symmetry but the row's snap behaviour is the same either way (delete removes
-     * the item; non-delete just closes).
-     */
-    instance.notifyActionDecided = function (ok)
-    {
-        if (actionDecisionResolver === null)
-        {
-            return;
-        }
-        const r = actionDecisionResolver;
-        actionDecisionResolver = null;
-        r(ok);
     };
     instance.dispose = function ()
     {

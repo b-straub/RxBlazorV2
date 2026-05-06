@@ -215,36 +215,6 @@ public partial class MudSwipeoutRx<TItem> : ComponentBase, IAsyncDisposable
         await OpenedSideChanged.InvokeAsync(newState);
     }
 
-    /// <summary>
-    /// Wraps an action's user-supplied <c>ConfirmExecutionAsync</c> with a notification call to the
-    /// JS instance so the row stays at its current swept-open visual until the dialog resolves.
-    /// Returns <c>null</c> when the user provided no confirm — in that case the action runs immediately
-    /// and the JS side falls through to its default close-after-click behaviour.
-    /// </summary>
-    private Func<Task<bool>>? WrapConfirm(Func<Task<bool>>? userConfirm)
-    {
-        if (userConfirm is null)
-        {
-            return null;
-        }
-        return async () =>
-        {
-            var ok = await userConfirm();
-            if (_instance is not null)
-            {
-                try
-                {
-                    await _instance.InvokeVoidAsync("notifyActionDecided", ok);
-                }
-                catch (JSDisconnectedException)
-                {
-                    // Browser navigated away — nothing to release.
-                }
-            }
-            return ok;
-        };
-    }
-
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
