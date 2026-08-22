@@ -19,21 +19,27 @@ internal static class TestShared
     {
         var net10 = new ReferenceAssemblies(
             "net10.0",
-            new PackageIdentity(
-                "Microsoft.NETCore.App.Ref",
-                "10.0.0"),
+            Package("Microsoft.NETCore.App.Ref"),
             Path.Combine("ref", "net10.0"));
-        
+
         return net10
             .AddPackages([
-                new PackageIdentity("Microsoft.Net.Compilers.Toolset",
-                    "5.0.0"), // Use the latest version of the compiler toolset
-                new PackageIdentity("Microsoft.Extensions.DependencyInjection", "10.0.5"),
-                new PackageIdentity("Microsoft.AspNetCore.Components", "10.0.5"),
-                new PackageIdentity("R3", "1.3.0"),
-                new PackageIdentity("ObservableCollections.R3", "3.3.4"),
-                new PackageIdentity("JetBrains.Annotations", "2025.2.4"),
-                new PackageIdentity("MudBlazor", "9.2.0")
+                Package("Microsoft.Net.Compilers.Toolset"),
+                Package("Microsoft.Extensions.DependencyInjection"),
+                Package("Microsoft.AspNetCore.Components"),
+                Package("R3"),
+                Package("ObservableCollections.R3"),
+                Package("JetBrains.Annotations"),
+                Package("MudBlazor")
             ]);
+    }
+
+    /// <summary>
+    /// Resolves a package identity from the centrally managed version in Directory.Packages.props,
+    /// so the harness always compiles against the same versions the solution builds against.
+    /// </summary>
+    private static PackageIdentity Package(string packageId)
+    {
+        return new PackageIdentity(packageId, PackageVersions.For(packageId));
     }
 }
