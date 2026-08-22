@@ -79,6 +79,12 @@
     /// </summary>
     [Parameter]
     public string SnackbarPositionClass { get; set; } = Defaults.Classes.Position.TopEnd;
+    
+    /// <summary>
+    /// Short visibility of snackbar. Default: false.
+    /// </summary>
+    [Parameter]
+    public bool ShortVisibility { get; set; }
 
     #endregion
 
@@ -115,7 +121,12 @@
     protected override void OnParametersSet()
     {
         Snackbar.Configuration.PositionClass = SnackbarPositionClass;
-
+        
+        if (ShortVisibility)
+        {
+            Snackbar.Configuration.VisibleStateDuration = 2000;
+        }
+   
         // Sync parameters to model's modes
         Model.ErrorMessageMode = ErrorMessageMode;
         Model.MessageMessageMode = MessageMessageMode;
