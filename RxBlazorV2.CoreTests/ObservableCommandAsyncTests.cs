@@ -171,7 +171,10 @@ public class ObservableCommandAsyncTests
         // Assert
         Assert.True(executingStates.Count >= 2, $"Expected at least 2 states, got {executingStates.Count}");
         Assert.True(executingStates.Any(s => s), "Expected Executing to be true at some point");
-        Assert.False(model.AsyncCommandWithParam.Executing, "Expected Executing to be false at end");
+        // The last *notification*, not the field afterwards: reading the field
+        // passes whichever order the flag and the notification happen in, and
+        // a subscriber told "still running" as the final word is the bug.
+        Assert.False(executingStates.Last(), "Expected Executing to be false at end");
     }
 
     [Fact]

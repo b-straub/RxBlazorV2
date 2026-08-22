@@ -37,9 +37,6 @@ public class ObservableCommandRFactory<T>(
     Func<Exception, string>? errorFormatter = null) :
     ObservableCommandR<T>(model, observedProperties, commandName, methodName, statusModel, errorFormatter)
 {
-    private readonly string[] _observedProperties = observedProperties;
-    private readonly ObservableModel _model = model;
-
     /// <inheritdoc />
     public override T? Execute()
     {
@@ -55,7 +52,7 @@ public class ObservableCommandRFactory<T>(
             SetError(e);
         }
 
-        _model.StateHasChanged(_observedProperties);
+        NotifyStateChanged();
         return result;
     }
 
@@ -101,9 +98,6 @@ public class ObservableCommandRFactory<T1, T2>(
     Func<Exception, string>? errorFormatter = null) :
     ObservableCommandR<T1, T2>(model, observedProperties, commandName, methodName, statusModel, errorFormatter)
 {
-    private readonly string[] _observedProperties = observedProperties;
-    private readonly ObservableModel _model = model;
-
     /// <inheritdoc />
     public override T2? Execute(T1 parameter)
     {
@@ -119,7 +113,7 @@ public class ObservableCommandRFactory<T1, T2>(
             SetError(e);
         }
 
-        _model.StateHasChanged(_observedProperties);
+        NotifyStateChanged();
         return result;
     }
 

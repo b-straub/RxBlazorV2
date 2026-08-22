@@ -78,6 +78,37 @@ public class ObservableCommandBase(
     }
 
     /// <summary>
+    /// Property names published when this command's own state changes —
+    /// <see cref="IObservableCommandAsyncBase.Executing"/>, <see cref="Error"/>, and whatever
+    /// <see cref="CanExecute"/> is derived from.
+    ///
+    /// <para>
+    /// The command's own qualified name leads, because that is what a component filters on: the
+    /// generator adds <c>Model.{CommandName}</c> to a component's filter as soon as the razor
+    /// references the command, and a button bound to it reads <c>Executing</c> / <c>CanExecute</c>
+    /// during its parent's render. Without the name in this list, a command with no observed
+    /// properties has nothing to publish that any filter matches, and every progress spinner and
+    /// disabled state bound to it stays as it was when the component last rendered for some other
+    /// reason.
+    /// </para>
+    /// <para>
+    /// The observed properties follow: a component that binds them re-renders, which is how
+    /// <see cref="CanExecute"/> gets re-evaluated where it is bound. The generator emits a single
+    /// empty string when a command observes nothing (an empty array is not a legal notification),
+    /// so empties are dropped here.
+    /// </para>
+    /// </summary>
+    protected string[] StateChangeProperties { get; } =
+        [$"Model.{commandName}", .. observedProperties.Where(p => !string.IsNullOrEmpty(p))];
+
+    /// <summary>
+    /// Publishes <see cref="StateChangeProperties"/> on the owning model. Call after anything that
+    /// changes what a bound component would render — start and end of execution, cancellation,
+    /// error.
+    /// </summary>
+    protected void NotifyStateChanged() => model.StateHasChanged(StateChangeProperties);
+
+    /// <summary>
     /// Subscribes the observer to the owning model's property change notifications, filtered to the observed properties.
     /// </summary>
     protected override IDisposable SubscribeCore(Observer<string[]> observer)
@@ -134,9 +165,6 @@ public class ObservableCommandFactory(
     Func<Exception, string>? errorFormatter = null) :
     ObservableCommand(model, observedProperties, commandName, methodName, statusModel, errorFormatter)
 {
-    private readonly string[] _observedProperties = observedProperties;
-    private readonly ObservableModel _model = model;
-
     /// <summary>
     /// Executes the command by invoking the backing delegate and notifying observed properties.
     /// </summary>
@@ -152,7 +180,7 @@ public class ObservableCommandFactory(
             SetError(e);
         }
 
-        _model.StateHasChanged(_observedProperties);
+        NotifyStateChanged();
     }
 
     /// <summary>
@@ -210,9 +238,6 @@ public class ObservableCommandFactory<T>(
     Func<Exception, string>? errorFormatter = null) :
     ObservableCommand<T>(model, observedProperties, commandName, methodName, statusModel, errorFormatter)
 {
-    private readonly string[] _observedProperties = observedProperties;
-    private readonly ObservableModel _model = model;
-
     /// <summary>
     /// Executes the command by invoking the backing delegate with the given parameter and notifying observed properties.
     /// </summary>
@@ -229,7 +254,7 @@ public class ObservableCommandFactory<T>(
             SetError(e);
         }
 
-        _model.StateHasChanged(_observedProperties);
+        NotifyStateChanged();
     }
 
     /// <summary>

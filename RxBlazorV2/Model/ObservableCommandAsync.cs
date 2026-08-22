@@ -91,9 +91,6 @@ public class ObservableCommandAsyncFactory(
     Func<Exception, string>? errorFormatter = null) :
     ObservableCommandAsync(model, observedProperties, commandName, methodName, statusModel, errorFormatter)
 {
-    private readonly string[] _observedProperties = observedProperties;
-    private readonly ObservableModel _model = model;
-
     /// <inheritdoc />
     public override async Task ExecuteAsync(CancellationToken? externalCancellationToken)
     {
@@ -104,7 +101,7 @@ public class ObservableCommandAsyncFactory(
     public override async Task ExecuteAsync()
     {
         Executing = true;
-        _model.StateHasChanged(_observedProperties);
+        NotifyStateChanged();
 
         SetError();
         try
@@ -117,7 +114,7 @@ public class ObservableCommandAsyncFactory(
         }
 
         Executing = false;
-        _model.StateHasChanged(_observedProperties);
+        NotifyStateChanged();
     }
 
     /// <inheritdoc />
@@ -138,7 +135,6 @@ public class ObservableCommandAsyncCancelableFactory(
     Func<Exception, string>? errorFormatter = null) :
     ObservableCommandAsync(model, observedProperties, commandName, methodName, statusModel, errorFormatter)
 {
-    private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;
     private CancellationToken? _externalCancellationToken;
 
@@ -169,11 +165,11 @@ public class ObservableCommandAsyncCancelableFactory(
         // If this is the first command in suspension, bypass suspension for immediate UI feedback
         if (_model.IsFirstCommandInSuspension())
         {
-            _model.PropertyChangedSubject.OnNext(_observedProperties);
+            _model.PropertyChangedSubject.OnNext(StateChangeProperties);
         }
         else
         {
-            _model.StateHasChanged(_observedProperties);
+            NotifyStateChanged();
         }
 
         SetError();
@@ -208,7 +204,7 @@ public class ObservableCommandAsyncCancelableFactory(
             {
                 LastCancellationReason = CancellationReason.NONE;
             }
-            _model.StateHasChanged(_observedProperties);
+            NotifyStateChanged();
         }
     }
 
@@ -253,9 +249,6 @@ public class ObservableCommandAsyncFactory<T>(
     Func<Exception, string>? errorFormatter = null) :
     ObservableCommandAsync<T>(model, observedProperties, commandName, methodName, statusModel, errorFormatter)
 {
-    private readonly string[] _observedProperties = observedProperties;
-    private readonly ObservableModel _model = model;
-
     /// <inheritdoc />
     public override async Task ExecuteAsync(T parameter, CancellationToken? externalCancellationToken)
     {
@@ -266,7 +259,7 @@ public class ObservableCommandAsyncFactory<T>(
     public override async Task ExecuteAsync(T parameter)
     {
         Executing = true;
-        _model.StateHasChanged(_observedProperties);
+        NotifyStateChanged();
 
         SetError();
         try
@@ -278,8 +271,8 @@ public class ObservableCommandAsyncFactory<T>(
             SetError(e);
         }
 
-        _model.StateHasChanged(_observedProperties);
         Executing = false;
+        NotifyStateChanged();
     }
 
     /// <inheritdoc />
@@ -300,7 +293,6 @@ public class ObservableCommandAsyncCancelableFactory<T>(
     Func<Exception, string>? errorFormatter = null) :
     ObservableCommandAsync<T>(model, observedProperties, commandName, methodName, statusModel, errorFormatter)
 {
-    private readonly string[] _observedProperties = observedProperties;
     private readonly ObservableModel _model = model;
     private CancellationToken? _externalCancellationToken;
 
@@ -331,11 +323,11 @@ public class ObservableCommandAsyncCancelableFactory<T>(
         // If this is the first command in suspension, bypass suspension for immediate UI feedback
         if (_model.IsFirstCommandInSuspension())
         {
-            _model.PropertyChangedSubject.OnNext(_observedProperties);
+            _model.PropertyChangedSubject.OnNext(StateChangeProperties);
         }
         else
         {
-            _model.StateHasChanged(_observedProperties);
+            NotifyStateChanged();
         }
 
         SetError();
@@ -370,7 +362,7 @@ public class ObservableCommandAsyncCancelableFactory<T>(
             {
                 LastCancellationReason = CancellationReason.NONE;
             }
-            _model.StateHasChanged(_observedProperties);
+            NotifyStateChanged();
         }
     }
 

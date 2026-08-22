@@ -1,0 +1,23 @@
+@inherits RxBlazorV2.Component.ObservableComponent<TestCommandModel>
+
+<div id="command-filter-component">
+    Executing: @Model.AsyncCommandWithParam.Executing
+    Render Count: @RenderCount
+</div>
+
+@code {
+    // A component that binds nothing but a command — the shape every async
+    // button has, since MudButtonAsyncRx reads Command.Executing during its
+    // parent's render and subscribes to nothing itself. If the command's
+    // state changes do not reach this component, no spinner anywhere moves.
+    public int RenderCount { get; private set; }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+        if (!firstRender)
+        {
+            RenderCount++;
+        }
+    }
+}
