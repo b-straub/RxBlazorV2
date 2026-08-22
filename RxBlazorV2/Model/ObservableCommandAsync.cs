@@ -31,15 +31,35 @@ public class ObservableCommandAsyncBase(
     private CancellationTokenSource? _cancellationTokenSource;
 
     /// <summary>
-    /// Resets the cancellation token, optionally linking to an external token.
+    /// Prepares a cancellation token for a new execution, optionally linking to an external token.
     /// </summary>
-    protected void ResetCancellationToken(CancellationToken? externalToken)
+    /// <param name="externalToken">Token the new source is linked to, when the caller supplied one.</param>
+    /// <param name="isSwitch">
+    /// True when a previous execution is still in flight. That run is cancelled and its
+    /// <see cref="LastCancellationReason"/> reported as <see cref="CancellationReason.SWITCH"/>,
+    /// so the run replacing it keeps <see cref="Executing"/> set.
+    /// </param>
+    protected void ResetCancellationToken(CancellationToken? externalToken, bool isSwitch)
     {
-        LastCancellationReason = CancellationReason.NONE;
+        var previous = _cancellationTokenSource;
 
-        if (_cancellationTokenSource is null || !_cancellationTokenSource.TryReset())
+        LastCancellationReason = isSwitch ? CancellationReason.SWITCH : CancellationReason.NONE;
+
+        // TryReset() drops every registration on the source, which silently unhooks an in-flight
+        // Task.Delay(..., token) from the token it was handed. Only reuse a source that no
+        // execution is still holding, otherwise the switched-away run becomes uncancellable.
+        if (isSwitch || previous is null || !previous.TryReset())
         {
             _cancellationTokenSource = externalToken is not null ? CancellationTokenSource.CreateLinkedTokenSource(externalToken.Value) : new();
+        }
+
+        if (isSwitch && previous is not null)
+        {
+            // Cancel only once the new source is in place: cancelling can resume the previous run
+            // synchronously, and its finally block must not observe the source it was cancelled on.
+            // The source is left to the GC - the cancelled run may still touch its token while
+            // unwinding, and disposing it here would turn that into an ObjectDisposedException.
+            previous.Cancel();
         }
     }
 
@@ -154,12 +174,10 @@ public class ObservableCommandAsyncCancelableFactory(
             return;
         }
 
-        ResetCancellationToken(_externalCancellationToken);
+        // A run already in flight is switched away from: it gets cancelled, not abandoned.
+        var isSwitch = Executing;
+        ResetCancellationToken(_externalCancellationToken, isSwitch);
         _externalCancellationToken = null;
-        if (Executing)
-        {
-            LastCancellationReason = CancellationReason.SWITCH;
-        }
         Executing = true;
 
         // If this is the first command in suspension, bypass suspension for immediate UI feedback
@@ -312,12 +330,10 @@ public class ObservableCommandAsyncCancelableFactory<T>(
             return;
         }
 
-        ResetCancellationToken(_externalCancellationToken);
+        // A run already in flight is switched away from: it gets cancelled, not abandoned.
+        var isSwitch = Executing;
+        ResetCancellationToken(_externalCancellationToken, isSwitch);
         _externalCancellationToken = null;
-        if (Executing)
-        {
-            LastCancellationReason = CancellationReason.SWITCH;
-        }
         Executing = true;
 
         // If this is the first command in suspension, bypass suspension for immediate UI feedback

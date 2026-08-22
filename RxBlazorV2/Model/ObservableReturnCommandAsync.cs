@@ -112,12 +112,10 @@ public class ObservableCommandRAsyncCancelableFactory<T>(
             return result;
         }
 
-        ResetCancellationToken(_externalCancellationToken);
+        // A run already in flight is switched away from: it gets cancelled, not abandoned.
+        var isSwitch = Executing;
+        ResetCancellationToken(_externalCancellationToken, isSwitch);
         _externalCancellationToken = null;
-        if (Executing)
-        {
-            LastCancellationReason = CancellationReason.SWITCH;
-        }
         Executing = true;
 
         // If this is the first command in suspension, bypass suspension for immediate UI feedback
@@ -287,12 +285,10 @@ public class ObservableCommandRAsyncCancelableFactory<T1, T2>(
             return result;
         }
 
-        ResetCancellationToken(_externalCancellationToken);
+        // A run already in flight is switched away from: it gets cancelled, not abandoned.
+        var isSwitch = Executing;
+        ResetCancellationToken(_externalCancellationToken, isSwitch);
         _externalCancellationToken = null;
-        if (Executing)
-        {
-            LastCancellationReason = CancellationReason.SWITCH;
-        }
         Executing = true;
 
         // If this is the first command in suspension, bypass suspension for immediate UI feedback
