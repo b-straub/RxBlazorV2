@@ -59,6 +59,13 @@ public static class ComponentCodeGenerator
                 sb.AppendLine();
             }
 
+            // Generate one hook method per [ObservableComponentBatchAsync] batch
+            if (componentInfo.ComponentBatches.Any())
+            {
+                GenerateComponentBatchHookMethods(sb, componentInfo.ComponentBatches);
+                sb.AppendLine();
+            }
+
             // Seal lifecycle methods to prevent derived classes (Razor pages) from
             // overriding them and breaking the reactive pipeline.
             // Use OnContextReady/OnContextReadyAsync for initialization instead.
@@ -152,6 +159,18 @@ public static class ComponentCodeGenerator
             }
         }
 
+        // Generate subscriptions for [ObservableComponentBatchAsync] batches.
+        // Debounce (trailing edge) rather than Chunk: a debounced member must reach the hook once
+        // after its burst settles, not once per rolling window. Members declaring window 0 get no
+        // Debounce at all, so a discrete action such as a switch click is delivered immediately.
+        // Switch is applied once for the whole batch: a newer change cancels the token of an
+        // in-flight hook invocation rather than queueing behind it.
+        foreach (var batch in componentInfo.ComponentBatches)
+        {
+            sb.AppendLine();
+            GenerateComponentBatchSubscription(sb, batch);
+        }
+
         sb.AppendLine("    }");
     }
 
@@ -161,6 +180,92 @@ public static class ComponentCodeGenerator
         sb.AppendLine("    {");
         sb.AppendLine("        return Task.CompletedTask;");
         sb.AppendLine("    }");
+    }
+
+    /// <summary>
+    /// Emits the subscription for one batch. When every member shares a debounce window the whole
+    /// batch is a single filtered stream; otherwise one stream per distinct window is merged, so
+    /// each member keeps its own timing while the batch still resolves to one hook.
+    /// </summary>
+    private static void GenerateComponentBatchSubscription(StringBuilder sb, ComponentBatchInfo batch)
+    {
+        var windows = batch.DistinctDebounceWindows;
+
+        if (windows.Count == 1)
+        {
+            var filter = FormatBatchFilter(batch.Members.Select(member => member.QualifiedPropertyName));
+
+            sb.AppendLine($"        Subscriptions.Add(Model.Observable.Where(p => p.Intersect([{filter}]).Any())");
+            AppendDebounceOperator(sb, windows[0], "            ");
+            sb.AppendLine("            .SubscribeAwait(async (props, ct) =>");
+            sb.AppendLine("            {");
+            sb.AppendLine($"                await {batch.HookMethodName}(ct);");
+            sb.AppendLine("            }, AwaitOperation.Switch));");
+            return;
+        }
+
+        // Fully qualified so a user-declared member named Observable in the partial component
+        // cannot shadow the R3 static class.
+        sb.AppendLine("        Subscriptions.Add(R3.Observable.Merge(");
+
+        for (var i = 0; i < windows.Count; i++)
+        {
+            var window = windows[i];
+            var filter = FormatBatchFilter(batch.Members
+                .Where(member => member.DebounceMilliseconds == window)
+                .Select(member => member.QualifiedPropertyName));
+
+            var terminator = i == windows.Count - 1 ? ")" : ",";
+
+            if (window > 0)
+            {
+                sb.AppendLine($"                Model.Observable.Where(p => p.Intersect([{filter}]).Any())");
+                sb.AppendLine($"                    .Debounce(TimeSpan.FromMilliseconds({window})){terminator}");
+            }
+            else
+            {
+                sb.AppendLine($"                Model.Observable.Where(p => p.Intersect([{filter}]).Any()){terminator}");
+            }
+        }
+
+        sb.AppendLine("            .SubscribeAwait(async (props, ct) =>");
+        sb.AppendLine("            {");
+        sb.AppendLine($"                await {batch.HookMethodName}(ct);");
+        sb.AppendLine("            }, AwaitOperation.Switch));");
+    }
+
+    private static void AppendDebounceOperator(StringBuilder sb, int debounceMilliseconds, string indent)
+    {
+        // Window 0 means immediate: no operator at all, rather than a zero-length timer.
+        if (debounceMilliseconds > 0)
+        {
+            sb.AppendLine($"{indent}.Debounce(TimeSpan.FromMilliseconds({debounceMilliseconds}))");
+        }
+    }
+
+    private static string FormatBatchFilter(IEnumerable<string> qualifiedPropertyNames)
+    {
+        return string.Join(", ", qualifiedPropertyNames.Select(name => $"\"{name}\""));
+    }
+
+    /// <summary>
+    /// Generates one overridable hook per [ObservableComponentBatchAsync] batch. The component
+    /// overrides it to run the coalesced side effect - reloading a server-driven table, for instance.
+    /// </summary>
+    private static void GenerateComponentBatchHookMethods(StringBuilder sb, List<ComponentBatchInfo> batches)
+    {
+        foreach (var batch in batches)
+        {
+            sb.AppendLine($"    protected virtual Task {batch.HookMethodName}(CancellationToken ct)");
+            sb.AppendLine("    {");
+            sb.AppendLine("        return Task.CompletedTask;");
+            sb.AppendLine("    }");
+
+            if (batch != batches.Last())
+            {
+                sb.AppendLine();
+            }
+        }
     }
 
     private static void GenerateHookMethods(StringBuilder sb, List<ComponentTriggerInfo> triggers)

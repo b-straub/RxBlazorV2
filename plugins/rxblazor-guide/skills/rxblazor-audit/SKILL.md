@@ -52,7 +52,8 @@ Find all files containing reactive patterns:
 - Reactive component with 2+ `@inject` services AND async logic — Component has complex behavior that belongs in its own model. Create a dedicated `*Model` with commands for the async operations, and let the component inherit from the generated `*ModelComponent`.
 
 **WARNING (likely wrong):**
-- `Property = !Property` or `Property++` as only mutation — Toggle/counter notification signal. Use semantic status property.
+- `Property = !Property` or `Property++` as only mutation — Toggle/counter notification signal. Use a semantic status property; if several inputs drive one component-level side effect, use `[ObservableComponentBatchAsync(id, ms)]` instead, which generates a single hook for the whole group.
+- 2+ `[ObservableComponentTriggerAsync]` hooks whose overrides do the same thing (e.g. all call `ReloadServerData()`) — Duplicated fan-out. Put the properties in one `[ObservableComponentBatchAsync(id, ms)]` batch and override its single `On{Id}BatchChangedAsync` hook. The debounce window is per property, so a typed field and a checkbox can share the batch while keeping their own urgency.
 - Methods named `Notify*` that only set a property — Indirect notification pattern. Inline into the source.
 - Deep property paths `Model.Sub.Property` (3+ levels) — Should inject the leaf model directly.
 - `EventCallback` handler that only calls `StateHasChanged()` — Dead code. In reactive components, the model already triggers re-renders. Remove the callback chain.

@@ -239,6 +239,27 @@ public static class DiagnosticDescriptors
         helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG041.md",
         customTags: ["Add [ObservableComponent] attribute", "Remove trigger attributes"]);
 
+    public static readonly DiagnosticDescriptor InvalidComponentBatchError = new(
+        id: "RXBG043",
+        title: "Invalid observable component batch declaration",
+        messageFormat: "Batch '{0}' is invalid: {1}. No hook method is generated for this batch.",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "An [ObservableComponentBatchAsync] batch names a generated hook method and subscribes with a per-property debounce window, so its identifier must be a valid non-keyword C# identifier and no member may declare a negative window.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG043.md");
+
+    public static readonly DiagnosticDescriptor UnusedComponentBatchWarning = new(
+        id: "RXBG044",
+        title: "Observable component batch has no effect",
+        messageFormat: "Batch '{0}' in model '{1}' is declared with [ObservableComponentBatchAsync], but this model has no [ObservableComponent] attribute. The batch generates its hook on the model's component, so without it no hook is generated and the attribute has no effect. Either add [ObservableComponent] to this model, or remove the attribute.",
+        category: "RxBlazorGenerator",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "An [ObservableComponentBatchAsync] batch generates a protected virtual hook method on the model's generated component. Models without [ObservableComponent] have no component, so the attribute has no effect.",
+        helpLinkUri: "https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG044.md",
+        customTags: ["Add [ObservableComponent] attribute", "Remove [ObservableComponentBatchAsync] attribute"]);
+
     public static readonly DiagnosticDescriptor NonObservableCollectionPropertyError = new(
         id: "RXBG042",
         title: "Non-observable collection type on partial property",
@@ -469,6 +490,8 @@ public static class DiagnosticDescriptors
         new(InvalidInitPropertyError, DiagnosticReporter.Analyzer),
         new(UnusedObservableComponentTriggerWarning, DiagnosticReporter.Generator),  // Requires cross-model analysis
         new(NonObservableCollectionPropertyError, DiagnosticReporter.Analyzer),
+        new(InvalidComponentBatchError, DiagnosticReporter.Analyzer),
+        new(UnusedComponentBatchWarning, DiagnosticReporter.Analyzer),
 
         // RXBG050-059: Dependency Injection - generator (requires service list analysis)
         new(UnregisteredServiceWarning, DiagnosticReporter.Generator),

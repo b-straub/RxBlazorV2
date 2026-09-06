@@ -11,9 +11,10 @@ This document provides comprehensive guidance for implementing reactive patterns
 5. [File Organization Best Practices](#file-organization-best-practices)
 6. [Model Lifecycle](#model-lifecycle)
 7. [Domain Architecture Patterns](#domain-architecture-patterns)
-8. [Multi-Assembly Considerations](#multi-assembly-considerations)
-9. [Anti-Patterns](#anti-patterns)
-10. [Diagnostic Reference](#diagnostic-reference)
+8. [Synchronising a Server-Driven Table](#synchronising-a-server-driven-table)
+9. [Multi-Assembly Considerations](#multi-assembly-considerations)
+10. [Anti-Patterns](#anti-patterns)
+11. [Diagnostic Reference](#diagnostic-reference)
 
 ---
 
@@ -62,6 +63,7 @@ Use this matrix to quickly determine which pattern fits your use case:
 | Bind a button click to a method | Command | `[ObservableCommand]` |
 | Auto-execute a command when a property changes | Command Trigger | `[ObservableCommandTrigger]` |
 | React to property changes in UI component | Component Trigger | `[ObservableComponentTrigger]` |
+| Coalesce several inputs into one debounced UI side effect | Component Batch Trigger | `[ObservableComponentBatchAsync(id, debounceMs)]` |
 | Have external service observe model changes | External Observer | `[ObservableModelObserver]` |
 | Share state between models | Model Reference | Partial constructor injection |
 | Define reusable reactive contracts | Abstract Base Class | `override partial` + attribute transfer |
@@ -415,6 +417,101 @@ public partial class WeatherModel : ObservableModel
 // Generated in WeatherModelComponent:
 protected virtual void OnSettingsIsDayChanged() { }
 ```
+
+---
+
+### 5b. Component Batch Triggers (`[ObservableComponentBatchAsync]`)
+
+**Purpose:** Treat several properties as one input group and deliver their changes to a **single**
+component hook, each property settling on its own schedule.
+
+**When to use:**
+- Several inputs feed one expensive side effect (a query, a re-layout, a JS interop call)
+- Some of those inputs are typed (want a debounce) and some are discrete (want immediacy)
+- A newer change should supersede an in-flight side effect rather than queue behind it
+
+```csharp
+[ObservableComponent]
+[ObservableModelScope(ModelScope.Scoped)]
+public partial class ServerTableModel : ObservableModel
+{
+    // Typed input: let the burst settle before it reaches the backend.
+    [ObservableComponentBatchAsync("search", 250)]
+    public partial string SearchTerm { get; set; } = "";
+
+    // A switch click is one deliberate action: no window, react at once.
+    [ObservableComponentBatchAsync("search")]
+    public partial bool HighlightMatches { get; set; }
+}
+```
+
+**Generated Component Hook:**
+
+```csharp
+// In ServerTableModelComponent.g.cs - one stream per distinct window, merged
+Subscriptions.Add(R3.Observable.Merge(
+        Model.Observable.Where(p => p.Intersect(["Model.HighlightMatches"]).Any()),
+        Model.Observable.Where(p => p.Intersect(["Model.SearchTerm"]).Any())
+            .Debounce(TimeSpan.FromMilliseconds(250)))
+    .SubscribeAwait(async (props, ct) =>
+    {
+        await OnSearchBatchChangedAsync(ct);
+    }, AwaitOperation.Switch));
+
+protected virtual Task OnSearchBatchChangedAsync(CancellationToken ct) => Task.CompletedTask;
+```
+
+When every member shares one window the generator emits the simpler single-stream form instead.
+
+Hook name: `On{PascalCase(BatchId)}BatchChangedAsync`, so the batch id must be a valid C# identifier
+(RXBG043).
+
+**Three properties worth knowing:**
+
+1. **The window is per property.** Mixing `250` and `0` in one batch is the point of the attribute,
+   not a conflict. Only the timing differs; both members reach the same hook.
+2. **`Debounce`, not `Chunk`.** Trailing edge: a debounced member reaches the hook once the burst
+   *stops*. (Per-property component triggers use a rolling `Chunk` window instead.) A window of `0`
+   emits no operator at all rather than a zero-length timer.
+3. **`AwaitOperation.Switch`, once for the whole batch.** A newer change cancels the running hook's
+   token and starts the new invocation immediately, rather than queueing behind it as a plain
+   `[ObservableComponentTriggerAsync]` (which is `Sequential`) would.
+
+**Versus one component trigger per property:**
+
+```csharp
+// WRONG - N near-identical hooks that all do the same thing
+[ObservableComponentTriggerAsync] public partial string SearchTerm { get; set; } = "";
+[ObservableComponentTriggerAsync] public partial bool HighlightMatches { get; set; }
+
+// WRONG - collapsing them into a counter is the toggle-as-a-signal anti-pattern (§Anti-Patterns 6)
+[ObservableComponentTriggerAsync] public partial int ReloadSignal { get; set; }
+private void BumpReloadSignal() => ReloadSignal++;
+
+// CORRECT - the batch id is the semantic group, and it generates exactly one hook
+[ObservableComponentBatchAsync("search", 250)] public partial string SearchTerm { get; set; } = "";
+[ObservableComponentBatchAsync("search")]      public partial bool HighlightMatches { get; set; }
+```
+
+**Not to be confused with `[ObservableBatch]`.** The names are similar; the mechanisms are unrelated:
+
+| | `[ObservableBatch("x")]` | `[ObservableComponentBatchAsync("x")]` |
+|---|---|---|
+| Where it acts | model - `StateHasChanged(name, batchIds)` | component - a generated subscription |
+| Activation | only inside `using (SuspendNotifications("x"))` | automatic, on any change |
+| Generates code | no | a `protected virtual` hook |
+| Id constraint | any string | must be a valid C# identifier |
+| Needs `[ObservableComponent]` | no | yes, or it is dead (RXBG044) |
+
+They share no state and can be used together or apart. Note in particular that wrapping batch
+members in a `SuspendNotifications` scope does **not** change how often the hook fires — the
+debounce already coalesces the burst. The scope saves *renders*, not hook invocations.
+
+**Diagnostics:** RXBG043 (id is not an identifier, or a window is negative), RXBG044 (no
+`[ObservableComponent]`, so no hook is generated).
+
+See [Synchronising a Server-Driven Table](#synchronising-a-server-driven-table) for the pattern this
+was designed for.
 
 ---
 
@@ -1346,6 +1443,134 @@ public partial class CheckoutModel : ObservableModel
 
 ---
 
+## Synchronising a Server-Driven Table
+
+Third-party components that fetch their own data — `MudTable.ServerData`, `MudDataGrid.ServerData`,
+any "give me a page" callback — are **pull** APIs, while RxBlazorV2 is **push**. This section is the
+reference for bridging the two without the usual mess. The working example lives in
+`RxBlazorV2Sample/Samples/ServerTable`.
+
+### The one fact everything follows from
+
+`MudTable<T>` (MudBlazor 9.8) invokes `ServerData` from exactly two places:
+
+```csharp
+// MudTable.razor.cs
+protected override async Task OnAfterRenderAsync(bool firstRender)
+{
+    if (firstRender) { await InvokeServerLoadFunc(); }
+}
+
+public Task ReloadServerData() => InvokeServerLoadFunc();
+```
+
+**A re-render never refetches.** Neither does a changed `ServerData` delegate identity. Two
+consequences:
+
+1. Something must *call* `ReloadServerData()`. Reactivity alone will not move the table.
+2. The callback may safely publish state — it can cause a re-render, but a re-render cannot cause
+   another fetch. There is no feedback loop to fear, only one to create by accident (below).
+
+`InvokeServerLoadFunc` also calls `CancelToken()` before each fetch, cancelling the previous one.
+
+### The wiring
+
+```
+SearchTerm ─ Debounce(250) ┐
+                            ├─ merge ─ Switch ─▶ OnSearchBatchChangedAsync
+Highlight  ─ (immediate) ───┘                                                    │
+                                                                    table.ReloadServerData()
+                                                                                 │
+                                        MudTable.CancelToken() ─▶ aborts the in-flight fetch
+                                                                                 │
+                                            LoadServerDataAsync(TableState, ct) ─┘
+```
+
+```csharp
+// Model - owns the query
+[ObservableComponentBatchAsync("search", 250)] public partial string SearchTerm { get; set; } = "";
+[ObservableComponentBatchAsync("search")]      public partial bool HighlightMatches { get; set; }
+
+public async Task<TableData<Row>> LoadServerDataAsync(TableState state, CancellationToken ct)
+{
+    var page = await Search.SearchAsync(
+        new SearchRequest(SearchTerm.Trim(), HighlightMatches,
+            state.Page * state.PageSize, state.PageSize,
+            ParseSortField(state.SortLabel), state.SortDirection == SortDirection.Descending),
+        ct);
+
+    LastOutcome = new SearchOutcome(page.TotalHits, page.Elapsed);   // a result, not an input
+    return new TableData<Row> { Items = page.Hits, TotalItems = page.TotalHits };
+}
+```
+
+```csharp
+// Page - the only place the table is told to refetch
+protected override async Task OnSearchBatchChangedAsync(CancellationToken ct)
+{
+    if (_table is not { } table)
+    {
+        return;
+    }
+
+    try
+    {
+        await table.ReloadServerData();
+    }
+    catch (OperationCanceledException)
+    {
+        // Superseded by a newer query.
+    }
+}
+```
+
+### Three rules
+
+**1. Split ownership; never duplicate it.** The table owns page, page size and sort — they arrive in
+`TableState`. The model owns the query. Mirroring `CurrentPage` into a model property means two
+sources of truth for one value, and a reload loop the first time they disagree.
+
+**2. Publish results, never inputs.** The callback may write result state (`LastOutcome`, a log).
+Writing a property that is *in the batch* asks the table to reload itself — that is the one feedback
+loop this design can still create.
+
+**3. Let `OperationCanceledException` propagate.** It is MudTable's documented contract, and it is
+what keeps the previous page on screen while the next one loads. Catching it and returning an empty
+page makes the table blink between queries. Catch it in the *hook*, not in the callback.
+
+### Why cancellation actually works
+
+Three independent layers, none of them hand-written:
+
+| Layer | Mechanism | Cancels |
+|---|---|---|
+| Typing | `Debounce(250ms)` on that member's stream | Superfluous queries, before they start |
+| Hook dispatch | `AwaitOperation.Switch` | The previous hook, releasing it immediately |
+| Fetch | `MudTable.CancelToken()` | The in-flight `ServerData` call |
+
+The middle layer is what makes the third reachable. A plain `[ObservableComponentTriggerAsync]` is
+dispatched `Sequential`, so hook #2 would wait for hook #1's `await ReloadServerData()` to finish —
+the stale page would render in full before the new query even started. `Switch` releases hook #1 at
+once; hook #2 calls `ReloadServerData()`, and MudTable's own `CancelToken()` kills the loser.
+
+### Virtualization
+
+`MudTable` computes `IsVirtualized => Virtualize && !string.IsNullOrEmpty(Height)` and renders the
+current page through `MudVirtualize`. So:
+
+```razor
+<MudTable ServerData="@Model.LoadServerDataAsync"
+          Virtualize="true" Height="60vh" FixedHeader="true" ItemSize="52">
+    <PagerContent><MudTablePager PageSizeOptions="@(new[] { 50, 100, 250, 1000 })" /></PagerContent>
+</MudTable>
+```
+
+`Height` is **required** — without it there is no scroll viewport and virtualization has nothing to
+measure against. Server paging keeps the fetch small; virtualization keeps the DOM small. They solve
+different halves of "the dataset is huge", and a 1000-row page needs both.
+
+---
+
 ## Multi-Assembly Considerations
 
 ### When to Split Models into Assemblies
@@ -1556,6 +1781,45 @@ private void OnInviteStatusChanged()
 
 **Solution:** Use the Service-Model Interaction pattern (Section 9). Model commands own workflows, Status property signals completion, other models observe Status.
 
+### 6b. Counter Property as a Reload Signal
+
+The most common form of the toggle-as-a-signal anti-pattern: several inputs each need to re-run one
+expensive side effect, so a counter is incremented to stand in for "do it again".
+
+```csharp
+// WRONG - a counter is not state, it is an event in disguise
+[ObservableComponentTriggerAsync]
+public partial int ReloadSignal { get; set; }
+
+private void BumpReloadSignal() => ReloadSignal++;
+
+[ObservableTrigger(nameof(BumpReloadSignal))] public partial SearchDisplayMode Mode { get; set; }
+[ObservableTrigger(nameof(BumpReloadSignal))] public partial Fts5QueryMode QueryMode { get; set; }
+// ... plus every add / delete / refresh path calling BumpReloadSignal()
+```
+
+The usual defence is DRY: the alternative was one `[ObservableComponentTriggerAsync]` per input and
+several near-identical hooks that all call the same method. That defence is real, and it is exactly
+what a **component batch** removes:
+
+```csharp
+// CORRECT - the batch id is the semantic group, and it generates exactly one hook
+[ObservableComponentBatchAsync("search", 250)] public partial string SearchTerm { get; set; } = "";
+[ObservableComponentBatchAsync("search")]      public partial bool HighlightMatches { get; set; }
+
+// Generated: OnSearchBatchChangedAsync(CancellationToken ct)
+```
+
+Better on every axis than the counter: no meaningless property in the model, one hook instead of N,
+a burst of keystrokes debounced into a single side effect instead of one per increment, and each
+input free to choose its own urgency — the typed term settles, the switch fires at once.
+
+For a workflow that genuinely needs to signal *completion* rather than *input changed*, use a
+semantic status property as in §6 above — not a counter either way.
+
+See [Component Batch Triggers](#5b-component-batch-triggers-observablecomponentbatchasync) and
+[Synchronising a Server-Driven Table](#synchronising-a-server-driven-table).
+
 ### 7. Manual StateHasChanged Calls
 
 ```csharp
@@ -1622,6 +1886,8 @@ public partial class MyModel : ObservableModel
 | RXBG033 | Error | Command method missing return value |
 | RXBG040 | Error | Invalid init accessor on property |
 | RXBG041 | Warning | Unused component trigger |
+| RXBG043 | Error | Invalid observable component batch declaration |
+| RXBG044 | Warning | Observable component batch has no effect |
 | RXBG050 | Info | Unregistered service warning |
 | RXBG051 | Error | DI scope violation |
 | RXBG052 | Error | Referenced model in different assembly |
@@ -1770,6 +2036,24 @@ START: What do you need?
         │               │    │ • Component-level effects       │
         │               │    └─────────────────────────────────┘
         │               │
+        │               ├─── SEVERAL properties feed ONE UI effect
+        │               │           │
+        │               │           ▼
+        │               │    ┌─────────────────────────────────┐
+        │               │    │ Use                             │
+        │               │    │ [ObservableComponentBatchAsync]  │
+        │               │    │ (one hook per batch; the         │
+        │               │    │  debounce window is per property)│
+        │               │    │                                 │
+        │               │    │ • Search-as-you-type            │
+        │               │    │ • Reloading a server-driven     │
+        │               │    │   table / grid                  │
+        │               │    │ • Any burst of edits driving    │
+        │               │    │   one expensive side effect     │
+        │               │    │                                 │
+        │               │    │ NOT a counter you increment     │
+        │               │    └─────────────────────────────────┘
+        │               │
         │               └─── EXTERNAL SERVICE needs notification
         │                           │
         │                           ▼
@@ -1807,6 +2091,7 @@ START: What do you need?
 | `this.Email` (own property) | **EXPLICIT** | `[ObservableTrigger]` | `[ObservableTrigger(nameof(Validate))]` |
 | `Settings.Theme` (injected model) | **AUTO** | Internal Observer | Just access it in private method |
 | Any model (from service) | **EXPLICIT** | `[ObservableModelObserver]` | `[ObservableModelObserver(nameof(Model.Prop))]` |
+| Several own properties → one UI effect | **EXPLICIT** | Component Batch Trigger | `[ObservableComponentBatchAsync("search", 250)]` |
 
 ### Why This Design?
 

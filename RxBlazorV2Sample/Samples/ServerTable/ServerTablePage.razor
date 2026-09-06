@@ -1,0 +1,225 @@
+@page "/samples/server-table"
+@using RxBlazorV2.MudBlazor.Buttons
+@using RxBlazorV2Sample.Samples.Helpers
+@using RxBlazorV2Sample.Services
+@inherits ServerTableModelComponent
+
+<PageTitle>Server-Side Table</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge">
+    <MudText Typo="Typo.h3" GutterBottom="true">Server-Side Table</MudText>
+    <MudText Typo="Typo.body1" Class="mb-4">
+        A <code>MudTable</code> driven entirely by <code>ServerData</code> over @Model.CorpusSize.ToString("N0")
+        documents. Two inputs share one <code>[ObservableComponentBatchAsync("search")]</code> batch, which
+        generates a single <code>OnSearchBatchChangedAsync</code> hook — the only thing in the sample that asks
+        the table to reload.
+    </MudText>
+
+    <MudCard Class="mb-4">
+        <MudCardContent>
+            <MudGrid Spacing="3" Class="align-center">
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="Model.SearchTerm"
+                                  Immediate="true"
+                                  Clearable="true"
+                                  Label="Full-text search"
+                                  Placeholder="try: cache, retry, shard, security"
+                                  Variant="Variant.Outlined"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Search"
+                                  HelperText="@($"Each keystroke restarts a {ServerTableModel.SearchDebounceMs} ms debounce window")" />
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudSwitch @bind-Value="Model.HighlightMatches"
+                               Color="Color.Primary"
+                               Label="Highlight matches" />
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                        Markup is produced server-side, so toggling re-runs the query with the current term —
+                        immediately, because this member of the batch declares no debounce window.
+                    </MudText>
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudButtonRx Command="@Model.ResetCommand"
+                                 Variant="Variant.Outlined"
+                                 Color="Color.Secondary"
+                                 StartIcon="@Icons.Material.Filled.RestartAlt"
+                                 FullWidth="true">
+                        Reset both inputs
+                    </MudButtonRx>
+                </MudItem>
+            </MudGrid>
+
+            <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Class="mt-3">
+                @if (Model.LastOutcome is { } outcome)
+                {
+                    @if (outcome.WasSearch)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text"
+                                 Icon="@Icons.Material.Filled.FilterAlt">
+                            @outcome.TotalHits.ToString("N0") hits for "@outcome.Term"
+                        </MudChip>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Text"
+                                 Icon="@Icons.Material.Filled.Timer">
+                            @outcome.Elapsed.TotalMilliseconds.ToString("F0") ms
+                        </MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Text"
+                                 Icon="@Icons.Material.Filled.Storage">
+                            Browsing all @outcome.TotalHits.ToString("N0") documents
+                        </MudChip>
+                    }
+                }
+                <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text"
+                         Icon="@Icons.Material.Filled.CloudQueue">
+                    simulated latency @Model.SimulatedLatency.TotalMilliseconds.ToString("F0") ms
+                </MudChip>
+            </MudStack>
+        </MudCardContent>
+    </MudCard>
+
+    @*
+        Virtualize + Height is what keeps a 1000-row page cheap: MudTable renders the page through
+        MudVirtualize, so only the rows in the viewport reach the DOM. Height is required - without a
+        fixed height there is no scroll viewport and virtualization has nothing to virtualize against.
+    *@
+    <MudTable @ref="_table"
+              T="SearchHit"
+              ServerData="@Model.LoadServerDataAsync"
+              Virtualize="true"
+              Height="60vh"
+              FixedHeader="true"
+              ItemSize="52"
+              OverscanCount="6"
+              Dense="true"
+              Hover="true"
+              Striped="true"
+              Breakpoint="Breakpoint.Sm"
+              LoadingProgressColor="Color.Info">
+        <HeaderContent>
+            <MudTh>
+                <MudTableSortLabel T="SearchHit" SortLabel="@ServerTableModel.TitleSortLabel">Title</MudTableSortLabel>
+            </MudTh>
+            <MudTh>Body</MudTh>
+            <MudTh>Category</MudTh>
+            <MudTh>
+                <MudTableSortLabel T="SearchHit" SortLabel="@ServerTableModel.PublishedSortLabel">Published</MudTableSortLabel>
+            </MudTh>
+            <MudTh>
+                <MudTableSortLabel T="SearchHit" SortLabel="@ServerTableModel.WordsSortLabel">Words</MudTableSortLabel>
+            </MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Title">
+                @if (context.TitleMarkup is { } titleMarkup)
+                {
+                    @((MarkupString)titleMarkup)
+                }
+                else
+                {
+                    @context.Title
+                }
+            </MudTd>
+            <MudTd DataLabel="Body" Style="max-width: 40rem;">
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                    @if (context.BodyMarkup is { } bodyMarkup)
+                    {
+                        @((MarkupString)bodyMarkup)
+                    }
+                    else
+                    {
+                        @context.Body
+                    }
+                </MudText>
+            </MudTd>
+            <MudTd DataLabel="Category">
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@context.Category</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Published">@context.Published.ToString("yyyy-MM-dd")</MudTd>
+            <MudTd DataLabel="Words">@context.Words</MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>No document matches this search.</MudText>
+        </NoRecordsContent>
+        <LoadingContent>
+            <MudText>Querying @Model.CorpusSize.ToString("N0") documents…</MudText>
+        </LoadingContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="@(new[] { 50, 100, 250, 1000 })" />
+        </PagerContent>
+    </MudTable>
+
+    <UsageWithLogging Usage="@Model.Usage" LogEntries="@Model.LogEntries" Class="mt-4" />
+
+    <MudPaper Class="pa-4 mt-4">
+        <MudText Typo="Typo.h6" GutterBottom="true">Key Concepts</MudText>
+        <MudList T="string">
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Merge">
+                <strong>One batch, one hook.</strong> <code>SearchTerm</code> and <code>HighlightMatches</code>
+                share <code>[ObservableComponentBatchAsync("search")]</code>, so the generator emits a single
+                <code>OnSearchBatchChangedAsync</code> instead of one hook per input.
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Timer">
+                <strong>The debounce window is per property.</strong> The typed term settles for
+                @ServerTableModel.SearchDebounceMs ms (R3's trailing-edge <code>Debounce</code>); the switch
+                declares no window and reloads at once. The generator emits one stream per distinct window and
+                merges them into the one subscription.
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.SwapHoriz">
+                <strong>Switch cancels the loser.</strong> The hook is dispatched with
+                <code>AwaitOperation.Switch</code>, so a newer query releases the previous hook at once; its
+                <code>ReloadServerData()</code> then makes MudTable cancel the in-flight fetch.
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.CallSplit">
+                <strong>Ownership is split, not duplicated.</strong> The table owns page, page size and sort
+                (they arrive in <code>TableState</code>); the model owns the term and the display mode.
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Output">
+                <strong>Publish results, never inputs.</strong> <code>LoadServerDataAsync</code> writes
+                <code>LastOutcome</code> and the log, never a batched property — writing one would ask the
+                table to reload itself.
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.ViewList">
+                <strong>Virtualize needs a Height.</strong> <code>IsVirtualized</code> is
+                <code>Virtualize &amp;&amp; Height is not null</code>; server paging keeps the fetch small and
+                virtualization keeps the DOM small, so a 1000-row page stays cheap.
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Layers">
+                <strong>Unrelated to <code>[ObservableBatch]</code>.</strong> That attribute groups properties
+                for <code>SuspendNotifications</code> scopes and generates nothing. This one generates a hook
+                and never touches notification suspension — different mechanisms, different attributes.
+            </MudListItem>
+        </MudList>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    // The one field that legitimately belongs in a reactive component rather than on the model:
+    // it is a Blazor component reference assigned by the renderer, not application state. Putting a
+    // MudTable handle on the model would make the model reach into the UI, which is the thing this
+    // pattern exists to avoid. Every piece of actual state here lives on ServerTableModel.
+    private MudTable<SearchHit>? _table;
+
+    /// <summary>
+    /// Generated by the debounced <c>[ObservableBatch("search", 250)]</c> group. This is the single
+    /// place the table is asked to refetch — MudTable never reloads on a re-render.
+    /// </summary>
+    protected override async Task OnSearchBatchChangedAsync(CancellationToken ct)
+    {
+        if (_table is not { } table)
+        {
+            return;
+        }
+
+        try
+        {
+            await table.ReloadServerData();
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer query started and MudTable cancelled this fetch. Its result is already
+            // obsolete, and the previously rendered page stays on screen until the new one lands.
+        }
+    }
+}

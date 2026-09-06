@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Diagnostics;
 using RxBlazorV2Generator.Extensions;
+using RxBlazorV2Generator.Helpers;
 using RxBlazorV2Generator.Models;
 using System.Collections.Immutable;
 
@@ -293,6 +294,10 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
 
             // Extract component attribute data for later ComponentInfo generation
             ExtractComponentAttributeData(namedTypeSymbol, record);
+
+            // Validate [ObservableComponentBatchAsync] batches (RXBG043/044). Needs the component
+            // attribute data above, so it runs after ExtractComponentAttributeData.
+            CheckComponentBatches(namedTypeSymbol, classDecl, record);
 
             // NOTE: RXBG041 (UnusedObservableComponentTriggerWarning) is checked in the generator
             // after all ComponentInfo is extracted, where we have the complete model reference graph
@@ -650,6 +655,9 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
             // Extract component attribute data
             ExtractComponentAttributeData(namedTypeSymbol, record);
 
+            // Validate [ObservableComponentBatchAsync] batches (RXBG043/044)
+            CheckComponentBatches(namedTypeSymbol, primaryDecl, record);
+
             return record;
         }
         catch (OperationCanceledException)
@@ -673,6 +681,10 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
     // Property names with component triggers (propertyName -> (hasSync, syncHookName, hasAsync, asyncHookName, location))
     public Dictionary<string, (bool hasSync, string? syncHookName, bool hasAsync, string? asyncHookName, Location location)> ComponentTriggerProperties { get; private set; } = [];
 
+    // [ObservableComponentBatchAsync] memberships: (propertyName, batchId, debounceMilliseconds).
+    // Plain data rather than symbols, so the record stays safe to cache across compilations.
+    public List<(string PropertyName, string BatchId, int DebounceMilliseconds)> ComponentBatchProperties { get; private set; } = [];
+
     // Component information for component generation
     // Set later in pipeline when all records are available for referenced model lookup
     public ComponentInfo? ComponentInfo { get; set; }
@@ -695,6 +707,111 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
     public void AddDiagnostic(Diagnostic diagnostic)
     {
         _diagnostics.Add(diagnostic);
+    }
+
+    /// <summary>
+    /// Reads every <c>[ObservableComponentBatchAsync]</c> on a property. Values come from the
+    /// semantic model's constructor arguments, so positional and named forms both work.
+    /// </summary>
+    internal static List<(string BatchId, int DebounceMilliseconds, Location Location)> GetComponentBatchMemberships(
+        IPropertySymbol propertySymbol)
+    {
+        var memberships = new List<(string, int, Location)>();
+
+        foreach (var attribute in propertySymbol.GetAttributes())
+        {
+            if (attribute.AttributeClass?.Name != "ObservableComponentBatchAsyncAttribute" ||
+                attribute.ConstructorArguments.Length == 0 ||
+                attribute.ConstructorArguments[0].Value is not string batchId)
+            {
+                continue;
+            }
+
+            // Second constructor argument is the optional per-property debounce window.
+            var debounceMilliseconds = 0;
+            if (attribute.ConstructorArguments.Length > 1 &&
+                attribute.ConstructorArguments[1].Value is int declaredDebounce)
+            {
+                debounceMilliseconds = declaredDebounce;
+            }
+
+            var location = attribute.ApplicationSyntaxReference?.GetSyntax().GetLocation()
+                           ?? propertySymbol.Locations.FirstOrDefault()
+                           ?? Location.None;
+
+            memberships.Add((batchId, debounceMilliseconds, location));
+        }
+
+        return memberships;
+    }
+
+    /// <summary>
+    /// Validates <c>[ObservableComponentBatchAsync]</c> batches and records RXBG043/RXBG044.
+    /// <para>
+    /// Grouping and validity are decided by <see cref="ComponentBatchResolver"/>, the same helper the
+    /// component generator uses to decide what to emit - detection is shared, only reporting lives here.
+    /// </para>
+    /// </summary>
+    private static void CheckComponentBatches(
+        INamedTypeSymbol namedTypeSymbol,
+        ClassDeclarationSyntax classDecl,
+        ObservableModelRecord record)
+    {
+        var memberships = new List<(string PropertyName, string BatchId, int DebounceMilliseconds)>();
+        var locations = new Dictionary<string, Location>();
+
+        foreach (var property in namedTypeSymbol.GetMembers().OfType<IPropertySymbol>())
+        {
+            foreach (var (batchId, debounceMilliseconds, location) in GetComponentBatchMemberships(property))
+            {
+                memberships.Add((property.Name, batchId, debounceMilliseconds));
+
+                // Report on the first attribute application seen for this batch.
+                if (!locations.ContainsKey(batchId))
+                {
+                    locations[batchId] = location;
+                }
+            }
+        }
+
+        if (memberships.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var resolution in ComponentBatchResolver.Resolve(memberships))
+        {
+            var location = locations.TryGetValue(resolution.BatchId, out var declared)
+                ? declared
+                : classDecl.Identifier.GetLocation();
+
+            switch (resolution.Issue)
+            {
+                case ComponentBatchIssue.INVALID_BATCH_ID:
+                    record.AddDiagnostic(Diagnostic.Create(
+                        DiagnosticDescriptors.InvalidComponentBatchError,
+                        location,
+                        resolution.BatchId,
+                        "the batch id is not a valid C# identifier, so no hook method name can be formed"));
+                    break;
+
+                case ComponentBatchIssue.NEGATIVE_DEBOUNCE:
+                    record.AddDiagnostic(Diagnostic.Create(
+                        DiagnosticDescriptors.InvalidComponentBatchError,
+                        location,
+                        resolution.BatchId,
+                        $"the debounce window is negative ({resolution.OffendingDebounceMilliseconds} ms)"));
+                    break;
+
+                case ComponentBatchIssue.NONE when !record.HasObservableComponentAttribute:
+                    record.AddDiagnostic(Diagnostic.Create(
+                        DiagnosticDescriptors.UnusedComponentBatchWarning,
+                        location,
+                        resolution.BatchId,
+                        namedTypeSymbol.Name));
+                    break;
+            }
+        }
     }
 
     /// <summary>
@@ -1007,6 +1124,20 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
         }
 
         record.ComponentTriggerProperties = componentTriggers;
+
+        // [ObservableComponentBatchAsync] memberships. Unlike the trigger attributes above this one
+        // needs no syntax-tree fallback: it is only ever read from the property symbol, which does
+        // surface attributes declared on partial properties.
+        var componentBatches = new List<(string, string, int)>();
+        foreach (var member in namedTypeSymbol.GetMembers().OfType<IPropertySymbol>())
+        {
+            foreach (var (batchId, debounceMilliseconds, _) in GetComponentBatchMemberships(member))
+            {
+                componentBatches.Add((member.Name, batchId, debounceMilliseconds));
+            }
+        }
+
+        record.ComponentBatchProperties = componentBatches;
     }
 
     /// <summary>
@@ -1164,12 +1295,29 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                 }
             }
 
+            // Resolve [ObservableComponentBatchAsync] batches into one hook each. Invalid batches are
+            // skipped here without a diagnostic - RxBlazorDiagnosticAnalyzer reports them (SSOT).
+            // Read straight off the model's own property symbols: unlike [ObservableBatch] this
+            // attribute never reaches StateHasChanged, so it needs no property-info plumbing.
+            var componentBatches = ComponentBatchResolver.Resolve(currentRecord.ComponentBatchProperties)
+                .Where(resolution => resolution.IsValid)
+                .Select(resolution => new ComponentBatchInfo(
+                    resolution.BatchId,
+                    resolution.Members
+                        .Select(member => new ComponentBatchMemberInfo(
+                            $"Model.{member.PropertyName}",
+                            member.DebounceMilliseconds))
+                        .ToList(),
+                    ComponentBatchResolver.GetHookMethodName(resolution.BatchId)))
+                .ToList();
+
             return new ComponentInfo(
                 componentClassName,
                 componentNamespace,
                 modelInfo.ClassName,
                 modelInfo.Namespace,
                 allComponentTriggers,
+                componentBatches,
                 currentRecord.GenericTypes,
                 currentRecord.TypeConstraints,
                 modelInfo.ModelReferences,
@@ -1264,7 +1412,27 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                GenericTypes == other.GenericTypes &&
                TypeConstraints == other.TypeConstraints &&
                ComponentTriggerPropertiesEqual(other.ComponentTriggerProperties) &&
+               ComponentBatchPropertiesEqual(other.ComponentBatchProperties) &&
                ComponentInfoEqual(other.ComponentInfo);
+    }
+
+    private bool ComponentBatchPropertiesEqual(
+        List<(string PropertyName, string BatchId, int DebounceMilliseconds)> other)
+    {
+        if (ComponentBatchProperties.Count != other.Count)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < ComponentBatchProperties.Count; i++)
+        {
+            if (ComponentBatchProperties[i] != other[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private bool ComponentTriggerPropertiesEqual(
@@ -1334,6 +1502,14 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
             hash.Add(kvp.Value.syncHookName);
             hash.Add(kvp.Value.hasAsync);
             hash.Add(kvp.Value.asyncHookName);
+        }
+
+        // Hash component batch memberships
+        foreach (var membership in ComponentBatchProperties)
+        {
+            hash.Add(membership.PropertyName);
+            hash.Add(membership.BatchId);
+            hash.Add(membership.DebounceMilliseconds);
         }
 
         hash.Add(ComponentInfo);

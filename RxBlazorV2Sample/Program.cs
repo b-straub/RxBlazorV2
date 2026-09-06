@@ -38,6 +38,10 @@ builder.Services.AddScoped<ModelObserversService>();
 // Register service-model interaction sample service
 builder.Services.AddScoped<ProcessingService>();
 
+// Register the server-table sample's search backend. Singleton because the 200,000 document
+// corpus is immutable and built once at start-up - every scoped model shares the same index.
+builder.Services.AddSingleton<IDocumentSearchService, DocumentSearchService>();
+
 // The localization demo on /samples/error-handling switches CultureInfo at runtime;
 // in dev builds Blazor includes every satellite resource assembly, so just flipping
 // CultureInfo.DefaultThreadCurrentUICulture from the page is enough.

@@ -132,6 +132,107 @@ public class PartialPropertyInfo
 }
 
 /// <summary>
+/// One property feeding an <c>[ObservableComponentBatchAsync]</c> batch, with its own debounce window.
+/// </summary>
+/// <param name="qualifiedPropertyName">Name as it appears on the model observable, e.g. <c>Model.SearchTerm</c>.</param>
+/// <param name="debounceMilliseconds">Trailing debounce window; zero means immediate.</param>
+public sealed class ComponentBatchMemberInfo(string qualifiedPropertyName, int debounceMilliseconds)
+    : IEquatable<ComponentBatchMemberInfo>
+{
+    public string QualifiedPropertyName { get; } = qualifiedPropertyName;
+    public int DebounceMilliseconds { get; } = debounceMilliseconds;
+
+    public bool Equals(ComponentBatchMemberInfo? other)
+    {
+        if (other is null)
+        {
+            return false;
+        }
+
+        return QualifiedPropertyName == other.QualifiedPropertyName &&
+               DebounceMilliseconds == other.DebounceMilliseconds;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return Equals(obj as ComponentBatchMemberInfo);
+    }
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        hash.Add(QualifiedPropertyName);
+        hash.Add(DebounceMilliseconds);
+        return hash.ToHashCode();
+    }
+}
+
+/// <summary>
+/// An <c>[ObservableComponentBatchAsync]</c> batch resolved for one component: the properties that
+/// feed it (each with its own debounce window) and the name of the generated hook method.
+/// </summary>
+public sealed class ComponentBatchInfo(
+    string batchId,
+    List<ComponentBatchMemberInfo> members,
+    string hookMethodName) : IEquatable<ComponentBatchInfo>
+{
+    public string BatchId { get; } = batchId;
+    public List<ComponentBatchMemberInfo> Members { get; } = members;
+    public string HookMethodName { get; } = hookMethodName;
+
+    /// <summary>
+    /// Distinct debounce windows in this batch, ascending. A single value means the generator can
+    /// emit one filtered stream; several mean one stream per window, merged.
+    /// </summary>
+    public List<int> DistinctDebounceWindows =>
+        Members.Select(member => member.DebounceMilliseconds).Distinct().OrderBy(window => window).ToList();
+
+    public bool Equals(ComponentBatchInfo? other)
+    {
+        if (other is null)
+        {
+            return false;
+        }
+
+        if (BatchId != other.BatchId ||
+            HookMethodName != other.HookMethodName ||
+            Members.Count != other.Members.Count)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < Members.Count; i++)
+        {
+            if (!Members[i].Equals(other.Members[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return Equals(obj as ComponentBatchInfo);
+    }
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        hash.Add(BatchId);
+        hash.Add(HookMethodName);
+
+        foreach (var member in Members)
+        {
+            hash.Add(member);
+        }
+
+        return hash.ToHashCode();
+    }
+}
+
+/// <summary>
 /// Information about a non-partial IObservableCollection property.
 /// These are getter-only properties that are reactive through collection observation.
 /// Example: public ObservableList&lt;string&gt; Errors { get; }
@@ -582,6 +683,7 @@ public class ComponentInfo : IEquatable<ComponentInfo>
     public string ModelTypeName { get; }
     public string ModelNamespace { get; }
     public List<ComponentTriggerInfo> ComponentTriggers { get; }
+    public List<ComponentBatchInfo> ComponentBatches { get; }
     public string GenericTypes { get; }
     public string TypeConstrains { get; }
     public List<ModelReferenceInfo> ModelReferences { get; }
@@ -594,6 +696,7 @@ public class ComponentInfo : IEquatable<ComponentInfo>
         string modelTypeName,
         string modelNamespace,
         List<ComponentTriggerInfo>? componentTriggers = null,
+        List<ComponentBatchInfo>? componentBatches = null,
         string? genericTypes = null,
         string? typeConstrains = null,
         List<ModelReferenceInfo>? modelReferences = null,
@@ -605,6 +708,7 @@ public class ComponentInfo : IEquatable<ComponentInfo>
         ModelTypeName = modelTypeName;
         ModelNamespace = modelNamespace;
         ComponentTriggers = componentTriggers ?? [];
+        ComponentBatches = componentBatches ?? [];
         GenericTypes = genericTypes ?? string.Empty;
         TypeConstrains = typeConstrains ?? string.Empty;
         ModelReferences = modelReferences ?? [];
@@ -629,6 +733,7 @@ public class ComponentInfo : IEquatable<ComponentInfo>
                ModelTypeName == other.ModelTypeName &&
                ModelNamespace == other.ModelNamespace &&
                ListEqual(ComponentTriggers, other.ComponentTriggers) &&
+               ListEqual(ComponentBatches, other.ComponentBatches) &&
                GenericTypes == other.GenericTypes &&
                TypeConstrains == other.TypeConstrains &&
                ListEqual(ModelReferences, other.ModelReferences) &&
@@ -670,6 +775,11 @@ public class ComponentInfo : IEquatable<ComponentInfo>
         foreach (var trigger in ComponentTriggers)
         {
             hash.Add(trigger);
+        }
+
+        foreach (var batch in ComponentBatches)
+        {
+            hash.Add(batch);
         }
 
         hash.Add(GenericTypes);

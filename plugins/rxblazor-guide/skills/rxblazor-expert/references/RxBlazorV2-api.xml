@@ -299,6 +299,114 @@
              is in a different assembly, either move it to the same assembly or set includeReferencedTriggers=false.</para>
              </remarks>
         </member>
+        <member name="T:RxBlazorV2.Model.ObservableComponentBatchAsyncAttribute">
+             <summary>
+             Groups several properties into one batch that generates a single async component hook.
+             Every property carrying the same <paramref name="batchId"/> feeds the generated
+             <c>On{BatchId}BatchChangedAsync(CancellationToken)</c> method on the model's component.
+             </summary>
+             <param name="batchId">
+             Identifier of the batch. Properties sharing it feed the same hook, and the hook method name is
+             derived from it, so it must be a valid C# identifier.
+             </param>
+             <param name="debounceMilliseconds">
+             Trailing debounce window for <b>this property</b>. Zero (the default) means the property reaches
+             the hook immediately - the right choice for a discrete action such as a checkbox or switch.
+             A positive value lets a burst of changes settle first, which is what typing into a text field
+             needs.
+             </param>
+             <remarks>
+             <para>
+             The window is per property, not per batch, so one batch can mix both kinds. The generator emits
+             one filtered stream per distinct window and merges them into a single subscription.
+             </para>
+             <para>
+             The whole batch shares one <c>AwaitOperation.Switch</c> dispatch: a newer change cancels the
+             token of an in-flight hook invocation instead of queueing behind it.
+             </para>
+             <para>
+             Unrelated to <see cref="T:RxBlazorV2.Model.ObservableBatchAttribute"/>, which groups properties for
+             <c>SuspendNotifications</c> scopes and generates nothing.
+             </para>
+             <para>
+             Requires <c>[ObservableComponent]</c> on the model - without it no hook is generated
+             (see <see href="https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG044.md">RXBG044</see>).
+             </para>
+             </remarks>
+             <example>
+             <code>
+             // Typing settles before it reaches the backend.
+             [ObservableComponentBatchAsync("search", 250)]
+             public partial string SearchTerm { get; set; } = "";
+            
+             // A switch click is deliberate - react at once.
+             [ObservableComponentBatchAsync("search")]
+             public partial bool HighlightMatches { get; set; }
+            
+             // Generated on the component:
+             // protected virtual Task OnSearchBatchChangedAsync(CancellationToken ct)
+             </code>
+             </example>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableComponentBatchAsyncAttribute.#ctor(System.String,System.Int32)">
+             <summary>
+             Groups several properties into one batch that generates a single async component hook.
+             Every property carrying the same <paramref name="batchId"/> feeds the generated
+             <c>On{BatchId}BatchChangedAsync(CancellationToken)</c> method on the model's component.
+             </summary>
+             <param name="batchId">
+             Identifier of the batch. Properties sharing it feed the same hook, and the hook method name is
+             derived from it, so it must be a valid C# identifier.
+             </param>
+             <param name="debounceMilliseconds">
+             Trailing debounce window for <b>this property</b>. Zero (the default) means the property reaches
+             the hook immediately - the right choice for a discrete action such as a checkbox or switch.
+             A positive value lets a burst of changes settle first, which is what typing into a text field
+             needs.
+             </param>
+             <remarks>
+             <para>
+             The window is per property, not per batch, so one batch can mix both kinds. The generator emits
+             one filtered stream per distinct window and merges them into a single subscription.
+             </para>
+             <para>
+             The whole batch shares one <c>AwaitOperation.Switch</c> dispatch: a newer change cancels the
+             token of an in-flight hook invocation instead of queueing behind it.
+             </para>
+             <para>
+             Unrelated to <see cref="T:RxBlazorV2.Model.ObservableBatchAttribute"/>, which groups properties for
+             <c>SuspendNotifications</c> scopes and generates nothing.
+             </para>
+             <para>
+             Requires <c>[ObservableComponent]</c> on the model - without it no hook is generated
+             (see <see href="https://github.com/b-straub/RxBlazorV2/blob/master/RxBlazorV2Generator/Diagnostics/Help/RXBG044.md">RXBG044</see>).
+             </para>
+             </remarks>
+             <example>
+             <code>
+             // Typing settles before it reaches the backend.
+             [ObservableComponentBatchAsync("search", 250)]
+             public partial string SearchTerm { get; set; } = "";
+            
+             // A switch click is deliberate - react at once.
+             [ObservableComponentBatchAsync("search")]
+             public partial bool HighlightMatches { get; set; }
+            
+             // Generated on the component:
+             // protected virtual Task OnSearchBatchChangedAsync(CancellationToken ct)
+             </code>
+             </example>
+        </member>
+        <member name="P:RxBlazorV2.Model.ObservableComponentBatchAsyncAttribute.BatchId">
+            <summary>
+            Gets the batch identifier. Properties sharing it feed the same generated hook.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.Model.ObservableComponentBatchAsyncAttribute.DebounceMilliseconds">
+            <summary>
+            Gets this property's trailing debounce window in milliseconds, or zero for immediate delivery.
+            </summary>
+        </member>
         <member name="T:RxBlazorV2.Model.ObservableComponentTriggerAsyncAttribute">
              <summary>
              Generates an async hook method that is called when the property value changes.
@@ -1136,6 +1244,36 @@
             </summary>
             <param name="exception">The exception to record, or <c>null</c> to clear the error.</param>
         </member>
+        <member name="P:RxBlazorV2.Model.ObservableCommandBase.StateChangeProperties">
+             <summary>
+             Property names published when this command's own state changes —
+             <see cref="P:RxBlazorV2.Interface.IObservableCommandAsyncBase.Executing"/>, <see cref="P:RxBlazorV2.Model.ObservableCommandBase.Error"/>, and whatever
+             <see cref="P:RxBlazorV2.Model.ObservableCommandBase.CanExecute"/> is derived from.
+            
+             <para>
+             The command's own qualified name leads, because that is what a component filters on: the
+             generator adds <c>Model.{CommandName}</c> to a component's filter as soon as the razor
+             references the command, and a button bound to it reads <c>Executing</c> / <c>CanExecute</c>
+             during its parent's render. Without the name in this list, a command with no observed
+             properties has nothing to publish that any filter matches, and every progress spinner and
+             disabled state bound to it stays as it was when the component last rendered for some other
+             reason.
+             </para>
+             <para>
+             The observed properties follow: a component that binds them re-renders, which is how
+             <see cref="P:RxBlazorV2.Model.ObservableCommandBase.CanExecute"/> gets re-evaluated where it is bound. The generator emits a single
+             empty string when a command observes nothing (an empty array is not a legal notification),
+             so empties are dropped here.
+             </para>
+             </summary>
+        </member>
+        <member name="M:RxBlazorV2.Model.ObservableCommandBase.NotifyStateChanged">
+            <summary>
+            Publishes <see cref="P:RxBlazorV2.Model.ObservableCommandBase.StateChangeProperties"/> on the owning model. Call after anything that
+            changes what a bound component would render — start and end of execution, cancellation,
+            error.
+            </summary>
+        </member>
         <member name="M:RxBlazorV2.Model.ObservableCommandBase.SubscribeCore(R3.Observer{System.String[]})">
             <summary>
             Subscribes the observer to the owning model's property change notifications, filtered to the observed properties.
@@ -1298,10 +1436,16 @@
             Gets the current cancellation token for the executing command.
             </summary>
         </member>
-        <member name="M:RxBlazorV2.Model.ObservableCommandAsyncBase.ResetCancellationToken(System.Nullable{System.Threading.CancellationToken})">
+        <member name="M:RxBlazorV2.Model.ObservableCommandAsyncBase.ResetCancellationToken(System.Nullable{System.Threading.CancellationToken},System.Boolean)">
             <summary>
-            Resets the cancellation token, optionally linking to an external token.
+            Prepares a cancellation token for a new execution, optionally linking to an external token.
             </summary>
+            <param name="externalToken">Token the new source is linked to, when the caller supplied one.</param>
+            <param name="isSwitch">
+            True when a previous execution is still in flight. That run is cancelled and its
+            <see cref="P:RxBlazorV2.Model.ObservableCommandAsyncBase.LastCancellationReason"/> reported as <see cref="F:RxBlazorV2.Interface.CancellationReason.SWITCH"/>,
+            so the run replacing it keeps <see cref="P:RxBlazorV2.Model.ObservableCommandAsyncBase.Executing"/> set.
+            </param>
         </member>
         <member name="M:RxBlazorV2.Model.ObservableCommandAsyncBase.Cancel">
             <summary>
@@ -1494,6 +1638,16 @@
             Called during asynchronous initialization; override to perform custom async setup logic.
             </summary>
         </member>
+        <member name="M:RxBlazorV2.Model.ObservableModel.OnContextReadyAsync(System.Threading.CancellationToken)">
+            <summary>
+            Called during asynchronous initialization with a cancellation token bound to model disposal.
+            Default implementation delegates to <see cref="M:RxBlazorV2.Model.ObservableModel.OnContextReadyAsync"/> for backwards compatibility —
+            override <i>this</i> overload to pass the token to <see cref="M:System.Threading.Tasks.Task.Delay(System.Int32,System.Threading.CancellationToken)"/> and
+            any other awaitable so a navigation that disposes the model doesn't leave this method writing to a
+            disposed reactive subject.
+            </summary>
+            <param name="cancellationToken">Cancelled when the model is disposed.</param>
+        </member>
         <member name="M:RxBlazorV2.Model.ObservableModel.StateHasChanged(System.String,System.String[])">
             <summary>
             Notifies subscribers that a single property has changed.
@@ -1576,7 +1730,7 @@
         </member>
         <member name="M:RxBlazorV2.Model.ObservableModel.Dispose(System.Boolean)">
             <summary>
-            Releases managed resources when disposing is true.
+            Releases managed resources when disposing is true. Safe to call multiple times.
             </summary>
         </member>
         <member name="T:RxBlazorV2.Model.ObservableCommandR`1">
@@ -2062,6 +2216,15 @@
             <summary>
             Called after first render; override to perform custom asynchronous initialization.
             </summary>
+        </member>
+        <member name="M:RxBlazorV2.Component.ObservableComponent`1.OnContextReadyAsync(System.Threading.CancellationToken)">
+            <summary>
+            Called after first render with a cancellation token bound to component disposal. Default
+            implementation delegates to <see cref="M:RxBlazorV2.Component.ObservableComponent`1.OnContextReadyAsync"/> for backwards compatibility —
+            override <i>this</i> overload to pass the token to any awaitable so navigating away during
+            initialization doesn't keep work running against torn-down state.
+            </summary>
+            <param name="cancellationToken">Cancelled when the component is disposed.</param>
         </member>
         <member name="M:RxBlazorV2.Component.ObservableComponent`1.OnDispose">
             <summary>

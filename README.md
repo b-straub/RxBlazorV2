@@ -541,6 +541,44 @@ public partial class FormModel : ObservableModel
 }
 ```
 
+## Component Batch Triggers
+
+Several inputs that drive **one** component-level side effect belong in one batch. The generator
+emits a single hook for the whole group, and each property chooses its own debounce window:
+
+```csharp
+[ObservableComponent]
+public partial class ServerTableModel : ObservableModel
+{
+    // Typed input: let the burst settle before it reaches the backend.
+    [ObservableComponentBatchAsync("search", 250)]
+    public partial string SearchTerm { get; set; } = "";
+
+    // A switch click is one deliberate action: no window, react at once.
+    [ObservableComponentBatchAsync("search")]
+    public partial bool HighlightMatches { get; set; }
+}
+
+// Generated on the component - one stream per distinct window, merged:
+//   R3.Observable.Merge(
+//       Model.Observable.Where(p => p.Intersect(["Model.HighlightMatches"]).Any()),
+//       Model.Observable.Where(p => p.Intersect(["Model.SearchTerm"]).Any())
+//           .Debounce(TimeSpan.FromMilliseconds(250)))
+//     .SubscribeAwait(async (props, ct) => await OnSearchBatchChangedAsync(ct),
+//         AwaitOperation.Switch)
+//
+//   protected virtual Task OnSearchBatchChangedAsync(CancellationToken ct)
+```
+
+`AwaitOperation.Switch` means a newer change cancels the running hook's token instead of queueing
+behind it — the reason this pattern can drive a server-side table without a reload counter. See the
+`ServerTable` sample and
+[Synchronising a Server-Driven Table](docs/REACTIVE_PATTERNS.md#synchronising-a-server-driven-table).
+
+> Despite the similar name this is unrelated to `[ObservableBatch]` above: that one groups properties
+> for `SuspendNotifications` scopes and generates nothing, this one generates a component hook and
+> never touches notification suspension.
+
 ## Key Attributes
 
 | Attribute                        | Target   | Description                                       |
@@ -554,7 +592,8 @@ public partial class FormModel : ObservableModel
 | `[ObservableTriggerAsync]`       | Property | Execute method on change (async)                  |
 | `[ObservableCommandTrigger]`     | Property | Auto-execute command on property change           |
 | `[ObservableModelObserver]`      | Method   | Subscribe service method to model property changes |
-| `[ObservableBatch]`              | Property | Group for batched notifications                   |
+| `[ObservableBatch]`              | Property | Group for batched notifications (`SuspendNotifications`) |
+| `[ObservableComponentBatchAsync]` | Property | Group several properties into one debounced component hook |
 
 ## Architecture
 
@@ -592,6 +631,7 @@ See the **RxBlazorV2Sample** project for comprehensive, interactive examples —
 | **ModelPatterns**               | Partial constructor pattern examples                               |
 | **GenericModels**               | Generic observable models with DI                                  |
 | **ObservableBatches**           | Batched property notifications                                     |
+| **ServerTable**                 | Server-side `MudTable` over 200,000 rows: one `[ObservableComponentBatchAsync]` batch drives a single reload hook, with `Virtualize` and full-text search that cancels on each keystroke |
 | **ValueEquality**               | Automatic value equality                                           |
 | **CrossComponentCommunication** | Share models across components                                     |
 | **InternalModelObservers**      | Auto-detected private methods reacting to referenced model changes |
