@@ -16,10 +16,10 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v5
       with:
         dotnet-version: '10.0.x'
 
@@ -130,11 +130,11 @@ jobs:
 
     - name: Upload artifact
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-      uses: actions/upload-pages-artifact@v3
+      uses: actions/upload-pages-artifact@v5
       with:
         path: ./pages
 
     - name: Deploy to GitHub Pages
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       id: deployment
-      uses: actions/deploy-pages@v4
+      uses: actions/deploy-pages@v5
