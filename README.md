@@ -14,13 +14,37 @@ A reactive programming framework for Blazor applications built on top of [R3 (Re
 > **Breaking changes in 1.2.x** — `ComponentTriggerType` has been removed. All existing `[ObservableComponentTrigger]` usages must be reviewed. See [Breaking Changes](#breaking-changes) below for the cleanup checklist.
 
 > [!TIP]
-> **New in 1.2.x (non-breaking)** — cancellation token on `OnContextReadyAsync`, plus swipe + sort list components in `RxBlazorV2.MudBlazor`. See [What's New](#whats-new) below.
+> **New in 1.3.0 (non-breaking)** — `[ObservableComponentBatchAsync]` groups several inputs into one debounced component hook. See [What's New](#whats-new) below.
 
 ## What's New
 
 The following are **non-breaking** additions — existing code continues to compile and run unchanged.
 
-### `OnContextReadyAsync(CancellationToken)` overload
+### 1.3.0 — `[ObservableComponentBatchAsync]`
+
+Several properties driving one component-level side effect used to mean one `[ObservableComponentTriggerAsync]` per property and that many near-identical hooks — or a single counter property incremented to mean "do it again", which is the toggle-as-a-signal anti-pattern. A batch names the group instead, and generates exactly one hook for it:
+
+```csharp
+[ObservableComponent]
+public partial class ServerTableModel : ObservableModel
+{
+    // Typed input: let the burst settle before anything expensive runs.
+    [ObservableComponentBatchAsync("search", 250)]
+    public partial string SearchTerm { get; set; } = "";
+
+    // A switch click is one deliberate action: no window, honoured at once.
+    [ObservableComponentBatchAsync("search")]
+    public partial bool HighlightMatches { get; set; }
+}
+
+// Generated: protected virtual Task OnSearchBatchChangedAsync(CancellationToken ct)
+```
+
+The debounce window is **per property**, because inputs in one group rarely deserve the same timing. The generator emits one stream per distinct window and merges them, so each member keeps its own urgency while the batch still resolves to a single hook. Dispatch is `AwaitOperation.Switch` once for the whole batch: a newer change cancels the running hook's token rather than queueing behind it.
+
+Despite the similar name this is unrelated to `[ObservableBatch]`, which is unchanged — that one tags `StateHasChanged` so a `SuspendNotifications` scope can recognise the property and generates nothing. See [Component Batch Triggers](#component-batch-triggers) for the full comparison, the `ServerTable` sample for it driving a server-side `MudTable` over 200,000 rows, and the new diagnostics **RXBG043** / **RXBG044**.
+
+### 1.2.x — `OnContextReadyAsync(CancellationToken)` overload
 
 Both `ObservableModel` and `ObservableComponent<T>` now expose a cancellation-aware `OnContextReadyAsync(CancellationToken)` virtual. The token is cancelled when the model or component is disposed, so async initialization work (e.g. `await Task.Delay(...)` before flipping a property) aborts cleanly instead of writing to a torn-down R3 subject after navigation.
 
@@ -42,7 +66,7 @@ protected override async Task OnContextReadyAsync(CancellationToken cancellation
 }
 ```
 
-### Swipe + sort list components in `RxBlazorV2.MudBlazor`
+### 1.2.x — Swipe + sort list components in `RxBlazorV2.MudBlazor`
 
 Two reactive list components for iOS-Mail-style swipe actions and drag-to-reorder:
 
