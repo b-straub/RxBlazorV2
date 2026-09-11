@@ -72,6 +72,19 @@
 
     #endregion
 
+    #region Queue Settings
+
+    /// <summary>
+    /// How long a queued message waits before it is displayed. Queued messages are added through the
+    /// model's QueueInfo / QueueSuccess methods; a message arriving inside the window - or a clear
+    /// covering the non-error messages - drops the queued one before it is ever shown.
+    /// Default: 1 second.
+    /// </summary>
+    [Parameter]
+    public TimeSpan QueueWindow { get; set; } = TimeSpan.FromSeconds(1);
+
+    #endregion
+
     #region Snackbar Settings
 
     /// <summary>
@@ -105,8 +118,8 @@
     private Guid? _previousLastMessageId;
 
     // Computed properties for filtering
-    private List<StatusMessage> ErrorMessages => Model.Messages.Where(m => m.Severity == StatusSeverity.Error).ToList();
-    private List<StatusMessage> NonErrorMessages => Model.Messages.Where(m => m.Severity != StatusSeverity.Error).ToList();
+    private List<StatusMessage> ErrorMessages => [.. Model.Messages.Where(m => m.Severity == StatusSeverity.Error)];
+    private List<StatusMessage> NonErrorMessages => [.. Model.Messages.Where(m => m.Severity != StatusSeverity.Error)];
 
     // Display mode helpers
     private bool ShowErrorIcon => ErrorDisplayMode is StatusDisplayMode.ICON or StatusDisplayMode.SNACKBAR_AND_ICON;
@@ -130,6 +143,7 @@
         // Sync parameters to model's modes
         Model.ErrorMessageMode = ErrorMessageMode;
         Model.MessageMessageMode = MessageMessageMode;
+        Model.QueueWindow = QueueWindow;
 
         base.OnParametersSet();
     }

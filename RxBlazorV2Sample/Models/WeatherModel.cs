@@ -94,6 +94,11 @@ public partial class WeatherModel : ObservableModel
         {
             IsLoading = true;
 
+            // Queued, not added: the note is held for StatusModel.QueueWindow and only reaches the
+            // snackbar when the API is genuinely slow. On a fast response the success or error message
+            // below arrives inside the window and drops it, so nothing flashes up after the fact.
+            StatusModel.QueueInfo($"Fetching forecast for {CurrentLocation}...", nameof(LoadWeatherCommand));
+
             var forecasts = await OpenMeteoClient.GetWeatherForecastAsync(CurrentLocation);
 
             if (forecasts.Length > 0)
@@ -128,10 +133,23 @@ public partial class WeatherModel : ObservableModel
 
     private async Task RefreshAsync(CancellationToken ct)
     {
+        // The refresh deliberately waits 2 s, so this one outlives its window and does show up - the
+        // counterpart to the fetch note above, which usually never makes it out.
+        StatusModel.QueueInfo($"Refreshing {CurrentLocation}...", nameof(RefreshCommand));
+
         try
         {
             await Task.Delay(2000, ct);
             await LoadWeatherAsync();
+        }
+        catch (OperationCanceledException)
+        {
+            // Cancelled: there is nothing left to announce. CancelQueuedMessage reports whether the note
+            // was still waiting - if it had already been published, clear it from the display instead.
+            if (!StatusModel.CancelQueuedMessage())
+            {
+                StatusModel.ClearNonErrorMessages();
+            }
         }
         catch (Exception e)
         {

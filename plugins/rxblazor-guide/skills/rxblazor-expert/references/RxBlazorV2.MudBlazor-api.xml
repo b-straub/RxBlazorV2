@@ -564,6 +564,14 @@
             Default: true.
             </summary>
         </member>
+        <member name="P:RxBlazorV2.MudBlazor.Components.Razor.StatusDisplay.QueueWindow">
+            <summary>
+            How long a queued message waits before it is displayed. Queued messages are added through the
+            model's QueueInfo / QueueSuccess methods; a message arriving inside the window - or a clear
+            covering the non-error messages - drops the queued one before it is ever shown.
+            Default: 1 second.
+            </summary>
+        </member>
         <member name="P:RxBlazorV2.MudBlazor.Components.Razor.StatusDisplay.SnackbarPositionClass">
             <summary>
             Position of the snackbar. Default: TopEnd.

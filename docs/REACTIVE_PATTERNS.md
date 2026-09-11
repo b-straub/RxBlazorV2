@@ -724,6 +724,44 @@ public partial OrderModel
 </MudAppBar>
 ```
 
+**Queued (cancellable) messages:**
+
+A message that is only worth showing while nothing else has happened - "Loading...", "Reconnecting...",
+"Saving..." - is **queued** instead of added. `StatusBaseModel` holds it for `QueueWindow` (1 second by
+default) and publishes it only if that window passes untouched. Only `QueueInfo` and `QueueSuccess` exist:
+a warning or an error is always worth showing, so overwriting one with whatever happens to follow it would
+be an anti-pattern.
+
+```csharp
+[ObservableCommand(nameof(LoadOrdersAsync))]
+public partial IObservableCommandAsync LoadOrdersCommand { get; }
+
+private async Task LoadOrdersAsync(CancellationToken ct)
+{
+    StatusModel.QueueInfo("Loading orders...");            // held back, nothing on screen yet
+
+    var orders = await OrderService.LoadAsync(ct);
+
+    StatusModel.AddSuccess($"{orders.Count} orders");      // fast path: the "Loading..." is dropped
+}
+```
+
+The window is a `Switch` over the queue request stream, so cancellation is the stream's own behaviour
+rather than bookkeeping: every new request unsubscribes the pending delay.
+
+| Inside the window | Result for the queued message |
+|-------------------|-------------------------------|
+| `AddInfo` / `AddSuccess` / `AddWarning` / `AddError` (any severity) | Dropped - the newer message wins |
+| Another `Queue*` call | Replaced, window restarts |
+| `ClearMessages()` / `ClearNonErrorMessages()` / `CancelQueuedMessage()` | Dropped |
+| `ClearMessages(severity)` | Dropped when the severity matches |
+| `ClearErrorMessages()` | Untouched - a queued message is never an error |
+| Model disposed | Dropped - the pending delay is unsubscribed with `Subscriptions` |
+| Nothing | Published to `Messages` exactly as `Add*` would have |
+
+Only one message is queued at a time, `QueueInfo(..., window: TimeSpan.Zero)` publishes immediately, and
+`HasQueuedMessage` reports whether one is still waiting.
+
 **When to Use:**
 - Any application that needs centralized error handling
 - Applications with many commands that could throw

@@ -56,14 +56,14 @@ public partial class MyModel : ObservableModel
 
     private void DoSomething()
     {
-        StatusModel.AddMessage("Operation completed");
+        StatusModel.AddSuccess("Operation completed");
     }
 
     private void HandleError()
     {
         // Errors are automatically captured from commands via IErrorModel
         // Or add manually:
-        StatusModel.HandleError(new Exception("Something went wrong"));
+        StatusModel.AddError(new Exception("Something went wrong"));
     }
 }
 ```
@@ -80,28 +80,56 @@ public partial class MyModel : ObservableModel
 
 | Mode | Description |
 |------|-------------|
-| `AGGREGATE` | Collect all messages (default for errors) |
-| `SINGLE` | Clear previous before adding new (default for messages) |
+| `Aggregate` | Collect all messages (default) |
+| `Single` | Clear previous of the same category before adding new |
+
+### Queued (Cancellable) Messages
+
+A message that only matters while nothing else has happened - "Loading...", "Saving..." - is queued
+instead of added. The model holds it for `QueueWindow` (1 second by default) and shows it only if that
+window passes untouched:
+
+```csharp
+StatusModel.QueueInfo("Loading orders...");        // held back, no snackbar yet
+
+var orders = await OrderService.LoadAsync(ct);
+
+StatusModel.AddSuccess($"{orders.Count} orders");  // inside the window: the "Loading..." is never shown
+```
+
+Inside the window the queued message is dropped by any other message (queued or immediate, any severity),
+by a clear covering its category (`ClearMessages`, `ClearErrorMessages`, `ClearNonErrorMessages`), by
+`CancelQueuedMessage()`, or by disposal. Only one message is queued at a time - a second `Queue*` call
+replaces the first and restarts the window. `QueueInfo(..., window: TimeSpan.Zero)` publishes at once,
+and `HasQueuedMessage` reports whether one is still waiting.
+
+`QueueInfo` and `QueueSuccess` mirror their `Add*` counterparts; each takes an optional `source` and an
+optional per-call `window`. Only these two severities can be queued - a warning or an error is always
+worth showing, so it must never be dropped by a message that happens to follow it.
 
 ### Parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `ErrorDisplayMode` | `StatusDisplayMode` | `SNACKBAR_AND_ICON` | How errors are displayed |
-| `ErrorMode` | `StatusMessageMode` | `AGGREGATE` | Error accumulation mode |
-| `ErrorSnackbarOptions` | `Action<SnackbarOptions>?` | Hide close icon | Snackbar configuration |
-| `MessageDisplayMode` | `StatusDisplayMode` | `SNACKBAR` | How messages are displayed |
-| `MessageMode` | `StatusMessageMode` | `SINGLE` | Message accumulation mode |
-| `MessageSnackbarOptions` | `Action<SnackbarOptions>?` | Hide close icon | Snackbar configuration |
+| `ErrorMessageMode` | `StatusMessageMode` | `Aggregate` | Error accumulation mode |
+| `ShowErrorSource` | `bool` | `true` | Append the source to error text |
+| `MessageDisplayMode` | `StatusDisplayMode` | `SNACKBAR` | How non-error messages are displayed |
+| `MessageMessageMode` | `StatusMessageMode` | `Aggregate` | Message accumulation mode |
+| `ShowMessageSource` | `bool` | `true` | Append the source to message text |
+| `GroupMessagesBySeverity` | `bool` | `true` | Group aggregated messages by severity |
+| `QueueWindow` | `TimeSpan` | `1 s` | How long a queued message waits before it is displayed |
 | `SnackbarPositionClass` | `string` | `TopEnd` | Snackbar position |
+| `ShortVisibility` | `bool` | `false` | Shorten the snackbar visible duration to 2 s |
 
 ### Customization Example
 
 ```razor
 <StatusDisplay ErrorDisplayMode="StatusDisplayMode.ICON"
                MessageDisplayMode="StatusDisplayMode.SNACKBAR_AND_ICON"
-               ErrorMode="StatusMessageMode.AGGREGATE"
-               MessageMode="StatusMessageMode.SINGLE"
+               ErrorMessageMode="StatusMessageMode.Aggregate"
+               MessageMessageMode="StatusMessageMode.Single"
+               QueueWindow="TimeSpan.FromMilliseconds(300)"
                SnackbarPositionClass="@Defaults.Classes.Position.BottomCenter" />
 ```
 
