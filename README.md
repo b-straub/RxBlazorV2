@@ -14,11 +14,30 @@ A reactive programming framework for Blazor applications built on top of [R3 (Re
 > **Breaking changes in 1.2.x** — `ComponentTriggerType` has been removed. All existing `[ObservableComponentTrigger]` usages must be reviewed. See [Breaking Changes](#breaking-changes) below for the cleanup checklist.
 
 > [!TIP]
-> **New in 1.3.0 (non-breaking)** — `[ObservableComponentBatchAsync]` groups several inputs into one debounced component hook. See [What's New](#whats-new) below.
+> **New in 1.3.1 (non-breaking)** — `StatusBaseModel` can queue a status message that the next message cancels, so a transient "Loading…" never flashes up after the fact. See [What's New](#whats-new) below.
 
 ## What's New
 
 The following are **non-breaking** additions — existing code continues to compile and run unchanged.
+
+### 1.3.1 — Queued status messages
+
+A status message that is only worth showing while nothing else has happened — "Loading…", "Saving…", "Reconnecting…" — used to be a choice between adding it, and watching it flash up right after the operation it announced had already finished, or reporting no progress at all. `StatusBaseModel` now queues such a message instead:
+
+```csharp
+private async Task LoadOrdersAsync(CancellationToken ct)
+{
+    StatusModel.QueueInfo("Loading orders...");        // held back, nothing on screen yet
+
+    var orders = await OrderService.LoadAsync(ct);
+
+    StatusModel.AddSuccess($"{orders.Count} orders");  // inside the window: the note is dropped
+}
+```
+
+The message waits for `QueueWindow` (1 second by default; `StatusDisplay` exposes it as a parameter) and is published only when that window passes untouched. Cancellation is an R3 `Switch` over the queue request stream rather than bookkeeping: another message of any severity, a clear covering the non-error messages, an explicit `CancelQueuedMessage()`, or disposal unsubscribes the pending delay before it can publish. Only one message is queued at a time — queuing a second replaces the first and restarts the window.
+
+Only `QueueInfo` and `QueueSuccess` exist. A warning or an error is always worth showing, so overwriting one with whatever message happens to follow it would be an anti-pattern. The `/weather` sample shows both outcomes — the note that is dropped on a fast response, and the one that survives a deliberately slow refresh — and the [RxBlazorV2.MudBlazor README](RxBlazorV2.MudBlazor/README.md) documents the `StatusDisplay` parameters.
 
 ### 1.3.0 — `[ObservableComponentBatchAsync]`
 
@@ -287,6 +306,7 @@ public partial class MyModel : ObservableModel
 - All command exceptions are routed to `HandleError(Exception)` method
 - No try/catch needed in command methods - errors are handled centrally
 - Use with `RxBlazorV2.MudBlazor.StatusDisplay` for automatic UI feedback
+- Queue transient progress notes with `QueueInfo` / `QueueSuccess` so a fast operation never flashes them up
 
 ### Per-Command Error Formatters
 
