@@ -21,6 +21,10 @@
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.10.0" />
 
     <!-- Roslyn / Source Generator tooling -->
+    <!-- NOTE: Do NOT add a PackageVersion for System.Composition. RxBlazorV2CodeFix gets it transitively from
+         Microsoft.CodeAnalysis.CSharp.Workspaces at the exact floor Roslyn was built against. Analyzer hosts
+         (Visual Studio, Rider) ship a fixed System.Composition; pinning it higher makes every
+         [ExportCodeFixProvider] fail to load in the IDE ("Failed to create provider ..."). -->
     <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="5.9.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Common" Version="5.9.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
@@ -42,7 +46,6 @@
     <!-- Compile-time helpers -->
     <PackageVersion Include="Nullable" Version="1.3.1" />
     <PackageVersion Include="JetBrains.Annotations" Version="2026.2.0" />
-    <PackageVersion Include="System.Composition" Version="10.0.12" />
     <PackageVersion Include="cmdwtf.BuildTimestampGenerator" Version="1.1.0" />
 
     <!-- UI -->
