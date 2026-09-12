@@ -73,10 +73,10 @@ dotnet restore
 dotnet build --configuration Release
 
 # Run generator tests
-dotnet test RxBlazorV2.GeneratorTests/RxBlazorV2.GeneratorTests.csproj --configuration Release
+dotnet test --project RxBlazorV2.GeneratorTests/RxBlazorV2.GeneratorTests.csproj --configuration Release
 
 # Run core tests
-dotnet test RxBlazorV2.CoreTests/RxBlazorV2.CoreTests.csproj --configuration Release
+dotnet test --project RxBlazorV2.CoreTests/RxBlazorV2.CoreTests.csproj --configuration Release
 
 # Create NuGet package
 dotnet pack RxBlazorV2/RxBlazorV2.csproj --configuration Release --output ./artifacts

@@ -2,8 +2,9 @@
 
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
-        <!-- xunit.v3 test projects run as Microsoft.Testing.Platform executables. -->
+        <!-- xunit.v3 test projects run as Microsoft.Testing.Platform executables (runner selected in global.json). -->
         <OutputType>Exe</OutputType>
+        <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <IsPackable>false</IsPackable>

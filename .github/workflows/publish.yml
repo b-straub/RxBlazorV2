@@ -56,10 +56,10 @@ jobs:
       run: dotnet build RxBlazorV2.slnx --configuration Release
 
     - name: Test Generator
-      run: dotnet test RxBlazorV2.GeneratorTests/RxBlazorV2.GeneratorTests.csproj --configuration Release --no-build --verbosity normal
+      run: dotnet test --project RxBlazorV2.GeneratorTests/RxBlazorV2.GeneratorTests.csproj --configuration Release --no-build --verbosity normal
 
     - name: Test Core
-      run: dotnet test RxBlazorV2.CoreTests/RxBlazorV2.CoreTests.csproj --configuration Release --no-build --verbosity normal
+      run: dotnet test --project RxBlazorV2.CoreTests/RxBlazorV2.CoreTests.csproj --configuration Release --no-build --verbosity normal
 
     - name: Publish to NuGet
       run: dotnet nuget push ./.nuget/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
