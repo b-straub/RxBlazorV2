@@ -44,7 +44,7 @@ public static class ModelReferenceAnalysisExtensions
         var usedProperties = new HashSet<string>();
 
         // Analyze execute method for model property usage
-        if (command.ExecuteMethod != null && modelInfo.Methods.TryGetValue(command.ExecuteMethod, out var executeMethod))
+        if (modelInfo.Methods.TryGetValue(command.ExecuteMethod, out var executeMethod))
         {
             // Get the correct semantic model for this method's syntax tree
             var methodSemanticModel = compilation.GetSemanticModel(executeMethod.SyntaxTree);

@@ -13,6 +13,8 @@ public static class NullableHelpers
     /// </summary>
     /// <param name="argument">The reference type argument to validate as non-null.</param>
     /// <param name="paramName">The name of the parameter.</param>
+    /// <param name="sourceFilePath">The caller's source file path, supplied by the compiler.</param>
+    /// <param name="sourceLineNumber">The caller's line number, supplied by the compiler.</param>
     public static void ThrowIfNull([NotNull] this object? argument, 
         [CallerMemberName] string paramName = "",
         [CallerFilePath] string sourceFilePath = "",
@@ -31,6 +33,8 @@ public static class NullableHelpers
     /// <typeparam name="T">The type of the argument.</typeparam>
     /// <param name="argument">The reference type argument to validate as non-null.</param>
     /// <param name="paramName">The name of the parameter.</param>
+    /// <param name="sourceFilePath">The caller's source file path, supplied by the compiler.</param>
+    /// <param name="sourceLineNumber">The caller's line number, supplied by the compiler.</param>
     /// <returns>The non-null argument.</returns>
     public static T ThrowIfNullReturn<T>([NotNull] this T? argument,
         [CallerMemberName] string paramName = "",

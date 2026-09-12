@@ -56,7 +56,7 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
         }
 
         // Multiple partial declarations - merge them
-        return CreateFromPartialDeclarations(classDeclarations, semanticModel, compilation, serviceClasses);
+        return CreateFromPartialDeclarations(classDeclarations, compilation, serviceClasses);
     }
 
     /// <summary>
@@ -73,7 +73,7 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
         try
         {
             var classSymbol = semanticModel.GetDeclaredSymbol(classDecl);
-            if (classSymbol is not INamedTypeSymbol namedTypeSymbol)
+            if (classSymbol is not { } namedTypeSymbol)
                 return null;
 
             // Check if class inherits from ObservableModel
@@ -320,7 +320,6 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
     /// </summary>
     private static ObservableModelRecord? CreateFromPartialDeclarations(
         List<ClassDeclarationSyntax> classDeclarations,
-        SemanticModel semanticModel,
         Compilation compilation,
         ServiceInfoList? serviceClasses)
     {
@@ -334,7 +333,7 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
             var primarySemanticModel = compilation.GetSemanticModel(primaryDecl.SyntaxTree);
 
             var classSymbol = primarySemanticModel.GetDeclaredSymbol(primaryDecl);
-            if (classSymbol is not INamedTypeSymbol namedTypeSymbol)
+            if (classSymbol is not { } namedTypeSymbol)
             {
                 return null;
             }
@@ -467,7 +466,6 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
             // Get model scope from the declaration that has the attribute
             var modelScope = "Scoped";
             var hasScopeAttribute = false;
-            ClassDeclarationSyntax? scopeAttributeDecl = null;
             foreach (var decl in classDeclarations)
             {
                 var declSemanticModel = compilation.GetSemanticModel(decl.SyntaxTree);
@@ -476,7 +474,6 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                 {
                     modelScope = scope;
                     hasScopeAttribute = true;
-                    scopeAttributeDecl = decl;
                     break;
                 }
             }
@@ -810,66 +807,6 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                         resolution.BatchId,
                         namedTypeSymbol.Name));
                     break;
-            }
-        }
-    }
-
-    /// <summary>
-    /// Checks for ObservableComponentTrigger attributes that won't generate any code.
-    /// This happens when a model has trigger attributes but:
-    /// 1. Does NOT have [ObservableComponent] attribute (no component to generate hooks in)
-    /// 2. Is NOT referenced by another model with [ObservableComponent(includeReferencedTriggers: true)]
-    /// Note: Currently only checks condition 1 (no ObservableComponent). A full check for condition 2
-    /// would require compilation-wide analysis to see if ANY model references this one.
-    /// Reports RXBG041 warning for properties with unused trigger attributes.
-    /// </summary>
-    private static void CheckForUnusedComponentTriggers(
-        INamedTypeSymbol namedTypeSymbol,
-        ClassDeclarationSyntax classDecl,
-        ObservableModelRecord record,
-        List<Diagnostic> diagnostics)
-    {
-        // If model has [ObservableComponent], triggers are used - no warning needed
-        if (record.HasObservableComponentAttribute)
-        {
-            return;
-        }
-
-        // If model has no trigger properties, nothing to check
-        if (record.ComponentTriggerProperties.Count == 0)
-        {
-            return;
-        }
-
-        // Model has trigger attributes but no [ObservableComponent]
-        // Report warning for each property with trigger attributes
-        // Note: We can't easily check if model is referenced by another model with includeReferencedTriggers: true
-        // at this point, so we report conservatively. The diagnostic message mentions both conditions.
-        foreach (var member in namedTypeSymbol.GetMembers())
-        {
-            if (member is IPropertySymbol propertySymbol)
-            {
-                foreach (var attr in propertySymbol.GetAttributes())
-                {
-                    if (attr.AttributeClass?.Name == "ObservableComponentTriggerAttribute" ||
-                        attr.AttributeClass?.Name == "ObservableComponentTriggerAsyncAttribute")
-                    {
-                        // Get the location of the attribute for precise error reporting
-                        var location = attr.ApplicationSyntaxReference?.GetSyntax().GetLocation()
-                            ?? propertySymbol.Locations.FirstOrDefault()
-                            ?? classDecl.Identifier.GetLocation();
-
-                        var diagnostic = Diagnostic.Create(
-                            DiagnosticDescriptors.UnusedObservableComponentTriggerWarning,
-                            location,
-                            propertySymbol.Name,
-                            namedTypeSymbol.Name);
-                        diagnostics.Add(diagnostic);
-
-                        // Only report once per property (even if it has both sync and async triggers)
-                        break;
-                    }
-                }
             }
         }
     }
@@ -1265,7 +1202,7 @@ public class ObservableModelRecord : IEquatable<ObservableModelRecord>
                     foreach (var kvp in triggerProperties)
                     {
                         var propertyName = kvp.Key;
-                        var (hasSync, syncHookName, hasAsync, asyncHookName, _) = kvp.Value;
+                        var (hasSync, _, hasAsync, _, _) = kvp.Value;
 
                         // Build hook method name: On{ReferencedProperty}{PropertyName}Changed[Async]
                         // Example: OnSettingsIsDayChanged

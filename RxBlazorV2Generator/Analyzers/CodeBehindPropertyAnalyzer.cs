@@ -49,7 +49,7 @@ public static class CodeBehindPropertyAnalyzer
                 }
 
                 // This is a code-behind class - analyze Model property usages
-                var usedProperties = AnalyzeModelPropertyUsages(classDecl, semanticModel);
+                var usedProperties = AnalyzeModelPropertyUsages(classDecl);
 
                 if (usedProperties.Count > 0)
                 {
@@ -99,9 +99,7 @@ public static class CodeBehindPropertyAnalyzer
     /// Analyzes a class declaration for all Model.PropertyName usages.
     /// Returns set of property chains (e.g., "IsDay", "Settings.Theme").
     /// </summary>
-    private static HashSet<string> AnalyzeModelPropertyUsages(
-        ClassDeclarationSyntax classDecl,
-        SemanticModel semanticModel)
+    private static HashSet<string> AnalyzeModelPropertyUsages(ClassDeclarationSyntax classDecl)
     {
         var usedProperties = new HashSet<string>();
 
@@ -111,7 +109,7 @@ public static class CodeBehindPropertyAnalyzer
 
         foreach (var memberAccess in memberAccesses)
         {
-            var propertyChain = ExtractModelPropertyChain(memberAccess, semanticModel);
+            var propertyChain = ExtractModelPropertyChain(memberAccess);
             if (propertyChain is not null && propertyChain.Length > 0)
             {
                 usedProperties.Add(propertyChain);
@@ -128,15 +126,13 @@ public static class CodeBehindPropertyAnalyzer
     /// E.g., "Model.Settings.Theme" → "Settings.Theme"
     /// Returns null if not a Model property access.
     /// </summary>
-    private static string? ExtractModelPropertyChain(
-        MemberAccessExpressionSyntax memberAccess,
-        SemanticModel semanticModel)
+    private static string? ExtractModelPropertyChain(MemberAccessExpressionSyntax memberAccess)
     {
         // Build the full chain by walking up the expression tree
         var chain = new List<string>();
         var current = memberAccess;
 
-        while (current is not null)
+        while (true)
         {
             // Add the member name to the chain (e.g., "IsAuthenticated", "Identity", "CurrentUser")
             chain.Insert(0, current.Name.Identifier.Text);

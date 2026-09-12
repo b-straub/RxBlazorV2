@@ -66,7 +66,7 @@ public static class PropertyTemplate
         var propertiesList = partialProperties.ToList();
         for (var i = 0; i < propertiesList.Count; i++)
         {
-            sb.AppendLine(GeneratePartialProperty(propertiesList[i], className));
+            sb.AppendLine(GeneratePartialProperty(propertiesList[i]));
             if (i < propertiesList.Count - 1)
             {
                 sb.AppendLine();
@@ -79,9 +79,8 @@ public static class PropertyTemplate
     /// Generates a single partial property implementation with Model. prefix.
     /// </summary>
     /// <param name="prop">The property information.</param>
-    /// <param name="className">The class name (unused, kept for compatibility).</param>
     /// <returns>Generated property code.</returns>
-    private static string GeneratePartialProperty(PartialPropertyInfo prop, string className)
+    private static string GeneratePartialProperty(PartialPropertyInfo prop)
     {
         var sb = new StringBuilder();
         var batchIdsParam = "";

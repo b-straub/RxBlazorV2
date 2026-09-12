@@ -131,19 +131,8 @@ public static class ExternalServiceHelper
             return "AddHttpClient";
         }
 
-        if (assemblyName.StartsWith("Microsoft.AspNetCore."))
-        {
-            // Various ASP.NET Core services have different registration methods
-            // Return null to use pattern matching instead
-            return null;
-        }
-
-        if (assemblyName.StartsWith("Microsoft.Extensions."))
-        {
-            // Extensions libraries typically register automatically or via specific methods
-            return null;
-        }
-
+        // Everything else (including Microsoft.AspNetCore.* and Microsoft.Extensions.*) has no single
+        // registration method - return null to fall back to pattern matching
         return null;
     }
 

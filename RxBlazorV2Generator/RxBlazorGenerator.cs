@@ -145,7 +145,6 @@ public class RxBlazorGenerator : IIncrementalGenerator
                 {
                     var declarations = kvp.Value;
                     // Use the first declaration's semantic model (all point to the same type symbol)
-                    var firstDecl = declarations[0].ClassDecl;
                     var firstTree = declarations[0].Tree;
                     var semanticModel = compilation.GetSemanticModel(firstTree);
 
@@ -197,7 +196,7 @@ public class RxBlazorGenerator : IIncrementalGenerator
 
                 // Check for unused ObservableComponentTrigger attributes (RXBG041)
                 // This must happen AFTER ComponentInfo extraction, when we have the complete model reference graph
-                CheckForUnusedComponentTriggersAcrossModels(records, recordsByTypeName);
+                CheckForUnusedComponentTriggersAcrossModels(records);
 
                 return records;
             });
@@ -608,9 +607,7 @@ public class RxBlazorGenerator : IIncrementalGenerator
     ///
     /// This check must happen after ComponentInfo extraction, where we have the complete model reference graph.
     /// </summary>
-    private static void CheckForUnusedComponentTriggersAcrossModels(
-        ImmutableArray<ObservableModelRecord?> records,
-        Dictionary<string, ObservableModelRecord> recordsByTypeName)
+    private static void CheckForUnusedComponentTriggersAcrossModels(ImmutableArray<ObservableModelRecord?> records)
     {
         // Build a set of models that ARE referenced by a model with includeReferencedTriggers: true
         var modelsWithReferencedTriggers = new HashSet<string>();

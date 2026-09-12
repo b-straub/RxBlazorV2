@@ -269,7 +269,6 @@ public static class RazorCodeBehindGenerator
             {
                 var usingValue = match.Groups[1].Value;
                 // Double-check: skip if this is part of an alias (defensive check)
-                var fullMatch = match.Value;
                 var matchIndex = match.Index;
                 var afterMatch = matchIndex + match.Length < razorContent.Length
                     ? razorContent.Substring(matchIndex + match.Length)
@@ -305,22 +304,6 @@ public static class RazorCodeBehindGenerator
             return typeName.Substring(0, genericStart);
         }
         return typeName;
-    }
-
-    /// <summary>
-    /// Extracts namespace from a fully qualified type name.
-    /// Example: "MyNamespace.WeatherModelComponent" → "MyNamespace"
-    /// Example: "WeatherModelComponent" → ""
-    /// </summary>
-    private static string ExtractNamespace(string inheritsType)
-    {
-        // Remove generic parameters first
-        var genericStart = inheritsType.IndexOf('<');
-        var typeWithoutGenerics = genericStart > 0 ? inheritsType.Substring(0, genericStart) : inheritsType;
-
-        // Extract namespace
-        var lastDot = typeWithoutGenerics.LastIndexOf('.');
-        return lastDot >= 0 ? typeWithoutGenerics.Substring(0, lastDot) : string.Empty;
     }
 
     /// <summary>

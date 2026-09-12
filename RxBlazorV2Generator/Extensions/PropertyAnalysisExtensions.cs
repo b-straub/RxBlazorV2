@@ -105,7 +105,7 @@ public static class PropertyAnalysisExtensions
                 // Process triggers transferred from abstract base property
                 if (isOverride)
                 {
-                    var propertySymbol = semanticModel.GetDeclaredSymbol(member) as IPropertySymbol;
+                    var propertySymbol = semanticModel.GetDeclaredSymbol(member);
                     var baseProperty = propertySymbol?.OverriddenProperty;
                     if (baseProperty?.IsAbstract == true)
                     {
@@ -467,7 +467,7 @@ public static class PropertyAnalysisExtensions
         try
         {
             var propertySymbol = semanticModel.GetDeclaredSymbol(property);
-            if (propertySymbol is not IPropertySymbol propSymbol)
+            if (propertySymbol is not { } propSymbol)
             {
                 return null;
             }
@@ -645,7 +645,7 @@ public static class PropertyAnalysisExtensions
             command.Triggers.Select(t => t.TriggerProperty));
 
         // Analyze execute method for property MODIFICATIONS
-        if (command.ExecuteMethod != null && modelInfo.Methods.TryGetValue(command.ExecuteMethod, out var executeMethod))
+        if (modelInfo.Methods.ContainsKey(command.ExecuteMethod))
         {
             var modifiedProps = modelInfo.Methods.AnalyzeMethodForPropertyModifications(command.ExecuteMethod, modelInfo);
             foreach (var prop in modifiedProps)
@@ -663,7 +663,7 @@ public static class PropertyAnalysisExtensions
         // CRITICAL: Remove trigger properties from _observedProperties if they're not modified
         // This prevents circular triggers: when the command completes, StateHasChanged(_observedProperties)
         // would notify about trigger properties, causing the command to re-trigger itself
-        var modifiedPropsInExecute = command.ExecuteMethod != null && modelInfo.Methods.TryGetValue(command.ExecuteMethod, out var execMethod)
+        var modifiedPropsInExecute = modelInfo.Methods.ContainsKey(command.ExecuteMethod)
             ? new HashSet<string>(modelInfo.Methods.AnalyzeMethodForPropertyModifications(command.ExecuteMethod, modelInfo))
             : new HashSet<string>();
 
@@ -903,7 +903,7 @@ public static class PropertyAnalysisExtensions
         {
             // Get the type symbol for the property
             var propertySymbol = semanticModel.GetDeclaredSymbol(property);
-            if (propertySymbol is not IPropertySymbol propSymbol) 
+            if (propertySymbol is not { } propSymbol)
                 return false;
 
             var propertyType = propSymbol.Type;
@@ -944,7 +944,7 @@ public static class PropertyAnalysisExtensions
         try
         {
             var propertySymbol = semanticModel.GetDeclaredSymbol(property);
-            if (propertySymbol is not IPropertySymbol propSymbol)
+            if (propertySymbol is not { } propSymbol)
             {
                 return null;
             }
@@ -996,7 +996,7 @@ public static class PropertyAnalysisExtensions
         {
             // Get the type symbol for the property
             var propertySymbol = semanticModel.GetDeclaredSymbol(property);
-            if (propertySymbol is not IPropertySymbol propSymbol)
+            if (propertySymbol is not { } propSymbol)
             {
                 return false;
             }

@@ -50,7 +50,7 @@ public class ObservableUsageAnalyzer : DiagnosticAnalyzer
         }
 
         // Verify the property's containing type is ObservableModel (where Observable is declared)
-        if (propertySymbol.ContainingType is not INamedTypeSymbol containingType)
+        if (propertySymbol.ContainingType is not { } containingType)
         {
             return;
         }
@@ -149,7 +149,7 @@ public class ObservableUsageAnalyzer : DiagnosticAnalyzer
         }
 
         // Verify the property's containing type is ObservableModel (where Observable is declared)
-        if (propertySymbol.ContainingType is not INamedTypeSymbol containingType)
+        if (propertySymbol.ContainingType is not { } containingType)
         {
             return;
         }

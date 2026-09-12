@@ -11,7 +11,7 @@ public static class CodeFixExtensions
     /// <param name="index">The index of the code fix message in custom tags (default: 0)</param>
     /// <param name="parameters">Optional format parameters for the message</param>
     /// <returns>The formatted code fix message</returns>
-    public static string CodeFixMessage(this DiagnosticDescriptor descriptor, int index = 0, params string[] parameters)
+    public static string CodeFixMessage(this DiagnosticDescriptor descriptor, int index = 0, params object[] parameters)
     {
         var message = descriptor.CustomTags.Skip(index).FirstOrDefault() ?? string.Empty;
         if (parameters.Any())
@@ -27,7 +27,7 @@ public static class CodeFixExtensions
     /// <param name="descriptor">The diagnostic descriptor</param>
     /// <param name="parameters">Optional format parameters for the messages</param>
     /// <returns>Enumerable of all code fix messages</returns>
-    public static IEnumerable<string> CodeFixMessages(this DiagnosticDescriptor descriptor, params string[] parameters)
+    public static IEnumerable<string> CodeFixMessages(this DiagnosticDescriptor descriptor, params object[] parameters)
     {
         var messages = descriptor.CustomTags;
         if (parameters.Any())

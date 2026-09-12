@@ -3,7 +3,6 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Models;
 using RxBlazorV2Generator.Diagnostics;
 using System.Collections.Immutable;
-using System.Diagnostics.CodeAnalysis;
 using RxBlazorV2Generator.Helpers;
 
 namespace RxBlazorV2Generator.Extensions;
@@ -317,7 +316,7 @@ public static class AttributeAnalysisExtensions
             }
         }
 
-        return (commandProperties, diagnostics);;
+        return (commandProperties, diagnostics);
     }
 
 

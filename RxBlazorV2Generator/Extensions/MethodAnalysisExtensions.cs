@@ -539,7 +539,7 @@ public static class MethodAnalysisExtensions
     private static string GetMemberAccessPath(MemberAccessExpressionSyntax memberAccess)
     {
         var parts = new List<string>();
-        ExpressionSyntax? current = memberAccess;
+        ExpressionSyntax current = memberAccess;
 
         while (current is MemberAccessExpressionSyntax ma)
         {
@@ -554,23 +554,6 @@ public static class MethodAnalysisExtensions
 
         parts.Reverse();
         return string.Join(".", parts);
-    }
-
-    /// <summary>
-    /// Validates that the method has a valid signature for internal model observer.
-    /// Valid signatures:
-    /// - void MethodName() - sync
-    /// - Task MethodName() - async without cancellation
-    /// - Task MethodName(CancellationToken ct) - async with cancellation
-    /// - ValueTask MethodName() - async without cancellation
-    /// - ValueTask MethodName(CancellationToken ct) - async with cancellation
-    /// </summary>
-    private static (bool IsValid, bool IsAsync, bool HasCancellationToken) ValidateObserverMethodSignature(
-        MethodDeclarationSyntax method,
-        SemanticModel semanticModel)
-    {
-        var (isValid, isAsync, hasCancellationToken, _) = ValidateObserverMethodSignatureWithReason(method, semanticModel);
-        return (isValid, isAsync, hasCancellationToken);
     }
 
     /// <summary>

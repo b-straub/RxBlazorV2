@@ -49,7 +49,7 @@ public static class ComponentCodeGenerator
             sb.AppendLine();
 
             // Generate InitializeGeneratedCodeAsync method
-            GenerateInitializeGeneratedCodeAsync(sb, componentInfo);
+            GenerateInitializeGeneratedCodeAsync(sb);
             sb.AppendLine();
 
             // Generate hook methods for properties with [ObservableComponentTrigger]
@@ -174,7 +174,7 @@ public static class ComponentCodeGenerator
         sb.AppendLine("    }");
     }
 
-    private static void GenerateInitializeGeneratedCodeAsync(StringBuilder sb, ComponentInfo componentInfo)
+    private static void GenerateInitializeGeneratedCodeAsync(StringBuilder sb)
     {
         sb.AppendLine("    protected override Task InitializeGeneratedCodeAsync()");
         sb.AppendLine("    {");
@@ -254,14 +254,15 @@ public static class ComponentCodeGenerator
     /// </summary>
     private static void GenerateComponentBatchHookMethods(StringBuilder sb, List<ComponentBatchInfo> batches)
     {
-        foreach (var batch in batches)
+        for (var i = 0; i < batches.Count; i++)
         {
+            var batch = batches[i];
             sb.AppendLine($"    protected virtual Task {batch.HookMethodName}(CancellationToken ct)");
             sb.AppendLine("    {");
             sb.AppendLine("        return Task.CompletedTask;");
             sb.AppendLine("    }");
 
-            if (batch != batches.Last())
+            if (i < batches.Count - 1)
             {
                 sb.AppendLine();
             }
@@ -270,8 +271,9 @@ public static class ComponentCodeGenerator
 
     private static void GenerateHookMethods(StringBuilder sb, List<ComponentTriggerInfo> triggers)
     {
-        foreach (var trigger in triggers)
+        for (var i = 0; i < triggers.Count; i++)
         {
+            var trigger = triggers[i];
             if (trigger.HookType == TriggerHookType.Sync)
             {
                 // Generate sync hook method
@@ -289,7 +291,7 @@ public static class ComponentCodeGenerator
             }
 
             // Add spacing between different properties
-            if (trigger != triggers.Last())
+            if (i < triggers.Count - 1)
             {
                 sb.AppendLine();
             }

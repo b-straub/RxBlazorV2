@@ -39,7 +39,7 @@ public class DiagnosticException : Exception
     {
         Descriptor = descriptor ?? throw new ArgumentNullException(nameof(descriptor));
         Location = location ?? throw new ArgumentNullException(nameof(location));
-        MessageArgs = messageArgs ?? Array.Empty<object>();
+        MessageArgs = messageArgs;
     }
 
     /// <summary>
@@ -53,12 +53,7 @@ public class DiagnosticException : Exception
 
     private static string FormatMessage(DiagnosticDescriptor descriptor, object[] messageArgs)
     {
-        if (descriptor is null)
-        {
-            return "Diagnostic error occurred";
-        }
-
-        if (messageArgs is null || messageArgs.Length == 0)
+        if (messageArgs.Length == 0)
         {
             return descriptor.MessageFormat.ToString();
         }

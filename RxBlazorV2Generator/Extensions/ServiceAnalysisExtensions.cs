@@ -48,7 +48,7 @@ public static class ServiceAnalysisExtensions
                 }
 
                 // Validate method signature
-                var (isValid, signatureError) = ValidateMethodSignature(method, modelType);
+                var (isValid, _) = ValidateMethodSignature(method, modelType);
                 if (!isValid)
                 {
                     var properties = ImmutableDictionary.CreateBuilder<string, string?>();

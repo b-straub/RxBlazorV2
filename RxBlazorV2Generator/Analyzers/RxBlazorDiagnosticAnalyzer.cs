@@ -38,7 +38,7 @@ public class RxBlazorDiagnosticAnalyzer : DiagnosticAnalyzer
         try
         {
             var classSymbol = context.SemanticModel.GetDeclaredSymbol(classDecl);
-            if (classSymbol is not INamedTypeSymbol namedTypeSymbol)
+            if (classSymbol is not { } namedTypeSymbol)
                 return;
 
             // Check if this is an ObservableModel class

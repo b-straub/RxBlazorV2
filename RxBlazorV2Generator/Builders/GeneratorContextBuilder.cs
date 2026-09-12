@@ -171,7 +171,7 @@ public static class GeneratorContextBuilder
                             var (allProperties, directProperties, baseModelType) = BuildModelInheritanceHierarchy(modelType);
 
                             // Extract model references from constructor parameters
-                            var modelReferences = ExtractModelReferencesFromSymbol(modelType, models);
+                            var modelReferences = ExtractModelReferencesFromSymbol(modelType);
 
                             // For each model reference, ensure the referenced model is also in our dictionary
                             foreach (var modelRef in modelReferences)
@@ -182,7 +182,7 @@ public static class GeneratorContextBuilder
                                     if (modelRef.TypeSymbol is INamedTypeSymbol refModelType)
                                     {
                                         var (refAllProps, refDirectProps, refBaseModel) = BuildModelInheritanceHierarchy(refModelType);
-                                        var nestedRefs = ExtractModelReferencesFromSymbol(refModelType, models);
+                                        var nestedRefs = ExtractModelReferencesFromSymbol(refModelType);
 
                                         models[modelRef.ReferencedModelTypeName] = new ModelMetadata(
                                             fullyQualifiedName: modelRef.ReferencedModelTypeName,
@@ -377,49 +377,6 @@ public static class GeneratorContextBuilder
     }
 
     /// <summary>
-    /// Builds filterable properties for a referenced assembly component by walking its base type hierarchy.
-    /// This ensures cross-assembly components get proper "Model." prefixed properties.
-    /// </summary>
-    private static HashSet<string> BuildFilterablePropertiesForReferencedComponent(
-        INamedTypeSymbol componentSymbol,
-        Dictionary<string, ComponentMetadata> components,
-        Dictionary<string, ModelMetadata> models)
-    {
-        var properties = new HashSet<string>();
-
-        // Walk the inheritance hierarchy to find the base ObservableComponent<TModel>
-        var currentType = componentSymbol.BaseType;
-        while (currentType is not null)
-        {
-            // Check if this is an ObservableComponent<TModel>
-            if (currentType.Name.StartsWith("ObservableComponent") &&
-                currentType.TypeArguments.Length > 0)
-            {
-                var modelType = currentType.TypeArguments[0];
-                var modelFullName = modelType.ToDisplayString();
-
-                // Try to find the model in our models dictionary
-                if (models.TryGetValue(modelFullName, out var model))
-                {
-                    // Both current and referenced assembly models now have AllProperties populated
-                    // This includes inherited properties from base ObservableModel classes
-                    var modelProperties = BuildFilterablePropertiesForModel(model, models);
-                    foreach (var prop in modelProperties)
-                    {
-                        properties.Add(prop);
-                    }
-                }
-
-                break; // Found the model, no need to go further up the hierarchy
-            }
-
-            currentType = currentType.BaseType;
-        }
-
-        return properties;
-    }
-
-    /// <summary>
     /// Checks if an assembly references RxBlazorV2.
     /// </summary>
     private static bool ReferencesRxBlazorV2(IAssemblySymbol assembly)
@@ -594,9 +551,7 @@ public static class GeneratorContextBuilder
     /// Only works for types from referenced assemblies (no syntax tree available).
     /// Returns list of ModelReferenceInfo for parameters that inherit from ObservableModel.
     /// </summary>
-    private static List<ModelReferenceInfo> ExtractModelReferencesFromSymbol(
-        INamedTypeSymbol typeSymbol,
-        Dictionary<string, ModelMetadata> models)
+    private static List<ModelReferenceInfo> ExtractModelReferencesFromSymbol(INamedTypeSymbol typeSymbol)
     {
         var modelReferences = new List<ModelReferenceInfo>();
 

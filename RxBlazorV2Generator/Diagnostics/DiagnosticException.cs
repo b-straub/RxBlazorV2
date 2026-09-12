@@ -29,7 +29,7 @@ public class GeneratorDiagnostic
         Descriptor = descriptor;
         Location = location;
         MessageArgs = messageArgs;
-        Properties = properties ?? new Dictionary<string, string?>();
+        Properties = properties;
     }
 
     /// <summary>
