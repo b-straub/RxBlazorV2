@@ -160,10 +160,6 @@ public class ObservableComponentReferenceTests : BunitContext
         var cut = Render<ParentModelComponent>();
         cut.WaitForState(() => cut.Instance.Model.GetCounterModel() is not null, timeout: TimeSpan.FromSeconds(2));
 
-        var filterMethod = cut.Instance.GetType().GetMethod("Filter",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        var filter = (string[])filterMethod!.Invoke(cut.Instance, null)!;
-
         var emittedBatches = new List<string[]>();
         using var subscription = cut.Instance.Model.Observable
             .Select(props => props.Where(p => cut.Instance.Model.FilterUsedProperties(p)).ToArray())

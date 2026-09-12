@@ -21,12 +21,10 @@ public class ObservableCommandErrorFormatterTests
     private sealed class FormatterCounter
     {
         public int Calls { get; private set; }
-        public Exception? LastException { get; private set; }
 
         public string Format(Exception ex)
         {
             Calls++;
-            LastException = ex;
             return $"prefix: {ex.Message}";
         }
     }

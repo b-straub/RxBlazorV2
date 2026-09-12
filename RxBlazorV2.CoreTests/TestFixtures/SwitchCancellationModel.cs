@@ -1,4 +1,3 @@
-using RxBlazorV2.Interface;
 using RxBlazorV2.Model;
 
 namespace RxBlazorV2.CoreTests.TestFixtures;

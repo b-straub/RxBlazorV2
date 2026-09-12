@@ -386,7 +386,6 @@ public class PartialClassGeneratorTests
         var compilation = CSharpCompilation.Create("TestAssembly",
             syntaxTrees,
             resolvedReferences
-                .Cast<MetadataReference>()
                 .Append(MetadataReference.CreateFromFile(typeof(Model.ObservableModel).Assembly.Location)),
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 

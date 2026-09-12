@@ -11,7 +11,7 @@ public class GenericModelsTests
     {
         // Arrange
         var services = new ServiceCollection();
-        services.AddSingleton<GenericModelsBaseModel<string, int>>(sp =>
+        services.AddSingleton<GenericModelsBaseModel<string, int>>(_ =>
             new GenericModelsBaseModel<string, int>
             {
                 Items = new ObservableList<string>(),
@@ -32,7 +32,7 @@ public class GenericModelsTests
     {
         // Arrange
         var services = new ServiceCollection();
-        services.AddSingleton<GenericModelsBaseModel<string, int>>(sp =>
+        services.AddSingleton<GenericModelsBaseModel<string, int>>(_ =>
             new GenericModelsBaseModel<string, int>
             {
                 Items = new ObservableList<string>(),
@@ -63,7 +63,7 @@ public class GenericModelsTests
             items.Add($"Item{i}");
         }
 
-        services.AddSingleton<GenericModelsBaseModel<string, int>>(sp =>
+        services.AddSingleton<GenericModelsBaseModel<string, int>>(_ =>
             new GenericModelsBaseModel<string, int>
             {
                 Items = items,
@@ -83,7 +83,7 @@ public class GenericModelsTests
     {
         // Arrange
         var services = new ServiceCollection();
-        services.AddSingleton<GenericModelsBaseModel<string, int>>(sp =>
+        services.AddSingleton<GenericModelsBaseModel<string, int>>(_ =>
             new GenericModelsBaseModel<string, int>
             {
                 Items = new ObservableList<string>(),
@@ -109,7 +109,7 @@ public class GenericModelsTests
         var services = new ServiceCollection();
         var items = new ObservableList<string> { "Item1", "Item2" };
 
-        services.AddSingleton<GenericModelsBaseModel<string, int>>(sp =>
+        services.AddSingleton<GenericModelsBaseModel<string, int>>(_ =>
             new GenericModelsBaseModel<string, int>
             {
                 Items = items,
@@ -133,7 +133,7 @@ public class GenericModelsTests
     {
         // Arrange
         var services = new ServiceCollection();
-        services.AddSingleton<GenericModelsBaseModel<string, int>>(sp =>
+        services.AddSingleton<GenericModelsBaseModel<string, int>>(_ =>
             new GenericModelsBaseModel<string, int>
             {
                 Items = new ObservableList<string>(),

@@ -41,7 +41,7 @@ public class RazorFileDiagnosticsTests
         sb.AppendLine("    protected override string[] Filter()");
         sb.AppendLine("    {");
 
-        if (filterProperties != null && filterProperties.Length > 0)
+        if (filterProperties.Length > 0)
         {
             sb.AppendLine("        return [");
             for (int i = 0; i < filterProperties.Length; i++)

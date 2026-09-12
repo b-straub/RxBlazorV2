@@ -19,9 +19,8 @@ public partial class SelectiveFilterTestComponent
         {
             Subscriptions.Add(Model.Observable
                 .Chunk(TimeSpan.FromMilliseconds(100))
-                .Subscribe(chunks =>
+                .Subscribe(_ =>
                 {
-                    var props = chunks.SelectMany(c => c).ToArray();
                     InvokeAsync(() => StateHasChanged());
                 }));
         }
@@ -30,9 +29,8 @@ public partial class SelectiveFilterTestComponent
             Subscriptions.Add(Model.Observable
                 .Where(props => props.Intersect(filter).Any())
                 .Chunk(TimeSpan.FromMilliseconds(100))
-                .Subscribe(chunks =>
+                .Subscribe(_ =>
                 {
-                    var props = chunks.SelectMany(c => c).ToArray();
                     InvokeAsync(() => StateHasChanged());
                 }));
         }

@@ -95,7 +95,6 @@ public class ObservableModelReferenceTests
         var counterModel = new CounterModel();
         var parent = new ParentModel(counterModel);
         var notificationCount = 0;
-        var receivedProperties = new List<string[]>();
 
         using var subscription = parent.Observable
             .Select(props => props.Where(p => parent.FilterUsedProperties(p)).ToArray())
@@ -103,7 +102,6 @@ public class ObservableModelReferenceTests
             .Subscribe(props =>
             {
                 notificationCount++;
-                receivedProperties.Add(props);
                 _output.WriteLine($"Notification {notificationCount}: {string.Join(", ", props)}");
             });
 

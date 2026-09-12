@@ -1891,8 +1891,7 @@ public class ModelObserverGeneratorTests
 
         await MultiModelGeneratorVerifierWithDiagnostics.VerifyAsync(
             [referencedModel, test],
-            [expected],
-            ["ReferencedModel", "TestModel"]);
+            [expected]);
     }
 
     [Fact]
@@ -1932,8 +1931,7 @@ public class ModelObserverGeneratorTests
         // No diagnostics expected - method name doesn't look like an observer
         await MultiModelGeneratorVerifierWithDiagnostics.VerifyAsync(
             [referencedModel, test],
-            [],
-            ["ReferencedModel", "TestModel"]);
+            []);
     }
 
     [Fact]
@@ -1977,8 +1975,7 @@ public class ModelObserverGeneratorTests
 
         await MultiModelGeneratorVerifierWithDiagnostics.VerifyAsync(
             [referencedModel, test],
-            [expected],
-            ["ReferencedModel", "TestModel"]);
+            [expected]);
     }
 
     [Fact]
@@ -2030,8 +2027,7 @@ public class ModelObserverGeneratorTests
         // and NOT report RXBG031 (circular reference)
         await MultiModelGeneratorVerifierWithDiagnostics.VerifyAsync(
             [storageModel, test],
-            [],
-            ["StorageModel", "SettingsModel"]);
+            []);
     }
 
     [Fact]
@@ -2082,8 +2078,7 @@ public class ModelObserverGeneratorTests
         // and generate the internal observer subscription (not a circular reference)
         await MultiModelGeneratorVerifierWithDiagnostics.VerifyAsync(
             [referencedModel, test],
-            [],
-            ["CatalogModel", "CartModel"]);
+            []);
     }
 
     [Fact]
@@ -2132,8 +2127,7 @@ public class ModelObserverGeneratorTests
         // No diagnostics expected - compound assignment reads should be excluded
         await MultiModelGeneratorVerifierWithDiagnostics.VerifyAsync(
             [referencedModel, test],
-            [],
-            ["CounterModel", "TestModel"]);
+            []);
     }
 
     [Fact]
@@ -2946,10 +2940,9 @@ internal static class MultiModelGeneratorVerifierWithDiagnostics
 {
     public static Task VerifyAsync(
         string[] sources,
-        Microsoft.CodeAnalysis.Testing.DiagnosticResult[] expectedDiagnostics,
-        string[] modelNames)
+        Microsoft.CodeAnalysis.Testing.DiagnosticResult[] expectedDiagnostics)
     {
-        var test = new MultiModelGeneratorDiagnosticTest(sources, expectedDiagnostics, modelNames);
+        var test = new MultiModelGeneratorDiagnosticTest(sources, expectedDiagnostics);
         return test.RunAsync();
     }
 }
@@ -2958,13 +2951,11 @@ internal class MultiModelGeneratorDiagnosticTest : Microsoft.CodeAnalysis.CSharp
 {
     private readonly string[] _sources;
     private readonly Microsoft.CodeAnalysis.Testing.DiagnosticResult[] _expectedDiagnostics;
-    private readonly string[] _modelNames;
 
-    public MultiModelGeneratorDiagnosticTest(string[] sources, Microsoft.CodeAnalysis.Testing.DiagnosticResult[] expectedDiagnostics, string[] modelNames)
+    public MultiModelGeneratorDiagnosticTest(string[] sources, Microsoft.CodeAnalysis.Testing.DiagnosticResult[] expectedDiagnostics)
     {
         _sources = sources;
         _expectedDiagnostics = expectedDiagnostics;
-        _modelNames = modelNames;
     }
 
     protected override Microsoft.CodeAnalysis.ParseOptions CreateParseOptions()

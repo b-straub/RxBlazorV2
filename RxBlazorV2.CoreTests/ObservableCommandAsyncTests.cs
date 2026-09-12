@@ -159,7 +159,7 @@ public class ObservableCommandAsyncTests
         var model = new TestCommandModel();
         var executingStates = new List<bool>();
 
-        using var subscription = model.Observable.Subscribe(properties =>
+        using var subscription = model.Observable.Subscribe(_ =>
         {
             executingStates.Add(model.AsyncCommandWithParam.Executing);
             _output.WriteLine($"Executing: {model.AsyncCommandWithParam.Executing}");

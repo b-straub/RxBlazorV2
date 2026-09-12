@@ -99,7 +99,7 @@ public class ObservableCommandReturnCancellationTests
     {
         // Arrange
         var model = new TestReturnCommandModel { Value = 0 };
-        var suspensionCompleted = false;
+        bool suspensionCompleted;
 
         using var subscription = model.Observable.Subscribe(_ =>
         {
@@ -218,7 +218,7 @@ public class ObservableCommandReturnCancellationTests
         // Arrange
         var model = new TestReturnCommandModel { Value = 0 };
 
-        using var subscription = model.Observable.Subscribe(_ =>
+        var subscription = model.Observable.Subscribe(_ =>
         {
             if (model.CancelableReturnCommand.Executing)
             {
@@ -332,7 +332,7 @@ public class ObservableCommandReturnCancellationTests
     {
         // Arrange
         var model = new TestReturnCommandModel { Value = 0 };
-        var suspensionCompleted = false;
+        bool suspensionCompleted;
 
         using var subscription = model.Observable.Subscribe(_ =>
         {

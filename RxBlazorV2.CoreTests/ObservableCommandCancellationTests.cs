@@ -171,7 +171,7 @@ public class ObservableCommandCancellationTests
     {
         // Arrange
         var model = new TestCommandModel();
-        var suspensionCompleted = false;
+        bool suspensionCompleted;
 
         using var subscription = model.Observable.Subscribe(_ =>
         {

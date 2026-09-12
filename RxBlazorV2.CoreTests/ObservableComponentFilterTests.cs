@@ -186,7 +186,6 @@ public class ObservableComponentFilterTests : BunitContext
         _output.WriteLine($"Filter length: {filter.Length}");
 
         // Act - change any property
-        var initialCallCount = cut.Instance.OnContextReadyCallCount;
         cut.Instance.Model.Counter = 99;
         Thread.Sleep(150);
 
