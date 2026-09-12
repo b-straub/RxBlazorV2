@@ -1,8 +1,6 @@
-using RxBlazorV2Sample.Models;
-
 namespace RxBlazorV2Sample.Layout;
 
-public partial class MainLayout : SettingsModelComponent
+public partial class MainLayout
 {
     private bool _drawerOpen = true;
     

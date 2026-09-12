@@ -2,7 +2,6 @@ using ObservableCollections;
 using RxBlazorV2.Interface;
 using RxBlazorV2.Model;
 using RxBlazorV2.MudBlazor.Components;
-using RxBlazorV2.MudBlazor.Components.Razor;
 
 namespace RxBlazorV2.MudBlazor.Sample.Model;
 

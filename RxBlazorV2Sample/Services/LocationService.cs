@@ -28,7 +28,7 @@ public class LocationService
             
             var result = JsonSerializer.Deserialize<GeocodingResponse>(json, options);
             
-            if (result?.Results?.Length > 0)
+            if (result?.Results.Length > 0)
             {
                 var location = result.Results[0];
                 return (location.Latitude, location.Longitude);
@@ -59,7 +59,7 @@ public class LocationService
             
             var result = JsonSerializer.Deserialize<GeocodingResponse>(json, options);
             
-            if (result?.Results?.Length > 0)
+            if (result?.Results.Length > 0)
             {
                 var location = result.Results[0];
                 return $"{location.Name}, {location.Country}";

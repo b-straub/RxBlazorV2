@@ -88,7 +88,7 @@ public class OpenMeteoApiClient
     {
         var forecasts = new List<WeatherForecast>();
 
-        if (response.Current != null && response.Daily?.Time?.Length > 0)
+        if (response.Current != null && response.Daily?.Time.Length > 0)
         {
             var today = DateOnly.FromDateTime(DateTime.Now);
             var todayIndex = Array.FindIndex(response.Daily.Time, t => DateOnly.Parse(t) == today);

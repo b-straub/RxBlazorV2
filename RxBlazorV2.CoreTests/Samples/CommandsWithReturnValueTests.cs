@@ -1,4 +1,4 @@
-using RxBlazorV2Sample.Samples.BasicCommands;
+using RxBlazorV2Sample.Samples.BasicCommandWithReturn;
 
 namespace RxBlazorV2.CoreTests.Samples;
 

@@ -3,7 +3,7 @@ using RxBlazorV2Sample.Models;
 
 namespace RxBlazorV2Sample.Pages
 {
-    public partial class TestEquatable : EquatableTestModelComponent
+    public partial class TestEquatable
     {
         private int _stateChangedCounter;
 
