@@ -6,7 +6,6 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Diagnostics;
 using System.Collections.Immutable;
 using System.Composition;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace RxBlazorV2CodeFix.CodeFix;
@@ -60,12 +59,12 @@ public class ObservableModelObserverCodeFixProvider : CodeFixProvider
                 // Offer async fixes
                 var fixAsyncWithCt = CodeAction.Create(
                     title: $"Fix signature: Task {methodDeclaration.Identifier.Text}({modelTypeName} model, CancellationToken ct)",
-                    createChangedDocument: c => FixAsyncMethodSignatureAsync(context.Document, root, methodDeclaration, modelTypeName, includeCancellationToken: true, c),
+                    createChangedDocument: _ => Task.FromResult(FixAsyncMethodSignature(context.Document, root, methodDeclaration, modelTypeName, includeCancellationToken: true)),
                     equivalenceKey: "FixAsyncWithCt");
 
                 var fixAsyncWithoutCt = CodeAction.Create(
                     title: $"Fix signature: Task {methodDeclaration.Identifier.Text}({modelTypeName} model)",
-                    createChangedDocument: c => FixAsyncMethodSignatureAsync(context.Document, root, methodDeclaration, modelTypeName, includeCancellationToken: false, c),
+                    createChangedDocument: _ => Task.FromResult(FixAsyncMethodSignature(context.Document, root, methodDeclaration, modelTypeName, includeCancellationToken: false)),
                     equivalenceKey: "FixAsyncWithoutCt");
 
                 context.RegisterCodeFix(fixAsyncWithCt, diagnostic);
@@ -76,7 +75,7 @@ public class ObservableModelObserverCodeFixProvider : CodeFixProvider
                 // Offer sync fix
                 var fixSync = CodeAction.Create(
                     title: $"Fix signature: void {methodDeclaration.Identifier.Text}({modelTypeName} model)",
-                    createChangedDocument: c => FixSyncMethodSignatureAsync(context.Document, root, methodDeclaration, modelTypeName, c),
+                    createChangedDocument: _ => Task.FromResult(FixSyncMethodSignature(context.Document, root, methodDeclaration, modelTypeName)),
                     equivalenceKey: "FixSync");
 
                 context.RegisterCodeFix(fixSync, diagnostic);
@@ -87,7 +86,7 @@ public class ObservableModelObserverCodeFixProvider : CodeFixProvider
             {
                 var convertToSync = CodeAction.Create(
                     title: $"Convert to sync: void {methodDeclaration.Identifier.Text}({modelTypeName} model)",
-                    createChangedDocument: c => FixSyncMethodSignatureAsync(context.Document, root, methodDeclaration, modelTypeName, c),
+                    createChangedDocument: _ => Task.FromResult(FixSyncMethodSignature(context.Document, root, methodDeclaration, modelTypeName)),
                     equivalenceKey: "ConvertToSync");
 
                 context.RegisterCodeFix(convertToSync, diagnostic);
@@ -96,7 +95,7 @@ public class ObservableModelObserverCodeFixProvider : CodeFixProvider
             {
                 var convertToAsync = CodeAction.Create(
                     title: $"Convert to async: Task {methodDeclaration.Identifier.Text}({modelTypeName} model)",
-                    createChangedDocument: c => FixAsyncMethodSignatureAsync(context.Document, root, methodDeclaration, modelTypeName, includeCancellationToken: false, c),
+                    createChangedDocument: _ => Task.FromResult(FixAsyncMethodSignature(context.Document, root, methodDeclaration, modelTypeName, includeCancellationToken: false)),
                     equivalenceKey: "ConvertToAsync");
 
                 context.RegisterCodeFix(convertToAsync, diagnostic);
@@ -104,12 +103,11 @@ public class ObservableModelObserverCodeFixProvider : CodeFixProvider
         }
     }
 
-    private static Task<Document> FixSyncMethodSignatureAsync(
+    private static Document FixSyncMethodSignature(
         Document document,
         SyntaxNode root,
         MethodDeclarationSyntax methodDeclaration,
-        string? modelTypeName,
-        CancellationToken cancellationToken)
+        string? modelTypeName)
     {
         // Create parameter: ModelType model
         var modelParameter = SyntaxFactory.Parameter(
@@ -134,16 +132,15 @@ public class ObservableModelObserverCodeFixProvider : CodeFixProvider
             .WithParameterList(parameterList);
 
         var newRoot = root.ReplaceNode(methodDeclaration, newMethod);
-        return Task.FromResult(document.WithSyntaxRoot(newRoot));
+        return document.WithSyntaxRoot(newRoot);
     }
 
-    private static Task<Document> FixAsyncMethodSignatureAsync(
+    private static Document FixAsyncMethodSignature(
         Document document,
         SyntaxNode root,
         MethodDeclarationSyntax methodDeclaration,
         string? modelTypeName,
-        bool includeCancellationToken,
-        CancellationToken cancellationToken)
+        bool includeCancellationToken)
     {
         // Create model parameter
         var modelParameter = SyntaxFactory.Parameter(
@@ -188,6 +185,6 @@ public class ObservableModelObserverCodeFixProvider : CodeFixProvider
         // Add using for System.Threading.Tasks for Task
         newRoot = SyntaxHelpers.AddUsingDirectives(newRoot, "System.Threading.Tasks");
 
-        return Task.FromResult(document.WithSyntaxRoot(newRoot));
+        return document.WithSyntaxRoot(newRoot);
     }
 }

@@ -76,7 +76,7 @@ public class DiServiceScopeViolationCodeFixProvider : CodeFixProvider
             // Create code action with consistent equivalence key for all diagnostics in this class
             var changeScopeAction = CodeAction.Create(
                 title: $"Change {className} to {requiredScope} scope",
-                createChangedDocument: c => Task.FromResult(ChangeToRequiredScope(
+                createChangedDocument: _ => Task.FromResult(ChangeToRequiredScope(
                     context.Document,
                     root,
                     classDeclaration,

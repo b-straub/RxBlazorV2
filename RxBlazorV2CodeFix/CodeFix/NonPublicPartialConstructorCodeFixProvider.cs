@@ -6,7 +6,6 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Diagnostics;
 using System.Collections.Immutable;
 using System.Composition;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace RxBlazorV2CodeFix.CodeFix;
@@ -36,12 +35,10 @@ public class NonPublicPartialConstructorCodeFixProvider : CodeFixProvider
 
             if (constructorDeclaration is not null)
             {
-                var className = constructorDeclaration.Identifier.Text;
-
                 // Code fix: Change constructor to public
                 var changeToPublicAction = CodeAction.Create(
                     title: $"Change partial constructor to 'public'",
-                    createChangedDocument: c => ChangeConstructorToPublic(context.Document, root, constructorDeclaration, c),
+                    createChangedDocument: _ => Task.FromResult(ChangeConstructorToPublic(context.Document, root, constructorDeclaration)),
                     equivalenceKey: "ChangeToPublicConstructor");
 
                 context.RegisterCodeFix(changeToPublicAction, diagnostic);
@@ -49,11 +46,10 @@ public class NonPublicPartialConstructorCodeFixProvider : CodeFixProvider
         }
     }
 
-    private static Task<Document> ChangeConstructorToPublic(
+    private static Document ChangeConstructorToPublic(
         Document document,
         SyntaxNode root,
-        ConstructorDeclarationSyntax constructor,
-        CancellationToken cancellationToken)
+        ConstructorDeclarationSyntax constructor)
     {
         // Find the first accessibility modifier (protected, private, internal)
         var firstAccessibilityModifier = constructor.Modifiers
@@ -64,7 +60,7 @@ public class NonPublicPartialConstructorCodeFixProvider : CodeFixProvider
 
         if (firstAccessibilityModifier == default)
         {
-            return Task.FromResult(document);
+            return document;
         }
 
         // Create public keyword with trivia from the first accessibility modifier
@@ -88,6 +84,6 @@ public class NonPublicPartialConstructorCodeFixProvider : CodeFixProvider
         // Replace the constructor in the syntax tree
         var newRoot = root.ReplaceNode(constructor, newConstructor);
 
-        return Task.FromResult(document.WithSyntaxRoot(newRoot));
+        return document.WithSyntaxRoot(newRoot);
     }
 }

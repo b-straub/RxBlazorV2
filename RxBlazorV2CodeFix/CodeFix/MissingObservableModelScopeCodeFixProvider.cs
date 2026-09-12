@@ -6,7 +6,6 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Diagnostics;
 using System.Collections.Immutable;
 using System.Composition;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace RxBlazorV2CodeFix.CodeFix;
@@ -41,7 +40,7 @@ public class MissingObservableModelScopeCodeFixProvider : CodeFixProvider
                 // Code fix 1: Add Scoped scope attribute (most common for page-specific models)
                 var addScopedAction = CodeAction.Create(
                     title: $"Add [ObservableModelScope(ModelScope.Scoped)] to {className}",
-                    createChangedDocument: c => AddScopeAttribute(context.Document, root, classDeclaration, "Scoped", c),
+                    createChangedDocument: _ => Task.FromResult(AddScopeAttribute(context.Document, root, classDeclaration, "Scoped")),
                     equivalenceKey: "AddScopedScope");
 
                 context.RegisterCodeFix(addScopedAction, diagnostic);
@@ -49,7 +48,7 @@ public class MissingObservableModelScopeCodeFixProvider : CodeFixProvider
                 // Code fix 2: Add Singleton scope attribute
                 var addSingletonAction = CodeAction.Create(
                     title: $"Add [ObservableModelScope(ModelScope.Singleton)] to {className}",
-                    createChangedDocument: c => AddScopeAttribute(context.Document, root, classDeclaration, "Singleton", c),
+                    createChangedDocument: _ => Task.FromResult(AddScopeAttribute(context.Document, root, classDeclaration, "Singleton")),
                     equivalenceKey: "AddSingletonScope");
 
                 context.RegisterCodeFix(addSingletonAction, diagnostic);
@@ -57,7 +56,7 @@ public class MissingObservableModelScopeCodeFixProvider : CodeFixProvider
                 // Code fix 3: Add Transient scope attribute
                 var addTransientAction = CodeAction.Create(
                     title: $"Add [ObservableModelScope(ModelScope.Transient)] to {className}",
-                    createChangedDocument: c => AddScopeAttribute(context.Document, root, classDeclaration, "Transient", c),
+                    createChangedDocument: _ => Task.FromResult(AddScopeAttribute(context.Document, root, classDeclaration, "Transient")),
                     equivalenceKey: "AddTransientScope");
 
                 context.RegisterCodeFix(addTransientAction, diagnostic);
@@ -65,12 +64,11 @@ public class MissingObservableModelScopeCodeFixProvider : CodeFixProvider
         }
     }
 
-    private static Task<Document> AddScopeAttribute(
+    private static Document AddScopeAttribute(
         Document document,
         SyntaxNode root,
         ClassDeclarationSyntax classDeclaration,
-        string scopeValue,
-        CancellationToken cancellationToken)
+        string scopeValue)
     {
         // Create the attribute with the specified scope
         var newAttribute = SyntaxFactory.Attribute(
@@ -96,6 +94,6 @@ public class MissingObservableModelScopeCodeFixProvider : CodeFixProvider
                 .First(c => c.Identifier.Text == classDeclaration.Identifier.Text),
             newClassDeclaration);
 
-        return Task.FromResult(document.WithSyntaxRoot(newRoot));
+        return document.WithSyntaxRoot(newRoot);
     }
 }

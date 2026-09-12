@@ -56,7 +56,7 @@ public class CircularTriggerReferenceCodeFixProvider : CodeFixProvider
         // Option 1: Remove the trigger attribute
         var removeTriggerAction = CodeAction.Create(
             title: "Remove circular trigger attribute",
-            createChangedDocument: c => Task.FromResult(RemoveAttribute(context.Document, root, attribute)),
+            createChangedDocument: _ => Task.FromResult(RemoveAttribute(context.Document, root, attribute)),
             equivalenceKey: "RemoveCircularTriggerAttribute");
         context.RegisterCodeFix(removeTriggerAction, diagnostic);
 
@@ -80,7 +80,7 @@ public class CircularTriggerReferenceCodeFixProvider : CodeFixProvider
                     {
                         var removeModificationAction = CodeAction.Create(
                             title: $"Remove modification of '{triggerProperty}'",
-                            createChangedDocument: c => Task.FromResult(RemoveStatement(context.Document, root, modificationStatement)),
+                            createChangedDocument: _ => Task.FromResult(RemoveStatement(context.Document, root, modificationStatement)),
                             equivalenceKey: "RemoveCircularPropertyModification");
                         context.RegisterCodeFix(removeModificationAction, diagnostic);
                     }
@@ -100,7 +100,7 @@ public class CircularTriggerReferenceCodeFixProvider : CodeFixProvider
         // Option 1: Remove the observer method
         var removeMethodAction = CodeAction.Create(
             title: $"Remove observer method '{methodName}'",
-            createChangedDocument: c => Task.FromResult(RemoveMethod(context.Document, root, methodDecl)),
+            createChangedDocument: _ => Task.FromResult(RemoveMethod(context.Document, root, methodDecl)),
             equivalenceKey: "RemoveCircularObserverMethod");
         context.RegisterCodeFix(removeMethodAction, diagnostic);
 
@@ -122,7 +122,7 @@ public class CircularTriggerReferenceCodeFixProvider : CodeFixProvider
                 {
                     var removeModificationAction = CodeAction.Create(
                         title: $"Remove modification of '{prop}'",
-                        createChangedDocument: c => Task.FromResult(RemoveStatement(context.Document, root, modificationStatement)),
+                        createChangedDocument: _ => Task.FromResult(RemoveStatement(context.Document, root, modificationStatement)),
                         equivalenceKey: $"RemoveCircularPropertyModification_{prop}");
                     context.RegisterCodeFix(removeModificationAction, diagnostic);
                 }

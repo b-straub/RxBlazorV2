@@ -40,8 +40,7 @@ public class UnregisteredServiceCodeFixProvider : CodeFixProvider
 
             if (constructorDeclaration != null)
             {
-                // Extract parameter name and type from diagnostic properties
-                var parameterName = diagnostic.Properties.TryGetValue("ParameterName", out var pName) ? pName : "service";
+                // Extract type name from diagnostic properties
                 var typeName = diagnostic.Properties.TryGetValue("TypeName", out var tName) ? tName : "unknown";
 
                 // Get simple type name for display
@@ -50,7 +49,7 @@ public class UnregisteredServiceCodeFixProvider : CodeFixProvider
                 // Code fix: Add [SuppressMessage] attribute with justification
                 var suppressMessageAction = CodeAction.Create(
                     title: $"Suppress warning with justification for {simpleTypeName}",
-                    createChangedDocument: c => Task.FromResult(AddSuppressMessageAttribute(
+                    createChangedDocument: _ => Task.FromResult(AddSuppressMessageAttribute(
                         context.Document,
                         root,
                         constructorDeclaration,

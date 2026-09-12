@@ -24,11 +24,6 @@ namespace RxBlazorV2CodeFix.CodeFix;
 
 internal static class SyntaxHelpers
 {
-    private static bool True(this bool? value)
-    {
-        return value.GetValueOrDefault(false);
-    }
-
     public static SyntaxList<TNode> RemoveKeepTrivia<TNode>(this SyntaxList<TNode> list, TNode node)
         where TNode : SyntaxNode
     {
@@ -178,14 +173,14 @@ internal static class SyntaxHelpers
 
     /// <summary>
     /// Extracts the type symbol from an attribute that references a type.
-    /// Supports both generic syntax (Attribute<T>) and typeof syntax (Attribute(typeof(T))).
+    /// Supports both generic syntax (Attribute&lt;T&gt;) and typeof syntax (Attribute(typeof(T))).
     /// </summary>
     public static INamedTypeSymbol? ExtractTypeFromAttribute(
         AttributeSyntax attribute,
         SemanticModel semanticModel)
     {
         if (attribute.Name is GenericNameSyntax genericName &&
-            genericName.TypeArgumentList?.Arguments.Count > 0)
+            genericName.TypeArgumentList.Arguments.Count > 0)
         {
             var typeArgument = genericName.TypeArgumentList.Arguments.First();
             var typeInfo = semanticModel.GetTypeInfo(typeArgument);

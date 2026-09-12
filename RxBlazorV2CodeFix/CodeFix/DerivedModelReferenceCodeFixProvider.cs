@@ -5,7 +5,6 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Diagnostics;
 using RxBlazorV2Generator.Extensions;
 using System.Collections.Immutable;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace RxBlazorV2CodeFix.CodeFix;
@@ -47,20 +46,19 @@ public class DerivedModelReferenceCodeFixProvider : CodeFixProvider
             // Code Fix: Remove the derived model reference parameter
             var removeParameterAction = CodeAction.Create(
                 title: diagnostic.Descriptor.CodeFixMessage(),
-                createChangedDocument: c => RemoveParameterAsync(context.Document, root, parameter, c),
+                createChangedDocument: _ => Task.FromResult(RemoveParameter(context.Document, root, parameter)),
                 equivalenceKey: diagnostic.Descriptor.Id);
 
             context.RegisterCodeFix(removeParameterAction, diagnostic);
         }
     }
 
-    private static Task<Document> RemoveParameterAsync(
+    private static Document RemoveParameter(
         Document document,
         SyntaxNode root,
-        ParameterSyntax parameter,
-        CancellationToken cancellationToken)
+        ParameterSyntax parameter)
     {
         var newRoot = SyntaxHelpers.RemoveConstructorParameter(root, parameter);
-        return Task.FromResult(document.WithSyntaxRoot(newRoot));
+        return document.WithSyntaxRoot(newRoot);
     }
 }

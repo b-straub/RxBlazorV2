@@ -7,7 +7,6 @@ using RxBlazorV2Generator.Diagnostics;
 using RxBlazorV2Generator.Extensions;
 using System.Collections.Immutable;
 using System.Composition;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace RxBlazorV2CodeFix.CodeFix;
@@ -51,14 +50,11 @@ public class UnusedComponentTriggerCodeFixProvider : CodeFixProvider
                 continue;
             }
 
-            var className = classDeclaration.Identifier.Text;
-            var propertyName = property.Identifier.Text;
-
             // Code fix 1: Add [ObservableComponent] attribute to the class
             var addObservableComponentAction = CodeAction.Create(
                 title: diagnostic.Descriptor.CodeFixMessage(),
-                createChangedDocument: c => AddObservableComponentAttribute(
-                    context.Document, root, classDeclaration, c),
+                createChangedDocument: _ => Task.FromResult(AddObservableComponentAttribute(
+                    context.Document, root, classDeclaration)),
                 equivalenceKey: diagnostic.Descriptor.Id);
 
             context.RegisterCodeFix(addObservableComponentAction, diagnostic);
@@ -66,19 +62,18 @@ public class UnusedComponentTriggerCodeFixProvider : CodeFixProvider
             // Code fix 2: Remove trigger attributes from the property
             var removeTriggerAttributesAction = CodeAction.Create(
                 title: diagnostic.Descriptor.CodeFixMessage(1),
-                createChangedDocument: c => RemoveTriggerAttributes(
-                    context.Document, root, property, c),
+                createChangedDocument: _ => Task.FromResult(RemoveTriggerAttributes(
+                    context.Document, root, property)),
                 equivalenceKey: $"{diagnostic.Descriptor.Id}_RemoveTriggers");
 
             context.RegisterCodeFix(removeTriggerAttributesAction, diagnostic);
         }
     }
 
-    private static Task<Document> AddObservableComponentAttribute(
+    private static Document AddObservableComponentAttribute(
         Document document,
         SyntaxNode root,
-        ClassDeclarationSyntax classDeclaration,
-        CancellationToken cancellationToken)
+        ClassDeclarationSyntax classDeclaration)
     {
         // Check if class already has [ObservableComponent] attribute
         var hasObservableComponent = classDeclaration.AttributeLists
@@ -88,7 +83,7 @@ public class UnusedComponentTriggerCodeFixProvider : CodeFixProvider
         if (hasObservableComponent)
         {
             // Already has the attribute, nothing to do
-            return Task.FromResult(document);
+            return document;
         }
 
         // Create the [ObservableComponent] attribute
@@ -108,14 +103,13 @@ public class UnusedComponentTriggerCodeFixProvider : CodeFixProvider
                 .First(c => c.Identifier.Text == classDeclaration.Identifier.Text),
             newClassDeclaration);
 
-        return Task.FromResult(document.WithSyntaxRoot(newRoot));
+        return document.WithSyntaxRoot(newRoot);
     }
 
-    private static Task<Document> RemoveTriggerAttributes(
+    private static Document RemoveTriggerAttributes(
         Document document,
         SyntaxNode root,
-        PropertyDeclarationSyntax property,
-        CancellationToken cancellationToken)
+        PropertyDeclarationSyntax property)
     {
         // Build new property with trigger attributes removed
         var newAttributeLists = new List<AttributeListSyntax>();
@@ -148,6 +142,6 @@ public class UnusedComponentTriggerCodeFixProvider : CodeFixProvider
         // Replace in root
         var newRoot = root.ReplaceNode(property, newProperty);
 
-        return Task.FromResult(document.WithSyntaxRoot(newRoot));
+        return document.WithSyntaxRoot(newRoot);
     }
 }

@@ -1,4 +1,3 @@
-using System;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
@@ -6,7 +5,6 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Diagnostics;
 using System.Collections.Immutable;
-using System.Threading;
 using System.Threading.Tasks;
 using RxBlazorV2Generator.Helpers;
 
@@ -49,18 +47,17 @@ public class InvalidInitPropertyCodeFixProvider : CodeFixProvider
             // Code Fix: Convert init to set (preserve required modifier)
             var convertToSetAction = CodeAction.Create(
                 title: "Convert 'init' to 'set'",
-                createChangedDocument: c => ConvertInitToSetAsync(context.Document, root, property, c),
+                createChangedDocument: _ => Task.FromResult(ConvertInitToSet(context.Document, root, property)),
                 equivalenceKey: "ConvertInitToSet");
 
             context.RegisterCodeFix(convertToSetAction, diagnostic);
         }
     }
 
-    private static Task<Document> ConvertInitToSetAsync(
+    private static Document ConvertInitToSet(
         Document document,
         SyntaxNode root,
-        PropertyDeclarationSyntax property,
-        CancellationToken cancellationToken)
+        PropertyDeclarationSyntax property)
     {
         // Convert init accessor to set accessor (preserve all modifiers including required)
         property.AccessorList.ThrowIfNull();
@@ -92,6 +89,6 @@ public class InvalidInitPropertyCodeFixProvider : CodeFixProvider
         var newProperty = property.WithAccessorList(newAccessorList);
 
         var newRoot = root.ReplaceNode(property, newProperty);
-        return Task.FromResult(document.WithSyntaxRoot(newRoot));
+        return document.WithSyntaxRoot(newRoot);
     }
 }

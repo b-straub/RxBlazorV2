@@ -1,6 +1,5 @@
 using System.Collections.Immutable;
 using System.Composition;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
@@ -52,7 +51,7 @@ public class CircularModelReferenceCodeFixProvider : CodeFixProvider
         // Register fix to remove this model's circular reference
         var removeSingleAction = CodeAction.Create(
             title: diagnostic.Descriptor.CodeFixMessage(),
-            createChangedDocument: c => RemoveAttributeAsync(context.Document, root, attribute, c),
+            createChangedDocument: _ => Task.FromResult(RemoveAttribute(context.Document, root, attribute)),
             equivalenceKey: diagnostic.Descriptor.Id);
 
         context.RegisterCodeFix(removeSingleAction, diagnostic);
@@ -64,21 +63,20 @@ public class CircularModelReferenceCodeFixProvider : CodeFixProvider
             // Register fix to remove both circular references
             var removeBothAction = CodeAction.Create(
                 title: diagnostic.Descriptor.CodeFixMessage(1),
-                createChangedDocument: c => RemoveBothAttributesAsync(context.Document, root, attribute, partnerAttribute, c),
+                createChangedDocument: _ => Task.FromResult(RemoveBothAttributes(context.Document, root, attribute, partnerAttribute)),
                 equivalenceKey: $"{diagnostic.Descriptor.Id}_RemoveAll");
 
             context.RegisterCodeFix(removeBothAction, diagnostic);
         }
     }
 
-    private static Task<Document> RemoveAttributeAsync(
+    private static Document RemoveAttribute(
         Document document,
         SyntaxNode root,
-        AttributeSyntax attribute,
-        CancellationToken cancellationToken)
+        AttributeSyntax attribute)
     {
         var newRoot = SyntaxHelpers.RemoveAttributeFromClass(root, attribute);
-        return Task.FromResult(document.WithSyntaxRoot(newRoot));
+        return document.WithSyntaxRoot(newRoot);
     }
 
     private static AttributeSyntax? FindCircularReferencePartner(
@@ -153,12 +151,11 @@ public class CircularModelReferenceCodeFixProvider : CodeFixProvider
         return SyntaxHelpers.ExtractTypeFromAttribute(attribute, semanticModel);
     }
 
-    private static Task<Document> RemoveBothAttributesAsync(
+    private static Document RemoveBothAttributes(
         Document document,
         SyntaxNode root,
         AttributeSyntax attribute1,
-        AttributeSyntax attribute2,
-        CancellationToken cancellationToken)
+        AttributeSyntax attribute2)
     {
         var nodesToRemove = new List<SyntaxNode>();
 
@@ -194,9 +191,9 @@ public class CircularModelReferenceCodeFixProvider : CodeFixProvider
         var newRoot = root.RemoveNodes(nodesToRemove, SyntaxRemoveOptions.KeepNoTrivia);
         if (newRoot is null)
         {
-            return Task.FromResult(document);
+            return document;
         }
 
-        return Task.FromResult(document.WithSyntaxRoot(newRoot));
+        return document.WithSyntaxRoot(newRoot);
     }
 }

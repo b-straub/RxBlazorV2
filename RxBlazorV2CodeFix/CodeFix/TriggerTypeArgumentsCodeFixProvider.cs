@@ -36,7 +36,7 @@ public class TriggerTypeArgumentsCodeFixProvider : CodeFixProvider
                     // Code fix 1: Fix trigger type arguments to match command
                     var fixTypeArgumentsAction = CodeAction.Create(
                         title: "Fix trigger type arguments to match command type",
-                        createChangedDocument: c => Task.FromResult(FixTriggerTypeArguments(context.Document, root, attribute, propertyDeclaration)),
+                        createChangedDocument: _ => Task.FromResult(FixTriggerTypeArguments(context.Document, root, attribute, propertyDeclaration)),
                         equivalenceKey: "FixTriggerTypeArguments");
 
                     context.RegisterCodeFix(fixTypeArgumentsAction, diagnostic);
@@ -44,7 +44,7 @@ public class TriggerTypeArgumentsCodeFixProvider : CodeFixProvider
                     // Code fix 2: Remove trigger type arguments (use non-generic version)
                     var removeTypeArgumentsAction = CodeAction.Create(
                         title: "Remove trigger type arguments (use non-generic trigger)",
-                        createChangedDocument: c => Task.FromResult(RemoveTriggerTypeArguments(context.Document, root, attribute)),
+                        createChangedDocument: _ => Task.FromResult(RemoveTriggerTypeArguments(context.Document, root, attribute)),
                         equivalenceKey: "RemoveTriggerTypeArguments");
 
                     context.RegisterCodeFix(removeTypeArgumentsAction, diagnostic);
@@ -133,7 +133,7 @@ public class TriggerTypeArgumentsCodeFixProvider : CodeFixProvider
             var newParameterArg = SyntaxFactory.AttributeArgument(defaultValue);
             
             var newArgumentList = SyntaxFactory.AttributeArgumentList(
-                SyntaxFactory.SeparatedList<AttributeArgumentSyntax>(new[] { firstArg, newParameterArg }));
+                SyntaxFactory.SeparatedList(new[] { firstArg, newParameterArg }));
             
             newAttribute = newAttribute.WithArgumentList(newArgumentList);
         }

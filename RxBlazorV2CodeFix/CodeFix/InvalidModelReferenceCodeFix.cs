@@ -42,7 +42,7 @@ public class InvalidModelReferenceCodeFix : CodeFixProvider
             // Code Fix 1: Remove the invalid attribute
             var removeAttributeAction = CodeAction.Create(
                 title: $"Remove invalid model reference attribute",
-                createChangedDocument: c => RemoveAttributeAsync(context.Document, root, attribute, c),
+                createChangedDocument: _ => Task.FromResult(RemoveAttribute(context.Document, root, attribute)),
                 equivalenceKey: "RemoveAttribute");
 
             context.RegisterCodeFix(removeAttributeAction, diagnostic);
@@ -63,19 +63,19 @@ public class InvalidModelReferenceCodeFix : CodeFixProvider
     private static string? ExtractModelNameFromDiagnostic(string message)
     {
         // Extract model name from message: "Referenced model 'ModelName' does not inherit from ObservableModel or implement IObservableModel"
-        var startIndex = message.IndexOf("'") + 1;
+        var startIndex = message.IndexOf('\'') + 1;
         if (startIndex <= 0) return null;
         
-        var endIndex = message.IndexOf("'", startIndex);
+        var endIndex = message.IndexOf('\'', startIndex);
         if (endIndex <= startIndex) return null;
         
         return message.Substring(startIndex, endIndex - startIndex);
     }
 
-    private static Task<Document> RemoveAttributeAsync(Document document, SyntaxNode root, AttributeSyntax attribute, CancellationToken cancellationToken)
+    private static Document RemoveAttribute(Document document, SyntaxNode root, AttributeSyntax attribute)
     {
         var newRoot = SyntaxHelpers.RemoveAttributeFromClass(root, attribute);
-        return Task.FromResult(document.WithSyntaxRoot(newRoot));
+        return document.WithSyntaxRoot(newRoot);
     }
 
     private static async Task<Document> MakeClassObservableAsync(Document document, string className, CancellationToken cancellationToken)
@@ -94,7 +94,7 @@ public class InvalidModelReferenceCodeFix : CodeFixProvider
             return await MakeClassObservableInProjectAsync(document, className, cancellationToken);
         }
 
-        return UpdateClassToInheritObservableModel(document, root, classDeclaration, cancellationToken);
+        return UpdateClassToInheritObservableModel(document, root, classDeclaration);
     }
 
     private static async Task<Document> MakeClassObservableInProjectAsync(Document document, string className, CancellationToken cancellationToken)
@@ -113,14 +113,14 @@ public class InvalidModelReferenceCodeFix : CodeFixProvider
 
             if (classDeclaration != null)
             {
-                return UpdateClassToInheritObservableModel(doc, docRoot, classDeclaration, cancellationToken);
+                return UpdateClassToInheritObservableModel(doc, docRoot, classDeclaration);
             }
         }
 
         return document; // Class not found
     }
 
-    private static Document UpdateClassToInheritObservableModel(Document document, SyntaxNode root, ClassDeclarationSyntax classDeclaration, CancellationToken cancellationToken)
+    private static Document UpdateClassToInheritObservableModel(Document document, SyntaxNode root, ClassDeclarationSyntax classDeclaration)
     {
         // Check if the class already has a base list
         var newClassDeclaration = classDeclaration;
@@ -156,12 +156,12 @@ public class InvalidModelReferenceCodeFix : CodeFixProvider
 
         // Add necessary using statements
         var newRoot = root.ReplaceNode(classDeclaration, newClassDeclaration);
-        newRoot = AddRequiredUsingStatements(document, newRoot, cancellationToken);
+        newRoot = AddRequiredUsingStatements(newRoot);
 
         return document.WithSyntaxRoot(newRoot);
     }
 
-    private static SyntaxNode AddRequiredUsingStatements(Document document, SyntaxNode root, CancellationToken cancellationToken)
+    private static SyntaxNode AddRequiredUsingStatements(SyntaxNode root)
     {
         return SyntaxHelpers.AddUsingDirectives(root, "RxBlazorV2.Model", "RxBlazorV2.Interface");
     }

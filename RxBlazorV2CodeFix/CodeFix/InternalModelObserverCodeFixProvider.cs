@@ -6,7 +6,6 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Diagnostics;
 using System.Collections.Immutable;
 using System.Composition;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace RxBlazorV2CodeFix.CodeFix;
@@ -61,14 +60,14 @@ public class InternalModelObserverCodeFixProvider : CodeFixProvider
                 // Offer to make private and fix signature
                 var makeSyncPrivate = CodeAction.Create(
                     title: $"Make private: private void {methodDeclaration.Identifier.Text}()",
-                    createChangedDocument: c => MakePrivateSyncAsync(context.Document, root, methodDeclaration, c),
+                    createChangedDocument: _ => Task.FromResult(MakeSyncObserverPrivate(context.Document, root, methodDeclaration)),
                     equivalenceKey: "MakePrivateSync");
 
                 context.RegisterCodeFix(makeSyncPrivate, diagnostic);
 
                 var makeAsyncPrivate = CodeAction.Create(
                     title: $"Make private async: private Task {methodDeclaration.Identifier.Text}(CancellationToken ct)",
-                    createChangedDocument: c => MakePrivateAsyncAsync(context.Document, root, methodDeclaration, includeCancellationToken: true, c),
+                    createChangedDocument: _ => Task.FromResult(MakeAsyncObserverPrivate(context.Document, root, methodDeclaration, includeCancellationToken: true)),
                     equivalenceKey: "MakePrivateAsync");
 
                 context.RegisterCodeFix(makeAsyncPrivate, diagnostic);
@@ -78,12 +77,12 @@ public class InternalModelObserverCodeFixProvider : CodeFixProvider
                 // Private async method but has wrong parameters
                 var fixAsyncWithCt = CodeAction.Create(
                     title: $"Fix signature: private Task {methodDeclaration.Identifier.Text}(CancellationToken ct)",
-                    createChangedDocument: c => MakePrivateAsyncAsync(context.Document, root, methodDeclaration, includeCancellationToken: true, c),
+                    createChangedDocument: _ => Task.FromResult(MakeAsyncObserverPrivate(context.Document, root, methodDeclaration, includeCancellationToken: true)),
                     equivalenceKey: "FixAsyncWithCt");
 
                 var fixAsyncWithoutCt = CodeAction.Create(
                     title: $"Fix signature: private Task {methodDeclaration.Identifier.Text}()",
-                    createChangedDocument: c => MakePrivateAsyncAsync(context.Document, root, methodDeclaration, includeCancellationToken: false, c),
+                    createChangedDocument: _ => Task.FromResult(MakeAsyncObserverPrivate(context.Document, root, methodDeclaration, includeCancellationToken: false)),
                     equivalenceKey: "FixAsyncWithoutCt");
 
                 context.RegisterCodeFix(fixAsyncWithCt, diagnostic);
@@ -94,12 +93,12 @@ public class InternalModelObserverCodeFixProvider : CodeFixProvider
                 // Private sync method but has parameters
                 var fixSync = CodeAction.Create(
                     title: $"Fix signature: private void {methodDeclaration.Identifier.Text}()",
-                    createChangedDocument: c => MakePrivateSyncAsync(context.Document, root, methodDeclaration, c),
+                    createChangedDocument: _ => Task.FromResult(MakeSyncObserverPrivate(context.Document, root, methodDeclaration)),
                     equivalenceKey: "FixSync");
 
                 var convertToAsync = CodeAction.Create(
                     title: $"Convert to async: private Task {methodDeclaration.Identifier.Text}(CancellationToken ct)",
-                    createChangedDocument: c => MakePrivateAsyncAsync(context.Document, root, methodDeclaration, includeCancellationToken: true, c),
+                    createChangedDocument: _ => Task.FromResult(MakeAsyncObserverPrivate(context.Document, root, methodDeclaration, includeCancellationToken: true)),
                     equivalenceKey: "ConvertToAsync");
 
                 context.RegisterCodeFix(fixSync, diagnostic);
@@ -110,12 +109,12 @@ public class InternalModelObserverCodeFixProvider : CodeFixProvider
                 // Other signature issues (e.g., wrong return type)
                 var fixSync = CodeAction.Create(
                     title: $"Fix signature: private void {methodDeclaration.Identifier.Text}()",
-                    createChangedDocument: c => MakePrivateSyncAsync(context.Document, root, methodDeclaration, c),
+                    createChangedDocument: _ => Task.FromResult(MakeSyncObserverPrivate(context.Document, root, methodDeclaration)),
                     equivalenceKey: "FixSync");
 
                 var fixAsync = CodeAction.Create(
                     title: $"Fix signature: private Task {methodDeclaration.Identifier.Text}()",
-                    createChangedDocument: c => MakePrivateAsyncAsync(context.Document, root, methodDeclaration, includeCancellationToken: false, c),
+                    createChangedDocument: _ => Task.FromResult(MakeAsyncObserverPrivate(context.Document, root, methodDeclaration, includeCancellationToken: false)),
                     equivalenceKey: "FixAsync");
 
                 context.RegisterCodeFix(fixSync, diagnostic);
@@ -124,11 +123,10 @@ public class InternalModelObserverCodeFixProvider : CodeFixProvider
         }
     }
 
-    private static Task<Document> MakePrivateSyncAsync(
+    private static Document MakeSyncObserverPrivate(
         Document document,
         SyntaxNode root,
-        MethodDeclarationSyntax methodDeclaration,
-        CancellationToken cancellationToken)
+        MethodDeclarationSyntax methodDeclaration)
     {
         // Create empty parameter list - preserve closing paren trivia from original
         var parameterList = SyntaxFactory.ParameterList()
@@ -180,15 +178,14 @@ public class InternalModelObserverCodeFixProvider : CodeFixProvider
             .WithParameterList(parameterList);
 
         var newRoot = root.ReplaceNode(methodDeclaration, newMethod);
-        return Task.FromResult(document.WithSyntaxRoot(newRoot));
+        return document.WithSyntaxRoot(newRoot);
     }
 
-    private static Task<Document> MakePrivateAsyncAsync(
+    private static Document MakeAsyncObserverPrivate(
         Document document,
         SyntaxNode root,
         MethodDeclarationSyntax methodDeclaration,
-        bool includeCancellationToken,
-        CancellationToken cancellationToken)
+        bool includeCancellationToken)
     {
         // Preserve trailing trivia from original parameter list
         var originalCloseParenTrivia = methodDeclaration.ParameterList.CloseParenToken.TrailingTrivia;
@@ -276,6 +273,6 @@ public class InternalModelObserverCodeFixProvider : CodeFixProvider
         }
         newRoot = SyntaxHelpers.AddUsingDirectives(newRoot, "System.Threading.Tasks");
 
-        return Task.FromResult(document.WithSyntaxRoot(newRoot));
+        return document.WithSyntaxRoot(newRoot);
     }
 }

@@ -6,7 +6,6 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Diagnostics;
 using System.Collections.Immutable;
 using System.Composition;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace RxBlazorV2CodeFix.CodeFix;
@@ -39,7 +38,7 @@ public class ObservableEntityMissingPartialCodeFixProvider : CodeFixProvider
             {
                 var action = CodeAction.Create(
                     title: "Add 'partial' modifier to class",
-                    createChangedDocument: c => AddPartialModifierToClass(context.Document, root, classDeclaration, c),
+                    createChangedDocument: _ => Task.FromResult(AddPartialModifierToClass(context.Document, root, classDeclaration)),
                     equivalenceKey: "AddPartialModifierToClass");
 
                 context.RegisterCodeFix(action, diagnostic);
@@ -48,7 +47,7 @@ public class ObservableEntityMissingPartialCodeFixProvider : CodeFixProvider
             {
                 var action = CodeAction.Create(
                     title: "Add 'partial' modifier to property",
-                    createChangedDocument: c => AddPartialModifierToProperty(context.Document, root, propertyDeclaration, c),
+                    createChangedDocument: _ => Task.FromResult(AddPartialModifierToProperty(context.Document, root, propertyDeclaration)),
                     equivalenceKey: "AddPartialModifierToProperty");
 
                 context.RegisterCodeFix(action, diagnostic);
@@ -56,11 +55,10 @@ public class ObservableEntityMissingPartialCodeFixProvider : CodeFixProvider
         }
     }
 
-    private static Task<Document> AddPartialModifierToClass(
+    private static Document AddPartialModifierToClass(
         Document document,
         SyntaxNode root,
-        ClassDeclarationSyntax classDeclaration,
-        CancellationToken cancellationToken)
+        ClassDeclarationSyntax classDeclaration)
     {
         // Find the first non-trivia modifier or the class keyword
         var firstModifier = classDeclaration.Modifiers.FirstOrDefault();
@@ -89,14 +87,13 @@ public class ObservableEntityMissingPartialCodeFixProvider : CodeFixProvider
         var newClassDeclaration = classDeclaration.WithModifiers(newModifiers);
         var newRoot = root.ReplaceNode(classDeclaration, newClassDeclaration);
 
-        return Task.FromResult(document.WithSyntaxRoot(newRoot));
+        return document.WithSyntaxRoot(newRoot);
     }
 
-    private static Task<Document> AddPartialModifierToProperty(
+    private static Document AddPartialModifierToProperty(
         Document document,
         SyntaxNode root,
-        PropertyDeclarationSyntax propertyDeclaration,
-        CancellationToken cancellationToken)
+        PropertyDeclarationSyntax propertyDeclaration)
     {
         // Find the first non-trivia modifier or the property type
         var firstModifier = propertyDeclaration.Modifiers.FirstOrDefault();
@@ -125,6 +122,6 @@ public class ObservableEntityMissingPartialCodeFixProvider : CodeFixProvider
         var newPropertyDeclaration = propertyDeclaration.WithModifiers(newModifiers);
         var newRoot = root.ReplaceNode(propertyDeclaration, newPropertyDeclaration);
 
-        return Task.FromResult(document.WithSyntaxRoot(newRoot));
+        return document.WithSyntaxRoot(newRoot);
     }
 }

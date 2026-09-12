@@ -5,10 +5,8 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RxBlazorV2Generator.Diagnostics;
 using RxBlazorV2Generator.Extensions;
-using RxBlazorV2Generator.Helpers;
 using System.Collections.Immutable;
 using System.Composition;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace RxBlazorV2CodeFix.CodeFix;
@@ -47,7 +45,7 @@ public class NonObservableCollectionCodeFixProvider : CodeFixProvider
                 continue;
             }
 
-            var propertySymbol = semanticModel.GetDeclaredSymbol(property) as IPropertySymbol;
+            var propertySymbol = semanticModel.GetDeclaredSymbol(property);
             if (propertySymbol is null)
             {
                 continue;
@@ -61,8 +59,8 @@ public class NonObservableCollectionCodeFixProvider : CodeFixProvider
 
             var action = CodeAction.Create(
                 title: diagnostic.Descriptor.CodeFixMessage(),
-                createChangedDocument: c => ReplaceWithObservableCollection(
-                    context.Document, root, property, replacementType, c),
+                createChangedDocument: _ => Task.FromResult(ReplaceWithObservableCollection(
+                    context.Document, root, property, replacementType)),
                 equivalenceKey: diagnostic.Descriptor.Id);
 
             context.RegisterCodeFix(action, diagnostic);
@@ -114,12 +112,11 @@ public class NonObservableCollectionCodeFixProvider : CodeFixProvider
         return null;
     }
 
-    private static Task<Document> ReplaceWithObservableCollection(
+    private static Document ReplaceWithObservableCollection(
         Document document,
         SyntaxNode root,
         PropertyDeclarationSyntax property,
-        string replacementType,
-        CancellationToken cancellationToken)
+        string replacementType)
     {
         // Replace the type
         var newType = SyntaxFactory.ParseTypeName(replacementType)
@@ -167,6 +164,6 @@ public class NonObservableCollectionCodeFixProvider : CodeFixProvider
         var newRoot = root.ReplaceNode(property, newProperty);
         newRoot = SyntaxHelpers.AddUsingDirectives(newRoot, "ObservableCollections");
 
-        return Task.FromResult(document.WithSyntaxRoot(newRoot));
+        return document.WithSyntaxRoot(newRoot);
     }
 }

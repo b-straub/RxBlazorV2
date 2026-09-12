@@ -36,7 +36,7 @@ public class ModelScopeCodeFixProvider : CodeFixProvider
                 // Code fix 1: Change to Singleton scope
                 var changeScopeAction = CodeAction.Create(
                     title: $"Change {className} to Singleton scope",
-                    createChangedDocument: c => Task.FromResult(ChangeToSingletonScope(context.Document, root, classDeclaration)),
+                    createChangedDocument: _ => Task.FromResult(ChangeToSingletonScope(context.Document, root, classDeclaration)),
                     equivalenceKey: "ChangeToSingleton");
 
                 context.RegisterCodeFix(changeScopeAction, diagnostic);
@@ -44,7 +44,7 @@ public class ModelScopeCodeFixProvider : CodeFixProvider
                 // Code fix 2: Remove scope attribute (defaults to Singleton)
                 var removeScopeAction = CodeAction.Create(
                     title: $"Remove scope attribute from {className} (defaults to Singleton)",
-                    createChangedDocument: c => Task.FromResult(RemoveScopeAttribute(context.Document, root, classDeclaration)),
+                    createChangedDocument: _ => Task.FromResult(RemoveScopeAttribute(context.Document, root, classDeclaration)),
                     equivalenceKey: "RemoveScopeAttribute");
 
                 context.RegisterCodeFix(removeScopeAction, diagnostic);

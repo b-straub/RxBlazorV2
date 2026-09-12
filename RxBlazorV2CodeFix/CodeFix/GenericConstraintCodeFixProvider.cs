@@ -76,7 +76,7 @@ public class GenericConstraintCodeFixProvider : CodeFixProvider
 
             var removeAttributeAction = CodeAction.Create(
                 title: diagnostic.Descriptor.CodeFixMessage(1),
-                createChangedDocument: c => RemoveAttributeAsync(context.Document, root, attribute, c),
+                createChangedDocument: _ => Task.FromResult(RemoveAttribute(context.Document, root, attribute)),
                 equivalenceKey: $"{diagnostic.Descriptor.Id}_Remove");
 
             context.RegisterCodeFix(removeAttributeAction, diagnostic);
@@ -259,9 +259,9 @@ public class GenericConstraintCodeFixProvider : CodeFixProvider
         return clause;
     }
 
-    private static Task<Document> RemoveAttributeAsync(Document document, SyntaxNode root, AttributeSyntax attribute, CancellationToken cancellationToken)
+    private static Document RemoveAttribute(Document document, SyntaxNode root, AttributeSyntax attribute)
     {
         var newRoot = SyntaxHelpers.RemoveAttributeFromClass(root, attribute);
-        return Task.FromResult(document.WithSyntaxRoot(newRoot));
+        return document.WithSyntaxRoot(newRoot);
     }
 }

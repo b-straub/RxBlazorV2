@@ -7,7 +7,6 @@ using RxBlazorV2Generator.Diagnostics;
 using RxBlazorV2Generator.Extensions;
 using System.Collections.Immutable;
 using System.Composition;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace RxBlazorV2CodeFix.CodeFix;
@@ -54,16 +53,16 @@ public class UnusedComponentBatchCodeFixProvider : CodeFixProvider
 
             var addObservableComponentAction = CodeAction.Create(
                 title: diagnostic.Descriptor.CodeFixMessage(),
-                createChangedDocument: c => AddObservableComponentAttribute(
-                    context.Document, root, classDeclaration, c),
+                createChangedDocument: _ => Task.FromResult(AddObservableComponentAttribute(
+                    context.Document, root, classDeclaration)),
                 equivalenceKey: diagnostic.Descriptor.Id);
 
             context.RegisterCodeFix(addObservableComponentAction, diagnostic);
 
             var removeAttributeAction = CodeAction.Create(
                 title: diagnostic.Descriptor.CodeFixMessage(1),
-                createChangedDocument: c => RemoveBatchAttributes(
-                    context.Document, root, classDeclaration, batchId, c),
+                createChangedDocument: _ => Task.FromResult(RemoveBatchAttributes(
+                    context.Document, root, classDeclaration, batchId)),
                 equivalenceKey: $"{diagnostic.Descriptor.Id}_RemoveAttribute");
 
             context.RegisterCodeFix(removeAttributeAction, diagnostic);
@@ -85,11 +84,10 @@ public class UnusedComponentBatchCodeFixProvider : CodeFixProvider
         return null;
     }
 
-    private static Task<Document> AddObservableComponentAttribute(
+    private static Document AddObservableComponentAttribute(
         Document document,
         SyntaxNode root,
-        ClassDeclarationSyntax classDeclaration,
-        CancellationToken cancellationToken)
+        ClassDeclarationSyntax classDeclaration)
     {
         var hasObservableComponent = classDeclaration.AttributeLists
             .SelectMany(list => list.Attributes)
@@ -97,7 +95,7 @@ public class UnusedComponentBatchCodeFixProvider : CodeFixProvider
 
         if (hasObservableComponent)
         {
-            return Task.FromResult(document);
+            return document;
         }
 
         var newAttribute = SyntaxFactory.Attribute(
@@ -113,7 +111,7 @@ public class UnusedComponentBatchCodeFixProvider : CodeFixProvider
                 .First(c => c.Identifier.Text == classDeclaration.Identifier.Text),
             newClassDeclaration);
 
-        return Task.FromResult(document.WithSyntaxRoot(newRoot));
+        return document.WithSyntaxRoot(newRoot);
     }
 
     /// <summary>
@@ -121,12 +119,11 @@ public class UnusedComponentBatchCodeFixProvider : CodeFixProvider
     /// the whole attribute list with it when nothing else is left on it so no empty <c>[]</c> remains.
     /// All members go together because a batch only means anything as a group.
     /// </summary>
-    private static Task<Document> RemoveBatchAttributes(
+    private static Document RemoveBatchAttributes(
         Document document,
         SyntaxNode root,
         ClassDeclarationSyntax classDeclaration,
-        string batchId,
-        CancellationToken cancellationToken)
+        string batchId)
     {
         var properties = classDeclaration.DescendantNodes()
             .OfType<PropertyDeclarationSyntax>()
@@ -137,7 +134,7 @@ public class UnusedComponentBatchCodeFixProvider : CodeFixProvider
 
         if (properties.Count == 0)
         {
-            return Task.FromResult(document);
+            return document;
         }
 
         var newRoot = root.ReplaceNodes(
@@ -170,7 +167,7 @@ public class UnusedComponentBatchCodeFixProvider : CodeFixProvider
                     .WithTriviaFrom(original);
             });
 
-        return Task.FromResult(document.WithSyntaxRoot(newRoot));
+        return document.WithSyntaxRoot(newRoot);
     }
 
     private static bool IsBatchAttribute(AttributeSyntax attribute, string batchId)
