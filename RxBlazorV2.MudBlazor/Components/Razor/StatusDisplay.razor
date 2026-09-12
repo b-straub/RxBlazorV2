@@ -101,6 +101,9 @@
 
     #endregion
 
+    /// <summary>
+    /// The MudBlazor snackbar service used to show error and message snackbars.
+    /// </summary>
     [Inject]
     public required ISnackbar Snackbar { get; init; }
 
@@ -131,6 +134,9 @@
     private bool IsErrorAutoAggregate => ErrorMessageMode is StatusMessageMode.Aggregate && ErrorDisplayMode is StatusDisplayMode.SNACKBAR;
     private bool IsMessageAutoAggregate => MessageMessageMode is StatusMessageMode.Aggregate && MessageDisplayMode is StatusDisplayMode.SNACKBAR;
 
+    /// <summary>
+    /// Applies the snackbar configuration and syncs the display parameters to the status model.
+    /// </summary>
     protected override void OnParametersSet()
     {
         Snackbar.Configuration.PositionClass = SnackbarPositionClass;
@@ -148,6 +154,9 @@
         base.OnParametersSet();
     }
 
+    /// <summary>
+    /// Updates the error and message snackbars whenever the model's message list changes.
+    /// </summary>
     protected override void OnMessagesChanged()
     {
         var errors = ErrorMessages;
