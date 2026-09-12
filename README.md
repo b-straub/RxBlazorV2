@@ -14,11 +14,17 @@ A reactive programming framework for Blazor applications built on top of [R3 (Re
 > **Breaking changes in 1.2.x** — `ComponentTriggerType` has been removed. All existing `[ObservableComponentTrigger]` usages must be reviewed. See [Breaking Changes](#breaking-changes) below for the cleanup checklist.
 
 > [!TIP]
-> **New in 1.3.1 (non-breaking)** — `StatusBaseModel` can queue a status message that the next message cancels, so a transient "Loading…" never flashes up after the fact. See [What's New](#whats-new) below.
+> **New in 1.3.2 (non-breaking)** — the RxBlazorV2 code fixes load again in Rider, and the dependency floors move to .NET 10.0.12 / MudBlazor 9.9.0. See [What's New](#whats-new) below.
 
 ## What's New
 
 The following are **non-breaking** additions — existing code continues to compile and run unchanged.
+
+### 1.3.2 — Code fixes in Rider, dependency refresh
+
+No new API in this release. The code-fix assembly shipped with 1.3.x referenced a newer `System.Composition` than the Roslyn host in Rider provides, so every RxBlazorV2 quick fix silently failed to load there (`Failed to create provider 'RxBlazorV2CodeFix:…'`). It is now compiled against the exact version Roslyn itself depends on and loads in Rider again.
+
+Dependencies were refreshed: ASP.NET Core / Microsoft.Extensions 10.0.12 and, for `RxBlazorV2.MudBlazor`, MudBlazor 9.9.0. Both are minimum versions — apps already on newer patches are unaffected.
 
 ### 1.3.1 — Queued status messages
 
