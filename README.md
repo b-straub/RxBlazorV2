@@ -14,11 +14,17 @@ A reactive programming framework for Blazor applications built on top of [R3 (Re
 > **Breaking changes in 1.2.x** — `ComponentTriggerType` has been removed. All existing `[ObservableComponentTrigger]` usages must be reviewed. See [Breaking Changes](#breaking-changes) below for the cleanup checklist.
 
 > [!TIP]
-> **New in 1.3.2 (non-breaking)** — the RxBlazorV2 code fixes load again in Rider, and the dependency floors move to .NET 10.0.12 / MudBlazor 9.9.0. See [What's New](#whats-new) below.
+> **New in 1.3.3 (non-breaking)** — `ObservableComponent<T>` subscribes to its model before the first render, so a state change made during another component's context-ready phase in the same render batch is no longer lost. See [What's New](#whats-new) below.
 
 ## What's New
 
 The following are **non-breaking** additions — existing code continues to compile and run unchanged.
+
+### 1.3.3 — Subscriptions before the first render
+
+No new API. `ObservableComponent<T>` used to subscribe to `Model.Observable` in `OnAfterRender(firstRender)`. Blazor runs after-render callbacks parent first, so a model change made by a component earlier in the same render batch — typically a layout-level component whose `OnContextReady()` / `Model.ContextReady()` starts a service and moves a shared state model — landed between the page's first render and its subscription. The page's model moved on (through an internal observer, say), the emission had no subscriber, the property setter's equality guard blocked every later identical emission, and the page stayed on its first-render branch until some *other* property changed.
+
+The generated subscriptions — the re-render filter, `[ObservableComponentTrigger]` hooks and `[ObservableComponentBatchAsync]` batches — are now wired once in `SetParametersAsync`, before the first `BuildRenderTree`. `OnContextReady()` / `Model.ContextReady()` still run in `OnAfterRender`, so nothing changes about when initialization code runs or when JS interop is available. A component that overrides `SetParametersAsync` must call `base`, as it already had to for parameters to work at all. Work-arounds that gated observers behind a "view attached" flag can go; an initial pull in the model's `OnContextReady()` remains the right pattern, since observers only react to changes.
 
 ### 1.3.2 — Code fixes in Rider, dependency refresh
 
