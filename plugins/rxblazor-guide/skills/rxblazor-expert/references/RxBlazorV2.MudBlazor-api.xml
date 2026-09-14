@@ -582,6 +582,26 @@
             Short visibility of snackbar. Default: false.
             </summary>
         </member>
+        <member name="P:RxBlazorV2.MudBlazor.Components.Razor.StatusDisplay.Snackbar">
+            <summary>
+            The MudBlazor snackbar service used to show error and message snackbars.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.MudBlazor.Components.Razor.StatusDisplay.OnParametersSet">
+            <summary>
+            Applies the snackbar configuration and syncs the display parameters to the status model.
+            </summary>
+        </member>
+        <member name="M:RxBlazorV2.MudBlazor.Components.Razor.StatusDisplay.OnMessagesChanged">
+            <summary>
+            Updates the error and message snackbars whenever the model's message list changes.
+            </summary>
+        </member>
+        <member name="P:RxBlazorV2.MudBlazor.Components.Razor.AggregatedMessagesContent.Messages">
+            <summary>
+            The messages to render inside the aggregated snackbar.
+            </summary>
+        </member>
         <member name="P:RxBlazorV2.MudBlazor.Components.Razor.AggregatedMessagesContent.GroupBySeverity">
             <summary>
             When true, groups messages by severity (Warning first, then Success, then Info)

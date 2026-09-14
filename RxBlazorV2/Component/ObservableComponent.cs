@@ -17,6 +17,7 @@ public abstract class ObservableComponent<TModel> : OwningComponentBase<TModel> 
 
     private readonly CancellationTokenSource _contextDisposeCts = new();
     private bool _disposed;
+    private bool _generatedCodeInitialized;
 
     /// <summary>
     /// Gets the reactive model instance resolved from dependency injection.
@@ -30,14 +31,29 @@ public abstract class ObservableComponent<TModel> : OwningComponentBase<TModel> 
     public RenderFragment? Body { get; set; }
 
     /// <summary>
-    /// Initializes generated code and model context on first render.
+    /// Wires the generated subscriptions before the first render. Blazor runs after-render callbacks
+    /// parent first, so a model change made by an earlier component's context-ready chain lands between
+    /// this component's first render and its own <see cref="OnAfterRender(bool)"/>; subscribing here
+    /// keeps that change from being lost.
+    /// </summary>
+    public override Task SetParametersAsync(ParameterView parameters)
+    {
+        if (!_generatedCodeInitialized)
+        {
+            _generatedCodeInitialized = true;
+            InitializeGeneratedCode();
+        }
+        return base.SetParametersAsync(parameters);
+    }
+
+    /// <summary>
+    /// Initializes the model context on first render.
     /// </summary>
     protected override void OnAfterRender(bool firstRender)
     {
         base.OnAfterRender(firstRender);
         if (firstRender)
         {
-            InitializeGeneratedCode();
             OnContextReady();
             Model.ContextReady();
         }
@@ -65,7 +81,7 @@ public abstract class ObservableComponent<TModel> : OwningComponentBase<TModel> 
     }
     
     /// <summary>
-    /// Called on first render to set up generated subscriptions and triggers; override in generated code only.
+    /// Called once before the first render to set up generated subscriptions and triggers; override in generated code only.
     /// </summary>
     protected virtual void InitializeGeneratedCode()
     {

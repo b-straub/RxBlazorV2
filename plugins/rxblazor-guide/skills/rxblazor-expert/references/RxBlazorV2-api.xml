@@ -2299,9 +2299,17 @@
             Gets or sets the content to be rendered inside the component.
             </summary>
         </member>
+        <member name="M:RxBlazorV2.Component.ObservableComponent`1.SetParametersAsync(Microsoft.AspNetCore.Components.ParameterView)">
+            <summary>
+            Wires the generated subscriptions before the first render. Blazor runs after-render callbacks
+            parent first, so a model change made by an earlier component's context-ready chain lands between
+            this component's first render and its own <see cref="M:RxBlazorV2.Component.ObservableComponent`1.OnAfterRender(System.Boolean)"/>; subscribing here
+            keeps that change from being lost.
+            </summary>
+        </member>
         <member name="M:RxBlazorV2.Component.ObservableComponent`1.OnAfterRender(System.Boolean)">
             <summary>
-            Initializes generated code and model context on first render.
+            Initializes the model context on first render.
             </summary>
         </member>
         <member name="M:RxBlazorV2.Component.ObservableComponent`1.OnAfterRenderAsync(System.Boolean)">
@@ -2311,7 +2319,7 @@
         </member>
         <member name="M:RxBlazorV2.Component.ObservableComponent`1.InitializeGeneratedCode">
             <summary>
-            Called on first render to set up generated subscriptions and triggers; override in generated code only.
+            Called once before the first render to set up generated subscriptions and triggers; override in generated code only.
             </summary>
         </member>
         <member name="M:RxBlazorV2.Component.ObservableComponent`1.InitializeGeneratedCodeAsync">
