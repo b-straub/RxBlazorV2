@@ -88,7 +88,7 @@ public partial class WeatherModel : ObservableModel
         }
     }
 
-    private async Task LoadWeatherAsync()
+    private async Task LoadWeatherAsync(CancellationToken ct)
     {
         try
         {
@@ -99,7 +99,7 @@ public partial class WeatherModel : ObservableModel
             // below arrives inside the window and drops it, so nothing flashes up after the fact.
             StatusModel.QueueInfo($"Fetching forecast for {CurrentLocation}...", nameof(LoadWeatherCommand));
 
-            var forecasts = await OpenMeteoClient.GetWeatherForecastAsync(CurrentLocation);
+            var forecasts = await OpenMeteoClient.GetWeatherForecastAsync(CurrentLocation, ct: ct);
 
             if (forecasts.Length > 0)
             {
@@ -114,6 +114,11 @@ public partial class WeatherModel : ObservableModel
                 StatusModel.AddError("No weather data available");
                 Forecasts = null;
             }
+        }
+        catch (OperationCanceledException)
+        {
+            // Let the caller decide - RefreshAsync clears its status note, the previous forecast stays.
+            throw;
         }
         catch (WeatherApiException ex)
         {
@@ -140,7 +145,7 @@ public partial class WeatherModel : ObservableModel
         try
         {
             await Task.Delay(2000, ct);
-            await LoadWeatherAsync();
+            await LoadWeatherAsync(ct);
         }
         catch (OperationCanceledException)
         {
@@ -175,7 +180,7 @@ public partial class WeatherModel : ObservableModel
         }
 
         CurrentLocation = newLocation.Trim();
-        await LoadWeatherAsync();
+        await LoadWeatherAsync(CancellationToken.None);
     }
 
     private void SimulateError()

@@ -11,15 +11,15 @@ public class LocationService
         _httpClient = httpClient;
     }
     
-    public async Task<(double Latitude, double Longitude)?> GetCoordinatesAsync(string cityName)
+    public async Task<(double Latitude, double Longitude)?> GetCoordinatesAsync(string cityName, CancellationToken ct = default)
     {
         try
         {
             var url = $"https://geocoding-api.open-meteo.com/v1/search?name={Uri.EscapeDataString(cityName)}&count=1";
-            var response = await _httpClient.GetAsync(url);
+            var response = await _httpClient.GetAsync(url, ct);
             response.EnsureSuccessStatusCode();
             
-            var json = await response.Content.ReadAsStringAsync();
+            var json = await response.Content.ReadAsStringAsync(ct);
             var options = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
@@ -35,6 +35,10 @@ public class LocationService
             }
             
             return null;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch
         {

@@ -16,15 +16,16 @@ public class OpenMeteoApiClient
         _locationService = locationService;
     }
 
-    public async Task<OpenMeteoResponse?> GetWeatherAsync(double latitude, double longitude, int forecastDays = 7)
+    public async Task<OpenMeteoResponse?> GetWeatherAsync(double latitude, double longitude, int forecastDays = 7,
+        CancellationToken ct = default)
     {
         try
         {
             var url = BuildApiUrl(latitude, longitude, forecastDays);
-            var response = await _httpClient.GetAsync(url);
+            var response = await _httpClient.GetAsync(url, ct);
             response.EnsureSuccessStatusCode();
 
-            var jsonString = await response.Content.ReadAsStringAsync();
+            var jsonString = await response.Content.ReadAsStringAsync(ct);
             var options = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
@@ -32,6 +33,10 @@ public class OpenMeteoApiClient
             };
 
             return JsonSerializer.Deserialize<OpenMeteoResponse>(jsonString, options);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -41,9 +46,9 @@ public class OpenMeteoApiClient
     }
 
     public async Task<WeatherForecast[]> GetWeatherForecastAsync(double latitude, double longitude,
-        string? locationName = null, int forecastDays = 7)
+        string? locationName = null, int forecastDays = 7, CancellationToken ct = default)
     {
-        var response = await GetWeatherAsync(latitude, longitude, forecastDays);
+        var response = await GetWeatherAsync(latitude, longitude, forecastDays, ct);
         if (response is null)
         {
             return [];
@@ -52,14 +57,15 @@ public class OpenMeteoApiClient
         return ConvertToWeatherForecast(response, locationName ?? $"{latitude:F4}, {longitude:F4}");
     }
 
-    public async Task<WeatherForecast[]> GetWeatherForecastAsync(string location, int forecastDays = 7)
+    public async Task<WeatherForecast[]> GetWeatherForecastAsync(string location, int forecastDays = 7,
+        CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(location))
         {
             throw new ArgumentException("Location cannot be null or empty", nameof(location));
         }
 
-        var coordinates = await _locationService.GetCoordinatesAsync(location);
+        var coordinates = await _locationService.GetCoordinatesAsync(location, ct);
 
         if (!coordinates.HasValue)
         {
@@ -67,7 +73,7 @@ public class OpenMeteoApiClient
         }
 
         return await GetWeatherForecastAsync(coordinates.Value.Latitude, coordinates.Value.Longitude, location,
-            forecastDays);
+            forecastDays, ct);
     }
 
     private string BuildApiUrl(double latitude, double longitude, int forecastDays)

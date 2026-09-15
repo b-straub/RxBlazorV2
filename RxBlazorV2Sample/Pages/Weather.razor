@@ -97,7 +97,7 @@
                         </MudButton>
 
                         <MudButton
-                            @onclick=@(async () => await Model.RefreshCommand.ExecuteAsync())
+                            @onclick="RefreshAsync"
                             Variant="Variant.Outlined"
                             Color="Color.Secondary"
                             StartIcon="@Icons.Material.Filled.Refresh">
