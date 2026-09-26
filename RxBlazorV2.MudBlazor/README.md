@@ -111,6 +111,7 @@ worth showing, so it must never be dropped by a message that happens to follow i
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
+| `Channel` | `string` | `StatusMessage.DefaultChannel` | The status channel this display serves |
 | `ErrorDisplayMode` | `StatusDisplayMode` | `SNACKBAR_AND_ICON` | How errors are displayed |
 | `ErrorMessageMode` | `StatusMessageMode` | `Aggregate` | Error accumulation mode |
 | `ShowErrorSource` | `bool` | `true` | Append the source to error text |
@@ -118,9 +119,13 @@ worth showing, so it must never be dropped by a message that happens to follow i
 | `MessageMessageMode` | `StatusMessageMode` | `Aggregate` | Message accumulation mode |
 | `ShowMessageSource` | `bool` | `true` | Append the source to message text |
 | `GroupMessagesBySeverity` | `bool` | `true` | Group aggregated messages by severity |
-| `QueueWindow` | `TimeSpan` | `1 s` | How long a queued message waits before it is displayed |
-| `SnackbarPositionClass` | `string` | `TopEnd` | Snackbar position |
-| `ShortVisibility` | `bool` | `false` | Shorten the snackbar visible duration to 2 s |
+| `QueueWindow` | `TimeSpan` | `1 s` | How long a queued message of the channel waits before it is displayed |
+| `ErrorIcon` | `string` | `Icons.Material.Filled.Error` | Icon of the error badge, snackbar and alerts |
+| `WarningIcon` | `string` | `Icons.Material.Filled.Warning` | Icon of warning messages |
+| `SuccessIcon` | `string` | `Icons.Material.Filled.CheckCircle` | Icon of success messages |
+| `InfoIcon` | `string` | `Icons.Material.Filled.Info` | Icon of info messages |
+| `SnackbarPositionClass` | `string` | `TopEnd` | Snackbar position (global MudBlazor setting, shared by all displays) |
+| `ShortVisibility` | `bool` | `false` | Shorten the snackbar visible duration to 2 s (global, shared by all displays) |
 
 ### Customization Example
 
@@ -131,6 +136,42 @@ worth showing, so it must never be dropped by a message that happens to follow i
                MessageMessageMode="StatusMessageMode.Single"
                QueueWindow="TimeSpan.FromMilliseconds(300)"
                SnackbarPositionClass="@Defaults.Classes.Position.BottomCenter" />
+```
+
+### Multiple Displays (Channels)
+
+Every `StatusMessage` belongs to a channel - `StatusMessage.DefaultChannel` unless one is given. One
+`StatusModel` can feed several `StatusDisplay`s, each serving exactly one channel. Channels are
+independent: accumulation modes, the queue window and Single-mode replacement never reach across them.
+Command errors are always published to the default channel.
+
+```razor
+@* Errors and system notifications *@
+<StatusDisplay />
+
+@* Database notifications with their own icon *@
+<StatusDisplay Channel="db"
+               MessageDisplayMode="StatusDisplayMode.ICON"
+               InfoIcon="@Icons.Material.Filled.Notifications" />
+```
+
+```csharp
+// Publish to a custom channel - pass your own Id to correlate the message with its database record
+StatusModel.AddInfo("Order 42 shipped", channel: "db");
+StatusModel.AddMessage(new StatusMessage(row.Text, StatusSeverity.Info, "Orders", "db") { Id = row.Id });
+```
+
+### Reacting to Dismissed Messages
+
+`StatusModel.Dismissed` emits the messages a user dismissed - via "Clear All", the close icon of a single
+message in the aggregated view, or an auto-aggregating snackbar closing. Programmatic clears (`Clear*`)
+and Single-mode replacement do not emit. Filter by channel to persist the dismissed state:
+
+```csharp
+Subscriptions.Add(StatusModel.Dismissed
+    .Select(messages => messages.Where(m => m.Channel == "db").Select(m => m.Id).ToList())
+    .Where(ids => ids.Count > 0)
+    .SubscribeAwait(async (ids, ct) => await notifications.MarkDismissedAsync(ids, ct)));
 ```
 
 ## Usage

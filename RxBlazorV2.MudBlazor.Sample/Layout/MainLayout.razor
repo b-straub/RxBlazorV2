@@ -29,7 +29,16 @@
         <MudSpacer />
         <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit"
                        Href="https://github.com/b-straub/RxBlazorV2" Target="_blank" />
-        <StatusDisplay ShowMessageSource="false" GroupMessagesBySeverity="false" MessageMessageMode="StatusMessageMode.Single" ShortVisibility="true"/>
+        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+            @* Unread notifications from the DB - their own channel, icon-only, dismissed from the badge *@
+            <StatusDisplay Channel="@NotificationsDemoModel.Channel"
+                           ErrorDisplayMode="StatusDisplayMode.ICON"
+                           MessageDisplayMode="StatusDisplayMode.ICON"
+                           InfoIcon="@Icons.Material.Filled.Notifications"
+                           WarningIcon="@Icons.Material.Filled.NotificationImportant"
+                           ShowMessageSource="false" />
+            <StatusDisplay ShowMessageSource="false" GroupMessagesBySeverity="false" MessageMessageMode="StatusMessageMode.Single" ShortVisibility="true"/>
+        </MudStack>
     </MudAppBar>
     <MudDrawer @bind-Open="_drawerOpen"
                ClipMode="DrawerClipMode.Always"

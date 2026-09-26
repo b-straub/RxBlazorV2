@@ -30,6 +30,13 @@
         (overswipe = delete), swipe right to toggle read.
     </MudText>
 
+    <MudText Typo="Typo.body2" Class="mb-4">
+        Unread notifications are mirrored to the <code>"db"</code> status channel - the bell badge in the
+        AppBar, a second <code>StatusDisplay</code> on the same <code>StatusModel</code>. Dismiss one there
+        (close icon or Clear All) and the <code>Dismissed</code> stream marks it read. Command feedback stays
+        on the default channel.
+    </MudText>
+
     <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
         <MudSwitch T="bool" @bind-Value="_revealScale" Color="Color.Primary" Label="iOS-style scale-in reveal" />
     </MudStack>

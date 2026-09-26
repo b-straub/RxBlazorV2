@@ -4,7 +4,7 @@
 @* Error Icon (separate from messages) *@
 @if (ShowErrorIcon && ErrorMessages.Count > 0)
 {
-    <MudFab Class=@(ShowMessageIcon && NonErrorMessages.Count > 0 ? "mr-2" : "") StartIcon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error" Label="@ErrorMessages.Count.ToString()" OnClick="ShowErrorSnackbarOnClick" />
+    <MudFab Class=@(ShowMessageIcon && NonErrorMessages.Count > 0 ? "mr-2" : "") StartIcon="@ErrorIcon" Size="Size.Small" Color="Color.Error" Label="@ErrorMessages.Count.ToString()" OnClick="ShowErrorSnackbarOnClick" />
 }
 
 @* Message Icon (Info, Success, Warning - separate from errors) *@
@@ -15,12 +15,25 @@
 
 @code
 {
+    #region Channel Settings
+
+    /// <summary>
+    /// The status channel this display serves. Several displays can share one status model, each serving
+    /// its own channel - e.g. errors and system notifications on the default channel, database
+    /// notifications on a custom one. Command errors are always published to
+    /// <see cref="StatusMessage.DefaultChannel"/>. Default: <see cref="StatusMessage.DefaultChannel"/>.
+    /// </summary>
+    [Parameter]
+    public string Channel { get; set; } = StatusMessage.DefaultChannel;
+
+    #endregion
+
     #region Error Settings (StatusSeverity.Error only)
 
     /// <summary>
     /// How errors are displayed. Default: SNACKBAR_AND_ICON.
     /// In SNACKBAR + Aggregate mode: errors accumulate while snackbar is visible,
-    /// cleared when snackbar closes.
+    /// dismissed when snackbar closes.
     /// </summary>
     [Parameter]
     public StatusDisplayMode ErrorDisplayMode { get; set; } = StatusDisplayMode.SNACKBAR_AND_ICON;
@@ -44,7 +57,7 @@
     /// <summary>
     /// How non-error messages are displayed. Default: SNACKBAR.
     /// In SNACKBAR + Aggregate mode: messages accumulate while snackbar is visible,
-    /// cleared when snackbar closes.
+    /// dismissed when snackbar closes.
     /// </summary>
     [Parameter]
     public StatusDisplayMode MessageDisplayMode { get; set; } = StatusDisplayMode.SNACKBAR;
@@ -72,12 +85,44 @@
 
     #endregion
 
+    #region Icon Settings
+
+    /// <summary>
+    /// Icon of the error badge, error snackbars and error alerts. Default: Material Filled Error.
+    /// </summary>
+    [Parameter]
+    public string ErrorIcon { get; set; } = Icons.Material.Filled.Error;
+
+    /// <summary>
+    /// Icon of warning messages; also the message badge icon while a warning is present.
+    /// Default: Material Filled Warning.
+    /// </summary>
+    [Parameter]
+    public string WarningIcon { get; set; } = Icons.Material.Filled.Warning;
+
+    /// <summary>
+    /// Icon of success messages; also the message badge icon while the most severe message is a success.
+    /// Default: Material Filled CheckCircle.
+    /// </summary>
+    [Parameter]
+    public string SuccessIcon { get; set; } = Icons.Material.Filled.CheckCircle;
+
+    /// <summary>
+    /// Icon of info messages; also the message badge icon while only info messages are present.
+    /// Default: Material Filled Info.
+    /// </summary>
+    [Parameter]
+    public string InfoIcon { get; set; } = Icons.Material.Filled.Info;
+
+    #endregion
+
     #region Queue Settings
 
     /// <summary>
-    /// How long a queued message waits before it is displayed. Queued messages are added through the
-    /// model's QueueInfo / QueueSuccess methods; a message arriving inside the window - or a clear
-    /// covering the non-error messages - drops the queued one before it is ever shown.
+    /// How long a queued message of this display's channel waits before it is displayed. Queued messages
+    /// are added through the model's QueueInfo / QueueSuccess methods; a message of the same channel
+    /// arriving inside the window - or a clear covering its non-error messages - drops the queued one
+    /// before it is ever shown.
     /// Default: 1 second.
     /// </summary>
     [Parameter]
@@ -89,12 +134,14 @@
 
     /// <summary>
     /// Position of the snackbar. Default: TopEnd.
+    /// The MudBlazor snackbar configuration is global, so all displays share the position that was set last.
     /// </summary>
     [Parameter]
     public string SnackbarPositionClass { get; set; } = Defaults.Classes.Position.TopEnd;
-    
+
     /// <summary>
     /// Short visibility of snackbar. Default: false.
+    /// The MudBlazor snackbar configuration is global, so this applies to all displays.
     /// </summary>
     [Parameter]
     public bool ShortVisibility { get; set; }
@@ -110,7 +157,11 @@
     private Snackbar? _currentErrorSnackbar;
     private Snackbar? _currentMessageSnackbar;
 
-    // Prevent OnClose from clearing messages during programmatic removal
+    // True while the current snackbar was opened from the icon (requires interaction, offers dismissal)
+    private bool _isErrorSnackbarInteractive;
+    private bool _isMessageSnackbarInteractive;
+
+    // Prevent OnClose from dismissing messages during programmatic removal
     private bool _isUpdatingErrorSnackbar;
     private bool _isUpdatingMessageSnackbar;
 
@@ -120,9 +171,9 @@
     private Guid? _previousLastErrorId;
     private Guid? _previousLastMessageId;
 
-    // Computed properties for filtering
-    private List<StatusMessage> ErrorMessages => [.. Model.Messages.Where(m => m.Severity == StatusSeverity.Error)];
-    private List<StatusMessage> NonErrorMessages => [.. Model.Messages.Where(m => m.Severity != StatusSeverity.Error)];
+    // Computed properties for filtering - only messages of this display's channel
+    private List<StatusMessage> ErrorMessages => [.. Model.Messages.Where(m => m.Channel == Channel && m.Severity == StatusSeverity.Error)];
+    private List<StatusMessage> NonErrorMessages => [.. Model.Messages.Where(m => m.Channel == Channel && m.Severity != StatusSeverity.Error)];
 
     // Display mode helpers
     private bool ShowErrorIcon => ErrorDisplayMode is StatusDisplayMode.ICON or StatusDisplayMode.SNACKBAR_AND_ICON;
@@ -135,27 +186,29 @@
     private bool IsMessageAutoAggregate => MessageMessageMode is StatusMessageMode.Aggregate && MessageDisplayMode is StatusDisplayMode.SNACKBAR;
 
     /// <summary>
-    /// Applies the snackbar configuration and syncs the display parameters to the status model.
+    /// Applies the snackbar configuration and syncs the display parameters to the settings of the
+    /// display's channel.
     /// </summary>
     protected override void OnParametersSet()
     {
         Snackbar.Configuration.PositionClass = SnackbarPositionClass;
-        
+
         if (ShortVisibility)
         {
             Snackbar.Configuration.VisibleStateDuration = 2000;
         }
-   
-        // Sync parameters to model's modes
-        Model.ErrorMessageMode = ErrorMessageMode;
-        Model.MessageMessageMode = MessageMessageMode;
-        Model.QueueWindow = QueueWindow;
+
+        // Sync parameters to the channel's modes
+        var settings = Model.GetChannelSettings(Channel);
+        settings.ErrorMessageMode = ErrorMessageMode;
+        settings.MessageMessageMode = MessageMessageMode;
+        settings.QueueWindow = QueueWindow;
 
         base.OnParametersSet();
     }
 
     /// <summary>
-    /// Updates the error and message snackbars whenever the model's message list changes.
+    /// Updates the error and message snackbars whenever the messages of the display's channel change.
     /// </summary>
     protected override void OnMessagesChanged()
     {
@@ -164,45 +217,32 @@
         var lastErrorId = errors.LastOrDefault()?.Id;
         var lastMessageId = messages.LastOrDefault()?.Id;
 
-        // Update error snackbar if errors changed (count or content in Single mode)
+        // Update error snackbar if errors changed (count or content in Single mode).
+        // An open interactive snackbar is refreshed in place, whatever the display mode.
         var errorsChanged = errors.Count != _previousErrorCount || lastErrorId != _previousLastErrorId;
-        if (ShowErrorSnackbar && errorsChanged)
+        if ((ShowErrorSnackbar || _isErrorSnackbarInteractive) && errorsChanged)
         {
             if (errors.Count > 0)
             {
-                DisplayErrorSnackbar();
+                DisplayErrorSnackbar(_isErrorSnackbarInteractive);
             }
             else
             {
-                // Errors cleared - remove snackbar
-                if (_currentErrorSnackbar is not null)
-                {
-                    _isUpdatingErrorSnackbar = true;
-                    Snackbar.Remove(_currentErrorSnackbar);
-                    _currentErrorSnackbar = null;
-                    _isUpdatingErrorSnackbar = false;
-                }
+                RemoveErrorSnackbar();
             }
         }
 
         // Update message snackbar if messages changed (count or content in Single mode)
         var messagesChanged = messages.Count != _previousMessageCount || lastMessageId != _previousLastMessageId;
-        if (ShowMessageSnackbar && messagesChanged)
+        if ((ShowMessageSnackbar || _isMessageSnackbarInteractive) && messagesChanged)
         {
             if (messages.Count > 0)
             {
-                DisplayMessageSnackbar();
+                DisplayMessageSnackbar(_isMessageSnackbarInteractive);
             }
             else
             {
-                // Messages cleared - remove snackbar
-                if (_currentMessageSnackbar is not null)
-                {
-                    _isUpdatingMessageSnackbar = true;
-                    Snackbar.Remove(_currentMessageSnackbar);
-                    _currentMessageSnackbar = null;
-                    _isUpdatingMessageSnackbar = false;
-                }
+                RemoveMessageSnackbar();
             }
         }
 
@@ -222,7 +262,7 @@
         DisplayMessageSnackbar(fromIconClick: true);
     }
 
-    private void DisplayErrorSnackbar(bool fromIconClick = false)
+    private void RemoveErrorSnackbar()
     {
         if (_currentErrorSnackbar is not null)
         {
@@ -231,6 +271,24 @@
             _currentErrorSnackbar = null;
             _isUpdatingErrorSnackbar = false;
         }
+        _isErrorSnackbarInteractive = false;
+    }
+
+    private void RemoveMessageSnackbar()
+    {
+        if (_currentMessageSnackbar is not null)
+        {
+            _isUpdatingMessageSnackbar = true;
+            Snackbar.Remove(_currentMessageSnackbar);
+            _currentMessageSnackbar = null;
+            _isUpdatingMessageSnackbar = false;
+        }
+        _isMessageSnackbarInteractive = false;
+    }
+
+    private void DisplayErrorSnackbar(bool fromIconClick = false)
+    {
+        RemoveErrorSnackbar();
 
         var errors = ErrorMessages;
         if (errors.Count == 0)
@@ -246,11 +304,13 @@
             // Aggregated errors - use theme-aware background with filled alerts inside
             var parameters = new Dictionary<string, object>
             {
-                { "Messages", errors }
+                { "Messages", errors },
+                { "IconSelector", (Func<StatusSeverity, string>)GetSeverityIcon }
             };
             if (fromIconClick)
             {
-                parameters.Add("OnClear", EventCallback.Factory.Create(this, ClearErrors));
+                parameters.Add("OnClear", EventCallback.Factory.Create(this, DismissErrors));
+                parameters.Add("OnDismiss", EventCallback.Factory.Create<StatusMessage>(this, DismissMessage));
             }
 
             _currentErrorSnackbar = Snackbar.Add<AggregatedMessagesContent>(
@@ -270,25 +330,19 @@
             // Single error - use normal plain snackbar
             var error = errors[0];
             var text = error.Source is not null && ShowErrorSource ? $"{error.Message} ({error.Source})" : error.Message;
-            _currentErrorSnackbar = Snackbar.Add(text, Severity.Error);
+            _currentErrorSnackbar = Snackbar.Add(text, Severity.Error, opts => opts.Icon = ErrorIcon);
         }
 
-        // In auto-aggregate mode, clear messages when snackbar closes (for both single and aggregated)
-        if (IsErrorAutoAggregate && !fromIconClick && _currentErrorSnackbar is not null)
+        if (_currentErrorSnackbar is not null)
         {
+            _isErrorSnackbarInteractive = fromIconClick;
             _currentErrorSnackbar.OnClose += OnErrorSnackbarClosed;
         }
     }
 
     private void DisplayMessageSnackbar(bool fromIconClick = false)
     {
-        if (_currentMessageSnackbar is not null)
-        {
-            _isUpdatingMessageSnackbar = true;
-            Snackbar.Remove(_currentMessageSnackbar);
-            _currentMessageSnackbar = null;
-            _isUpdatingMessageSnackbar = false;
-        }
+        RemoveMessageSnackbar();
 
         var messages = NonErrorMessages;
         if (messages.Count == 0)
@@ -305,11 +359,13 @@
             var parameters = new Dictionary<string, object>
             {
                 { "Messages", messages },
-                { "GroupBySeverity", GroupMessagesBySeverity }
+                { "GroupBySeverity", GroupMessagesBySeverity },
+                { "IconSelector", (Func<StatusSeverity, string>)GetSeverityIcon }
             };
             if (fromIconClick)
             {
-                parameters.Add("OnClear", EventCallback.Factory.Create(this, ClearNonErrors));
+                parameters.Add("OnClear", EventCallback.Factory.Create(this, DismissNonErrors));
+                parameters.Add("OnDismiss", EventCallback.Factory.Create<StatusMessage>(this, DismissMessage));
             }
 
             _currentMessageSnackbar = Snackbar.Add<AggregatedMessagesContent>(
@@ -329,46 +385,67 @@
             // Single message - use normal plain snackbar
             var msg = messages[0];
             var text = msg.Source is not null && ShowMessageSource ? $"{msg.Message} ({msg.Source})" : msg.Message;
-            _currentMessageSnackbar = Snackbar.Add(text, ToMudSeverity(msg.Severity));
+            _currentMessageSnackbar = Snackbar.Add(text, ToMudSeverity(msg.Severity), opts => opts.Icon = GetSeverityIcon(msg.Severity));
         }
 
-        // In auto-aggregate mode, clear messages when snackbar closes (for both single and aggregated)
-        if (IsMessageAutoAggregate && !fromIconClick && _currentMessageSnackbar is not null)
+        if (_currentMessageSnackbar is not null)
         {
+            _isMessageSnackbarInteractive = fromIconClick;
             _currentMessageSnackbar.OnClose += OnMessageSnackbarClosed;
         }
     }
 
-    private void ClearErrors()
+    private void DismissErrors()
     {
-        Model.ClearErrorMessages();
+        Model.DismissErrorMessages(Channel);
     }
 
-    private void ClearNonErrors()
+    private void DismissNonErrors()
     {
-        Model.ClearNonErrorMessages();
+        Model.DismissNonErrorMessages(Channel);
+    }
+
+    private void DismissMessage(StatusMessage message)
+    {
+        Model.DismissMessages([message]);
     }
 
     private void OnErrorSnackbarClosed(Snackbar snackbar)
     {
-        // Don't clear messages if we're updating to show new aggregated content
+        // Don't dismiss messages if we're updating to show new aggregated content
         if (_isUpdatingErrorSnackbar)
         {
             return;
         }
+
+        var wasInteractive = _isErrorSnackbarInteractive;
         _currentErrorSnackbar = null;
-        ClearErrors();
+        _isErrorSnackbarInteractive = false;
+
+        // In auto-aggregate mode, the messages are gone once the snackbar closes (timeout or dismissal)
+        if (IsErrorAutoAggregate && !wasInteractive)
+        {
+            DismissErrors();
+        }
     }
 
     private void OnMessageSnackbarClosed(Snackbar snackbar)
     {
-        // Don't clear messages if we're updating to show new aggregated content
+        // Don't dismiss messages if we're updating to show new aggregated content
         if (_isUpdatingMessageSnackbar)
         {
             return;
         }
+
+        var wasInteractive = _isMessageSnackbarInteractive;
         _currentMessageSnackbar = null;
-        ClearNonErrors();
+        _isMessageSnackbarInteractive = false;
+
+        // In auto-aggregate mode, the messages are gone once the snackbar closes (timeout or dismissal)
+        if (IsMessageAutoAggregate && !wasInteractive)
+        {
+            DismissNonErrors();
+        }
     }
 
     private Color GetMessageIconColor()
@@ -383,19 +460,28 @@
         }
         return Color.Info;
     }
-    
+
     private string GetMessageIcon()
     {
         if (NonErrorMessages.Any(m => m.Severity == StatusSeverity.Warning))
         {
-            return Icons.Material.Filled.Warning;
+            return WarningIcon;
         }
         if (NonErrorMessages.Any(m => m.Severity == StatusSeverity.Success))
         {
-            return Icons.Material.Filled.CheckCircle;
+            return SuccessIcon;
         }
-        return Icons.Material.Filled.Info;
+        return InfoIcon;
     }
+
+    private string GetSeverityIcon(StatusSeverity severity) => severity switch
+    {
+        StatusSeverity.Error => ErrorIcon,
+        StatusSeverity.Warning => WarningIcon,
+        StatusSeverity.Success => SuccessIcon,
+        StatusSeverity.Info => InfoIcon,
+        _ => throw new ArgumentOutOfRangeException(nameof(severity), severity, null)
+    };
 
     private static Severity ToMudSeverity(StatusSeverity severity) => severity switch
     {

@@ -1,4 +1,5 @@
 using ObservableCollections;
+using R3;
 using RxBlazorV2.Interface;
 using RxBlazorV2.Model;
 using RxBlazorV2.MudBlazor.Components;
@@ -14,10 +15,25 @@ public sealed record Notification(
     bool IsRead,
     bool IsArchived = false);
 
-[ObservableModelScope(ModelScope.Scoped)]
+/// <summary>
+/// Notifications "loaded from the database". Unread notifications are mirrored to the <see cref="Channel"/>
+/// status channel, served by the bell StatusDisplay in the AppBar; the command feedback stays on the
+/// default channel. Dismissing a notification in the bell marks it read via
+/// <see cref="StatusBaseModel.Dismissed"/> - the flag the real app would write back to the database.
+/// <para>
+/// Singleton, so the dismissal subscription outlives the page: notifications dismissed from the AppBar
+/// while another page is open are still marked read.
+/// </para>
+/// </summary>
+[ObservableModelScope(ModelScope.Singleton)]
 [ObservableComponent]
 public partial class NotificationsDemoModel : ObservableModel
 {
+    /// <summary>
+    /// The status channel of the unread notifications.
+    /// </summary>
+    public const string Channel = "db";
+
     public partial NotificationsDemoModel(StatusModel statusModel);
 
     /// <summary>
@@ -39,6 +55,14 @@ public partial class NotificationsDemoModel : ObservableModel
     public partial IObservableCommandAsync ResetCommand { get; }
 
     public int UnreadCount => Notifications.Count(n => n.IsRead == false);
+
+    protected override void OnContextReady()
+    {
+        Subscriptions.Add(StatusModel.Dismissed
+            .Select(messages => messages.Where(m => m.Channel == Channel).Select(m => m.Id).ToHashSet())
+            .Where(ids => ids.Count > 0)
+            .Subscribe(MarkRead));
+    }
 
     protected override async Task OnContextReadyAsync(CancellationToken cancellationToken)
     {
@@ -67,6 +91,7 @@ public partial class NotificationsDemoModel : ObservableModel
         {
             Notifications.Add(n);
         }
+        SyncStatusChannel();
     }
 
     private async Task ToggleReadAsync(Notification item)
@@ -77,6 +102,7 @@ public partial class NotificationsDemoModel : ObservableModel
             return;
         }
         Notifications[index] = item with { IsRead = !item.IsRead };
+        SyncStatusChannel();
         StatusModel.AddInfo(item.IsRead ? $"Marked unread: {item.Subject}" : $"Marked read: {item.Subject}");
         await Task.CompletedTask;
     }
@@ -90,6 +116,7 @@ public partial class NotificationsDemoModel : ObservableModel
         }
         var updated = item with { IsArchived = !item.IsArchived };
         Notifications[index] = updated;
+        SyncStatusChannel();
         StatusModel.AddSuccess(updated.IsArchived ? $"Archived: {item.Subject}" : $"Unarchived: {item.Subject}");
         await Task.CompletedTask;
     }
@@ -102,6 +129,7 @@ public partial class NotificationsDemoModel : ObservableModel
             return;
         }
         Notifications.RemoveAt(index);
+        SyncStatusChannel();
         StatusModel.AddWarning($"Deleted: {item.Subject}");
         await Task.CompletedTask;
     }
@@ -110,6 +138,35 @@ public partial class NotificationsDemoModel : ObservableModel
     {
         await LoadFromDatabaseAsync(cancellationToken);
         StatusModel.AddInfo("Reloaded notifications");
+    }
+
+    /// <summary>
+    /// Rebuilds the status channel from the unread, non-archived notifications. The message Id is the
+    /// notification Id, so a dismissal can be correlated with its row. Clearing is programmatic and
+    /// therefore never reported through <see cref="StatusBaseModel.Dismissed"/>.
+    /// </summary>
+    private void SyncStatusChannel()
+    {
+        StatusModel.ClearMessages(Channel);
+        foreach (var n in Notifications.Where(n => n.IsRead == false && n.IsArchived == false).Reverse())
+        {
+            StatusModel.AddMessage(new StatusMessage($"{n.Sender}: {n.Subject}", StatusSeverity.Info, "Inbox", Channel) { Id = n.Id });
+        }
+    }
+
+    /// <summary>
+    /// Marks the notifications dismissed in the bell as read - the real app would write the flag to the
+    /// database here. Their messages are already gone from the channel.
+    /// </summary>
+    private void MarkRead(HashSet<Guid> ids)
+    {
+        for (var i = 0; i < Notifications.Count; i++)
+        {
+            if (ids.Contains(Notifications[i].Id))
+            {
+                Notifications[i] = Notifications[i] with { IsRead = true };
+            }
+        }
     }
 
     private int IndexOf(Notification item)

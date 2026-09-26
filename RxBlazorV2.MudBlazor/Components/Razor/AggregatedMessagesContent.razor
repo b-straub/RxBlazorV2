@@ -3,7 +3,9 @@
 <MudStack Spacing="1">
     @foreach (var msg in OrderedMessages)
     {
-        <MudAlert Severity="@ToMudSeverity(msg.Severity)" Variant="Variant.Filled" Dense="true" NoIcon="false">
+        <MudAlert Severity="@ToMudSeverity(msg.Severity)" Variant="Variant.Filled" Dense="true" NoIcon="false"
+                  Icon="@IconSelector(msg.Severity)" ShowCloseIcon="@OnDismiss.HasDelegate"
+                  CloseIconClicked="@(() => OnDismiss.InvokeAsync(msg))">
             @if (msg.Source is not null)
             {
                 @msg.Message @:(@msg.Source)
@@ -38,10 +40,23 @@
     public bool GroupBySeverity { get; set; } = true;
 
     /// <summary>
+    /// Returns the icon of each alert by severity.
+    /// </summary>
+    [Parameter]
+    public required Func<StatusSeverity, string> IconSelector { get; set; }
+
+    /// <summary>
     /// Callback invoked when the clear all button is clicked.
     /// </summary>
     [Parameter]
     public EventCallback OnClear { get; set; }
+
+    /// <summary>
+    /// Callback invoked when the close icon of a single message is clicked. The close icons are only
+    /// shown when this callback is set.
+    /// </summary>
+    [Parameter]
+    public EventCallback<StatusMessage> OnDismiss { get; set; }
 
     private IEnumerable<StatusMessage> OrderedMessages => GroupBySeverity
         ? Messages.GroupBy(m => m.Severity)

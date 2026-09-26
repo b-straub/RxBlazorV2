@@ -23,81 +23,109 @@ namespace RxBlazorV2.Model;
 /// that window, which is what keeps a transient "Loading..." from flashing up after the operation it
 /// announces has already finished. Only these two severities can be queued: a warning or an error is
 /// always worth showing, so it must never be silently dropped.
+///
+/// Every message belongs to a channel (<see cref="StatusMessage.Channel"/>). Channels are independent:
+/// each has its own <see cref="StatusChannelSettings"/> and its own queue, and a message only replaces or
+/// cancels messages of its own channel. This lets one status model feed several displays, each serving
+/// one channel. Messages a user dismisses from a display are reported through <see cref="Dismissed"/>.
 /// </summary>
 public abstract class StatusBaseModel : ObservableModel
 {
     /// <summary>
-    /// One entry of the queue stream: a message to publish once <see cref="Window"/> has elapsed, or -
-    /// when <see cref="Message"/> is null - a cancellation that switches the pipeline to an empty stream.
+    /// One entry of a channel's queue stream: a message to publish once <see cref="Window"/> has elapsed,
+    /// or - when <see cref="Message"/> is null - a cancellation that switches the pipeline to an empty stream.
     /// </summary>
     private readonly record struct QueueRequest(StatusMessage? Message, TimeSpan Window);
 
+    /// <summary>
+    /// Settings, queue stream and pending message of one channel.
+    /// </summary>
+    private sealed class ChannelState
+    {
+        public StatusChannelSettings Settings { get; } = new();
+
+        public Subject<QueueRequest> QueueRequests { get; } = new();
+
+        public StatusMessage? PendingMessage { get; set; }
+    }
+
     private static readonly QueueRequest CancelRequest = new(null, TimeSpan.Zero);
 
-    private readonly Subject<QueueRequest> _queueRequests = new();
-    private StatusMessage? _pendingMessage;
+    private readonly Dictionary<string, ChannelState> _channels = [];
+    private readonly Subject<IReadOnlyList<StatusMessage>> _dismissed = new();
 
     /// <summary>
-    /// Builds the queue pipeline. Every request switches away from the previous one, so a newer message,
-    /// a cancellation or disposal unsubscribes the pending delay before it can reach <see cref="Messages"/> -
-    /// the same trailing-edge semantics a debounced input stream has, with the message as its payload.
+    /// Creates the default channel, so its settings exist before the first message arrives.
     /// </summary>
     protected StatusBaseModel()
     {
-        Subscriptions.Add(_queueRequests
-            .Select(request =>
-            {
-                if (request.Message is not { } message)
-                {
-                    // Qualified: ObservableModel.Observable shadows the R3 static class inside this type.
-                    return R3.Observable.Empty<StatusMessage>();
-                }
-
-                return R3.Observable.Timer(request.Window, QueueTimeProvider).Select(_ => message);
-            })
-            .Switch()
-            .Subscribe(PublishQueuedMessage));
+        GetChannel(StatusMessage.DefaultChannel);
     }
 
     /// <summary>
-    /// All status messages including errors, warnings, info, and success messages.
+    /// All status messages of all channels, including errors, warnings, info, and success messages.
     /// Changes to this collection trigger component updates via [ObservableComponentTrigger].
     /// </summary>
     [ObservableComponentTrigger]
     public abstract ObservableList<StatusMessage> Messages { get; }
 
     /// <summary>
-    /// How error messages are accumulated - Aggregate (multiple) or Single (replace).
+    /// Emits the messages a user dismissed - through a display's "Clear All", the close icon of a single
+    /// message, or an auto-aggregating snackbar closing - once they have been removed from
+    /// <see cref="Messages"/>. Programmatic clears (<c>Clear*</c>) and Single-mode replacement are not
+    /// dismissals and do not emit. Each message carries its <see cref="StatusMessage.Channel"/>, so a
+    /// subscriber - e.g. a service persisting a dismissed flag - can filter for the channel it owns.
     /// </summary>
-    public StatusMessageMode ErrorMessageMode { get; set; } = StatusMessageMode.Aggregate;
+    public Observable<IReadOnlyList<StatusMessage>> Dismissed => _dismissed;
 
     /// <summary>
-    /// How non-error messages (Info, Success, Warning) are accumulated - Aggregate (multiple) or Single (replace).
+    /// How error messages of the default channel are accumulated - Aggregate (multiple) or Single (replace).
+    /// Use <see cref="GetChannelSettings"/> for other channels.
     /// </summary>
-    public StatusMessageMode MessageMessageMode { get; set; } = StatusMessageMode.Aggregate;
+    public StatusMessageMode ErrorMessageMode
+    {
+        get => DefaultSettings.ErrorMessageMode;
+        set => DefaultSettings.ErrorMessageMode = value;
+    }
 
     /// <summary>
-    /// How long a queued message waits before it is published to <see cref="Messages"/>. Used by the
-    /// <c>Queue*</c> methods whenever the caller does not pass an explicit window. Default: 1 second.
+    /// How non-error messages (Info, Success, Warning) of the default channel are accumulated.
+    /// Use <see cref="GetChannelSettings"/> for other channels.
+    /// </summary>
+    public StatusMessageMode MessageMessageMode
+    {
+        get => DefaultSettings.MessageMessageMode;
+        set => DefaultSettings.MessageMessageMode = value;
+    }
+
+    /// <summary>
+    /// How long a queued message of the default channel waits before it is published to
+    /// <see cref="Messages"/>. Used by the <c>Queue*</c> methods whenever the caller does not pass an
+    /// explicit window. Use <see cref="GetChannelSettings"/> for other channels. Default: 1 second.
     /// <para>
     /// When the window elapses untouched the message is added to <see cref="Messages"/> exactly as an
     /// <c>Add*</c> call would have added it. Inside the window it is dropped - and never displayed - by
     /// any of:
     /// </para>
     /// <list type="bullet">
-    /// <item><description>another message arriving, queued or immediate, of any severity;</description></item>
+    /// <item><description>another message of the same channel arriving, queued or immediate, of any
+    /// severity;</description></item>
     /// <item><description>a clear that covers it (<see cref="ClearMessages()"/>,
-    /// <see cref="ClearNonErrorMessages"/>, or <see cref="ClearMessages(StatusSeverity)"/> for its own
-    /// severity);</description></item>
+    /// <see cref="ClearNonErrorMessages()"/>, <see cref="ClearMessages(StatusSeverity)"/> for its own
+    /// severity, or their channel overloads);</description></item>
     /// <item><description>an explicit <see cref="CancelQueuedMessage()"/>;</description></item>
     /// <item><description>disposal of the model, which unsubscribes the pending delay.</description></item>
     /// </list>
     /// <para>
-    /// Only one message is ever queued: queuing a second one replaces the first and restarts the window.
-    /// A window of zero or less publishes immediately, which makes the delay a call-site decision.
+    /// Only one message per channel is ever queued: queuing a second one replaces the first and restarts
+    /// the window. A window of zero or less publishes immediately, which makes the delay a call-site decision.
     /// </para>
     /// </summary>
-    public TimeSpan QueueWindow { get; set; } = TimeSpan.FromSeconds(1);
+    public TimeSpan QueueWindow
+    {
+        get => DefaultSettings.QueueWindow;
+        set => DefaultSettings.QueueWindow = value;
+    }
 
     /// <summary>
     /// Time source driving the queue window. Defaults to <see cref="TimeProvider.System"/>; assign a fake
@@ -106,14 +134,26 @@ public abstract class StatusBaseModel : ObservableModel
     public TimeProvider QueueTimeProvider { get; set; } = TimeProvider.System;
 
     /// <summary>
-    /// True while a queued message is waiting for its window to elapse. Such a message is not part of
-    /// <see cref="Messages"/> yet and can still be cancelled.
+    /// True while a queued message of any channel is waiting for its window to elapse. Such a message is
+    /// not part of <see cref="Messages"/> yet and can still be cancelled.
     /// </summary>
-    public bool HasQueuedMessage => _pendingMessage is not null;
+    public bool HasQueuedMessage => _channels.Values.Any(c => c.PendingMessage is not null);
+
+    private StatusChannelSettings DefaultSettings => GetChannel(StatusMessage.DefaultChannel).Settings;
+
+    /// <summary>
+    /// Returns the settings of <paramref name="channel"/>, creating the channel on first use.
+    /// </summary>
+    /// <param name="channel">The channel name.</param>
+    public StatusChannelSettings GetChannelSettings(string channel)
+    {
+        return GetChannel(channel).Settings;
+    }
 
     /// <summary>
     /// Called by command factories when a command throws an exception.
     /// Automatically captures command name and method name as source.
+    /// The error is published to the default channel.
     /// </summary>
     /// <param name="error">The exception that was thrown.</param>
     /// <param name="commandName">The name of the command property (e.g., "RefreshCommand").</param>
@@ -128,6 +168,7 @@ public abstract class StatusBaseModel : ObservableModel
     /// Called by command factories when a command throws an exception and a per-command error formatter
     /// has produced a user-facing message. Records the formatted text in <see cref="Messages"/> with the
     /// command source attribution; the original exception is accepted for symmetry / future logging hooks.
+    /// The error is published to the default channel.
     /// </summary>
     /// <param name="error">The exception that was thrown (kept for parity with the unformatted overload).</param>
     /// <param name="formattedMessage">The user-facing message produced by the configured formatter.</param>
@@ -143,41 +184,41 @@ public abstract class StatusBaseModel : ObservableModel
     /// <summary>
     /// Adds an info message.
     /// </summary>
-    public void AddInfo(string message, string? source = null)
+    public void AddInfo(string message, string? source = null, string channel = StatusMessage.DefaultChannel)
     {
-        AddMessage(message, StatusSeverity.Info, source);
+        AddMessage(message, StatusSeverity.Info, source, channel);
     }
 
     /// <summary>
     /// Adds a success message.
     /// </summary>
-    public void AddSuccess(string message, string? source = null)
+    public void AddSuccess(string message, string? source = null, string channel = StatusMessage.DefaultChannel)
     {
-        AddMessage(message, StatusSeverity.Success, source);
+        AddMessage(message, StatusSeverity.Success, source, channel);
     }
 
     /// <summary>
     /// Adds a warning message.
     /// </summary>
-    public void AddWarning(string message, string? source = null)
+    public void AddWarning(string message, string? source = null, string channel = StatusMessage.DefaultChannel)
     {
-        AddMessage(message, StatusSeverity.Warning, source);
+        AddMessage(message, StatusSeverity.Warning, source, channel);
     }
 
     /// <summary>
     /// Adds an error message.
     /// </summary>
-    public void AddError(string message, string? source = null)
+    public void AddError(string message, string? source = null, string channel = StatusMessage.DefaultChannel)
     {
-        AddMessage(message, StatusSeverity.Error, source);
+        AddMessage(message, StatusSeverity.Error, source, channel);
     }
-        
+
     /// <summary>
     /// Adds an error message.
     /// </summary>
-    public void AddError(Exception ex, string? source = null)
+    public void AddError(Exception ex, string? source = null, string channel = StatusMessage.DefaultChannel)
     {
-        AddMessage(ex.Message, StatusSeverity.Error, source);
+        AddMessage(ex.Message, StatusSeverity.Error, source, channel);
     }
 
     /// <summary>
@@ -185,10 +226,12 @@ public abstract class StatusBaseModel : ObservableModel
     /// </summary>
     /// <param name="message">The message text.</param>
     /// <param name="source">Optional source attribution.</param>
-    /// <param name="window">Window to wait; <see cref="QueueWindow"/> when omitted.</param>
-    public void QueueInfo(string message, string? source = null, TimeSpan? window = null)
+    /// <param name="window">Window to wait; the channel's <see cref="StatusChannelSettings.QueueWindow"/> when omitted.</param>
+    /// <param name="channel">The channel to publish to.</param>
+    public void QueueInfo(string message, string? source = null, TimeSpan? window = null,
+        string channel = StatusMessage.DefaultChannel)
     {
-        QueueMessage(message, StatusSeverity.Info, source, window);
+        QueueMessage(new StatusMessage(message, StatusSeverity.Info, source, channel), window);
     }
 
     /// <summary>
@@ -196,42 +239,48 @@ public abstract class StatusBaseModel : ObservableModel
     /// </summary>
     /// <param name="message">The message text.</param>
     /// <param name="source">Optional source attribution.</param>
-    /// <param name="window">Window to wait; <see cref="QueueWindow"/> when omitted.</param>
-    public void QueueSuccess(string message, string? source = null, TimeSpan? window = null)
+    /// <param name="window">Window to wait; the channel's <see cref="StatusChannelSettings.QueueWindow"/> when omitted.</param>
+    /// <param name="channel">The channel to publish to.</param>
+    public void QueueSuccess(string message, string? source = null, TimeSpan? window = null,
+        string channel = StatusMessage.DefaultChannel)
     {
-        QueueMessage(message, StatusSeverity.Success, source, window);
+        QueueMessage(new StatusMessage(message, StatusSeverity.Success, source, channel), window);
     }
-
 
     /// <summary>
     /// Adds a message with the specified severity.
     /// </summary>
-    private void AddMessage(string message, StatusSeverity severity, string? source)
+    private void AddMessage(string message, StatusSeverity severity, string? source, string channel)
     {
-        AddMessage(new StatusMessage(message, severity, source));
+        AddMessage(new StatusMessage(message, severity, source, channel));
     }
 
     /// <summary>
-    /// Adds a prepared message, applying the accumulation mode of its severity. Any queued message still
-    /// inside its window is cancelled first - the newer message is the one the user gets to see.
+    /// Adds a prepared message to its channel, applying the channel's accumulation mode for its severity.
+    /// Any queued message of the channel still inside its window is cancelled first - the newer message is
+    /// the one the user gets to see. Use this overload to supply your own <see cref="StatusMessage.Id"/>,
+    /// e.g. the key of a database record the message represents.
     /// </summary>
     /// <param name="message">The message to publish to <see cref="Messages"/>.</param>
-    private void AddMessage(StatusMessage message)
+    public void AddMessage(StatusMessage message)
     {
-        CancelQueuedMessage();
+        var channel = GetChannel(message.Channel);
+        CancelQueuedMessage(channel);
 
-        var mode = message.Severity == StatusSeverity.Error ? ErrorMessageMode : MessageMessageMode;
+        var mode = message.Severity == StatusSeverity.Error
+            ? channel.Settings.ErrorMessageMode
+            : channel.Settings.MessageMessageMode;
 
         if (mode is StatusMessageMode.Single)
         {
-            // Clear only messages of the same category (errors vs non-errors)
+            // Clear only messages of the same category (errors vs non-errors) in the same channel
             if (message.Severity == StatusSeverity.Error)
             {
-                ClearMessages(StatusSeverity.Error);
+                RemoveMessages(m => m.Channel == message.Channel && m.Severity is StatusSeverity.Error);
             }
             else
             {
-                ClearNonErrorMessages();
+                RemoveMessages(m => m.Channel == message.Channel && m.Severity is not StatusSeverity.Error);
             }
         }
 
@@ -239,18 +288,16 @@ public abstract class StatusBaseModel : ObservableModel
     }
 
     /// <summary>
-    /// Holds a message back for <paramref name="window"/> instead of publishing it right away, pushing it
-    /// into the queue stream so that the next request switches away from it. See <see cref="QueueWindow"/>
-    /// for what cancels it and when it is published.
+    /// Holds a message back instead of publishing it right away, pushing it into its channel's queue stream
+    /// so that the next request switches away from it. See <see cref="QueueWindow"/> for what cancels it and
+    /// when it is published.
     /// </summary>
-    /// <param name="message">The message text.</param>
-    /// <param name="severity">The severity of the message.</param>
-    /// <param name="source">Optional source attribution.</param>
-    /// <param name="window">Window to wait; <see cref="QueueWindow"/> when omitted.</param>
-    private void QueueMessage(string message, StatusSeverity severity, string? source, TimeSpan? window)
+    /// <param name="queued">The message to queue.</param>
+    /// <param name="window">Window to wait; the channel's queue window when omitted.</param>
+    private void QueueMessage(StatusMessage queued, TimeSpan? window)
     {
-        var delay = window ?? QueueWindow;
-        var queued = new StatusMessage(message, severity, source);
+        var channel = GetChannel(queued.Channel);
+        var delay = window ?? channel.Settings.QueueWindow;
 
         if (delay <= TimeSpan.Zero)
         {
@@ -259,82 +306,113 @@ public abstract class StatusBaseModel : ObservableModel
         }
 
         // Switch drops whatever was pending; no need to cancel it first.
-        _pendingMessage = queued;
-        _queueRequests.OnNext(new QueueRequest(queued, delay));
+        channel.PendingMessage = queued;
+        channel.QueueRequests.OnNext(new QueueRequest(queued, delay));
     }
 
     /// <summary>
-    /// Drops the queued message, if one is waiting, so that it is never displayed.
+    /// Drops the queued messages of all channels, if any are waiting, so that they are never displayed.
     /// </summary>
     /// <returns>True when a queued message was dropped.</returns>
     public bool CancelQueuedMessage()
     {
-        if (_pendingMessage is null)
+        var cancelled = false;
+        foreach (var channel in _channels.Values)
+        {
+            cancelled |= CancelQueuedMessage(channel);
+        }
+
+        return cancelled;
+    }
+
+    /// <summary>
+    /// Drops the queued message of <paramref name="channel"/>, if one is waiting, so that it is never displayed.
+    /// </summary>
+    /// <param name="channel">The channel name.</param>
+    /// <returns>True when a queued message was dropped.</returns>
+    public bool CancelQueuedMessage(string channel)
+    {
+        return CancelQueuedMessage(GetChannel(channel));
+    }
+
+    private bool CancelQueuedMessage(ChannelState channel)
+    {
+        if (channel.PendingMessage is null)
         {
             return false;
         }
 
-        _pendingMessage = null;
-        _queueRequests.OnNext(CancelRequest);
+        channel.PendingMessage = null;
+        channel.QueueRequests.OnNext(CancelRequest);
         return true;
     }
 
     /// <summary>
-    /// Drops the queued message when its severity matches <paramref name="severity"/>.
+    /// Drops the queued messages whose severity matches <paramref name="severity"/>, in all channels.
     /// </summary>
     /// <param name="severity">The severity to cancel.</param>
-    /// <returns>True when a queued message was dropped.</returns>
-    private bool CancelQueuedMessage(StatusSeverity severity)
+    private void CancelQueuedMessages(StatusSeverity severity)
     {
-        if (_pendingMessage is null || _pendingMessage.Severity != severity)
+        foreach (var channel in _channels.Values)
         {
-            return false;
+            if (channel.PendingMessage is not null && channel.PendingMessage.Severity == severity)
+            {
+                CancelQueuedMessage(channel);
+            }
         }
-
-        return CancelQueuedMessage();
     }
 
     /// <summary>
-    /// Publishes the queued message once its window has elapsed. Reaching this point means the pipeline
-    /// was never switched away from, so no cancellation check is needed here. Clearing the pending slot
-    /// first keeps the cancellation inside <see cref="AddMessage(StatusMessage)"/> a no-op, rather than
+    /// Publishes a channel's queued message once its window has elapsed. Reaching this point means the
+    /// pipeline was never switched away from, so no cancellation check is needed here. Clearing the pending
+    /// slot first keeps the cancellation inside <see cref="AddMessage(StatusMessage)"/> a no-op, rather than
     /// pushing a request back into the stream whose emission we are currently handling.
     /// </summary>
-    private void PublishQueuedMessage(StatusMessage queued)
+    private void PublishQueuedMessage(ChannelState channel, StatusMessage queued)
     {
-        _pendingMessage = null;
+        channel.PendingMessage = null;
         AddMessage(queued);
     }
 
     /// <summary>
-    /// Clears all non-error messages (Info, Success, Warning), including a queued one - only non-error
-    /// messages can be queued, so this covers every pending message.
+    /// Clears all non-error messages (Info, Success, Warning) of all channels, including queued ones - only
+    /// non-error messages can be queued, so this covers every pending message.
     /// </summary>
     public void ClearNonErrorMessages()
     {
         CancelQueuedMessage();
-
-        var toRemove = Messages.Where(m => m.Severity is not StatusSeverity.Error).ToList();
-        foreach (var msg in toRemove)
-        {
-            Messages.Remove(msg);
-        }
+        RemoveMessages(m => m.Severity is not StatusSeverity.Error);
     }
-    
+
     /// <summary>
-    /// Clears all error messages (Error). A queued message is never an error, so none is cancelled here.
+    /// Clears the non-error messages of <paramref name="channel"/>, including its queued one.
+    /// </summary>
+    /// <param name="channel">The channel name.</param>
+    public void ClearNonErrorMessages(string channel)
+    {
+        CancelQueuedMessage(channel);
+        RemoveMessages(m => m.Channel == channel && m.Severity is not StatusSeverity.Error);
+    }
+
+    /// <summary>
+    /// Clears the error messages of all channels. A queued message is never an error, so none is cancelled here.
     /// </summary>
     public void ClearErrorMessages()
     {
-        var toRemove = Messages.Where(m => m.Severity is StatusSeverity.Error).ToList();
-        foreach (var msg in toRemove)
-        {
-            Messages.Remove(msg);
-        }
+        RemoveMessages(m => m.Severity is StatusSeverity.Error);
     }
 
     /// <summary>
-    /// Clears all messages, including a queued one.
+    /// Clears the error messages of <paramref name="channel"/>.
+    /// </summary>
+    /// <param name="channel">The channel name.</param>
+    public void ClearErrorMessages(string channel)
+    {
+        RemoveMessages(m => m.Channel == channel && m.Severity is StatusSeverity.Error);
+    }
+
+    /// <summary>
+    /// Clears all messages of all channels, including queued ones.
     /// </summary>
     public void ClearMessages()
     {
@@ -343,17 +421,98 @@ public abstract class StatusBaseModel : ObservableModel
     }
 
     /// <summary>
-    /// Clears messages with the specified severity, including a queued one of that severity.
+    /// Clears all messages of <paramref name="channel"/>, including its queued one.
+    /// </summary>
+    /// <param name="channel">The channel name.</param>
+    public void ClearMessages(string channel)
+    {
+        CancelQueuedMessage(channel);
+        RemoveMessages(m => m.Channel == channel);
+    }
+
+    /// <summary>
+    /// Clears messages with the specified severity in all channels, including queued ones of that severity.
     /// </summary>
     public void ClearMessages(StatusSeverity severity)
     {
-        CancelQueuedMessage(severity);
+        CancelQueuedMessages(severity);
+        RemoveMessages(m => m.Severity == severity);
+    }
 
-        var toRemove = Messages.Where(m => m.Severity == severity).ToList();
+    /// <summary>
+    /// Removes <paramref name="messages"/> as dismissed by the user and reports the ones actually removed
+    /// through <see cref="Dismissed"/>. Messages no longer in <see cref="Messages"/> are ignored.
+    /// </summary>
+    /// <param name="messages">The messages the user dismissed.</param>
+    public void DismissMessages(IEnumerable<StatusMessage> messages)
+    {
+        var dismissed = messages.Where(Messages.Remove).ToList();
+        if (dismissed.Count > 0)
+        {
+            _dismissed.OnNext(dismissed);
+        }
+    }
+
+    /// <summary>
+    /// Dismisses all error messages of <paramref name="channel"/>. See <see cref="Dismissed"/>.
+    /// </summary>
+    /// <param name="channel">The channel name.</param>
+    public void DismissErrorMessages(string channel)
+    {
+        DismissMessages([.. Messages.Where(m => m.Channel == channel && m.Severity is StatusSeverity.Error)]);
+    }
+
+    /// <summary>
+    /// Dismisses all non-error messages of <paramref name="channel"/> and drops its queued message, which
+    /// was never displayed and therefore is not reported as dismissed. See <see cref="Dismissed"/>.
+    /// </summary>
+    /// <param name="channel">The channel name.</param>
+    public void DismissNonErrorMessages(string channel)
+    {
+        CancelQueuedMessage(channel);
+        DismissMessages([.. Messages.Where(m => m.Channel == channel && m.Severity is not StatusSeverity.Error)]);
+    }
+
+    private void RemoveMessages(Func<StatusMessage, bool> predicate)
+    {
+        var toRemove = Messages.Where(predicate).ToList();
         foreach (var msg in toRemove)
         {
             Messages.Remove(msg);
         }
+    }
+
+    /// <summary>
+    /// Returns the state of <paramref name="name"/>, creating the channel and wiring its queue pipeline on
+    /// first use. Every request switches away from the previous one, so a newer message, a cancellation or
+    /// disposal unsubscribes the pending delay before it can reach <see cref="Messages"/> - the same
+    /// trailing-edge semantics a debounced input stream has, with the message as its payload.
+    /// </summary>
+    private ChannelState GetChannel(string name)
+    {
+        if (_channels.TryGetValue(name, out var existing))
+        {
+            return existing;
+        }
+
+        var channel = new ChannelState();
+        _channels.Add(name, channel);
+
+        Subscriptions.Add(channel.QueueRequests
+            .Select(request =>
+            {
+                if (request.Message is not { } message)
+                {
+                    // Qualified: ObservableModel.Observable shadows the R3 static class inside this type.
+                    return R3.Observable.Empty<StatusMessage>();
+                }
+
+                return R3.Observable.Timer(request.Window, QueueTimeProvider).Select(_ => message);
+            })
+            .Switch()
+            .Subscribe(queued => PublishQueuedMessage(channel, queued)));
+
+        return channel;
     }
 
     /// <summary>
