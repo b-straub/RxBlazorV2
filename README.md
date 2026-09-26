@@ -14,11 +14,42 @@ A reactive programming framework for Blazor applications built on top of [R3 (Re
 > **Breaking changes in 1.2.x** — `ComponentTriggerType` has been removed. All existing `[ObservableComponentTrigger]` usages must be reviewed. See [Breaking Changes](#breaking-changes) below for the cleanup checklist.
 
 > [!TIP]
-> **New in 1.3.3 (non-breaking)** — `ObservableComponent<T>` subscribes to its model before the first render, so a state change made during another component's context-ready phase in the same render batch is no longer lost. See [What's New](#whats-new) below.
+> **New in 1.3.4 (non-breaking)** — status channels: one `StatusModel` feeds several `StatusDisplay`s, each serving its own channel, user dismissals are reported through a reactive `Dismissed` stream, and the display icons are customizable. See [What's New](#whats-new) below.
 
 ## What's New
 
 The following are **non-breaking** additions — existing code continues to compile and run unchanged.
+
+### 1.3.4 — Status channels, dismissal stream, custom icons
+
+An app that shows errors and system notifications in one `StatusDisplay` and, say, database notifications in a second one no longer needs a second status model. Every `StatusMessage` now carries a `Channel` next to its `Source` — `StatusMessage.DefaultChannel` unless one is given — and a `StatusDisplay` serves exactly one channel:
+
+```razor
+<StatusDisplay />                                          @* errors + system notifications *@
+<StatusDisplay Channel="db"
+               MessageDisplayMode="StatusDisplayMode.ICON"
+               InfoIcon="@Icons.Material.Filled.Notifications" />
+```
+
+```csharp
+StatusModel.AddInfo("Order 42 shipped", channel: "db");
+StatusModel.AddMessage(new StatusMessage(row.Text, StatusSeverity.Info, "Orders", "db") { Id = row.Id });
+```
+
+Channels are independent: each has its own `StatusChannelSettings` (error / message accumulation mode, queue window — `GetChannelSettings(channel)`, synced from the display parameters), its own queued message, and Single-mode replacement never reaches across them. Command errors always go to the default channel. The existing `Clear*` methods still clear all channels; `ClearMessages(channel)`, `ClearErrorMessages(channel)`, `ClearNonErrorMessages(channel)` and `CancelQueuedMessage(channel)` scope to one. `AddMessage(StatusMessage)` is now public, so a message can carry the key of the record it represents as its `Id`.
+
+`StatusBaseModel.Dismissed` emits the messages a user dismissed — "Clear All", the new close icon of a single message in the aggregated view, or an auto-aggregating snackbar closing. Programmatic clears and Single-mode replacement do not emit. Filter by channel to write a dismissed flag back:
+
+```csharp
+Subscriptions.Add(StatusModel.Dismissed
+    .Select(messages => messages.Where(m => m.Channel == "db").Select(m => m.Id).ToHashSet())
+    .Where(ids => ids.Count > 0)
+    .Subscribe(MarkDismissed));
+```
+
+`StatusDisplay` gains `Channel`, `ErrorIcon`, `WarningIcon`, `SuccessIcon` and `InfoIcon`. An aggregated snackbar opened from the badge now stays interactive when new messages arrive. `SnackbarPositionClass` and `ShortVisibility` remain global MudBlazor settings shared by all displays. The MudBlazor sample's Notifications page shows a second display for unread notifications that marks them read on dismissal.
+
+The new optional `channel` parameters keep existing call sites compiling unchanged; libraries compiled against 1.3.3 that call the `Add*` / `Queue*` methods must be recompiled.
 
 ### 1.3.3 — Subscriptions before the first render
 
